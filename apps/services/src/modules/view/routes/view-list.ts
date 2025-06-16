@@ -64,13 +64,16 @@ export const viewList = async (app: FastifyInstance) => {
           tenantId: view.tenantId,
           isPublished: view.isPublished,
           publishedBy: view.isPublished ? view.ownerUserId : undefined,
-          publishedAt: view.publishedAt && view.publishedAt !== null ? new Date(view.publishedAt) : undefined,
+          publishedAt:
+            view.publishedAt && view.publishedAt !== null
+              ? new Date(view.publishedAt)
+              : undefined,
           config: {
             columns: view.visibleColumns,
             groupBy: [],
             layout: 'table',
           },
-          metadata: {},
+          metadata: view.metadata,
           panel: {
             id: view.panel.id,
             name: '',

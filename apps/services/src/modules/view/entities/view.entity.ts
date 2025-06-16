@@ -48,6 +48,9 @@ export class View {
   )
   filters = new Collection<ViewFilter>(this)
 
+  @Property({ type: 'jsonb' })
+  metadata?: Record<string, unknown>
+
   @ManyToOne(() => Panel)
   panel!: Panel
 

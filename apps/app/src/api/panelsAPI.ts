@@ -29,13 +29,18 @@ export const panelsAPI = {
     options?: Record<string, unknown>,
   ): Promise<PanelResponse> => {
     const { apiConfig } = await import('./config/apiConfig')
-    const response = await fetch(apiConfig.buildUrl(`/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      apiConfig.buildUrl(
+        `/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`,
+      ),
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        ...(options || {}),
       },
-      ...(options || {}),
-    })
+    )
     return response.json() as Promise<PanelResponse>
   },
 
@@ -107,10 +112,15 @@ export const panelsAPI = {
     options = undefined,
   ): Promise<void> => {
     const { apiConfig } = await import('./config/apiConfig')
-    await fetch(apiConfig.buildUrl(`/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`), {
-      method: 'DELETE',
-      ...(options || {}),
-    })
+    await fetch(
+      apiConfig.buildUrl(
+        `/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`,
+      ),
+      {
+        method: 'DELETE',
+        ...(options || {}),
+      },
+    )
   },
 
   dataSources: {
@@ -217,13 +227,30 @@ export const panelsAPI = {
       panel: IdParam,
       tenantId: string,
       userId: string,
+      ids?: string[],
+      tags?: string[],
       options = undefined,
     ): Promise<ColumnsResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
+
+      const queryParams = new URLSearchParams()
+      queryParams.append('tenantId', tenantId)
+      queryParams.append('userId', userId)
+      if (ids) {
+        for (const id of ids) {
+          queryParams.append('ids', id)
+        }
+      }
+      if (tags) {
+        for (const tag of tags) {
+          queryParams.append('tags', tag)
+        }
+      }
+
+      const queryString = queryParams.toString()
+
       const response = await fetch(
-        apiConfig.buildUrl(
-          `/panels/${panel.id}/columns?tenantId=${tenantId}&userId=${userId}`,
-        ),
+        apiConfig.buildUrl(`/panels/${panel.id}/columns?${queryString}`),
         {
           method: 'GET',
           headers: {

@@ -49,13 +49,13 @@ export default function WorklistPage() {
       return;
     }
 
-    const panel = getPanel(panelId);
+    const panel = getPanel?.(panelId);
     if (!panel) {
       // TODO panel not found
       return;
     }
     setPanelDefinition(panel);
-    const view = getView(panelId, viewId);
+    const view = getView?.(panelId, viewId);
     if (!view) {
       // TODO view not found
       return;
@@ -74,7 +74,7 @@ export default function WorklistPage() {
       return;
     }
 
-    const panel = getPanel(panelId);
+    const panel = getPanel?.(panelId);
     if (!panel) {
       // TODO panel not found
       return;
@@ -101,7 +101,7 @@ export default function WorklistPage() {
     }
 
     try {
-      await updateView(panelId, viewId, newView);
+      await updateView?.(panelId, viewId, newView);
       setViewDefinition(newView);
     } catch (error) {
       console.error('Failed to update column:', error);
@@ -123,7 +123,7 @@ export default function WorklistPage() {
     }
 
     try {
-      await updateView(panelId, viewId, newView);
+      await updateView?.(panelId, viewId, newView);
       setViewDefinition(newView);
       setTableFilters(newTableFilters);
     } catch (error) {
@@ -155,7 +155,7 @@ export default function WorklistPage() {
     };
 
     try {
-      await updateView(panelId, viewId, newView);
+      await updateView?.(panelId, viewId, newView);
       setViewDefinition(newView);
     } catch (error) {
       console.error('Failed to reorder columns:', error);
@@ -173,7 +173,7 @@ export default function WorklistPage() {
     }
 
     try {
-      await updateView(panelId, viewId, newView);
+      await updateView?.(panelId, viewId, newView);
       setViewDefinition(newView);
     } catch (error) {
       console.error('Failed to update view:', error);
@@ -189,20 +189,22 @@ export default function WorklistPage() {
   });
 
   const onNewView = async () => {
-    const panel = getPanel(panelId);
+    const panel = getPanel?.(panelId);
     if (!panel) {
       return;
     }
 
     try {
-      const newView = await addView(panelId, {
+      const newView = await addView?.(panelId, {
         title: "New View",
         filters: viewDefinition?.filters ?? panel.filters,
         columns: viewDefinition?.columns ?? panel.taskViewColumns,
         createdAt: new Date(),
         viewType: viewDefinition?.viewType ?? 'task',
       });
-      router.push(`/panel/${panelId}/view/${newView.id}`);
+      if (newView) {
+        router.push(`/panel/${panelId}/view/${newView.id}`);
+      }
     } catch (error) {
       console.error('Failed to create new view:', error);
       // Optionally show user-friendly error message
@@ -217,7 +219,7 @@ export default function WorklistPage() {
     console.log("newTitle", newTitle);
 
     try {
-      await updateView(panelId, viewId, { title: newTitle });
+      await updateView?.(panelId, viewId, { title: newTitle });
       const updatedView = {
         ...viewDefinition,
         title: newTitle,

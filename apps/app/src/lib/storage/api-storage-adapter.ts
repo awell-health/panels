@@ -1,4 +1,8 @@
-import type { PanelDefinition, ViewDefinition } from '@/types/worklist'
+import type {
+  ColumnDefinition,
+  PanelDefinition,
+  ViewDefinition,
+} from '@/types/worklist'
 import type { ColumnsResponse } from '@panels/types/columns'
 import type { ViewResponse } from '@panels/types/views'
 import {
@@ -549,7 +553,9 @@ export class APIStorageAdapter implements StorageAdapter {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
       // Delete via API
-      await panelsAPI.delete(this.config.tenantId, this.config.userId, { id: id })
+      await panelsAPI.delete(this.config.tenantId, this.config.userId, {
+        id: id,
+      })
 
       // Invalidate panels cache since we deleted one
       this.invalidateCache('panels')
@@ -567,7 +573,7 @@ export class APIStorageAdapter implements StorageAdapter {
   ): Promise<ViewDefinition> {
     try {
       const { viewsAPI } = await import('@/api/viewsAPI')
-
+      const { panelsAPI } = await import('@/api/panelsAPI')
 
       // Convert frontend view to backend format
       const backendViewInfo = adaptFrontendViewToBackend(
@@ -578,8 +584,35 @@ export class APIStorageAdapter implements StorageAdapter {
       // Create view via API
       const createdView = await viewsAPI.create(backendViewInfo)
 
-      // Convert back to frontend format
-      const frontendView = adaptBackendViewToFrontend(createdView)
+      const columns = await panelsAPI.columns.list(
+        { id: panelId },
+        this.config.tenantId,
+        this.config.userId,
+        createdView.config.columns,
+      )
+
+      const frontendView = adaptBackendViewToFrontend(
+        createdView,
+        columns.baseColumns,
+        columns.calculatedColumns,
+      )
+
+      // const patientColumns = columns.baseColumns.map(
+      //   adaptBackendColumnToFrontend,
+      // )
+      // const taskColumns = columns.calculatedColumns.map(
+      //   adaptBackendColumnToFrontend,
+      // )
+
+      // const updatedView: ViewDefinition = {
+      //   ...createdView,
+      //   id: createdView.id.toString(),
+      //   columns: [...patientColumns, ...taskColumns] as ColumnDefinition[], //TODO: fix this type
+      //   title: createdView.name,
+      //   filters: [],
+      //   createdAt: new Date(), //TODO: get the actual createdAt from the backend
+      //   viewType: 'patient',
+      // }
 
       // Invalidate views cache for this panel
       this.invalidateCache('views', panelId)
@@ -641,7 +674,9 @@ export class APIStorageAdapter implements StorageAdapter {
       const { viewsAPI } = await import('@/api/viewsAPI')
 
       // Delete via API
-      await viewsAPI.delete(this.config.tenantId, this.config.userId, { id: viewId })
+      await viewsAPI.delete(this.config.tenantId, this.config.userId, {
+        id: viewId,
+      })
 
       // Invalidate views cache for this panel
       this.invalidateCache('views', panelId)
@@ -662,7 +697,7 @@ export class APIStorageAdapter implements StorageAdapter {
   ): Promise<ViewDefinition | null> {
     try {
       const { viewsAPI } = await import('@/api/viewsAPI')
-
+      const { panelsAPI } = await import('@/api/panelsAPI')
       // Check cache first
       const cachedViews = this.getCacheEntry<ViewDefinition[]>('views', panelId)
       if (cachedViews) {
@@ -671,10 +706,41 @@ export class APIStorageAdapter implements StorageAdapter {
       }
 
       // Get from API
-      const backendView = await viewsAPI.get(this.config.tenantId, this.config.userId, { id: viewId } )
+      const backendView = await viewsAPI.get(
+        this.config.tenantId,
+        this.config.userId,
+        { id: viewId },
+      )
 
-      // Convert to frontend format
-      const frontendView = adaptBackendViewToFrontend(backendView)
+      const columns = await panelsAPI.columns.list(
+        { id: panelId },
+        this.config.tenantId,
+        this.config.userId,
+        backendView.config.columns,
+      )
+
+      const frontendView = adaptBackendViewToFrontend(
+        backendView,
+        columns.baseColumns,
+        columns.calculatedColumns,
+      )
+
+      // const patientColumns = columns.baseColumns.map(
+      //   adaptBackendColumnToFrontend,
+      // )
+      // const taskColumns = columns.calculatedColumns.map(
+      //   adaptBackendColumnToFrontend,
+      // )
+
+      // const frontendView: ViewDefinition = {
+      //   ...backendView,
+      //   id: backendView.id.toString(),
+      //   columns: [...patientColumns, ...taskColumns] as ColumnDefinition[],
+      //   title: backendView.name,
+      //   filters: [],
+      //   createdAt: new Date(), //TODO: get the actual createdAt from the backend
+      //   viewType: 'patient',
+      // }
 
       // Cache the result
       this.setCacheEntry('views', [frontendView], panelId)
@@ -706,22 +772,34 @@ export class APIStorageAdapter implements StorageAdapter {
         this.loadPanelColumns(panel.id),
         this.loadPanelViews(panel.id),
       ])
-  
 
       // Create enriched panel with all available data
       const enrichedPanel: PanelDefinition = {
         ...panel,
         patientViewColumns:
           columns.status === 'fulfilled' && columns.value?.baseColumns
-            ? columns.value.baseColumns.filter((column) => column.tags?.includes("panels:patients")).map(adaptBackendColumnToFrontend)
+            ? columns.value.baseColumns
+                .filter((column) => column.tags?.includes('panels:patients'))
+                .map(adaptBackendColumnToFrontend)
             : panel.patientViewColumns || [],
         taskViewColumns:
           columns.status === 'fulfilled' && columns.value?.baseColumns
-            ? columns.value.baseColumns.filter((column) => column.tags?.includes("panels:tasks")).map(adaptBackendColumnToFrontend)
+            ? columns.value.baseColumns
+                .filter((column) => column.tags?.includes('panels:tasks'))
+                .map(adaptBackendColumnToFrontend)
             : panel.taskViewColumns || [],
         views:
-          views.status === 'fulfilled' && views.value
-            ? views.value.map(adaptBackendViewToFrontend)
+          views.status === 'fulfilled' &&
+          views.value &&
+          columns.status === 'fulfilled' &&
+          columns.value
+            ? views.value.map((vw) =>
+                adaptBackendViewToFrontend(
+                  vw,
+                  columns.value?.baseColumns || [],
+                  columns.value?.calculatedColumns || [],
+                ),
+              )
             : panel.views || [],
       }
 
@@ -766,6 +844,7 @@ export class APIStorageAdapter implements StorageAdapter {
 
       // Get all views for the user and filter by panel
       const allViews = await viewsAPI.all(
+        //TODO: fix this is extremely bad
         this.config.tenantId,
         this.config.userId,
       )

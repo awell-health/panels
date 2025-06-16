@@ -30,7 +30,7 @@ export const viewCreate = async (app: FastifyInstance) => {
     url: '/views',
     handler: async (request, reply) => {
       // !! TODO: Add description and metadata !!
-      const { name, panelId, config, tenantId, userId } = request.body
+      const { name, panelId, config, tenantId, userId, metadata } = request.body
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({
@@ -51,7 +51,7 @@ export const viewCreate = async (app: FastifyInstance) => {
         tenantId,
         isPublished: false,
         visibleColumns: config.columns,
-        // metadata,
+        metadata,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -71,6 +71,7 @@ export const viewCreate = async (app: FastifyInstance) => {
           groupBy: [],
           layout: 'table',
         },
+        metadata: view.metadata,
       }
     },
   })

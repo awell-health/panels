@@ -66,15 +66,23 @@ export const adaptBackendToFrontend = (
 
   // Convert backend columns to frontend columns if provided
   const patientViewColumns =
-    columns?.baseColumns.filter((column) => column.tags?.includes("panels:patients")).map(adaptBackendColumnToFrontend) ||
-    defaultPatientColumns
+    columns?.baseColumns
+      .filter((column) => column.tags?.includes('panels:patients'))
+      .map(adaptBackendColumnToFrontend) || defaultPatientColumns
   const taskViewColumns =
-    columns?.baseColumns.filter((column) => column.tags?.includes("panels:tasks")).map(adaptBackendColumnToFrontend) ||
-    defaultTaskColumns
+    columns?.baseColumns
+      .filter((column) => column.tags?.includes('panels:tasks'))
+      .map(adaptBackendColumnToFrontend) || defaultTaskColumns
 
   // Convert backend views to frontend views if provided
   const frontendViews: ViewDefinition[] =
-    views?.map(adaptBackendViewToFrontend) || []
+    views?.map((vw) =>
+      adaptBackendViewToFrontend(
+        vw,
+        columns?.baseColumns || [],
+        columns?.calculatedColumns || [],
+      ),
+    ) || []
 
   return {
     id: backendPanel.id.toString(),
@@ -145,33 +153,37 @@ export const adaptBackendColumnToFrontend = (
  */
 export const adaptBackendViewToFrontend = (
   backendView: ViewResponse,
+  backendColumns: ColumnInfoResponse[],
+  backendCalculatedColumns: ColumnInfoResponse[],
 ): ViewDefinition => {
   // Convert backend column IDs to frontend column definitions
-  const columns: ColumnDefinition[] = backendView.config.columns.map(
-    (columnId) => ({
-      id: columnId,
-      key: columnId,
-      name: columnId
-        .replace(/([A-Z])/g, ' $1')
-        .replace(/^./, (str) => str.toUpperCase()),
-      type: 'string',
-      description: `Column ${columnId}`,
-    }),
-  )
+  const patientColumns = backendColumns
+    .filter((column) =>
+      backendView.config.columns.includes(column.id.toString()),
+    )
+    .map(adaptBackendColumnToFrontend)
+  const taskColumns = backendCalculatedColumns
+    .filter((column) =>
+      backendView.config.columns.includes(column.id.toString()),
+    )
+    .map(adaptBackendColumnToFrontend)
 
   // Extract view type and filters from metadata
   const metadata = backendView.metadata || {}
   const viewType = (metadata.viewType as 'task' | 'patient') || 'patient'
   const filters = metadata.filters || []
 
-  return {
+  const frontendView: ViewDefinition = {
+    ...backendView,
     id: backendView.id.toString(),
+    columns: [...patientColumns, ...taskColumns] as ColumnDefinition[],
     title: backendView.name,
-    createdAt: new Date(), // Keep as Date object
     filters,
-    columns,
+    createdAt: new Date(), //TODO: get the actual createdAt from the backend
     viewType,
   }
+
+  return frontendView
 }
 
 /**

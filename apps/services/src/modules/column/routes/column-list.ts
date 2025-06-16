@@ -11,6 +11,7 @@ import { z } from 'zod'
 const querystringSchema = z.object({
   tenantId: z.string(),
   userId: z.string(),
+  ids: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
 })
 
@@ -36,7 +37,7 @@ export const columnList = async (app: FastifyInstance) => {
     url: '/panels/:id/columns',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { tenantId, userId, tags } = request.query
+      const { tenantId, userId, tags, ids } = request.query
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({
@@ -53,6 +54,7 @@ export const columnList = async (app: FastifyInstance) => {
         {
           panel: { id: Number(id) },
           ...(tags && { tags: { $in: tags } }),
+          ...(ids && { id: { $in: ids.map(Number) } }),
         },
         { populate: ['dataSource'] },
       )
@@ -60,6 +62,7 @@ export const columnList = async (app: FastifyInstance) => {
       const calculatedColumns = await request.store.calculatedColumn.find({
         panel: { id: Number(id) },
         ...(tags && { tags: { $in: tags } }),
+        ...(ids && { id: { $in: ids.map(Number) } }),
       })
 
       return {

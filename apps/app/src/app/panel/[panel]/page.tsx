@@ -50,10 +50,10 @@ export default function WorklistPage() {
       return;
     }
 
-    const panel = getPanel(panelId);
+    const panel = getPanel?.(panelId);
     if (!panel) {
       if (panelId === 'default') {
-        createPanel(DEFAULT_WORKLIST).then(newPanel => {
+        createPanel?.(DEFAULT_WORKLIST).then(newPanel => {
           router.push(`/panel/${newPanel.id}`);
         }).catch(error => {
           console.error('Failed to create default panel:', error);
@@ -88,7 +88,7 @@ export default function WorklistPage() {
     }
 
     try {
-      await updatePanel(panelDefinition.id, newPanel);
+      await updatePanel?.(panelDefinition.id, newPanel);
       setPanelDefinition(newPanel);
     } catch (error) {
       console.error('Failed to update panel:', error);
@@ -109,14 +109,16 @@ export default function WorklistPage() {
     }
 
     try {
-      const newView = await addView(panelDefinition.id, {
+      const newView = await addView?.(panelDefinition.id, {
         title: "New View",
         filters: panelDefinition.filters,
         columns: currentView === 'patient' ? panelDefinition.patientViewColumns : panelDefinition.taskViewColumns,
         createdAt: new Date(),
         viewType: currentView,
       });
-      router.push(`/panel/${panelDefinition.id}/view/${newView.id}`);
+      if (newView) {
+        router.push(`/panel/${panelDefinition.id}/view/${newView.id}`);
+      }
     } catch (error) {
       console.error('Failed to create new view:', error);
       // Optionally show user-friendly error message
@@ -129,7 +131,7 @@ export default function WorklistPage() {
     }
 
     try {
-      await updatePanel(panelDefinition.id, { title: newTitle });
+      await updatePanel?.(panelDefinition.id, { title: newTitle });
       const updatedPanel = {
         ...panelDefinition,
         title: newTitle,
@@ -169,7 +171,7 @@ export default function WorklistPage() {
     }
 
     try {
-      await updatePanel(panelDefinition.id, newPanel);
+      await updatePanel?.(panelDefinition.id, newPanel);
       setPanelDefinition(newPanel);
     } catch (error) {
       console.error('Failed to update column:', error);
@@ -191,7 +193,7 @@ export default function WorklistPage() {
     }
 
     try {
-      await updatePanel(panelId, newPanel);
+      await updatePanel?.(panelId, newPanel);
       setPanelDefinition(newPanel);
       setTableFilters(newTableFilters);
     } catch (error) {
@@ -224,7 +226,7 @@ export default function WorklistPage() {
     };
 
     try {
-      await updatePanel(panelDefinition.id, newPanel);
+      await updatePanel?.(panelDefinition.id, newPanel);
       setPanelDefinition(newPanel);
     } catch (error) {
       console.error('Failed to reorder columns:', error);
