@@ -20,7 +20,7 @@ export type ChatMessage = {
     const reducedData = data.slice(0, 2).map(item => {
         const reduceValue = (value: any): any => {
             if (typeof value === 'string') {
-                return value.substring(0, 50);
+                return value.substring(0, 75);
             }
             if (Array.isArray(value)) {
                 return value.map(reduceValue);
