@@ -73,7 +73,7 @@ export const viewList = async (app: FastifyInstance) => {
             groupBy: [],
             layout: 'table',
           },
-          metadata: view.metadata,
+          metadata: view.metadata || {},
           panel: {
             id: view.panel.id,
             name: '',
