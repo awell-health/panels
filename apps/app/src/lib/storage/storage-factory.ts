@@ -23,20 +23,21 @@ export const getStorageMode = (): StorageMode => {
 export const getStorageConfig = () => {
   const mode = getStorageMode()
 
-  if (mode === STORAGE_MODES.API) {
+  if (mode === STORAGE_MODES.LOCAL) {
     return {
-      mode: STORAGE_MODES.API,
-      apiConfig: {
-        baseUrl: process.env.NEXT_PUBLIC_APP_API_BASE_URL || '',
-        tenantId: process.env.NEXT_PUBLIC_APP_TENANT_ID || '',
-        userId: process.env.NEXT_PUBLIC_APP_USER_ID || '',
-      },
+      mode: STORAGE_MODES.LOCAL,
     }
   }
 
   return {
-    mode: STORAGE_MODES.LOCAL,
+    mode: STORAGE_MODES.API,
+    apiConfig: {
+      baseUrl: process.env.NEXT_PUBLIC_APP_API_BASE_URL || '',
+      tenantId: process.env.NEXT_PUBLIC_APP_TENANT_ID || '',
+      userId: process.env.NEXT_PUBLIC_APP_USER_ID || '',
+    },
   }
+
 }
 
 /**
