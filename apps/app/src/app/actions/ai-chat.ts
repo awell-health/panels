@@ -16,13 +16,35 @@ export type ChatMessage = {
  * https://awellhealth.slack.com/archives/C06JLPNJZMG/p1748532575499539?thread_ts=1748525675.878809&cid=C06JLPNJZMG
  */
  export const columnAiAssistantMessageHandler = async (messages: ChatMessage[], data: any[], currentDefinition?: WorklistDefinition | ViewDefinition): Promise<{ response: string, needsDefinitionUpdate: boolean, definition?: WorklistDefinition | ViewDefinition }> => {
+
+    const reducedData = data.slice(0, 2).map(item => {
+        const reduceValue = (value: any): any => {
+            if (typeof value === 'string') {
+                return value.substring(0, 50);
+            }
+            if (Array.isArray(value)) {
+                return value.map(reduceValue);
+            }
+            if (value && typeof value === 'object') {
+                const reducedObj = { ...value };
+                Object.keys(reducedObj).forEach(key => {
+                    reducedObj[key] = reduceValue(reducedObj[key]);
+                });
+                return reducedObj;
+            }
+            return value;
+        };
+        
+        return reduceValue(item);
+    });
+    
     const prompt = `You are a helpful assistant that helps users add columns to their view.
             
             Current worklist definition:
             ${JSON.stringify(currentDefinition, null, 2)}
             
             All the data is FHIR data.Available data: 
-            ${JSON.stringify(data.slice(0, 10), null, 2)}
+            ${JSON.stringify(reducedData, null, 2)}
             
             Your task is to:
             1. Explain what columns are possible to add based on the available data, please provide field based arrays and fields inside arrays as well. For tasks insure you provide all inputs. Do not provide the fhirpath syntax at this stage.
