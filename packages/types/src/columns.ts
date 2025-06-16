@@ -40,6 +40,7 @@ export const ColumnBaseCreateSchema = z.object({
   metadata: z.record(z.any()).optional(),
   tenantId: z.string(),
   userId: z.string(),
+  tags: z.array(z.string()).optional(),
 })
 
 export const ColumnBaseCreateResponseSchema = z.object({
@@ -57,6 +58,7 @@ export const ColumnBaseCreateResponseSchema = z.object({
     'custom',
   ]),
   sourceField: z.string(),
+  tags: z.array(z.string()).optional(),
   properties: ColumnPropertiesSchema,
   metadata: z.record(z.any()).optional(),
 })
@@ -88,6 +90,7 @@ export const ColumnCalculatedCreateSchema = z.object({
   metadata: z.record(z.any()).optional(),
   tenantId: z.string(),
   userId: z.string(),
+  tags: z.array(z.string()).optional(),
 })
 
 export const ColumnCalculatedCreateResponseSchema = z.object({
@@ -108,6 +111,7 @@ export const ColumnCalculatedCreateResponseSchema = z.object({
   dependencies: z.array(z.string()),
   properties: ColumnPropertiesSchema,
   metadata: z.record(z.any()).optional(),
+  tags: z.array(z.string()).optional(),
 })
 
 // Types
@@ -177,6 +181,7 @@ export const ColumnInfoSchema = z.object({
   sourceField: z.string().optional(),
   tenantId: z.string(),
   userId: z.string(),
+  tags: z.array(z.string()).optional(),
 })
 
 export const ColumnInfoResponseSchema = z.object({
@@ -195,6 +200,7 @@ export const ColumnInfoResponseSchema = z.object({
   ]),
   properties: ColumnPropertiesSchema,
   metadata: z.record(z.any()).optional(),
+  tags: z.array(z.string()).optional(),
 })
 
 export type ColumnInfo = z.infer<typeof ColumnInfoSchema>

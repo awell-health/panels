@@ -48,6 +48,9 @@ export class BaseColumn {
   @Property()
   sourceField!: string
 
+  @Property({ type: 'jsonb', nullable: true })
+  tags?: string[]
+
   @Property({ type: 'jsonb' })
   properties!: ColumnProperties
 
@@ -55,8 +58,8 @@ export class BaseColumn {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   metadata?: Record<string, any>
 
-  @ManyToOne(() => DataSource)
-  dataSource!: DataSource
+  @ManyToOne(() => DataSource, { nullable: true })
+  dataSource?: DataSource
 
   @ManyToOne(() => Panel)
   panel!: Panel

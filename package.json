@@ -16,6 +16,7 @@
     "clean:all": "run-p clean clean:datastore",
     "commit": "git-cz",
     "dev": "turbo dev --parallel",
+    "dev:services": "turbo dev --filter=@panels/services",
     "docs:dev": "turbo run docs:dev --parallel",
     "docs:validate": "node dev/scripts/validate-docs.js",
     "generate:env": "node dev/scripts/generate-env.js",
@@ -56,9 +57,9 @@
     "husky": "^9.1.7",
     "npm-run-all": "^4.1.5",
     "rimraf": "^6.0.1",
-    "tsx": "^4.19.3",
+    "tsx": "^4.20.3",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.2"
+    "vitest": "^3.2.3"
   },
   "dependencies": {
     "turbo": "^2.5.4",

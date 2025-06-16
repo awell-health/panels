@@ -39,6 +39,7 @@ export const columnCreateBase = async (app: FastifyInstance) => {
         metadata,
         tenantId,
         userId,
+        tags,
       } = request.body
 
       // First verify panel exists and user has access
@@ -70,6 +71,7 @@ export const columnCreateBase = async (app: FastifyInstance) => {
         metadata,
         dataSource,
         panel,
+        tags,
       })
 
       await request.store.em.persistAndFlush(baseColumn)
