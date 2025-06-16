@@ -80,6 +80,11 @@ export class PanelStore {
       throw new Error('Storage adapter not initialized')
     }
 
+    // If already loading, return early
+    if (this._isLoading) {
+      return
+    }
+
     try {
       this._isLoading = true
       this.notifyListeners()
@@ -298,9 +303,17 @@ export class PanelStore {
 // Create context
 const PanelStoreContext = createContext<PanelStore | null>(null)
 
+// Create a singleton instance
+let storeInstance: PanelStore | null = null
+
 // Provider component
 export function PanelStoreProvider({ children }: { children: ReactNode }) {
-  const [store] = useState(() => new PanelStore())
+  const [store] = useState(() => {
+    if (!storeInstance) {
+      storeInstance = new PanelStore()
+    }
+    return storeInstance
+  })
 
   return (
     <PanelStoreContext.Provider value={store}>
@@ -326,13 +339,16 @@ export function usePanelStore() {
       setIsLoading(store.isLoading())
     })
 
-    // Initial load if needed
-    if (panels.length === 0) {
-      store.loadPanels()
-    }
-
     return () => unsubscribe()
   }, [store])
+
+  if(isLoading) {
+    return {
+      panels: [],
+      isLoading: true,
+      getSaveState: () => undefined,
+    }
+  }
 
   // Return a proxy object that provides access to the store's public methods
   return {
