@@ -39,6 +39,7 @@ export const columnCreateCalculated = async (app: FastifyInstance) => {
         metadata,
         tenantId,
         userId,
+        tags,
       } = request.body
 
       // First verify panel exists and user has access
@@ -62,6 +63,7 @@ export const columnCreateCalculated = async (app: FastifyInstance) => {
         properties,
         metadata,
         panel,
+        tags,
       })
 
       await request.store.em.persistAndFlush(calculatedColumn)

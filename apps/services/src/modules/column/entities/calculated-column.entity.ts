@@ -16,6 +16,9 @@ export class CalculatedColumn {
   @Property()
   formula!: string
 
+  @Property({ type: 'jsonb', nullable: true })
+  tags?: string[]
+
   @Property({ type: 'jsonb' })
   dependencies!: string[] // references to other column IDs
 
