@@ -35,7 +35,7 @@ describe('panelsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/api/panels/panel-123',
+        'https://api.test.com/panels/panel-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -86,7 +86,7 @@ describe('panelsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/api/panels?tenantId=tenant-123&userId=user-123',
+        'https://api.test.com/panels?tenantId=tenant-123&userId=user-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -126,7 +126,7 @@ describe('panelsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/api/panels',
+        'https://api.test.com/panels',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'POST')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -167,7 +167,7 @@ describe('panelsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        `https://api.test.com/api/panels/${panelData.id}`,
+        `https://api.test.com/panels/${panelData.id}`,
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'PUT')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -203,7 +203,7 @@ describe('panelsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        `https://api.test.com/api/panels/${panelData.id}`,
+        `https://api.test.com/panels/${panelData.id}`,
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'DELETE')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -241,7 +241,7 @@ describe('panelsAPI', () => {
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/api/panels/${panel.id}/datasources?tenantId=${tenantId}&userId=${userId}`,
+          `https://api.test.com/panels/${panel.id}/datasources?tenantId=${tenantId}&userId=${userId}`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
         expect(result).toEqual(expectedResponse)
@@ -268,7 +268,7 @@ describe('panelsAPI', () => {
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/api/panels/${panel.id}/datasources`,
+          `https://api.test.com/panels/${panel.id}/datasources`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'POST')
         testCrudOperations.expectCorrectBody(mockFetch, dataSource)
@@ -294,7 +294,7 @@ describe('panelsAPI', () => {
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/api/panels/${panel.id}/columns?tenantId=${tenantId}&userId=${userId}`,
+          `https://api.test.com/panels/${panel.id}/columns?tenantId=${tenantId}&userId=${userId}`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
         expect(result).toEqual(expectedResponse)
@@ -321,7 +321,7 @@ describe('panelsAPI', () => {
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/api/panels/${panel.id}/columns/base`,
+          `https://api.test.com/panels/${panel.id}/columns/base`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'POST')
         testCrudOperations.expectCorrectBody(mockFetch, column)
@@ -333,7 +333,7 @@ describe('panelsAPI', () => {
   describe('environment configuration', () => {
     it('should use different base URLs based on environment', async () => {
       // Test with different environment variable
-      vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.production.com')
+      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', 'https://api.production.com')
 
       const panel = { id: 'panel-123' }
       const expectedResponse = mockResponses.panelResponse()
@@ -344,13 +344,13 @@ describe('panelsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.production.com/api/panels/panel-123',
+        'https://api.production.com/panels/panel-123',
       )
     })
 
     it('should handle missing base URL gracefully', async () => {
       // Remove the base URL
-      vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '')
+      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', '')
 
       const panel = { id: 'panel-123' }
       const expectedResponse = mockResponses.panelResponse()
@@ -360,7 +360,7 @@ describe('panelsAPI', () => {
       await panelsAPI.get(panel)
 
       // Should use relative URL when no base URL is set
-      testCrudOperations.expectCorrectUrl(mockFetch, '/api/panels/panel-123')
+      testCrudOperations.expectCorrectUrl(mockFetch, '/panels/panel-123')
     })
   })
 })

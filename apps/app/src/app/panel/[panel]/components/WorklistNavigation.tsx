@@ -115,7 +115,7 @@ export default function WorklistNavigation({
         router.push(`/panel/${panelDefinition.id}`);
       }
 
-      await deleteView(panelDefinition.id, viewToDelete.id);
+      await deleteView?.(panelDefinition.id, viewToDelete.id);
 
       // The useEffect will handle closing the modal when save state becomes 'saved'
     } catch (error) {

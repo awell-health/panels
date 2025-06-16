@@ -163,7 +163,7 @@ export const ViewUpdateInfoSchema = z.object({
       layout: z.enum(['table', 'card', 'kanban']).optional(),
     })
     .optional(),
-  //metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.any()).optional(),
   tenantId: z.string(),
   userId: z.string(),
 })
@@ -181,7 +181,7 @@ export const ViewUpdateInfoResponseSchema = z.object({
     groupBy: z.array(z.string()).optional(),
     layout: z.enum(['table', 'card', 'kanban']).optional(),
   }),
-  //metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.any()).optional(),
 })
 
 export type ViewConfig = z.infer<typeof ViewConfigSchema>

@@ -140,6 +140,7 @@ export const ColumnBaseSchema = z.object({
   properties: ColumnPropertiesSchema,
   metadata: z.record(z.any()).optional(),
   columnType: z.literal('base'),
+  tags: z.array(z.string()).optional(),
 })
 
 export const ColumnCalculatedSchema = z.object({
@@ -161,6 +162,7 @@ export const ColumnCalculatedSchema = z.object({
   properties: ColumnPropertiesSchema,
   metadata: z.record(z.any()).optional(),
   columnType: z.literal('calculated'),
+  tags: z.array(z.string()).optional(),
 })
 
 export const ColumnsResponseSchema = z.object({

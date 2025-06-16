@@ -1,18 +1,20 @@
-import type { StorageAdapter, StorageMode } from './types'
-import { STORAGE_MODES } from './types'
+import { APIStorageAdapter } from './api-storage-adapter'
+import { LocalStorageAdapter } from './local-storage-adapter'
+import type { StorageAdapter } from './types'
+
+export const STORAGE_MODES = {
+  LOCAL: 'local',
+  API: 'api',
+} as const
+
+export type StorageMode = (typeof STORAGE_MODES)[keyof typeof STORAGE_MODES]
 
 /**
  * Get the storage mode from environment variables
  */
 export const getStorageMode = (): StorageMode => {
-  const mode = process.env.NEXT_PUBLIC_STORAGE_MODE?.toLowerCase()
-
-  if (mode === STORAGE_MODES.API) {
-    return STORAGE_MODES.API
-  }
-
-  // Default to local storage
-  return STORAGE_MODES.LOCAL
+  const mode = process.env.NEXT_PUBLIC_APP_STORAGE_MODE
+  return mode === STORAGE_MODES.API ? STORAGE_MODES.API : STORAGE_MODES.LOCAL
 }
 
 /**
@@ -21,20 +23,21 @@ export const getStorageMode = (): StorageMode => {
 export const getStorageConfig = () => {
   const mode = getStorageMode()
 
-  if (mode === STORAGE_MODES.API) {
+  if (mode === STORAGE_MODES.LOCAL) {
     return {
-      mode: STORAGE_MODES.API,
-      apiConfig: {
-        baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || '',
-        tenantId: process.env.NEXT_PUBLIC_TENANT_ID || '',
-        userId: process.env.NEXT_PUBLIC_USER_ID || '',
-      },
+      mode: STORAGE_MODES.LOCAL,
     }
   }
 
   return {
-    mode: STORAGE_MODES.LOCAL,
+    mode: STORAGE_MODES.API,
+    apiConfig: {
+      baseUrl: process.env.NEXT_PUBLIC_APP_API_BASE_URL || '',
+      tenantId: process.env.NEXT_PUBLIC_APP_TENANT_ID || '',
+      userId: process.env.NEXT_PUBLIC_APP_USER_ID || '',
+    },
   }
+
 }
 
 /**
@@ -43,9 +46,9 @@ export const getStorageConfig = () => {
 const validateEnvironmentConfig = (mode: StorageMode): void => {
   if (mode === STORAGE_MODES.API) {
     const requiredVars = [
-      'NEXT_PUBLIC_API_BASE_URL',
-      'NEXT_PUBLIC_TENANT_ID',
-      'NEXT_PUBLIC_USER_ID',
+      'NEXT_PUBLIC_APP_API_BASE_URL',
+      'NEXT_PUBLIC_APP_TENANT_ID',
+      'NEXT_PUBLIC_APP_USER_ID',
     ]
 
     const missingVars = requiredVars.filter((varName) => !process.env[varName])
@@ -72,12 +75,10 @@ export const createStorageAdapter = async (cacheConfig?: {
 
   switch (mode) {
     case STORAGE_MODES.API: {
-      const { APIStorageAdapter } = await import('./api-storage-adapter')
       return new APIStorageAdapter(cacheConfig)
     }
 
     case STORAGE_MODES.LOCAL: {
-      const { LocalStorageAdapter } = await import('./local-storage-adapter')
       return new LocalStorageAdapter()
     }
 
@@ -97,33 +98,14 @@ let storagePromise: Promise<StorageAdapter> | null = null
  * Get the storage adapter instance (singleton pattern with race condition protection)
  * This ensures the same adapter is used throughout the application
  */
-export const getStorageAdapter = async (cacheConfig?: {
-  enabled?: boolean
-  duration?: number
-}): Promise<StorageAdapter> => {
-  // If we already have an instance, return it
-  if (storageInstance) {
-    return storageInstance
+export const getStorageAdapter = async (): Promise<StorageAdapter> => {
+  const mode = getStorageMode()
+
+  if (mode === STORAGE_MODES.API) {
+    return new APIStorageAdapter()
   }
 
-  // If initialization is already in progress, wait for it
-  if (storagePromise) {
-    return storagePromise
-  }
-
-  // Start initialization and cache the promise
-  storagePromise = createStorageAdapter(cacheConfig)
-    .then((adapter) => {
-      storageInstance = adapter
-      return adapter
-    })
-    .catch((error) => {
-      // Reset promise on error so retry is possible
-      storagePromise = null
-      throw error
-    })
-
-  return storagePromise
+  return new LocalStorageAdapter()
 }
 
 /**

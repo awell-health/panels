@@ -26,7 +26,15 @@ export class LocalStorageAdapter implements StorageAdapter {
 
       const storedPanels = localStorage.getItem(this.STORAGE_KEY)
       if (storedPanels) {
-        return JSON.parse(storedPanels) as PanelDefinition[]
+        const parsedPanels = JSON.parse(storedPanels) as (Omit<
+          PanelDefinition,
+          'createdAt'
+        > & { createdAt: string })[]
+        // Convert string dates back to Date objects
+        return parsedPanels.map((panel) => ({
+          ...panel,
+          createdAt: new Date(panel.createdAt),
+        }))
       }
       return []
     } catch (error) {
@@ -49,7 +57,12 @@ export class LocalStorageAdapter implements StorageAdapter {
         return
       }
 
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(panels))
+      // Convert Date objects to ISO strings for storage
+      const panelsToStore = panels.map((panel) => ({
+        ...panel,
+        createdAt: panel.createdAt.toISOString(),
+      }))
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(panelsToStore))
     } catch (error) {
       console.error('Error saving panels to localStorage:', error)
       throw new Error('Failed to save panels to localStorage')
@@ -74,7 +87,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     const newPanel: PanelDefinition = {
       ...panel,
       id: uuidv4(),
-      createdAt: new Date().toISOString(),
+      createdAt: new Date(),
     }
 
     const updatedPanels = [...panels, newPanel]
@@ -88,20 +101,20 @@ export class LocalStorageAdapter implements StorageAdapter {
     updates: Partial<PanelDefinition>,
   ): Promise<void> {
     const panels = await this.loadPanelsFromStorage()
+    const index = panels.findIndex((panel) => panel.id === id)
 
-    const updatedPanels = panels.map((panel) =>
-      panel.id === id ? { ...panel, ...updates } : panel,
-    )
+    if (index === -1) {
+      throw new Error(`Panel ${id} not found`)
+    }
 
-    await this.savePanelsToStorage(updatedPanels)
+    panels[index] = { ...panels[index], ...updates }
+    await this.savePanelsToStorage(panels)
   }
 
   async deletePanel(id: string): Promise<void> {
     const panels = await this.loadPanelsFromStorage()
-
-    const updatedPanels = panels.filter((panel) => panel.id !== id)
-
-    await this.savePanelsToStorage(updatedPanels)
+    const filteredPanels = panels.filter((panel) => panel.id !== id)
+    await this.savePanelsToStorage(filteredPanels)
   }
 
   // View operations
@@ -110,23 +123,20 @@ export class LocalStorageAdapter implements StorageAdapter {
     view: Omit<ViewDefinition, 'id'>,
   ): Promise<ViewDefinition> {
     const panels = await this.loadPanelsFromStorage()
+    const panel = panels.find((p) => p.id === panelId)
+
+    if (!panel) {
+      throw new Error(`Panel ${panelId} not found`)
+    }
 
     const newView: ViewDefinition = {
       ...view,
       id: uuidv4(),
-      createdAt: new Date().toISOString(),
+      createdAt: new Date(),
     }
 
-    const updatedPanels = panels.map((panel) =>
-      panel.id === panelId
-        ? {
-            ...panel,
-            views: [...(panel.views || []), newView],
-          }
-        : panel,
-    )
-
-    await this.savePanelsToStorage(updatedPanels)
+    panel.views = [...(panel.views || []), newView]
+    await this.savePanelsToStorage(panels)
 
     return newView
   }
@@ -137,42 +147,49 @@ export class LocalStorageAdapter implements StorageAdapter {
     updates: Partial<ViewDefinition>,
   ): Promise<void> {
     const panels = await this.loadPanelsFromStorage()
+    const panel = panels.find((p) => p.id === panelId)
 
-    const updatedPanels = panels.map((panel) =>
-      panel.id === panelId
-        ? {
-            ...panel,
-            views: (panel.views || []).map((view) =>
-              view.id === viewId ? { ...view, ...updates } : view,
-            ),
-          }
-        : panel,
-    )
+    if (!panel) {
+      throw new Error(`Panel ${panelId} not found`)
+    }
 
-    await this.savePanelsToStorage(updatedPanels)
+    const viewIndex = panel.views?.findIndex((v) => v.id === viewId) ?? -1
+    if (viewIndex === -1) {
+      throw new Error(`View ${viewId} not found in panel ${panelId}`)
+    }
+
+    if (!panel.views) {
+      throw new Error(`Panel ${panelId} has no views`)
+    }
+
+    panel.views[viewIndex] = { ...panel.views[viewIndex], ...updates }
+    await this.savePanelsToStorage(panels)
   }
 
   async deleteView(panelId: string, viewId: string): Promise<void> {
     const panels = await this.loadPanelsFromStorage()
+    const panel = panels.find((p) => p.id === panelId)
 
-    const updatedPanels = panels.map((panel) =>
-      panel.id === panelId
-        ? {
-            ...panel,
-            views: (panel.views || []).filter((view) => view.id !== viewId),
-          }
-        : panel,
-    )
+    if (!panel) {
+      throw new Error(`Panel ${panelId} not found`)
+    }
 
-    await this.savePanelsToStorage(updatedPanels)
+    panel.views = panel.views?.filter((v) => v.id !== viewId)
+    await this.savePanelsToStorage(panels)
   }
 
   async getView(
     panelId: string,
     viewId: string,
   ): Promise<ViewDefinition | null> {
-    const panel = await this.getPanel(panelId)
-    return panel?.views?.find((view) => view.id === viewId) || null
+    const panels = await this.loadPanelsFromStorage()
+    const panel = panels.find((p) => p.id === panelId)
+
+    if (!panel) {
+      return null
+    }
+
+    return panel.views?.find((v) => v.id === viewId) || null
   }
 
   // Loading state

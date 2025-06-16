@@ -16,6 +16,7 @@
     "clean:all": "run-p clean clean:datastore",
     "commit": "git-cz",
     "dev": "turbo dev --parallel",
+    "dev:app": "turbo dev --filter=@panels/app",
     "dev:services": "turbo dev --filter=@panels/services",
     "docs:dev": "turbo run docs:dev --parallel",
     "docs:validate": "node dev/scripts/validate-docs.js",
