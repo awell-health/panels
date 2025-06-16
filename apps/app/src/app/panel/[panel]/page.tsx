@@ -239,7 +239,7 @@ export default function WorklistPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
         </div>
       ) : (
-        <>
+        <div className="flex flex-col h-screen">
           {/* biome-ignore lint/style/noNonNullAssertion: <explanation> */}
           <WorklistNavigation panelDefinition={panelDefinition!} onNewView={onNewView} onPanelTitleChange={onPanelTitleChange} />
           <WorklistToolbar
@@ -249,41 +249,51 @@ export default function WorklistPage() {
             onSearchModeChange={setSearchMode}
             currentView={currentView}
             setCurrentView={setCurrentView}
-          />
-          <WorklistTable isLoading={isMedplumLoading}
-            selectedRows={[]}
-            toggleSelectAll={() => { }}
             worklistColumns={columns}
             onAddColumn={onAddColumn}
-            isBlank={false}
-            tableData={filteredData}
-            handlePDFClick={() => { }}
-            handleTaskClick={() => { }}
-            handleRowHover={() => { }}
-            toggleSelectRow={() => { }}
-            handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId, process.env.NEXT_PUBLIC_AUTH_USER_ID ?? '')}
-            setIsAddingIngestionSource={() => setIsAddingIngestionSource(true)}
-            currentView={currentView}
-            handleDragEnd={handleDragEnd}
-            onColumnUpdate={onColumnUpdate}
-            filters={tableFilters}
-            onFiltersChange={onFiltersChange}
+            onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({
+              id: columnId,
+              properties: {
+                display: { visible }
+              }
+            })}
           />
-          {isAddingIngestionSource && (
-            <AddIngestionModal
-              isOpen={isAddingIngestionSource}
-              onClose={() => setIsAddingIngestionSource(false)}
-              onSelectSource={() => { }}
-              ingestionBots={[]}
+          <div className="flex-1 overflow-hidden"> {/* This container prevents double scrollbars */}
+            <WorklistTable isLoading={isMedplumLoading}
+              selectedRows={[]}
+              toggleSelectAll={() => { }}
+              worklistColumns={columns}
+              onAddColumn={onAddColumn}
+              isBlank={false}
+              tableData={filteredData}
+              handlePDFClick={() => { }}
+              handleTaskClick={() => { }}
+              handleRowHover={() => { }}
+              toggleSelectRow={() => { }}
+              handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId, process.env.NEXT_PUBLIC_AUTH_USER_ID ?? '')}
+              setIsAddingIngestionSource={() => setIsAddingIngestionSource(true)}
+              currentView={currentView}
+              handleDragEnd={handleDragEnd}
+              onColumnUpdate={onColumnUpdate}
+              filters={tableFilters}
+              onFiltersChange={onFiltersChange}
             />
-          )}
+            {isAddingIngestionSource && (
+              <AddIngestionModal
+                isOpen={isAddingIngestionSource}
+                onClose={() => setIsAddingIngestionSource(false)}
+                onSelectSource={() => { }}
+                ingestionBots={[]}
+              />
+            )}
+          </div>
           <WorklistFooter
             columnsCounter={columns.length}
             rowsCounter={tableData.length}
             navigateToHome={() => router.push('/')}
             isAISidebarOpen={false}
           />
-        </>
+        </div>
       )}
     </>
   );

@@ -245,8 +245,11 @@ export default function WorklistPage() {
             onSearch={setSearchTerm}
             searchMode={searchMode}
             onSearchModeChange={setSearchMode}
-            currentView={undefined}
+            currentView={viewDefinition?.viewType}
             setCurrentView={() => { }}
+            worklistColumns={columns}
+            onAddColumn={onAddColumn}
+            onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({ id: columnId, properties: { display: { visible } } })}
           />
           <WorklistTable isLoading={isMedplumLoading}
             selectedRows={[]}
