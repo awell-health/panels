@@ -342,14 +342,6 @@ export function usePanelStore() {
     return () => unsubscribe()
   }, [store])
 
-  if(isLoading) {
-    return {
-      panels: [],
-      isLoading: true,
-      getSaveState: () => undefined,
-    }
-  }
-
   // Return a proxy object that provides access to the store's public methods
   return {
     panels,
