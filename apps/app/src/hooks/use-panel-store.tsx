@@ -1,7 +1,7 @@
 "use client"
 
 import type { PanelDefinition, ViewDefinition } from '@/types/worklist'
-import { type ReactNode, createContext, useContext, useState } from 'react'
+import { type ReactNode, createContext, useContext, useEffect, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 
 import { getStorageAdapter } from '@/lib/storage/storage-factory'
@@ -316,10 +316,28 @@ export function usePanelStore() {
     throw new Error('usePanelStore must be used within a PanelStoreProvider')
   }
 
+  const [panels, setPanels] = useState(store.getPanels())
+  const [isLoading, setIsLoading] = useState(store.isLoading())
+
+  useEffect(() => {
+    // Subscribe to store updates
+    const unsubscribe = store.subscribe(() => {
+      setPanels(store.getPanels())
+      setIsLoading(store.isLoading())
+    })
+
+    // Initial load if needed
+    if (panels.length === 0) {
+      store.loadPanels()
+    }
+
+    return () => unsubscribe()
+  }, [store])
+
   // Return a proxy object that provides access to the store's public methods
   return {
-    panels: store.getPanels(),
-    isLoading: store.isLoading(),
+    panels,
+    isLoading,
     getSaveState: store.getSaveState.bind(store),
     getPanel: store.getPanel.bind(store),
     getView: store.getView.bind(store),

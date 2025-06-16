@@ -103,17 +103,16 @@ export const panelsAPI = {
     options = undefined,
   ): Promise<void> => {
     const { apiConfig } = await import('./config/apiConfig')
-    await fetch(apiConfig.buildUrl(`/panels/${panel.id}`), {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
+    await fetch(
+      apiConfig.buildUrl(`/panels/${panel.id}?tenantId=${panel.tenantId}&userId=${panel.userId}`),
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        ...(options || {}),
       },
-      body: JSON.stringify({
-        tenantId: panel.tenantId,
-        userId: panel.userId,
-      }),
-      ...(options || {}),
-    })
+    )
   },
 
   dataSources: {

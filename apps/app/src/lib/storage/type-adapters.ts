@@ -66,10 +66,10 @@ export const adaptBackendToFrontend = (
 
   // Convert backend columns to frontend columns if provided
   const patientViewColumns =
-    columns?.baseColumns.map(adaptBackendColumnToFrontend) ||
+    columns?.baseColumns.filter((column) => column.tags?.includes("panels:patients")).map(adaptBackendColumnToFrontend) ||
     defaultPatientColumns
   const taskViewColumns =
-    columns?.calculatedColumns.map(adaptBackendColumnToFrontend) ||
+    columns?.baseColumns.filter((column) => column.tags?.includes("panels:tasks")).map(adaptBackendColumnToFrontend) ||
     defaultTaskColumns
 
   // Convert backend views to frontend views if provided

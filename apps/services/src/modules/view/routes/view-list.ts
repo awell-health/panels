@@ -36,7 +36,6 @@ export const viewList = async (app: FastifyInstance) => {
     url: '/views',
     handler: async (request, reply) => {
       const { tenantId, userId, panelId, published } = request.query
-
       const where: FilterQuery<View> = {
         $or: [
           { ownerUserId: userId, tenantId }, // User's own views
@@ -52,7 +51,6 @@ export const viewList = async (app: FastifyInstance) => {
       }
 
       const views = await request.store.view.find(where, {
-        populate: ['panel'],
         orderBy: { updatedAt: 'DESC' },
       })
 
@@ -65,10 +63,8 @@ export const viewList = async (app: FastifyInstance) => {
           userId: view.ownerUserId,
           tenantId: view.tenantId,
           isPublished: view.isPublished,
-          publishedBy: '',
-          publishedAt: view.publishedAt,
-          createdAt: view.createdAt,
-          updatedAt: view.updatedAt,
+          publishedBy: view.isPublished ? view.ownerUserId : undefined,
+          publishedAt: view.publishedAt && view.publishedAt !== null ? new Date(view.publishedAt) : undefined,
           config: {
             columns: view.visibleColumns,
             groupBy: [],
@@ -77,7 +73,7 @@ export const viewList = async (app: FastifyInstance) => {
           metadata: {},
           panel: {
             id: view.panel.id,
-            name: view.panel.name,
+            name: '',
           },
         })),
         total: views.length,

@@ -213,7 +213,6 @@ export class APIStorageAdapter implements StorageAdapter {
 
       // Cache the result
       this.setCacheEntry('panels', result)
-
       return result
     } catch (error) {
       console.error('Failed to fetch panels from API:', error)
@@ -573,13 +572,13 @@ export class APIStorageAdapter implements StorageAdapter {
     try {
       const { viewsAPI } = await import('@/api/viewsAPI')
 
+
       // Convert frontend view to backend format
       const backendViewInfo = adaptFrontendViewToBackend(
         view,
         panelId,
         this.config,
       )
-
       // Create view via API
       const createdView = await viewsAPI.create(backendViewInfo)
 
@@ -715,17 +714,18 @@ export class APIStorageAdapter implements StorageAdapter {
         this.loadPanelColumns(panel.id),
         this.loadPanelViews(panel.id),
       ])
+  
 
       // Create enriched panel with all available data
       const enrichedPanel: PanelDefinition = {
         ...panel,
         patientViewColumns:
           columns.status === 'fulfilled' && columns.value?.baseColumns
-            ? columns.value.baseColumns.map(adaptBackendColumnToFrontend)
+            ? columns.value.baseColumns.filter((column) => column.tags?.includes("panels:patients")).map(adaptBackendColumnToFrontend)
             : panel.patientViewColumns || [],
         taskViewColumns:
-          columns.status === 'fulfilled' && columns.value?.calculatedColumns
-            ? columns.value.calculatedColumns.map(adaptBackendColumnToFrontend)
+          columns.status === 'fulfilled' && columns.value?.baseColumns
+            ? columns.value.baseColumns.filter((column) => column.tags?.includes("panels:tasks")).map(adaptBackendColumnToFrontend)
             : panel.taskViewColumns || [],
         views:
           views.status === 'fulfilled' && views.value

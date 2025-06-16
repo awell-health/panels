@@ -56,7 +56,7 @@ export const viewCreate = async (app: FastifyInstance) => {
         updatedAt: new Date(),
       })
 
-      // await request.store.em.persistAndFlush(view)
+      await request.store.em.persistAndFlush(view)
       reply.statusCode = 201
       return {
         id: view.id,
