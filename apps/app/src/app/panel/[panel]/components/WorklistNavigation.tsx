@@ -150,214 +150,186 @@ export default function WorklistNavigation({
   return (
     <>
       <div className="bg-gray-50 relative pt-4">
-        <div className="h-9 flex items-end px-2">                    {/* Border line that creates the tab effect */}
+        <div className="h-9 flex items-end px-2 overflow-x-auto scrollbar-none">
           <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gray-200" />
-
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-          <div
-            className="relative ml-2 mb-[-1px] cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (!selectedViewId) {
-                setEditingPanel(true);
-              } else {
-                handlePanelClick();
-              }
-            }}
-            onKeyDown={(e) => {
-              // Don't handle keyboard events if we're editing the panel title
-              if (editingPanel) return;
-
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
+          <div className="flex items-end min-w-0">
+            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+            <div
+              className="relative ml-2 mb-[-1px] cursor-pointer flex-shrink-0"
+              onClick={(e) => {
                 e.stopPropagation();
                 if (!selectedViewId) {
                   setEditingPanel(true);
                 } else {
                   handlePanelClick();
                 }
-              }
-            }}
-            role="button"
-            tabIndex={0}
-          >
-            <div className={`
-                h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r
-                ${editingPanel
-                ? 'bg-slate-50 border-blue-200' // Highlight when editing
-                : !selectedViewId
-                  ? 'bg-white border-gray-200'
-                  : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
-              }
-              `}>
-              <LayoutGrid className={`h-3 w-3 mr-2 ${!selectedViewId ? 'text-yellow-800' : 'text-gray-500'}`} />
-              {editingPanel ? (
-                <div className="flex items-center w-full">
-                  <input
-                    type="text"
-                    value={panelTitle}
-                    placeholder="Enter panel name..."
-                    onChange={(e) => setPanelTitle(e.target.value)}
-                    onBlur={handlePanelTitleSubmit}
-                    onKeyDown={(e) => {
-                      e.stopPropagation(); // Prevent parent from handling
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handlePanelTitleSubmit();
-                      }
-                      if (e.key === 'Escape') {
-                        e.preventDefault();
-                        setEditingPanel(false);
-                        setPanelTitle(panelDefinition.title); // Reset to original value
-                      }
-                    }}
-                    className="text-xs bg-transparent border-none focus:outline-none focus:ring-0 p-0 flex-1"
-                    // eslint-disable-next-line jsx-a11y/no-autofocus
-                    autoFocus
-                  />
-                  {panelTitle.trim() !== panelDefinition.title && (
-                    <span className="text-xs text-orange-500 ml-1" title="Unsaved changes">•</span>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <span
-                    className={`text-xs ${!selectedViewId ? 'font-semibold text-gray-700' : 'font-normal text-gray-600'}`}
-                  >
-                    {panelDefinition.title}
-                  </span>
-                  {getSaveStatusIcon(`panel-${panelDefinition.id}`)}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* List of views */}
-          {panelDefinition.views?.map((view: ViewDefinition) => (
-            <div
-              key={view.id || Math.random().toString(36)}
-              className="relative ml-2 mb-[-1px] cursor-pointer group"
-              onClick={() => handleViewClick(view)}
+              }}
               onKeyDown={(e) => {
-                // Don't handle keyboard events if we're editing this view
-                if (editingViewId === view.id) return;
+                // Don't handle keyboard events if we're editing the panel title
+                if (editingPanel) return;
 
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  handleViewClick(view);
+                  e.stopPropagation();
+                  if (!selectedViewId) {
+                    setEditingPanel(true);
+                  } else {
+                    handlePanelClick();
+                  }
                 }
               }}
-              onMouseEnter={() => setHoveredViewId(view.id)}
-              onMouseLeave={() => setHoveredViewId(null)}
               role="button"
               tabIndex={0}
             >
               <div className={`
-                  h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r
-                  ${editingViewId === view.id
+                  h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
+                  ${editingPanel
                   ? 'bg-slate-50 border-blue-200' // Highlight when editing
-                  : view.id === selectedViewId
+                  : !selectedViewId
                     ? 'bg-white border-gray-200'
                     : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
                 }
                 `}>
-                {editingViewId === view.id ? (
+                <LayoutGrid className={`h-3 w-3 mr-2 ${!selectedViewId ? 'text-yellow-800' : 'text-gray-500'}`} />
+                {editingPanel ? (
                   <div className="flex items-center w-full">
                     <input
                       type="text"
-                      value={viewTitles[view.id] || ''}
-                      placeholder="Enter view name..."
-                      onChange={(e) => setViewTitles(prev => ({ ...prev, [view.id]: e.target.value }))}
-                      onBlur={() => handleViewTitleSubmit(view.id)}
+                      value={panelTitle}
+                      placeholder="Enter panel name..."
+                      onChange={(e) => setPanelTitle(e.target.value)}
+                      onBlur={handlePanelTitleSubmit}
                       onKeyDown={(e) => {
-                        e.stopPropagation(); // Prevent parent from handling
                         if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleViewTitleSubmit(view.id);
-                        }
-                        if (e.key === 'Escape') {
-                          e.preventDefault();
-                          setEditingViewId(null);
-                          setViewTitles(prev => ({
-                            ...prev,
-                            [view.id]: view.title || '' // Reset to original
-                          }));
+                          handlePanelTitleSubmit();
+                        } else if (e.key === 'Escape') {
+                          setPanelTitle(panelDefinition.title);
+                          setEditingPanel(false);
                         }
                       }}
-                      className="text-xs bg-transparent border-none focus:outline-none focus:ring-0 p-0 flex-1"
-                      // eslint-disable-next-line jsx-a11y/no-autofocus
+                      className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-xs"
                       autoFocus
                     />
-                    {(viewTitles[view.id] || '').trim() !== (view.title || '') && (
+                    {panelTitle.trim() !== panelDefinition.title && (
                       <span className="text-xs text-orange-500 ml-1" title="Unsaved changes">•</span>
                     )}
+                    {getSaveStatusIcon(panelDefinition.id)}
                   </div>
                 ) : (
-                  <>
+                  <div className="flex items-center">
                     <span
-                      className={`text-xs ${view.id === selectedViewId ? 'font-semibold text-gray-700' : 'font-normal text-gray-600'} flex-1`}
+                      className="text-xs font-normal text-gray-600 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (view.id === selectedViewId) {
-                          setEditingViewId(view.id);
+                        if (!selectedViewId) {
+                          setEditingPanel(true);
                         } else {
-                          handleViewClick(view);
+                          handlePanelClick();
                         }
                       }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
+                    >
+                      {panelDefinition.title}
+                    </span>
+                    {getSaveStatusIcon(panelDefinition.id)}
+                    <button
+                      type="button"
+                      className="ml-2 text-gray-400 hover:text-gray-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteViewClick(panelDefinition.id, panelDefinition.title);
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Views */}
+            {panelDefinition.views?.map((view) => (
+              <div
+                key={view.id}
+                className="relative ml-2 mb-[-1px] cursor-pointer flex-shrink-0"
+                onClick={() => handleViewClick(view)}
+                onMouseEnter={() => setHoveredViewId(view.id)}
+                onMouseLeave={() => setHoveredViewId(null)}
+              >
+                <div className={`
+                    h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
+                    ${editingViewId === view.id
+                    ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                    : view.id === selectedViewId
+                      ? 'bg-white border-gray-200'
+                      : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                  }
+                  `}>
+                  {editingViewId === view.id ? (
+                    <div className="flex items-center w-full">
+                      <input
+                        type="text"
+                        value={viewTitles[view.id] || ''}
+                        placeholder="Enter view name..."
+                        onChange={(e) => setViewTitles(prev => ({ ...prev, [view.id]: e.target.value }))}
+                        onBlur={() => handleViewTitleSubmit(view.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleViewTitleSubmit(view.id);
+                          } else if (e.key === 'Escape') {
+                            setViewTitles(prev => ({ ...prev, [view.id]: view.title || '' }));
+                            setEditingViewId(null);
+                          }
+                        }}
+                        className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-xs"
+                        autoFocus
+                      />
+                      {(viewTitles[view.id] || '').trim() !== (view.title || '') && (
+                        <span className="text-xs text-orange-500 ml-1" title="Unsaved changes">•</span>
+                      )}
+                      {getSaveStatusIcon(view.id)}
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <span
+                        className="text-xs font-normal text-gray-600 cursor-pointer"
+                        onClick={(e) => {
                           e.stopPropagation();
                           if (view.id === selectedViewId) {
                             setEditingViewId(view.id);
                           } else {
                             handleViewClick(view);
                           }
-                        }
-                      }}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      {view?.title || 'Untitled View'}
-                    </span>
-
-                    {/* Status indicator and delete button container */}
-                    <div className="flex items-center ml-1">
-                      {getSaveStatusIcon(`view-${view.id}`)}
-
-                      {/* Delete button - show on hover or when selected */}
-                      {(hoveredViewId === view.id || view.id === selectedViewId) && (
-                        <button
-                          type="button"
-                          className="ml-1 p-0.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteViewClick(view.id, view.title || 'Untitled View');
-                          }}
-                          title={`Delete view "${view.title || 'Untitled View'}"`}
-                          disabled={deletingViewId === view.id}
-                        >
-                          {deletingViewId === view.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <X className="h-3 w-3" />
-                          )}
-                        </button>
-                      )}
+                        }}
+                      >
+                        {view.title}
+                      </span>
+                      {getSaveStatusIcon(view.id)}
+                      <button
+                        type="button"
+                        className="ml-2 text-gray-400 hover:text-gray-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteViewClick(view.id, view.title || '');
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          <button
-            type="button"
-            className="flex items-center h-9 px-3 text-gray-600 hover:bg-gray-100 text-xs font-normal ml-2 mb-[-1px]"
-            onClick={() => onNewView()} >
-            <Plus className="h-3 w-3 mr-1" />
-            New view
-          </button>
+            {/* Add View Button */}
+            <button
+              type="button"
+              className="ml-2 mb-[-1px] h-9 px-3 flex items-center text-sm text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-t-md border-l border-t border-r border-gray-200 whitespace-nowrap"
+              onClick={onNewView}
+            >
+              <Plus className="h-3 w-3 mr-1 flex-shrink-0" />
+              <span className="text-xs">Add View</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -367,10 +339,10 @@ export default function WorklistNavigation({
         onClose={handleDeleteModalClose}
         onConfirm={handleDeleteViewConfirm}
         title="Delete View"
-        message="Are you sure you want to delete this view? All filters and customizations will be permanently removed."
-        itemName={viewToDelete?.title || 'Untitled View'}
+        message={`Are you sure you want to delete the view "${viewToDelete?.title}"? This action cannot be undone.`}
+        itemName={viewToDelete?.title || ''}
         isDeleting={!!deletingViewId}
       />
     </>
-  )
+  );
 }
