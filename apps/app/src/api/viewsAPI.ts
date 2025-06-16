@@ -30,11 +30,13 @@ export const viewsAPI = {
   },
 
   get: async (
+    tenantId: string,
+    userId: string,
     view: IdParam,
     options?: Record<string, unknown>,
   ): Promise<ViewResponse> => {
     const { apiConfig } = await import('./config/apiConfig')
-    const response = await fetch(apiConfig.buildUrl(`/views/${view.id}`), {
+    const response = await fetch(apiConfig.buildUrl(`/views/${view.id}?tenantId=${tenantId}&userId=${userId}`), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -77,19 +79,14 @@ export const viewsAPI = {
   },
 
   delete: async (
-    view: IdParam & { tenantId: string; userId: string },
+    tenantId: string,
+    userId: string,
+    view: IdParam,
     options = undefined,
   ): Promise<void> => {
     const { apiConfig } = await import('./config/apiConfig')
-    await fetch(apiConfig.buildUrl(`/views/${view.id}`), {
+    await fetch(apiConfig.buildUrl(`/views/${view.id}?tenantId=${tenantId}&userId=${userId}`), {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        tenantId: view.tenantId,
-        userId: view.userId,
-      }),
       ...(options || {}),
     })
   },

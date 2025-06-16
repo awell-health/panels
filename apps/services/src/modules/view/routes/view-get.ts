@@ -53,27 +53,25 @@ export const viewGet = async (app: FastifyInstance) => {
 
       reply.statusCode = 200
       return {
-        id: view.id,
-        name: view.name,
-        description: '',
-        panelId: view.panel.id,
-        userId: view.ownerUserId,
-        tenantId: view.tenantId,
-        isPublished: view.isPublished,
-        publishedBy: '',
-        publishedAt: view.publishedAt,
-        createdAt: view.createdAt,
-        updatedAt: view.updatedAt,
-        config: {
-          columns: view.visibleColumns,
-          groupBy: [],
-          layout: 'table',
-        },
-        metadata: {},
-        panel: {
-          id: view.panel.id,
-          name: view.panel.name,
-        },
+          id: view.id,
+          name: view.name,
+          description: '',
+          panelId: view.panel.id,
+          userId: view.ownerUserId,
+          tenantId: view.tenantId,
+          isPublished: view.isPublished,
+          publishedBy: view.isPublished ? view.ownerUserId : undefined,
+          publishedAt: view.publishedAt && view.publishedAt !== null ? new Date(view.publishedAt) : undefined,
+          config: {
+            columns: view.visibleColumns,
+            groupBy: [],
+            layout: 'table',
+          },
+          metadata: {},
+          panel: {
+            id: view.panel.id,
+            name: '',
+          },
       }
     },
   })

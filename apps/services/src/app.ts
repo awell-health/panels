@@ -36,7 +36,12 @@ export async function createApp(
     livenessURL: '/liveness',
   })
 
-  await app.register(cors, { origin: true })
+  await app.register(cors, {
+    origin: true,
+    methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  })
   await app.register(autoload, {
     dir: resolve(__dirname, 'plugins'),
     forceESM: true,

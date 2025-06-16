@@ -28,6 +28,7 @@ export const panelUpdate = async (app: FastifyInstance) => {
     },
     url: '/panels/:id',
     handler: async (request, reply) => {
+
       const { id } = request.params as { id: string }
       const { name, description, tenantId, userId } = request.body as {
         name?: string

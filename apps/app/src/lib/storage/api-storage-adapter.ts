@@ -228,7 +228,7 @@ export class APIStorageAdapter implements StorageAdapter {
 
       // Get detailed panel data with all relationships
       const [backendPanel, columns, backendViews] = await Promise.allSettled([
-        panelsAPI.get({ id }),
+        panelsAPI.get({ id }, this.config.tenantId, this.config.userId),
         this.loadPanelColumns(id),
         this.loadPanelViews(id),
       ])
@@ -549,11 +549,7 @@ export class APIStorageAdapter implements StorageAdapter {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
       // Delete via API
-      await panelsAPI.delete({
-        id: id, // Keep as string for API compatibility
-        tenantId: this.config.tenantId,
-        userId: this.config.userId,
-      })
+      await panelsAPI.delete(this.config.tenantId, this.config.userId, { id: id })
 
       // Invalidate panels cache since we deleted one
       this.invalidateCache('panels')
@@ -645,11 +641,7 @@ export class APIStorageAdapter implements StorageAdapter {
       const { viewsAPI } = await import('@/api/viewsAPI')
 
       // Delete via API
-      await viewsAPI.delete({
-        id: viewId,
-        tenantId: this.config.tenantId,
-        userId: this.config.userId,
-      })
+      await viewsAPI.delete(this.config.tenantId, this.config.userId, { id: viewId })
 
       // Invalidate views cache for this panel
       this.invalidateCache('views', panelId)
@@ -679,7 +671,7 @@ export class APIStorageAdapter implements StorageAdapter {
       }
 
       // Get from API
-      const backendView = await viewsAPI.get({ id: viewId })
+      const backendView = await viewsAPI.get(this.config.tenantId, this.config.userId, { id: viewId } )
 
       // Convert to frontend format
       const frontendView = adaptBackendViewToFrontend(backendView)

@@ -24,10 +24,12 @@ import type {
 export const panelsAPI = {
   get: async (
     panel: IdParam,
+    tenantId: string,
+    userId: string,
     options?: Record<string, unknown>,
   ): Promise<PanelResponse> => {
     const { apiConfig } = await import('./config/apiConfig')
-    const response = await fetch(apiConfig.buildUrl(`/panels/${panel.id}`), {
+    const response = await fetch(apiConfig.buildUrl(`/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -99,20 +101,16 @@ export const panelsAPI = {
   },
 
   delete: async (
-    panel: IdParam & { tenantId: string; userId: string },
+    tenantId: string,
+    userId: string,
+    panel: IdParam,
     options = undefined,
   ): Promise<void> => {
     const { apiConfig } = await import('./config/apiConfig')
-    await fetch(
-      apiConfig.buildUrl(`/panels/${panel.id}?tenantId=${panel.tenantId}&userId=${panel.userId}`),
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        ...(options || {}),
-      },
-    )
+    await fetch(apiConfig.buildUrl(`/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`), {
+      method: 'DELETE',
+      ...(options || {}),
+    })
   },
 
   dataSources: {
