@@ -12,6 +12,7 @@ import type {
   PanelsResponse,
 } from '@panels/types/panels'
 import type { ViewInfo, ViewResponse } from '@panels/types/views'
+import type { ColumnInfoResponse } from '@panels/types/columns'
 
 /**
  * Convert backend panel response to frontend panel definition
@@ -78,7 +79,7 @@ export const adaptBackendToFrontend = (
   return {
     id: backendPanel.id.toString(),
     title: backendPanel.name,
-    createdAt: backendPanel.createdAt.toISOString(),
+    createdAt: new Date(backendPanel.createdAt), // Keep as Date object
     filters,
     patientViewColumns,
     taskViewColumns,
@@ -95,7 +96,7 @@ export const adaptFrontendToBackend = (
 ): PanelInfo => {
   return {
     name: frontendPanel.title,
-    description: `Panel created: ${frontendPanel.createdAt}`,
+    description: `Panel created: ${frontendPanel.createdAt instanceof Date ? frontendPanel.createdAt.toISOString() : frontendPanel.createdAt}`,
     tenantId: config.tenantId,
     userId: config.userId,
   }
@@ -104,10 +105,8 @@ export const adaptFrontendToBackend = (
 /**
  * Convert backend column to frontend column definition
  */
-const adaptBackendColumnToFrontend = (
-  backendColumn:
-    | ColumnsResponse['baseColumns'][0]
-    | ColumnsResponse['calculatedColumns'][0],
+export const adaptBackendColumnToFrontend = (
+  backendColumn: ColumnInfoResponse,
 ): ColumnDefinition => {
   // Map backend column types to frontend types
   const typeMapping: Record<string, ColumnDefinition['type']> = {
@@ -124,8 +123,9 @@ const adaptBackendColumnToFrontend = (
 
   // Handle different column types - base columns have sourceField, calculated columns have formula
   const key =
-    backendColumn.columnType === 'base'
-      ? (backendColumn as ColumnsResponse['baseColumns'][0]).sourceField
+    'sourceField' in backendColumn &&
+    typeof backendColumn.sourceField === 'string'
+      ? backendColumn.sourceField
       : backendColumn.name
 
   return {
@@ -133,12 +133,9 @@ const adaptBackendColumnToFrontend = (
     key,
     name: backendColumn.name,
     type: typeMapping[backendColumn.type] || 'string',
-    description: backendColumn.metadata?.description as string | undefined,
+    description: backendColumn.metadata?.description || '',
     properties: {
-      display: {
-        visible: backendColumn.properties?.display?.visible ?? true,
-        width: backendColumn.properties?.display?.width,
-      },
+      display: backendColumn.properties?.display,
     },
   }
 }
@@ -146,7 +143,7 @@ const adaptBackendColumnToFrontend = (
 /**
  * Convert backend view to frontend view definition
  */
-const adaptBackendViewToFrontend = (
+export const adaptBackendViewToFrontend = (
   backendView: ViewResponse,
 ): ViewDefinition => {
   // Convert backend column IDs to frontend column definitions
@@ -162,13 +159,18 @@ const adaptBackendViewToFrontend = (
     }),
   )
 
+  // Extract view type and filters from metadata
+  const metadata = backendView.metadata || {}
+  const viewType = (metadata.viewType as 'task' | 'patient') || 'patient'
+  const filters = metadata.filters || []
+
   return {
     id: backendView.id.toString(),
     title: backendView.name,
-    createdAt: new Date().toISOString(), // Backend doesn't provide createdAt for views
-    filters: [], // TODO: Map from backend view filters
+    createdAt: new Date(), // Keep as Date object
+    filters,
     columns,
-    viewType: 'patient', // Default, could be determined from config
+    viewType,
   }
 }
 
@@ -177,13 +179,13 @@ const adaptBackendViewToFrontend = (
  */
 export const adaptFrontendViewToBackend = (
   frontendView: ViewDefinition | Omit<ViewDefinition, 'id'>,
-  panelId: number,
+  panelId: string,
   config: { tenantId: string; userId: string },
 ): ViewInfo => {
   return {
     name: frontendView.title,
-    description: `View created: ${frontendView.createdAt}`,
-    panelId,
+    description: `View created: ${frontendView.createdAt instanceof Date ? frontendView.createdAt.toISOString() : frontendView.createdAt}`,
+    panelId: Number.parseInt(panelId, 10), // Convert to number for backend
     config: {
       columns: frontendView.columns.map((col) => col.id),
       layout: 'table',
@@ -224,12 +226,12 @@ export const validateApiConfig = (config: {
  * Get API configuration from environment variables
  */
 export const getApiConfig = () => {
-  const tenantId = process.env.NEXT_PUBLIC_TENANT_ID
-  const userId = process.env.NEXT_PUBLIC_USER_ID
+  const tenantId = process.env.NEXT_PUBLIC_APP_TENANT_ID
+  const userId = process.env.NEXT_PUBLIC_APP_USER_ID
 
   if (!tenantId || !userId) {
     throw new Error(
-      'Missing API configuration. Please set NEXT_PUBLIC_TENANT_ID and NEXT_PUBLIC_USER_ID environment variables.',
+      'Missing API configuration. Please set NEXT_PUBLIC_APP_TENANT_ID and NEXT_PUBLIC_APP_USER_ID environment variables.',
     )
   }
 

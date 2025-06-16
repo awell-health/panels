@@ -17,7 +17,15 @@ export async function createApp(
 ): Promise<FastifyInstance> {
   const __dirname = dirname(fileURLToPath(import.meta.url))
 
-  const app = Fastify(opts)
+  const app = Fastify(
+    Object.assign(opts, {
+      logger: {
+        transport: {
+          target: '@fastify/one-line-logger',
+        },
+      },
+    }),
+  )
   app.setValidatorCompiler(validatorCompiler)
   app.setSerializerCompiler(serializerCompiler)
 

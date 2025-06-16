@@ -4,7 +4,6 @@ import { createApp } from './app.js'
 
 const app = await createApp({
   trustProxy: true,
-  logger: true,
 })
 
 closeWithGrace(

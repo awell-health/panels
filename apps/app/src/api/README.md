@@ -22,20 +22,20 @@ src/api/
 
 The API base URL is configured through environment variables:
 
-- **`NEXT_PUBLIC_API_BASE_URL`** - Primary environment variable for client-side usage
+- **`NEXT_PUBLIC_APP_API_BASE_URL`** - Primary environment variable for client-side usage
 - **`API_BASE_URL`** - Fallback for server-side usage
 - **Default**: Empty string (uses relative URLs)
 
 Example `.env` file:
 ```bash
 # Development
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+NEXT_PUBLIC_APP_API_BASE_URL=http://localhost:3001
 
 # Production
-NEXT_PUBLIC_API_BASE_URL=https://api.yourapp.com
+NEXT_PUBLIC_APP_API_BASE_URL=https://api.yourapp.com
 
 # Testing
-NEXT_PUBLIC_API_BASE_URL=https://api.test.com
+NEXT_PUBLIC_APP_API_BASE_URL=https://api.test.com
 ```
 
 ### API Configuration

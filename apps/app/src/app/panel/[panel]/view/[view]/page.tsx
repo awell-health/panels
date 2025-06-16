@@ -199,7 +199,7 @@ export default function WorklistPage() {
         title: "New View",
         filters: viewDefinition?.filters ?? panel.filters,
         columns: viewDefinition?.columns ?? panel.taskViewColumns,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(),
         viewType: viewDefinition?.viewType ?? 'task',
       });
       router.push(`/panel/${panelId}/view/${newView.id}`);

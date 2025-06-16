@@ -47,7 +47,7 @@ export type WorklistDefinition = {
   filters: Filter[]
   taskViewColumns: ColumnDefinition[]
   patientViewColumns: ColumnDefinition[]
-  createdAt: string
+  createdAt: Date
   views?: ViewDefinition[]
 }
 
@@ -59,7 +59,7 @@ export type ViewDefinition = {
   columns: ColumnDefinition[]
   taskViewColumns?: ColumnDefinition[]
   patientViewColumns?: ColumnDefinition[]
-  createdAt: string
+  createdAt: Date
   views?: ViewDefinition[]
   viewType: 'task' | 'patient'
 }

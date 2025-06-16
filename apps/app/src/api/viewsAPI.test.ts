@@ -35,7 +35,7 @@ describe('viewsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/api/views?tenantId=tenant-123&userId=user-123',
+        'https://api.test.com/views?tenantId=tenant-123&userId=user-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -75,7 +75,7 @@ describe('viewsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/api/views/view-123',
+        'https://api.test.com/views/view-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -109,7 +109,7 @@ describe('viewsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/api/views',
+        'https://api.test.com/views',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'POST')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -145,7 +145,7 @@ describe('viewsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        `https://api.test.com/api/views/${viewData.id}`,
+        `https://api.test.com/views/${viewData.id}`,
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'PUT')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -184,7 +184,7 @@ describe('viewsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        `https://api.test.com/api/views/${viewData.id}`,
+        `https://api.test.com/views/${viewData.id}`,
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'DELETE')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -232,7 +232,7 @@ describe('viewsAPI', () => {
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/api/views/${view.id}/publish`,
+          `https://api.test.com/views/${view.id}/publish`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'POST')
         testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -273,7 +273,7 @@ describe('viewsAPI', () => {
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/api/views/${view.id}/sorts`,
+          `https://api.test.com/views/${view.id}/sorts`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'PUT')
         testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -304,7 +304,7 @@ describe('viewsAPI', () => {
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/api/views/${view.id}/sorts?tenantId=${tenantId}&userId=${userId}`,
+          `https://api.test.com/views/${view.id}/sorts?tenantId=${tenantId}&userId=${userId}`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
         testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -370,7 +370,7 @@ describe('viewsAPI', () => {
   describe('environment configuration', () => {
     it('should use different base URLs based on environment', async () => {
       // Test with different environment variable
-      vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.production.com')
+      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', 'https://api.production.com')
 
       const view = { id: 'view-123' }
       const expectedResponse = mockResponses.viewResponse()
@@ -381,13 +381,13 @@ describe('viewsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.production.com/api/views/view-123',
+        'https://api.production.com/views/view-123',
       )
     })
 
     it('should handle missing base URL gracefully', async () => {
       // Remove the base URL
-      vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '')
+      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', '')
 
       const view = { id: 'view-123' }
       const expectedResponse = mockResponses.viewResponse()
@@ -397,7 +397,7 @@ describe('viewsAPI', () => {
       await viewsAPI.get(view)
 
       // Should use relative URL when no base URL is set
-      testCrudOperations.expectCorrectUrl(mockFetch, '/api/views/view-123')
+      testCrudOperations.expectCorrectUrl(mockFetch, '/views/view-123')
     })
   })
 })

@@ -27,7 +27,7 @@ describe('Storage Integration', () => {
     localStorage.clear()
 
     // Ensure we're in local storage mode
-    process.env.NEXT_PUBLIC_STORAGE_MODE = 'local'
+    process.env.NEXT_PUBLIC_APP_STORAGE_MODE = 'local'
   })
 
   test('should create LocalStorageAdapter in local mode', async () => {
@@ -84,7 +84,7 @@ describe('Storage Integration', () => {
   })
 
   test('should handle errors gracefully through factory', async () => {
-    process.env.NEXT_PUBLIC_STORAGE_MODE = 'api'
+    process.env.NEXT_PUBLIC_APP_STORAGE_MODE = 'api'
 
     await expect(createStorageAdapter()).rejects.toThrow(
       'Missing required environment variables for API storage mode',

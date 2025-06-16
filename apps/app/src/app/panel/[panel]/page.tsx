@@ -113,7 +113,7 @@ export default function WorklistPage() {
         title: "New View",
         filters: panelDefinition.filters,
         columns: currentView === 'patient' ? panelDefinition.patientViewColumns : panelDefinition.taskViewColumns,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(),
         viewType: currentView,
       });
       router.push(`/panel/${panelDefinition.id}/view/${newView.id}`);
