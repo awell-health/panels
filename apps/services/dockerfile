@@ -30,11 +30,8 @@ RUN corepack enable && \
 
 COPY ./apps/services/ ./apps/services/
 
-RUN pnpm --filter @panels/types install --frozen-lockfile --prefer-offline --ignore-scripts && \
-    pnpm --filter @panels/services install --frozen-lockfile --prefer-offline --ignore-scripts
-
-RUN pnpm --filter @panels/types build && \
-    pnpm --filter @panels/services build
+RUN pnpm --filter @panels/services... install --frozen-lockfile --prefer-offline --ignore-scripts
+RUN pnpm --filter @panels/services... build
 
 # regenerate node_modules with only prod deps
 RUN pnpm --filter @panels/services... install --prod --prefer-offline --ignore-scripts --no-optional --frozen-lockfile
@@ -51,7 +48,6 @@ RUN apk update && apk add --no-cache dumb-init && \
 
 ENV NODE_ENV=production
 ENV HOME=/home/app
-
 
 USER node
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { getNestedValue, isMatchingFhirPathCondition } from "@/lib/fhir-path";
-import type { ColumnDefinition } from "@/types/worklist";
+import type { ColumnDefinition, SortConfig } from "@/types/worklist";
 import { DndContext, type DragEndEvent, DragOverlay, type DragStartEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { Loader2 } from "lucide-react";
@@ -32,15 +32,13 @@ interface WorklistTableProps {
   setIsAddingIngestionSource: (open: boolean) => void;
   handleAssigneeClick: (taskId: string) => void;
   onColumnUpdate: (updates: Partial<ColumnDefinition>) => void;
+  onSortConfigUpdate: (sortConfig: SortConfig | undefined) => void;
   currentView: string;
   filters: TableFilter[];
   onFiltersChange: (filters: TableFilter[]) => void;
+  initialSortConfig: SortConfig | null;
 }
 
-interface SortConfig {
-  key: string;
-  direction: 'asc' | 'desc';
-}
 
 export default function WorklistTable({
   isLoading,
@@ -56,11 +54,14 @@ export default function WorklistTable({
   setIsAddingIngestionSource,
   handleAssigneeClick,
   onColumnUpdate,
+  onSortConfigUpdate,
   currentView,
   handleDragEnd,
   filters,
-  onFiltersChange }: WorklistTableProps) {
-  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+  onFiltersChange,
+  initialSortConfig
+ }: WorklistTableProps) {
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(initialSortConfig);
   const [activeColumn, setActiveColumn] = useState<ColumnDefinition | null>(null);
 
   // Filter visible columns
@@ -117,15 +118,25 @@ export default function WorklistTable({
   }, [tableData, sortConfig, filters]);
 
   const handleSort = (columnKey: string) => {
-    setSortConfig(current => {
+
+    const getSortConfig = (current: SortConfig | null): SortConfig | undefined => {
+      if(current?.key === columnKey) {
+        return { key: columnKey, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
       if (!current || current.key !== columnKey) {
-        return { key: columnKey, direction: 'asc' };
+        return { key: columnKey, direction: 'desc' };
       }
       if (current.direction === 'asc') {
         return { key: columnKey, direction: 'desc' };
       }
-      return null;
-    });
+      return undefined;
+    }
+    const newSortConfig = getSortConfig(sortConfig);
+    if (newSortConfig) {
+      setSortConfig(newSortConfig);
+      
+    }
+    onSortConfigUpdate(newSortConfig);  
   };
 
   const handleFilter = (columnKey: string, value: string) => {
@@ -134,15 +145,6 @@ export default function WorklistTable({
       newFilters.push({ key: columnKey, value });
     }
     onFiltersChange(newFilters);
-  };
-
-  const handleColumnVisibilityChange = (columnId: string, visible: boolean) => {
-    onColumnUpdate({
-      id: columnId,
-      properties: {
-        display: { visible }
-      }
-    });
   };
 
   const handleDragStart = (event: DragStartEvent) => {

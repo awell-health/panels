@@ -52,6 +52,12 @@ export type WorklistDefinition = {
 }
 
 export type PanelDefinition = WorklistDefinition
+
+export type SortConfig = {
+  key: string
+  direction: 'asc' | 'desc'
+}
+
 export type ViewDefinition = {
   id: string
   title: string
@@ -62,4 +68,5 @@ export type ViewDefinition = {
   createdAt: Date
   views?: ViewDefinition[]
   viewType: 'task' | 'patient'
+  sortConfig?: SortConfig[]
 }

@@ -9,7 +9,7 @@ import { type WorklistPatient, type WorklistTask, useMedplumStore } from "@/hook
 import { usePanelStore } from "@/hooks/use-panel-store";
 import { useSearch } from "@/hooks/use-search";
 import { arrayMove } from "@/lib/utils";
-import type { ColumnDefinition, Filter, PanelDefinition, ViewDefinition, WorklistDefinition } from "@/types/worklist";
+import type { ColumnDefinition, Filter, PanelDefinition, SortConfig, ViewDefinition, WorklistDefinition } from "@/types/worklist";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -32,6 +32,7 @@ export default function WorklistPage() {
   const [tableData, setTableData] = useState<(WorklistPatient | WorklistTask)[]>([]);
   const { searchTerm, setSearchTerm, searchMode, setSearchMode, filteredData } = useSearch(tableData);
   const [tableFilters, setTableFilters] = useState<TableFilter[]>([]);
+  const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined);
 
   const { patients, tasks, toggleTaskOwner, isLoading: isMedplumLoading } = useMedplumStore();
   const { getPanel, updatePanel, addView, isLoading: isPanelLoading } = usePanelStore();
@@ -108,6 +109,7 @@ export default function WorklistPage() {
         columns: currentView === 'patient' ? panelDefinition.patientViewColumns : panelDefinition.taskViewColumns,
         createdAt: new Date(),
         viewType: currentView,
+        sortConfig: sortConfig ? [sortConfig] : [],
       });
       if (newView) {
         router.push(`/panel/${panelDefinition.id}/view/${newView.id}`);
@@ -258,6 +260,7 @@ export default function WorklistPage() {
             <WorklistTable isLoading={isMedplumLoading}
               selectedRows={[]}
               toggleSelectAll={() => { }}
+              onSortConfigUpdate={setSortConfig}
               worklistColumns={columns}
               tableData={filteredData}
               handlePDFClick={() => { }}
@@ -271,6 +274,7 @@ export default function WorklistPage() {
               onColumnUpdate={onColumnUpdate}
               filters={tableFilters}
               onFiltersChange={onFiltersChange}
+              initialSortConfig={sortConfig ?? null}
             />
             {isAddingIngestionSource && (
               <AddIngestionModal

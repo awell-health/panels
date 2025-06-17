@@ -11,7 +11,7 @@ import type {
   PanelResponse,
   PanelsResponse,
 } from '@panels/types/panels'
-import type { ViewInfo, ViewResponse } from '@panels/types/views'
+import type { ViewInfo, ViewResponse, ViewSortsInfoResponse } from '@panels/types/views'
 import type { ColumnInfoResponse } from '@panels/types/columns'
 
 /**
@@ -155,6 +155,7 @@ export const adaptBackendViewToFrontend = (
   backendView: ViewResponse,
   backendColumns: ColumnInfoResponse[],
   backendCalculatedColumns: ColumnInfoResponse[],
+  sortConfig?: ViewSortsInfoResponse,
 ): ViewDefinition => {
   // Convert backend column IDs to frontend column definitions
   const columns = backendView.config.columns.map((columnId) => {
@@ -162,6 +163,17 @@ export const adaptBackendViewToFrontend = (
   })
   .filter(column => column !== undefined)
   .map(adaptBackendColumnToFrontend)
+
+  const frontendSortConfig = sortConfig?.sorts.map(sort => {
+    const column = columns.find(column => column.key === sort.columnName)
+    if (!column) {
+      return undefined
+    }
+    return {
+      key: column.key,
+      direction: sort.direction,
+    }
+  }).filter(sort => sort !== undefined)
 
   // Extract view type and filters from metadata
   const metadata = backendView.metadata || {}
@@ -176,6 +188,7 @@ export const adaptBackendViewToFrontend = (
     filters,
     createdAt: new Date(), //TODO: get the actual createdAt from the backend
     viewType,
+    sortConfig: frontendSortConfig,
   }
 
   return frontendView
