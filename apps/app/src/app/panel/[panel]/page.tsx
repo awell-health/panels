@@ -52,7 +52,7 @@ export default function WorklistPage() {
 
     const panel = getPanel(panelId);
     if (!panel) {
-      throw new Error('Panel not found');
+      router.push('/');
     }
     setPanelDefinition(panel);
   }, [panelId, router, isPanelLoading]);
