@@ -259,8 +259,6 @@ export default function WorklistPage() {
               selectedRows={[]}
               toggleSelectAll={() => { }}
               worklistColumns={columns}
-              onAddColumn={onAddColumn}
-              isBlank={false}
               tableData={filteredData}
               handlePDFClick={() => { }}
               handleTaskClick={() => { }}
