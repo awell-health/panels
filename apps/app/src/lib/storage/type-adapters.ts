@@ -57,12 +57,13 @@ export const adaptBackendToFrontend = (
     },
   ]
 
+  // TODO: TEMPORARY DISABLED BUT THE COHORT RULE PERMITS TO ADD FILTERS LATER AND MANAGE THEM IN THE UI
   // Convert cohort rule to filters
-  const filters: Filter[] = backendPanel.cohortRule.conditions.map(
-    (condition) => ({
-      fhirPathFilter: [condition.field, condition.value?.toString() || ''],
-    }),
-  )
+  // const filters: Filter[] = backendPanel.cohortRule.conditions.map(
+  //   (condition) => ({
+  //     fhirPathFilter: [condition.field, condition.value?.toString() || ''],
+  //   }),
+  // )
 
   // Convert backend columns to frontend columns if provided
   const patientViewColumns =
@@ -83,6 +84,8 @@ export const adaptBackendToFrontend = (
         columns?.calculatedColumns || [],
       ),
     ) || []
+
+  const filters = backendPanel.metadata?.filters || []
 
   return {
     id: backendPanel.id.toString(),
@@ -107,6 +110,9 @@ export const adaptFrontendToBackend = (
     description: `Panel created: ${frontendPanel.createdAt instanceof Date ? frontendPanel.createdAt.toISOString() : frontendPanel.createdAt}`,
     tenantId: config.tenantId,
     userId: config.userId,
+    metadata: {
+      filters: frontendPanel.filters,
+    },
   }
 }
 
@@ -157,11 +163,12 @@ export const adaptBackendViewToFrontend = (
   backendCalculatedColumns: ColumnInfoResponse[],
 ): ViewDefinition => {
   // Convert backend column IDs to frontend column definitions
-  const columns = backendView.config.columns.map((columnId) => {
-    return backendColumns.find((column) => column.id.toString() === columnId)
-  })
-  .filter(column => column !== undefined)
-  .map(adaptBackendColumnToFrontend)
+  const columns = backendView.config.columns
+    .map((columnId) => {
+      return backendColumns.find((column) => column.id.toString() === columnId)
+    })
+    .filter((column) => column !== undefined)
+    .map(adaptBackendColumnToFrontend)
 
   // Extract view type and filters from metadata
   const metadata = backendView.metadata || {}
@@ -212,7 +219,7 @@ export const adaptFrontendViewToBackend = (
 export const adaptBackendPanelsToFrontend = (
   backendPanels: PanelsResponse,
 ): PanelDefinition[] => {
-  return backendPanels.map((panel) => adaptBackendToFrontend(panel))
+  return backendPanels.map((panel) => adaptBackendToFrontend(panel)) || []
 }
 
 /**

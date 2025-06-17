@@ -11,10 +11,11 @@ import { CalculatedColumn } from '../../column/entities/calculated-column.entity
 import { DataSource } from '../../datasource/entities/data-source.entity.js'
 import { View } from '../../view/entities/view.entity.js'
 import type { CohortRule } from './cohort-rule.js'
+import { ResourceModel } from '@/model/resource.entity.js'
 
 @Entity()
 @Index({ properties: ['tenantId', 'userId'] })
-export class Panel {
+export class Panel extends ResourceModel {
   @PrimaryKey()
   id!: number
 
@@ -56,10 +57,4 @@ export class Panel {
     (view) => view.panel,
   )
   views = new Collection<View>(this)
-
-  @Property()
-  createdAt: Date = new Date()
-
-  @Property({ onUpdate: () => new Date() })
-  updatedAt: Date = new Date()
 }

@@ -25,12 +25,7 @@ export const panelCreate = async (app: FastifyInstance) => {
     },
     url: '/panels',
     handler: async (request, reply) => {
-      const { name, description, tenantId, userId } = request.body as {
-        name: string
-        description?: string
-        tenantId: string
-        userId: string
-      }
+      const { name, description, tenantId, userId, metadata } = request.body
 
       const panel = request.store.panel.create({
         name,
@@ -40,6 +35,7 @@ export const panelCreate = async (app: FastifyInstance) => {
         cohortRule: { conditions: [], logic: 'AND' },
         createdAt: new Date(),
         updatedAt: new Date(),
+        metadata,
       })
 
       await request.store.em.persistAndFlush(panel)
@@ -53,6 +49,7 @@ export const panelCreate = async (app: FastifyInstance) => {
         cohortRule: panel.cohortRule,
         createdAt: panel.createdAt,
         updatedAt: panel.updatedAt,
+        metadata: panel.metadata || {},
       }
     },
   })

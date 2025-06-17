@@ -10,11 +10,12 @@ import {
 import { Panel } from '../../panel/entities/panel.entity.js'
 import { ViewFilter } from './view-filter.entity.js'
 import { ViewSort } from './view-sort.entity.js'
+import { ResourceModel } from '@/model/resource.entity.js'
 
 @Entity()
 @Index({ properties: ['tenantId', 'ownerUserId'] })
 @Index({ properties: ['tenantId', 'isPublished'] })
-export class View {
+export class View extends ResourceModel {
   @PrimaryKey()
   id!: number
 
@@ -48,15 +49,6 @@ export class View {
   )
   filters = new Collection<ViewFilter>(this)
 
-  @Property({ type: 'jsonb' })
-  metadata?: Record<string, unknown>
-
   @ManyToOne(() => Panel)
   panel!: Panel
-
-  @Property()
-  createdAt: Date = new Date()
-
-  @Property({ onUpdate: () => new Date() })
-  updatedAt: Date = new Date()
 }

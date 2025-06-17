@@ -28,14 +28,8 @@ export const panelUpdate = async (app: FastifyInstance) => {
     },
     url: '/panels/:id',
     handler: async (request, reply) => {
-
       const { id } = request.params as { id: string }
-      const { name, description, tenantId, userId } = request.body as {
-        name?: string
-        description?: string
-        tenantId: string
-        userId: string
-      }
+      const { name, description, tenantId, userId, metadata } = request.body
 
       const panel = await request.store.panel.findOne({
         id: Number(id),
@@ -49,8 +43,10 @@ export const panelUpdate = async (app: FastifyInstance) => {
 
       if (name) panel.name = name
       if (description !== undefined) panel.description = description
+      if (metadata !== undefined) panel.metadata = metadata
 
-      await request.store.em.flush()
+      await request.store.em.persistAndFlush(panel)
+
       return {
         id: panel.id,
         name: panel.name,
@@ -60,6 +56,7 @@ export const panelUpdate = async (app: FastifyInstance) => {
         cohortRule: panel.cohortRule,
         createdAt: panel.createdAt,
         updatedAt: panel.updatedAt,
+        metadata: panel.metadata || {},
       }
     },
   })

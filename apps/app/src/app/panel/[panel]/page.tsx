@@ -52,9 +52,8 @@ export default function WorklistPage() {
     const panel = getPanel(panelId);
     if (!panel) {
       throw new Error('Panel not found');
-    } else {
-      setPanelDefinition(panel);
     }
+    setPanelDefinition(panel);
   }, [panelId, router, isPanelLoading]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
