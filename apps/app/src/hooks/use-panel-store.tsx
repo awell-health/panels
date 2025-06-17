@@ -11,7 +11,7 @@ export class PanelStore {
   private listeners: Array<() => void> = []
   private panels: PanelDefinition[] = []
   private storage: StorageAdapter | null = null
-  private _isLoading = false
+  private _isLoading = true
   private saveStates: Map<string, 'saving' | 'saved' | 'error'> = new Map()
 
   constructor() {
@@ -79,12 +79,6 @@ export class PanelStore {
     if (!this.storage) {
       throw new Error('Storage adapter not initialized')
     }
-
-    // If already loading, return early
-    if (this._isLoading) {
-      return
-    }
-
     try {
       this._isLoading = true
       this.notifyListeners()
@@ -174,10 +168,11 @@ export class PanelStore {
     try {
       // Update local state optimistically
       this.panels = this.panels.filter((panel) => panel.id !== id)
-      this.notifyListeners()
 
       // Sync with storage adapter
       await this.storage.deletePanel(id)
+      this.notifyListeners()
+
 
       this.setSaveState(operationId, 'saved')
     } catch (error) {
@@ -303,6 +298,7 @@ let storeInstance: PanelStore | null = null
 export function PanelStoreProvider({ children }: { children: ReactNode }) {
   const [store] = useState(() => {
     if (!storeInstance) {
+      console.log('Creating new PanelStore instance')
       storeInstance = new PanelStore()
     }
     return storeInstance
@@ -318,16 +314,17 @@ export function PanelStoreProvider({ children }: { children: ReactNode }) {
 // Hook to use the store
 export function usePanelStore() {
   const store = useContext(PanelStoreContext)
+  const [panels, setPanels] = useState(store?.getPanels() ?? [])
+  const [isLoading, setIsLoading] = useState(store?.isLoading() ?? true)
+
   if (!store) {
     throw new Error('usePanelStore must be used within a PanelStoreProvider')
   }
 
-  const [panels, setPanels] = useState(store.getPanels())
-  const [isLoading, setIsLoading] = useState(store.isLoading())
-
   useEffect(() => {
     // Subscribe to store updates
     const unsubscribe = store.subscribe(() => {
+      console.log('Get panel update', store.isLoading())
       setPanels(store.getPanels())
       setIsLoading(store.isLoading())
     })
