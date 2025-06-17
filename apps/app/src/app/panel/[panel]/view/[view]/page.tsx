@@ -87,21 +87,21 @@ export default function WorklistPage() {
       return;
     }
 
+    const panelColumns = viewDefinition.viewType === 'patient' ? panelDefinition?.patientViewColumns ?? [] : panelDefinition?.taskViewColumns ?? []
+
+    const newColumns = updates.properties?.display?.visible 
+      ? viewDefinition.columns.some(col => col.id === updates.id)
+        ? viewDefinition.columns 
+        : [...viewDefinition.columns, panelColumns.find(col => col.id === updates.id)].filter((col): col is ColumnDefinition => col !== undefined)
+      : viewDefinition.columns.filter(column => column.id !== updates.id).filter((col): col is ColumnDefinition => col !== undefined)
+
     const newView = {
       ...viewDefinition,
-      columns: viewDefinition.columns.map(column => {
-        if (column.id === updates.id) {
-          return {
-            ...column,
-            ...updates,
-          }
-        }
-        return column;
-      }),
+      columns: newColumns
     }
 
     try {
-      await updateView?.(panelId, viewId, newView);
+      await updateView(panelId, viewId, newView);
       setViewDefinition(newView);
     } catch (error) {
       console.error('Failed to update column:', error);
@@ -216,7 +216,6 @@ export default function WorklistPage() {
       console.log("viewDefinition not found");
       return;
     }
-    console.log("newTitle", newTitle);
 
     try {
       await updateView?.(panelId, viewId, { title: newTitle });
@@ -249,8 +248,9 @@ export default function WorklistPage() {
             onSearchModeChange={setSearchMode}
             currentView={viewDefinition?.viewType}
             setCurrentView={() => { }}
-            worklistColumns={columns}
+            worklistColumns={viewDefinition?.viewType === 'patient' ? panelDefinition?.patientViewColumns ?? [] : panelDefinition?.taskViewColumns ?? []}
             onAddColumn={onAddColumn}
+            visibleColumns={columns}
             onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({ id: columnId, properties: { display: { visible } } })}
           />
           <WorklistTable isLoading={isMedplumLoading}

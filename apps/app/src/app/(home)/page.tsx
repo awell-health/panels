@@ -11,7 +11,7 @@ const users = [
 ];
 
 const Home = () => {
-  const { panels, isLoading: isPanelLoading, deletePanel, deleteView } = usePanelStore();
+  const { panels, isLoading: isPanelLoading, deletePanel, deleteView, createPanel } = usePanelStore();
 
   return (
     <div className={`flex min-h-screen ml-0 transition-all duration-300`}>
@@ -44,6 +44,7 @@ const Home = () => {
                 panels={panels}
                 onDeletePanel={(id: string) => deletePanel?.(id)}
                 onDeleteView={(panelId: string, viewId: string) => deleteView?.(panelId, viewId)}
+                createPanel={createPanel}
               />
               <TeamTable users={users} />
             </>

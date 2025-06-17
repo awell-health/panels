@@ -359,13 +359,23 @@ export class APIStorageAdapter implements StorageAdapter {
       ]
 
       // Wait for all columns to be created
-      await Promise.all(allColumnsPromises)
+      const createdColumns = await Promise.all(allColumnsPromises)
 
       // Invalidate panels cache since we created a new one
       this.invalidateCache('panels')
 
       // Return the created panel using full adapter
-      return adaptBackendToFrontend(createdPanel)
+      const createdPanelAdapted = adaptBackendToFrontend(
+        createdPanel,
+        {
+          baseColumns: createdColumns.map(column => ({
+            ...column,
+            columnType: 'base'
+          })),
+          calculatedColumns: []
+        }
+      )
+      return createdPanelAdapted
     } catch (error) {
       console.error('Failed to create panel via API:', error)
       throw new Error(
@@ -418,10 +428,10 @@ export class APIStorageAdapter implements StorageAdapter {
         currentTaskColumns.map((col) => col.sourceField),
       )
       const newPatientKeys = new Set(
-        updatedPanel.patientViewColumns.map((col) => col.key),
+        updatedPanel.patientViewColumns?.map((col) => col.key) || [],
       )
       const newTaskKeys = new Set(
-        updatedPanel.taskViewColumns.map((col) => col.key),
+        updatedPanel.taskViewColumns?.map((col) => col.key) || [],
       )
 
       // Find columns to delete (in current but not in new)
@@ -433,10 +443,10 @@ export class APIStorageAdapter implements StorageAdapter {
       )
 
       // Find columns to create (in new but not in current)
-      const patientColumnsToCreate = updatedPanel.patientViewColumns.filter(
+      const patientColumnsToCreate = updatedPanel.patientViewColumns?.filter(
         (col) => !currentPatientKeys.has(col.key),
-      )
-      const taskColumnsToCreate = updatedPanel.taskViewColumns.filter(
+      ) || []
+      const taskColumnsToCreate = updatedPanel.taskViewColumns?.filter(
         (col) => !currentTaskKeys.has(col.key),
       )
 
@@ -458,9 +468,13 @@ export class APIStorageAdapter implements StorageAdapter {
         ),
       ]
 
+      const dataSources = await panelsAPI.dataSources.list(
+        { id: id },
+        this.config.tenantId,
+        this.config.userId,
+      )
       // Get the data source ID from the current panel
-      const dataSourceId =
-        (currentPanel as { dataSourceId?: number }).dataSourceId || 1 // Fallback to 1 if not available
+      const dataSourceId = dataSources[0].id || 1 // Fallback to 1 if not available
 
       // Map frontend column types to backend types
       const typeMapping: Record<
@@ -510,7 +524,7 @@ export class APIStorageAdapter implements StorageAdapter {
             },
           ),
         ),
-        ...taskColumnsToCreate.map((column) =>
+        ...(taskColumnsToCreate || []).map((column) =>
           panelsAPI.columns.createBase(
             { id },
             {
