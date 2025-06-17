@@ -6,10 +6,12 @@
     "rootDir": "src",
     "experimentalDecorators": true,
     "esModuleInterop": true,
+        "declaration": true,
     "paths": {
       "@/*": ["./src/*"],
       "@tests/*": ["./tests/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "plugins": [{ "transform": "typescript-transform-paths" }]
 }
