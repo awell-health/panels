@@ -9,7 +9,10 @@ import {
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
-import type { BaseColumn } from '../entities/base-column.entity.js'
+import type {
+  BaseColumn,
+  ColumnProperties,
+} from '../entities/base-column.entity.js'
 import type { CalculatedColumn } from '../entities/calculated-column.entity.js'
 
 // Zod Schemas
@@ -86,21 +89,43 @@ export const columnUpdate = async (app: FastifyInstance) => {
 
       // Update common fields
       if (name) column.name = name
-      if (properties) column.properties = properties
       if (metadata !== undefined) column.metadata = metadata
+      if (tags) column.tags = tags
 
-      // Update specific fields based on column type
-      if ('formula' in column) {
-        // Calculated column
-        if (formula) column.formula = formula
-        if (dependencies) column.dependencies = dependencies
-        if (tags) column.tags = tags
-      } else if ('sourceField' in column) {
-        // Base column
-        if (sourceField) column.sourceField = sourceField
+      // Handle properties update
+      if (properties) {
+        const updatedProperties: ColumnProperties = {
+          ...column.properties,
+          ...properties,
+          display: {
+            ...column.properties.display,
+            ...properties.display,
+          },
+        }
+
+        // If we're updating the order, ensure it's a non-negative integer
+        if (updatedProperties.display?.order !== undefined) {
+          updatedProperties.display.order = Math.max(
+            0,
+            Math.floor(updatedProperties.display.order),
+          )
+        }
+
+        column.properties = updatedProperties
       }
 
-      await request.store.em.flush()
+      // Update type-specific fields
+      if ('formula' in column && formula !== undefined) {
+        column.formula = formula
+      }
+      if ('formula' in column && dependencies !== undefined) {
+        column.dependencies = dependencies
+      }
+      if ('sourceField' in column && sourceField !== undefined) {
+        column.sourceField = sourceField
+      }
+
+      await request.store.em.persistAndFlush(column)
       return column
     },
   })

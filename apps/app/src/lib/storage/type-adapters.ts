@@ -11,7 +11,11 @@ import type {
   PanelResponse,
   PanelsResponse,
 } from '@panels/types/panels'
-import type { ViewInfo, ViewResponse, ViewSortsInfoResponse } from '@panels/types/views'
+import type {
+  ViewInfo,
+  ViewResponse,
+  ViewSortsInfoResponse,
+} from '@panels/types/views'
 import type { ColumnInfoResponse } from '@panels/types/columns'
 
 /**
@@ -69,10 +73,20 @@ export const adaptBackendToFrontend = (
   const patientViewColumns =
     columns?.baseColumns
       .filter((column) => column.tags?.includes('panels:patients'))
+      .sort((a, b) => {
+        const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+        const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+        return orderA - orderB
+      })
       .map(adaptBackendColumnToFrontend) || defaultPatientColumns
   const taskViewColumns =
     columns?.baseColumns
       .filter((column) => column.tags?.includes('panels:tasks'))
+      .sort((a, b) => {
+        const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+        const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+        return orderA - orderB
+      })
       .map(adaptBackendColumnToFrontend) || defaultTaskColumns
 
   // Convert backend views to frontend views if provided
@@ -171,16 +185,18 @@ export const adaptBackendViewToFrontend = (
     .filter((column) => column !== undefined)
     .map(adaptBackendColumnToFrontend)
 
-  const frontendSortConfig = sortConfig?.sorts.map(sort => {
-    const column = columns.find(column => column.key === sort.columnName)
-    if (!column) {
-      return undefined
-    }
-    return {
-      key: column.key,
-      direction: sort.direction,
-    }
-  }).filter(sort => sort !== undefined)
+  const frontendSortConfig = sortConfig?.sorts
+    .map((sort) => {
+      const column = columns.find((column) => column.key === sort.columnName)
+      if (!column) {
+        return undefined
+      }
+      return {
+        key: column.key,
+        direction: sort.direction,
+      }
+    })
+    .filter((sort) => sort !== undefined)
 
   // Extract view type and filters from metadata
   const metadata = backendView.metadata || {}

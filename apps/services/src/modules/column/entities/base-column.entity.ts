@@ -31,6 +31,7 @@ export interface ColumnProperties {
     width?: number
     format?: string
     visible?: boolean
+    order?: number
   }
 }
 

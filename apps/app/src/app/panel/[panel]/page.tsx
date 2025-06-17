@@ -212,11 +212,29 @@ export default function WorklistPage() {
     // Reorder the columns
     const reorderedColumns = arrayMove(columns, oldIndex, newIndex);
 
+    // Update the order property for all columns to ensure sequential order
+    const columnsWithOrder = reorderedColumns.map((col, index) => {
+      // Preserve existing properties
+      const existingProperties = col.properties || {};
+      const existingDisplay = existingProperties.display || {};
+
+      return {
+        ...col,
+        properties: {
+          ...existingProperties,
+          display: {
+            ...existingDisplay,
+            order: index, // Ensure sequential order
+          },
+        },
+      };
+    });
+
     // Update the panel definition based on current view
     const newPanel = {
       ...panelDefinition,
-      taskViewColumns: currentView === 'task' ? reorderedColumns : panelDefinition.taskViewColumns,
-      patientViewColumns: currentView === 'patient' ? reorderedColumns : panelDefinition.patientViewColumns,
+      taskViewColumns: currentView === 'task' ? columnsWithOrder : panelDefinition.taskViewColumns,
+      patientViewColumns: currentView === 'patient' ? columnsWithOrder : panelDefinition.patientViewColumns,
     };
 
     try {
