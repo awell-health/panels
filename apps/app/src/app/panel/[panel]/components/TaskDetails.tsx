@@ -1,7 +1,11 @@
 "use client"
 
+import { type WorklistTask, useMedplumStore } from '@/hooks/use-medplum-store'
+import { isFeatureEnabled } from "@/utils/featureFlags"
 import { useEffect, useState } from "react"
-import { useMedplumStore, WorklistTask } from '@/hooks/use-medplum-store'
+import { ExtensionDetails } from "./ExtensionDetails"
+import { SearchableAdditionalInfo } from "./SearchableAdditionalInfo"
+import { SearchableExtensionDetails } from "./SearchableExtensionDetails"
 
 type TaskContentProps = {
   taskData: WorklistTask
@@ -15,13 +19,18 @@ export function TaskDetails({ taskData }: TaskContentProps) {
 
   useEffect(() => {
     setTask(taskData)
-    setConnectors([{
-      connectorName: "Awell",
-      url: "https://care.development.awellhealth.com/pathway/vV7xHQ5qakpI/activity-feed?activityId=BDtAEU7AXaPxWkXewRvnM",
-    }, {
-      connectorName: "Connector 2",
-      url: "https://example.com/connector2",
-    }])
+
+    // Extract connectors from task input
+    const extractedConnectors = taskData.input
+      ?.filter((input: any) =>
+        input.type?.coding?.[0]?.system === 'http://awellhealth.com/fhir/connector-type'
+      )
+      .map((input: any) => ({
+        connectorName: input.type.coding[0].display,
+        url: input.valueUrl
+      })) || []
+
+    setConnectors(extractedConnectors)
   }, [taskData])
 
   const { addNotesToTask } = useMedplumStore()
@@ -43,21 +52,19 @@ export function TaskDetails({ taskData }: TaskContentProps) {
         <nav className="flex space-x-8 px-4" aria-label="Tabs">
           <button
             onClick={() => setActiveTab("context")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "context"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "context"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Context
           </button>
           <button
             onClick={() => setActiveTab("comments")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "comments"
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "comments"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Comments
           </button>
@@ -67,85 +74,95 @@ export function TaskDetails({ taskData }: TaskContentProps) {
         {activeTab === "context" && (
           <div className="flex flex-col h-full">
 
-              <>
-                <h3 className="text-sm font-medium mb-2">Context</h3>
-                <div className="w-full space-y-4">
-                  {/* System Connectors Section */}
-                  <div className="bg-gray-50 p-3 rounded">
-                    <p className="text-xs font-medium text-gray-500 mb-2">Available Connectors</p>
-                    <div className="space-y-2">
-                      {connectors.length > 0 ? (
-                        connectors.map((connector, index) => (
-                          <div key={index} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
-                            <div>
-                              <p className="text-xs font-medium text-gray-700">
-                                {connector.connectorName}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => {
-                                window.open(connector.url, '_blank')
-                              }}
-                              className="text-blue-500 hover:text-blue-600 text-xs cursor-pointer"
-                            >
-                              Open
-                            </button>
+            <>
+              <h3 className="text-sm font-medium mb-2">Context</h3>
+              <div className="w-full space-y-4">
+                {/* System Connectors Section */}
+                <div className="bg-gray-50 p-3 rounded">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Available Connectors</p>
+                  <div className="space-y-2">
+                    {connectors.length > 0 ? (
+                      connectors.map((connector, index) => (
+                        <div key={index} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
+                          <div>
+                            <p className="text-xs font-medium text-gray-700">
+                              {connector.connectorName}
+                            </p>
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-xs text-gray-500">No connectors available</p>
+                          <button
+                            onClick={() => {
+                              window.open(connector.url, '_blank')
+                            }}
+                            className="text-blue-500 hover:text-blue-600 text-xs cursor-pointer"
+                          >
+                            Open
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500">No connectors available</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-3 rounded">
+                    <p className="text-xs font-medium text-gray-500">Status</p>
+                    <p className="text-sm">{taskData.status}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded">
+                    <p className="text-xs font-medium text-gray-500">Intent</p>
+                    <p className="text-sm">{taskData.intent}</p>
+                  </div>
+                  {taskData.priority && (
+                    <div className="bg-gray-50 p-3 rounded">
+                      <p className="text-xs font-medium text-gray-500">Priority</p>
+                      <p className="text-sm">{taskData.priority}</p>
+                    </div>
+                  )}
+                  {taskData.authoredOn && (
+                    <div className="bg-gray-50 p-3 rounded">
+                      <p className="text-xs font-medium text-gray-500">Authored On</p>
+                      <p className="text-sm">{new Date(taskData.authoredOn).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                </div>
+
+                {taskData.executionPeriod && (
+                  <div className="bg-gray-50 p-3 rounded">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Execution Period</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {taskData.executionPeriod.start && (
+                        <div>
+                          <p className="text-xs text-gray-500">Start</p>
+                          <p className="text-sm">{new Date(taskData.executionPeriod.start).toLocaleDateString()}</p>
+                        </div>
+                      )}
+                      {taskData.executionPeriod.end && (
+                        <div>
+                          <p className="text-xs text-gray-500">End</p>
+                          <p className="text-sm">{new Date(taskData.executionPeriod.end).toLocaleDateString()}</p>
+                        </div>
                       )}
                     </div>
                   </div>
+                )}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-3 rounded">
-                      <p className="text-xs font-medium text-gray-500">Status</p>
-                      <p className="text-sm">{taskData.status}</p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded">
-                      <p className="text-xs font-medium text-gray-500">Intent</p>
-                      <p className="text-sm">{taskData.intent}</p>
-                    </div>
-                    {taskData.priority && (
-                      <div className="bg-gray-50 p-3 rounded">
-                        <p className="text-xs font-medium text-gray-500">Priority</p>
-                        <p className="text-sm">{taskData.priority}</p>
-                      </div>
-                    )}
-                    {taskData.authoredOn && (
-                      <div className="bg-gray-50 p-3 rounded">
-                        <p className="text-xs font-medium text-gray-500">Authored On</p>
-                        <p className="text-sm">{new Date(taskData.authoredOn).toLocaleDateString()}</p>
-                      </div>
-                    )}
-                  </div>
+                {taskData.input && taskData.input.length > 0 && (() => {
+                  // Filter out connector inputs (same logic as used for connectors section)
+                  const nonConnectorInputs = taskData.input.filter((input: any) =>
+                    input.type?.coding?.[0]?.system !== 'http://awellhealth.com/fhir/connector-type'
+                  );
 
-                  {taskData.executionPeriod && (
-                    <div className="bg-gray-50 p-3 rounded">
-                      <p className="text-xs font-medium text-gray-500 mb-2">Execution Period</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        {taskData.executionPeriod.start && (
-                          <div>
-                            <p className="text-xs text-gray-500">Start</p>
-                            <p className="text-sm">{new Date(taskData.executionPeriod.start).toLocaleDateString()}</p>
-                          </div>
-                        )}
-                        {taskData.executionPeriod.end && (
-                          <div>
-                            <p className="text-xs text-gray-500">End</p>
-                            <p className="text-sm">{new Date(taskData.executionPeriod.end).toLocaleDateString()}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  if (nonConnectorInputs.length === 0) return null;
 
-                  {taskData.input && taskData.input.length > 0 && (
+                  return isFeatureEnabled('ENABLE_ADDITIONAL_INFO_SEARCH') ? (
+                    <SearchableAdditionalInfo input={nonConnectorInputs} />
+                  ) : (
                     <div className="bg-gray-50 p-3 rounded">
                       <p className="text-xs font-medium text-gray-500 mb-2">Additional Information</p>
                       <div className="space-y-2">
-                        {taskData.input.map((input: any, index: number) => (
+                        {nonConnectorInputs.map((input: any, index: number) => (
                           <div key={index} className="border-b border-gray-200 pb-2 last:border-0">
                             <p className="text-xs text-gray-500">
                               {input.type?.coding?.[0]?.display || 'Unknown Field'}
@@ -155,9 +172,19 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                         ))}
                       </div>
                     </div>
-                  )}
-                </div>
-              </>
+                  );
+                })()}
+
+                {taskData.extension && (
+                  isFeatureEnabled('ENABLE_EXTENSION_SEARCH') ? (
+                    <SearchableExtensionDetails extensions={taskData.extension} />
+                  ) : (
+                    <ExtensionDetails extensions={taskData.extension} />
+                  )
+                )}
+
+              </div>
+            </>
           </div>
         )}
 
@@ -165,21 +192,21 @@ export function TaskDetails({ taskData }: TaskContentProps) {
           <div className="flex flex-col items-center justify-center">
             <h3 className="text-sm font-medium mb-2">Comments</h3>
             {task.note && task.note.length > 0 && (
-                <div className="bg-gray-50 p-3 rounded w-full mb-4">
-                  <p className="text-xs font-medium text-gray-500 mb-2">Notes</p>
-                  <div className="space-y-4">
-                    {task.note.map((note: any, index: number) => (
-                      <div key={index} className="bg-white p-3 rounded-md shadow-sm">
-                        <p className="text-sm text-gray-800 mb-1">{note.text}</p>
-                        <p className="text-xs text-gray-500">
-                          {note.time ? new Date(note.time).toLocaleString() : 'No timestamp'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+              <div className="bg-gray-50 p-3 rounded w-full mb-4">
+                <p className="text-xs font-medium text-gray-500 mb-2">Notes</p>
+                <div className="space-y-4">
+                  {task.note.map((note: any, index: number) => (
+                    <div key={index} className="bg-white p-3 rounded-md shadow-sm">
+                      <p className="text-sm text-gray-800 mb-1">{note.text}</p>
+                      <p className="text-xs text-gray-500">
+                        {note.time ? new Date(note.time).toLocaleString() : 'No timestamp'}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              )}
-            
+              </div>
+            )}
+
             <div className="w-full space-y-4">
               <textarea
                 value={newComment}

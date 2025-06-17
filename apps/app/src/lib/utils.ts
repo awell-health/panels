@@ -1,6 +1,6 @@
-import type React from "react"
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from 'clsx'
+import type React from 'react'
+import { twMerge } from 'tailwind-merge'
 
 /**
  * Combines multiple class names and resolves Tailwind CSS conflicts
@@ -22,11 +22,24 @@ export function positionStyle(
 ) {
   const style: React.CSSProperties = {}
 
-  if (top !== undefined) style.top = typeof top === "number" ? `${top}px` : top
-  if (right !== undefined) style.right = typeof right === "number" ? `${right}px` : right
-  if (bottom !== undefined) style.bottom = typeof bottom === "number" ? `${bottom}px` : bottom
-  if (left !== undefined) style.left = typeof left === "number" ? `${left}px` : left
+  if (top !== undefined) style.top = typeof top === 'number' ? `${top}px` : top
+  if (right !== undefined)
+    style.right = typeof right === 'number' ? `${right}px` : right
+  if (bottom !== undefined)
+    style.bottom = typeof bottom === 'number' ? `${bottom}px` : bottom
+  if (left !== undefined)
+    style.left = typeof left === 'number' ? `${left}px` : left
 
   return style
 }
 
+/**
+ * Moves an array element from one position to another
+ * Used for drag-and-drop reordering functionality
+ */
+export function arrayMove<T>(array: T[], from: number, to: number): T[] {
+  const newArray = [...array]
+  const [movedItem] = newArray.splice(from, 1)
+  newArray.splice(to, 0, movedItem)
+  return newArray
+}

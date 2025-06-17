@@ -7,16 +7,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative min-h-screen bg-base-100">
-      <main className="flex flex-col h-screen">
-        {children}
-      </main>
-      <RightDrawer 
-        open={isOpen} 
-        onClose={closeDrawer}
-        title={title}
-      >
-        {content}
-      </RightDrawer>
+      <div className="flex h-screen">
+        <main className={`flex flex-col flex-1 transition-all duration-300 ${isOpen ? 'w-2/3' : 'w-full'}`}>
+          {children}
+        </main>
+          <RightDrawer 
+            open={isOpen} 
+            onClose={closeDrawer}
+            title={title}
+          >
+            {content}
+          </RightDrawer>
+      </div>
     </div>
   );
 }

@@ -17,6 +17,11 @@
       "persistent": true,
       "cache": false
     },
+    "dev:services": {
+      "dependsOn": ["//#run:infra:root", "@panels/services#build"],
+      "persistent": true,
+      "cache": false
+    },
     "docs:build": {},
     "docs:dev": {},
     "lint": {

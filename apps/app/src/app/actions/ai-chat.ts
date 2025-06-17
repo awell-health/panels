@@ -1,6 +1,6 @@
 "use server"
 
-import { WorklistDefinition } from "@/types/worklist"
+import { ViewDefinition, WorklistDefinition } from "@/types/worklist"
 import { OpenAI } from "openai"
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions"
 
@@ -15,14 +15,36 @@ export type ChatMessage = {
  * TODO start using proper FHIR to extract the data structure
  * https://awellhealth.slack.com/archives/C06JLPNJZMG/p1748532575499539?thread_ts=1748525675.878809&cid=C06JLPNJZMG
  */
- export const columnAiAssistantMessageHandler = async (messages: ChatMessage[], data: any[], currentDefinition?: WorklistDefinition): Promise<{ response: string, needsDefinitionUpdate: boolean, definition?: WorklistDefinition }> => {
+ export const columnAiAssistantMessageHandler = async (messages: ChatMessage[], data: any[], currentDefinition?: WorklistDefinition | ViewDefinition): Promise<{ response: string, needsDefinitionUpdate: boolean, definition?: WorklistDefinition | ViewDefinition }> => {
+
+    const reducedData = data.slice(0, 2).map(item => {
+        const reduceValue = (value: any): any => {
+            if (typeof value === 'string') {
+                return value.substring(0, 75);
+            }
+            if (Array.isArray(value)) {
+                return value.map(reduceValue);
+            }
+            if (value && typeof value === 'object') {
+                const reducedObj = { ...value };
+                Object.keys(reducedObj).forEach(key => {
+                    reducedObj[key] = reduceValue(reducedObj[key]);
+                });
+                return reducedObj;
+            }
+            return value;
+        };
+        
+        return reduceValue(item);
+    });
+    
     const prompt = `You are a helpful assistant that helps users add columns to their view.
             
             Current worklist definition:
             ${JSON.stringify(currentDefinition, null, 2)}
             
             All the data is FHIR data.Available data: 
-            ${JSON.stringify(data.slice(0, 10), null, 2)}
+            ${JSON.stringify(reducedData, null, 2)}
             
             Your task is to:
             1. Explain what columns are possible to add based on the available data, please provide field based arrays and fields inside arrays as well. For tasks insure you provide all inputs. Do not provide the fhirpath syntax at this stage.
@@ -68,6 +90,10 @@ export type ChatMessage = {
             - str.startsWith(prefix)
             - str.endsWith(suffix)
             - str.contains(substring)
+
+            When looking into extensions be aware that some extensions are inside other extensions. For that case you need to do:
+            extension('https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension('call_category').valueString
+
 
             Be concise and clear in your explanations.
             When suggesting changes, always include the complete updated worklist definition in a JSON code block. Never add comments to the worklist JSON definition.
@@ -117,7 +143,7 @@ export async function chatWithAI(messages: ChatMessage[], botDescription?: strin
             model: 'gpt-4-turbo-preview',
             messages: formattedMessages,
             temperature: 0.2,
-            max_tokens: 1000,
+            max_tokens: 4096,
         });
 
         return response.choices[0].message.content || 'I apologize, but I could not generate a response.';

@@ -1,7 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Bot, Patient, Task } from '@medplum/fhirtypes';
-import { medplumStore } from '@/lib/medplum';
-
+import { useMedplum } from '@/contexts/medplum-context'
+import type { Patient, Task } from '@medplum/fhirtypes'
+import { useMemo } from 'react'
 
 // REFACTOR NEEDED:
 // This was a quick hack to get something working, it needs a lot of work to create a proper data store for frontend
@@ -15,51 +14,59 @@ import { medplumStore } from '@/lib/medplum';
 
 // Types for our worklist data
 export type WorklistPatient = {
-  id: string;
-  name: string;
-  tasks: WorklistTask[];
-  [key: string]: any; // For dynamic columns
-};
+  id: string
+  name: string
+  tasks: WorklistTask[]
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  [key: string]: any // For dynamic columns
+}
 
 export type WorklistTask = {
-  id: string;
-  description: string;
-  status: string;
-  priority?: string;
-  dueDate?: string;
-  patientId: string;
-  patientName: string;
-  [key: string]: any; // For dynamic columns
-};
-
+  id: string
+  description: string
+  status: string
+  priority?: string
+  dueDate?: string
+  patientId: string
+  patientName: string
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  [key: string]: any // For dynamic columns
+}
 
 // Helper methods
 function getPatientName(patient: Patient): string {
-  if (!patient.name || patient.name.length === 0) return 'Unknown';
-  const name = patient.name[0];
-  return `${name.given?.join(' ') || ''} ${name.family || ''}`.trim();
+  if (!patient.name || patient.name.length === 0) return 'Unknown'
+  const name = patient.name[0]
+  return `${name.given?.join(' ') || ''} ${name.family || ''}`.trim()
 }
 
 const mapPatientsToWorklistPatients = (
   patients: Patient[],
-  tasks: Task[]
+  tasks: Task[],
 ): WorklistPatient[] => {
-  return patients.map(patient => {
-    const patientTasks = tasks.filter(task => task.for?.reference === `${patient.resourceType}/${patient.id}`);
-    const taskDescriptions = patientTasks.map(task => task.description).join("; ");
-    const rawPatient = patient as Patient;
+  return patients.map((patient) => {
+    const patientTasks = tasks.filter(
+      (task) => task.for?.reference === `${patient.resourceType}/${patient.id}`,
+    )
+    const taskDescriptions = patientTasks
+      .map((task) => task.description)
+      .join('; ')
+    const rawPatient = patient as Patient
 
     return {
       ...rawPatient,
       id: patient.id || '',
       name: getPatientName(patient),
       taskDescriptionsSummary: taskDescriptions,
-      tasks: patientTasks.map(task => taskToWorklistData(patient, task))
-    };
-  });
-};
+      tasks: patientTasks.map((task) => taskToWorklistData(patient, task)),
+    }
+  })
+}
 
-const taskToWorklistData = (patient: Patient | undefined, task: Task): WorklistTask => {
+const taskToWorklistData = (
+  patient: Patient | undefined,
+  task: Task,
+): WorklistTask => {
   return {
     ...task,
     id: task.id || '',
@@ -68,109 +75,45 @@ const taskToWorklistData = (patient: Patient | undefined, task: Task): WorklistT
     description: task.description || '',
     patientId: patient?.id || '',
     patientName: patient ? getPatientName(patient) : '',
-    
-  };
+  }
 }
 
-const mapTasksToWorklistTasks = (  patients: Patient[], tasks: Task[]): WorklistTask[] => {
-  return tasks.map(task => {
-    const patient = patients.find(p => `${p.resourceType}/${p.id}` === task.for?.reference);
-    return taskToWorklistData(patient, task);
-  });
-};
+const mapTasksToWorklistTasks = (
+  patients: Patient[],
+  tasks: Task[],
+): WorklistTask[] => {
+  return tasks.map((task) => {
+    const patient = patients.find(
+      (p) => `${p.resourceType}/${p.id}` === task.for?.reference,
+    )
+    return taskToWorklistData(patient, task)
+  })
+}
 
-export function useMedplumStore(): {
-  patients: WorklistPatient[];
-  tasks: WorklistTask[];
-  ingestionBots: Bot[];
-  enrichmentBots: Bot[];
-  connectorBots: Bot[];
-  isLoading: boolean;
-  error: Error | null;
-  accessToken: string | null;
-  addNotesToTask: (taskId: string, notes: string) => Promise<Task>;
-  addTaskOwner: (taskId: string, authenticatedUserId: string) => Promise<Task>;
-} {
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [ingestionBots, setIngestionBots] = useState<Bot[]>([]);
-  const [enrichmentBots, setEnrichmentBots] = useState<Bot[]>([]);
-  const [connectorBots, setConnectorBots] = useState<Bot[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+export function useMedplumStore() {
+  const {
+    patients,
+    tasks,
+    ingestionBots,
+    enrichmentBots,
+    connectorBots,
+    isLoading,
+    error,
+    accessToken,
+    addNotesToTask,
+    toggleTaskOwner,
+  } = useMedplum()
 
-  // TODO: Mapping should disappear, we should use FHIR resources directly
-  const mappedPatients = useMemo(() => 
-    mapPatientsToWorklistPatients(patients, tasks),
-    [patients, tasks]
-  );
-  
-  const mappedTasks = useMemo(() => 
-    mapTasksToWorklistTasks(patients, tasks),
-    [patients, tasks]
-  );
+  // Map the raw FHIR resources to our worklist format
+  const mappedPatients = useMemo(
+    () => mapPatientsToWorklistPatients(patients, tasks),
+    [patients, tasks],
+  )
 
-  const updateResource = <T extends { id?: string }>(
-    currentResources: T[],
-    updatedResource: T
-  ): T[] => {
-    const resourceIndex = currentResources.findIndex(r => r.id === updatedResource.id);
-    if (resourceIndex === -1) {
-      return [...currentResources, updatedResource];
-    }
-    const newResources = [...currentResources];
-    newResources[resourceIndex] = updatedResource;
-    return newResources;
-  };
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        const [loadedPatients, loadedTasks, loadedIngestionBots, loadedEnrichmentBots, loadedConnectorBots, loadedAccessToken] = await Promise.all([
-          medplumStore.getPatients(),
-          medplumStore.getTasks(),
-          medplumStore.getIngestionBots(),
-          medplumStore.getEnrichmentBots(),
-          medplumStore.getConnectorBots(),
-          medplumStore.getAccessToken()
-        ]);
-        setPatients(loadedPatients);
-        setTasks(loadedTasks);
-        setIngestionBots(loadedIngestionBots);
-        setEnrichmentBots(loadedEnrichmentBots);
-        setConnectorBots(loadedConnectorBots);
-        setAccessToken(loadedAccessToken || null);
-    
-
-        medplumStore.subscribeToTasks((updatedTask) => {
-          setTasks(currentTasks => updateResource(currentTasks, updatedTask));
-        });
-        medplumStore.subscribeToPatients((updatedPatient) => {
-          setPatients(currentPatients => updateResource(currentPatients, updatedPatient));
-        });
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to load data'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  async function addNotesToTask(taskId: string, note: string) {
-    const task = await medplumStore.addNoteToTask(taskId, note);
-    setTasks(currentTasks => updateResource(currentTasks, task));
-    return task;
-  }
-
-  async function addTaskOwner(taskId: string, authenticatedUserId: string) {
-    const task = await medplumStore.addTaskOwner(taskId, authenticatedUserId);
-    setTasks(currentTasks => updateResource(currentTasks, task));
-    return task;
-  }
+  const mappedTasks = useMemo(
+    () => mapTasksToWorklistTasks(patients, tasks),
+    [patients, tasks],
+  )
 
   return {
     patients: mappedPatients,
@@ -182,6 +125,6 @@ export function useMedplumStore(): {
     accessToken,
     error,
     addNotesToTask,
-    addTaskOwner
-  };
-} 
+    toggleTaskOwner,
+  }
+}

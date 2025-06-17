@@ -51,6 +51,7 @@ export const columnUpdate = async (app: FastifyInstance) => {
         sourceField,
         tenantId,
         userId,
+        tags,
       } = request.body
 
       // First verify panel exists and user has access
@@ -93,6 +94,7 @@ export const columnUpdate = async (app: FastifyInstance) => {
         // Calculated column
         if (formula) column.formula = formula
         if (dependencies) column.dependencies = dependencies
+        if (tags) column.tags = tags
       } else if ('sourceField' in column) {
         // Base column
         if (sourceField) column.sourceField = sourceField

@@ -30,7 +30,7 @@ export const viewUpdate = async (app: FastifyInstance) => {
     url: '/views/:id',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { name, config, tenantId, userId } = request.body
+      const { name, config, tenantId, userId, metadata } = request.body
 
       // Only owner can update their own view
       const view = await request.store.view.findOne({
@@ -48,7 +48,7 @@ export const viewUpdate = async (app: FastifyInstance) => {
       // !!! description is not used yet !!!
       //if (description !== undefined) view.description = description
       if (config) view.visibleColumns = config.columns
-      //if (metadata !== undefined) view.metadata = metadata
+      if (metadata !== undefined) view.metadata = metadata
 
       await request.store.em.persistAndFlush(view)
       return {
@@ -63,6 +63,7 @@ export const viewUpdate = async (app: FastifyInstance) => {
           groupBy: [],
           layout: 'table',
         },
+        metadata,
       }
     },
   })

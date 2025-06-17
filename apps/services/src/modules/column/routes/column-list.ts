@@ -11,6 +11,8 @@ import { z } from 'zod'
 const querystringSchema = z.object({
   tenantId: z.string(),
   userId: z.string(),
+  ids: z.union([z.array(z.string()), z.string()]).optional(),
+  tags: z.array(z.string()).optional(),
 })
 
 type QuerystringType = z.infer<typeof querystringSchema>
@@ -23,7 +25,7 @@ export const columnList = async (app: FastifyInstance) => {
   }>({
     method: 'GET',
     schema: {
-      description: 'List all columns for a panel',
+      description: 'List all columns for a panel, optionally filtered by tags',
       tags: ['panel', 'column'],
       params: IdParamSchema,
       querystring: querystringSchema,
@@ -35,7 +37,9 @@ export const columnList = async (app: FastifyInstance) => {
     url: '/panels/:id/columns',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { tenantId, userId } = request.query
+      const { tenantId, userId, tags, ids } = request.query
+
+      const idsArray = Array.isArray(ids) ? ids : [ids]
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({
@@ -49,12 +53,18 @@ export const columnList = async (app: FastifyInstance) => {
       }
 
       const baseColumns = await request.store.baseColumn.find(
-        { panel: { id: Number(id) } },
+        {
+          panel: { id: Number(id) },
+          ...(tags && { tags: { $in: tags } }),
+          ...(ids && { id: { $in: idsArray.map(Number) } }),
+        },
         { populate: ['dataSource'] },
       )
 
       const calculatedColumns = await request.store.calculatedColumn.find({
         panel: { id: Number(id) },
+        ...(tags && { tags: { $in: tags } }),
+        ...(ids && { id: { $in: idsArray.map(Number) } }),
       })
 
       return {

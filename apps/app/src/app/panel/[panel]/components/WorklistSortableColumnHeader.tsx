@@ -2,14 +2,14 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
 import { TableHead } from "@/components/ui/table"
-import { Calendar, Hash, ToggleLeft, Text, MoreVertical } from "lucide-react"
+import { cn } from "@/lib/utils"
+import type { ColumnDefinition } from "@/types/worklist"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { cn } from "@/lib/utils"
+import { Calendar, GripVertical, Hash, MoreVertical, Text, ToggleLeft } from "lucide-react"
+import { useRef, useState } from "react"
 import { ColumnMenu } from "./WorklistColumnMenu"
-import type { ColumnDefinition } from "@/types/worklist"
 
 type SortableColumnHeaderProps = {
   column: ColumnDefinition
@@ -18,26 +18,27 @@ type SortableColumnHeaderProps = {
   onSort: () => void
   filterValue: string
   onFilter: (value: string) => void
+  onColumnUpdate: (updates: Partial<ColumnDefinition>) => void
 }
 
-export function SortableColumnHeader({ column, index, sortConfig, onSort, filterValue, onFilter }: SortableColumnHeaderProps) {
+export function SortableColumnHeader({ column, index, sortConfig, onSort, filterValue, onFilter, onColumnUpdate }: SortableColumnHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const [isFilterVisible, setIsFilterVisible] = useState(false)
   const headerRef = useRef<HTMLTableCellElement>(null)
   const filterInputRef = useRef<HTMLInputElement>(null)
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver } = useSortable({
     id: column.id || `column-${index}`,
   })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 1 : 0,
-    opacity: isDragging ? 0.8 : 1,
-    cursor: "grab",
-    width: column.name === "Patient Name" ? "140px" : "auto", // Snug width for Patient Name
+    zIndex: isDragging ? 1000 : 0,
+    opacity: isDragging ? 0.5 : 1,
+    width: column.name === "Patient Name" ? "140px" : "auto",
+    position: 'relative' as const,
   }
 
   // Get the appropriate icon based on column type
@@ -88,9 +89,9 @@ export function SortableColumnHeader({ column, index, sortConfig, onSort, filter
   const sampleOptions =
     column.type === "boolean"
       ? [
-          { value: "True", color: "#10B981" }, // green-500
-          { value: "False", color: "#EF4444" }, // red-500
-        ]
+        { value: "True", color: "#10B981" }, // green-500
+        { value: "False", color: "#EF4444" }, // red-500
+      ]
       : undefined
 
   // Enhanced column with sample source and options
@@ -98,33 +99,6 @@ export function SortableColumnHeader({ column, index, sortConfig, onSort, filter
     ...column,
     source: "Metriport",
     options: sampleOptions,
-  }
-
-  // Handle filter input changes
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onFilter(e.target.value)
-  }
-
-  // Show filter input when clicking the filter icon
-  const handleFilterClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsFilterVisible(true)
-    // Focus the input after it's rendered
-    setTimeout(() => {
-      filterInputRef.current?.focus()
-    }, 0)
-  }
-
-  // Handle filter input blur
-  const handleFilterBlur = () => {
-    setIsFilterVisible(false)
-  }
-
-  // Handle filter input keydown
-  const handleFilterKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Escape') {
-      setIsFilterVisible(false)
-    }
   }
 
   return (
@@ -136,37 +110,80 @@ export function SortableColumnHeader({ column, index, sortConfig, onSort, filter
         }
       }}
       style={style}
-      className={cn("text-xs font-normal text-gray-700 p-2 border-r border-gray-200 relative")}
+      className={cn(
+        "text-xs font-normal text-gray-700 p-2 border-r border-gray-200 relative select-none",
+        isDragging && "bg-blue-50 border-blue-200 shadow-lg",
+        isOver && !isDragging && "bg-blue-25 border-blue-100",
+        "transition-colors duration-150"
+      )}
       {...attributes}
-      {...listeners}
     >
+      {/* Drop indicator line */}
+      {isOver && !isDragging && (
+        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500 z-50" />
+      )}
+
       <div className="flex flex-col">
         <div className="flex items-center justify-between whitespace-nowrap">
-          <div 
-            className="flex items-center cursor-pointer hover:text-gray-900"
-            onClick={onSort}
+          {/* Drag handle - only this area can be used to drag */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center cursor-grab hover:bg-gray-100 rounded px-1 -ml-1 mr-1 border-0 bg-transparent",
+              isDragging && "cursor-grabbing bg-gray-100"
+            )}
+            {...listeners}
+            aria-label="Drag to reorder column"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                // Keyboard users can use tab to navigate and arrow keys for reordering
+              }
+            }}
+          >
+            <GripVertical className="h-3 w-3 text-gray-400" />
+          </button>
+
+          {/* Column content - clickable for sorting */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center cursor-pointer hover:text-gray-900 flex-1 border-0 bg-transparent text-left",
+              isDragging && "pointer-events-none"
+            )}
+            onClick={isDragging ? undefined : onSort}
+            disabled={isDragging}
+            aria-label={`Sort by ${column.name}`}
           >
             {getTypeIcon()}
             <div className="flex flex-col">
               <span>{column.name}</span>
             </div>
             <span className="ml-1 text-gray-500">{getSortIndicator()}</span>
-          </div>
-          <div className="flex items-center">
+          </button>
+
+          {/* Menu controls - separate from drag handle */}
+          <div className={cn(
+            "flex items-center",
+            isDragging && "pointer-events-none"
+          )}>
             {/* Filter button */}
             <button
+              type="button"
               className={cn(
-                "h-5 w-5 p-0 mr-1 text-gray-500 hover:bg-gray-100 rounded-full",
-                filterValue && "text-blue-500"
+                "h-5 w-5 p-0 hover:bg-gray-100 rounded-full flex items-center justify-center",
+                filterValue ? "text-blue-500 bg-blue-20" : "text-gray-500"
               )}
-              onClick={handleFilterClick}
+              onClick={isDragging ? undefined : toggleMenu}
+              disabled={isDragging}
+              aria-label="Filter column"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="12"
                 height="12"
                 viewBox="0 0 24 24"
-                fill="none"
+                fill={filterValue ? "currentColor" : "none"}
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
@@ -177,41 +194,36 @@ export function SortableColumnHeader({ column, index, sortConfig, onSort, filter
             </button>
             {/* Menu button */}
             <button
+              type="button"
               className="h-5 w-5 p-0 text-gray-500 hover:bg-gray-100 rounded-full"
-              onClick={toggleMenu}
+              onClick={isDragging ? undefined : toggleMenu}
+              disabled={isDragging}
+              aria-label="Column options"
             >
               <MoreVertical className="h-3 w-3" />
             </button>
           </div>
         </div>
-        
+
         {/* Filter input */}
-        {isFilterVisible && (
-          <div className="mt-1">
-            <input
-              ref={filterInputRef}
-              type="text"
-              value={filterValue}
-              onChange={handleFilterChange}
-              onBlur={handleFilterBlur}
-              onKeyDown={handleFilterKeyDown}
-              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Filter..."
-            />
-          </div>
-        )}
       </div>
+
+      {/* Drag handle indicator */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-100 to-blue-50 opacity-75 pointer-events-none" />
+      )}
 
       {/* Column menu */}
       <ColumnMenu
         column={enhancedColumn}
-        isOpen={isMenuOpen}
+        isOpen={isMenuOpen && !isDragging}
         onClose={() => setIsMenuOpen(false)}
         position={menuPosition}
         onSort={onSort}
         sortConfig={sortConfig}
         filterValue={filterValue}
         onFilter={onFilter}
+        onColumnUpdate={onColumnUpdate}
       />
     </TableHead>
   )

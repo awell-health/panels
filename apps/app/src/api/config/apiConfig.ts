@@ -2,7 +2,9 @@ export const apiConfig = {
   // Dynamic getter for base URL to support environment variable changes in tests
   get baseUrl(): string {
     return (
-      process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || ''
+      process.env.NEXT_PUBLIC_APP_API_BASE_URL ||
+      process.env.APP_API_BASE_URL ||
+      ''
     )
   },
 

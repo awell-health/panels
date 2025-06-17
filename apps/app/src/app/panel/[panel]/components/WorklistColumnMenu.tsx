@@ -1,9 +1,9 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
-import { createPortal } from "react-dom"
-import { ArrowUpDown, Database, Hash, Calendar, Text, ToggleLeft } from "lucide-react"
 import type { ColumnDefinition } from "@/types/worklist"
+import { ArrowUpDown, Calendar, Database, Hash, Text, ToggleLeft } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 
 type ColumnMenuProps = {
   column: ColumnDefinition
@@ -14,28 +14,43 @@ type ColumnMenuProps = {
   sortConfig: { key: string; direction: 'asc' | 'desc' } | null
   filterValue: string
   onFilter: (value: string) => void
+  onColumnUpdate?: (updates: Partial<ColumnDefinition>) => void
 }
 
-export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConfig, filterValue, onFilter }: ColumnMenuProps) {
+export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConfig, filterValue, onFilter, onColumnUpdate }: ColumnMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [mounted, setMounted] = useState(false)
   const [localFilterValue, setLocalFilterValue] = useState(filterValue)
-
+  const [localColumnKey, setLocalColumnKey] = useState(column.key)
+  const [localColumnName, setLocalColumnName] = useState(column.name)
+  const [localColumnDescription, setLocalColumnDescription] = useState(column.description)
+  const [localColumnType, setLocalColumnType] = useState(column.type)
+  const [localColumnSource, setLocalColumnSource] = useState(column.source)
   // Set mounted state after component mounts (for SSR compatibility)
   useEffect(() => {
     setMounted(true)
     return () => setMounted(false)
   }, [])
 
-  // Update local filter value when prop changes
+  // Update local values when props change
   useEffect(() => {
     setLocalFilterValue(filterValue)
-  }, [filterValue])
+    setLocalColumnKey(column.key)
+    setLocalColumnName(column.name)
+    setLocalColumnDescription(column.description)
+    setLocalColumnType(column.type)
+    setLocalColumnSource(column.source)
+  }, [filterValue, column])
 
   // Close menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      // Don't close if clicking on any input element
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        return;
+      }
+      if (menuRef.current && !menuRef.current.contains(target)) {
         onClose()
       }
     }
@@ -56,7 +71,7 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
 
     switch (column.type) {
       case "number":
-        return isSorted 
+        return isSorted
           ? (isAscending ? "Sort large → small" : "Sort small → large")
           : "Sort small → large"
       case "date":
@@ -148,6 +163,12 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
               type="text"
               value={localFilterValue}
               onChange={handleFilterChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleFilterApply()
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
               className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Filter..."
             />
@@ -160,30 +181,137 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
           </div>
         </div>
 
-        {/* Type */}
-        <div className="flex items-center w-full px-3 py-2 text-xs font-normal text-left border-b border-gray-100">
-          {getTypeIcon()}
-          <div className="flex flex-col">
-            <span>Type: {column.type.charAt(0).toUpperCase() + column.type.slice(1)}</span>
-            <span>Key: <span className="text-[10px] text-gray-400"> {column.key}</span></span>
-          </div>
-        </div>
-
-        {/* Source */}
-        <div className="flex items-center w-full px-3 py-2 text-xs font-normal text-left border-b border-gray-100">
-          <Database className="h-3.5 w-3.5 mr-2 text-gray-500" />
-          <span>Source: {column.source || "Unknown"}</span>
-        </div>
-
-        {/* Multiline text field for column description */}
+        {/* Hide Column Option */}
         <div className="px-3 py-2 border-b border-gray-100">
-          <label htmlFor="column-description" className="block text-xs text-gray-500 mb-1">Column Description:</label>
-          {/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
-          <textarea
-            className="textarea min-h-[60px] text-xs resize-y w-full p-2 border border-gray-200 rounded"
-            placeholder="Enter a description or prompt for this column..."
-            onClick={(e: React.MouseEvent<HTMLTextAreaElement>) => e.stopPropagation()}
-          />
+          <button
+            className="flex items-center w-full px-0 py-1 text-xs font-normal text-left hover:bg-gray-50 rounded"
+            onClick={() => {
+              onColumnUpdate?.({
+                id: column.id,
+                properties: {
+                  display: { visible: false }
+                }
+              })
+              onClose()
+            }}
+          >
+            <svg className="h-3.5 w-3.5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.464 8.464M14.12 14.12l1.415 1.415M14.12 14.12L9.878 9.878m4.242 4.242L8.464 15.536" />
+            </svg>
+            Hide Column
+          </button>
+        </div>
+
+        {/* Column Properties */}
+        <div className="px-3 py-2 border-b border-gray-100">
+          <div className="space-y-2">
+            <div>
+              <label htmlFor="column-key" className="block text-xs text-gray-500 mb-1">Column Key:</label>
+              <input
+                id="column-key"
+                type="text"
+                value={localColumnKey}
+                onChange={(e) => setLocalColumnKey(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === ' ') {
+                    e.stopPropagation()
+                  }
+                }}
+                className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="column-type" className="block text-xs text-gray-500 mb-1">Column Type:</label>
+              <select
+                id="column-type"
+                value={localColumnType}
+                onChange={(e) => setLocalColumnType(e.target.value as ColumnDefinition['type'])}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === ' ') {
+                    e.stopPropagation()
+                  }
+                }}
+                className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="string">String</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+                <option value="date">Date</option>
+                <option value="tasks">Tasks</option>
+                <option value="select">Select</option>
+                <option value="array">Array</option>
+                <option value="assignee">Assignee</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="column-name" className="block text-xs text-gray-500 mb-1">Column Name:</label>
+              <input
+                id="column-name"
+                type="text"
+                value={localColumnName}
+                onChange={(e) => setLocalColumnName(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === ' ') {
+                    e.stopPropagation()
+                  }
+                }}
+                className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="column-description" className="block text-xs text-gray-500 mb-1">Column Description:</label>
+              <textarea
+                id="column-description"
+                value={localColumnDescription}
+                onChange={(e) => setLocalColumnDescription(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === ' ') {
+                    e.stopPropagation()
+                  }
+                }}
+                className="textarea min-h-[60px] text-xs resize-y w-full p-2 border border-gray-200 rounded"
+                placeholder="Enter a description or prompt for this column..."
+              />
+            </div>
+            <div className="flex items-center">
+              <Database className="h-3.5 w-3.5 mr-2 text-gray-500" />
+              <label htmlFor="column-source" className="text-xs text-gray-500">Source:</label>
+            </div>
+            <input
+              id="column-source"
+              type="text"
+              value={localColumnSource || ''}
+              onChange={(e) => setLocalColumnSource(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === ' ') {
+                  e.stopPropagation()
+                }
+              }}
+              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter source..."
+            />
+            <button
+              className="w-full px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
+              onClick={() => {
+                onColumnUpdate?.({
+                  id: column.id,
+                  key: localColumnKey,
+                  name: localColumnName,
+                  description: localColumnDescription,
+                  type: localColumnType,
+                  source: localColumnSource,
+                })
+                onClose()
+              }}
+            >
+              Save Changes
+            </button>
+          </div>
         </div>
 
         {/* Options with colors (if available) */}

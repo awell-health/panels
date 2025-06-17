@@ -17,7 +17,15 @@ export async function createApp(
 ): Promise<FastifyInstance> {
   const __dirname = dirname(fileURLToPath(import.meta.url))
 
-  const app = Fastify(opts)
+  const app = Fastify(
+    Object.assign(opts, {
+      logger: {
+        transport: {
+          target: '@fastify/one-line-logger',
+        },
+      },
+    }),
+  )
   app.setValidatorCompiler(validatorCompiler)
   app.setSerializerCompiler(serializerCompiler)
 
@@ -28,7 +36,12 @@ export async function createApp(
     livenessURL: '/liveness',
   })
 
-  await app.register(cors, { origin: true })
+  await app.register(cors, {
+    origin: true,
+    methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  })
   await app.register(autoload, {
     dir: resolve(__dirname, 'plugins'),
     forceESM: true,

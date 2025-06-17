@@ -2,7 +2,7 @@
 
 import { TaskDetails } from "@/app/panel/[panel]/components/TaskDetails"
 import { useDrawer } from "@/contexts/DrawerContext"
-import { WorklistPatient, WorklistTask } from "@/hooks/use-medplum-store"
+import type { WorklistPatient, WorklistTask } from "@/hooks/use-medplum-store"
 import { getNestedValue } from "@/lib/fhir-path"
 import { formatTasksForPatientView, renderTaskStatus } from "@/lib/task-utils"
 import type { ColumnDefinition } from "@/types/worklist"
@@ -42,20 +42,17 @@ export default function WorklistTableRow({
     const { openDrawer } = useDrawer()
 
     const handleRowClick = () => {
-        console.log(row)
-        if (row.resourceType === "Task") {
-            console.log('patientRow', row)
+        if (currentView === "task") {
             openDrawer(
-                <TaskDetails 
-                    taskData={row as WorklistTask} 
+                <TaskDetails
+                    taskData={row as WorklistTask}
                 />,
                 row.description || "Task Details"
             )
-        } else if (row.resourceType === "Patient") {
-            console.log('patientRow', row)
+        } else if (currentView === "patient") {
             openDrawer(
-                <PatientDetails 
-                    patient={row as WorklistPatient} 
+                <PatientDetails
+                    patient={row as WorklistPatient}
                 />,
                 `${row.name} - Patient Details`
             )
@@ -79,78 +76,87 @@ export default function WorklistTableRow({
             <TableCell
                 key={`${rowIndex}-${// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
                     colIndex}`}
-        className={cn("py-1 px-2 border-r border-gray-200 text-xs max-w-[200px]", "truncate")}
-        title={typeof row[column.name] === "string" ? row[column.name] : ""}
-    >
-        {column.name === "Discharge Summary" && row[column.name] ? (
-            // biome-ignore lint/a11y/useButtonType: <explanation>
-            <button
-                className="text-xs h-6 px-2 text-blue-500 hover:bg-blue-50 flex items-center"
-                onClick={() => handlePDFClick(row[column.name], row["Patient Name"] || "Patient")}
+                className={cn("py-1 px-2 border-r border-gray-200 text-xs max-w-[200px]", "truncate")}
+                title={typeof columnValue === "string" ? columnValue : ""}
             >
-                <File className="h-3 w-3 mr-1" />
-                {row[column.name]}
-            </button>
-        ) : column.type === "tasks" && currentView === "Patient view" && row._raw?.tasks ? (
-            formatTasksForPatientView(row._raw.tasks, row["Patient Name"], handleTaskClick)
-        ) : column.name === "Task Status" && row["Task Status"] ? (
-            renderTaskStatus(row["Task Status"], row.Task, row["Patient Name"], handleTaskClick)
-        ) : column.type === "tasks" ? (
-            // biome-ignore lint/a11y/useButtonType: <explanation>
-            <button
-                className="text-xs h-6 px-2 text-blue-500 hover:bg-blue-50 flex items-center justify-start w-full"
-                onClick={() =>
-                    handleTaskClick(row[column.name] || "", row["Task Status"] || "", row["Patient Name"] || "")
-                }
-            >
-                <CheckSquare className="h-3 w-3 mr-1" />
-                <span className="truncate">{row[column.key] || ""}</span>
-            </button>
-        ) : column.type === "array" ? (
-            <div className="flex flex-wrap gap-1">
-                {Array.isArray(columnValue) ? (
-                    columnValue.map((item: any, index: number) => (
-                        <span 
-                            key={index}
-                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
-                        >
-                            {typeof item === 'object' ? Object.values(item).join(', ') : String(item)}
-                        </span>
-                    ))
-                ) : (
-                    <span className="text-gray-500">-</span>
-                )}
-            </div>
-        ) : column.type === "assignee" ? (
-            <div className="flex items-center">
-                {columnValue ? (
-                    <span className="text-sm text-gray-700">{columnValue}</span>
-                ) : (
+                {column.name === "Discharge Summary" && columnValue ? (
+                    // biome-ignore lint/a11y/useButtonType: <explanation>
                     <button
-                        type="button"
-                        className="text-xs h-6 px-2 text-blue-500 hover:bg-blue-50 flex items-center rounded border border-blue-200"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleAssigneeClick();
-                        }}
+                        className="btn btn-ghost btn-sm text-xs h-6 px-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                        onClick={() => handlePDFClick(columnValue, row["Patient Name"] || "Patient")}
                     >
-                        Assign to me
+                        <File className="h-3 w-3 mr-1" />
+                        {columnValue}
                     </button>
+                ) : column.type === "tasks" && currentView === "Patient view" && row._raw?.tasks ? (
+                    formatTasksForPatientView(row._raw.tasks, row["Patient Name"], handleTaskClick)
+                ) : column.name === "Task Status" && columnValue ? (
+                    renderTaskStatus(columnValue, row.Task, row["Patient Name"], handleTaskClick)
+                ) : column.type === "tasks" ? (
+                    // biome-ignore lint/a11y/useButtonType: <explanation>
+                    <button
+                        className="btn btn-ghost btn-sm text-xs h-6 px-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                        onClick={() =>
+                            handleTaskClick(columnValue || "", row["Task Status"] || "", row["Patient Name"] || "")
+                        }
+                    >
+                        <CheckSquare className="h-3 w-3 mr-1" />
+                        <span className="truncate">{columnValue || ""}</span>
+                    </button>
+                ) : column.type === "array" ? (
+                    <div className="flex flex-wrap gap-1">
+                        {Array.isArray(columnValue) ? (
+                            columnValue.map((item: unknown, index: number) => (
+                                <span
+                                    // biome-ignore lint/suspicious/noArrayIndexKey: No unique identifier available for array items
+                                    key={`${rowIndex}-${colIndex}-${index}`}
+                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                                >
+                                    {typeof item === 'object' ? Object.values(item as Record<string, unknown>).join(', ') : String(item)}
+                                </span>
+                            ))
+                        ) : (
+                            <span className="text-gray-500">-</span>
+                        )}
+                    </div>
+                ) : column.type === "assignee" ? (
+                    <div className="flex items-center">
+                        {columnValue ? (
+                            <button
+                                type="button"
+                                className="text-xs text-gray-700 hover:text-blue-600"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAssigneeClick();
+                                }}>
+                                {columnValue}                        
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className="btn btn-outline btn-sm text-xs h-6 px-2 text-blue-500 hover:text-blue-600 border-blue-200"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAssigneeClick();
+                                }}
+                            >
+                                Assign to me
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <div className="truncate">
+                        {(() => {
+                            if (columnValue === null || columnValue === undefined) return "";
+                            if (typeof columnValue === "string") return columnValue;
+                            if (Array.isArray(columnValue)) return columnValue.join(", ");
+                            if (typeof columnValue === "object") return JSON.stringify(columnValue);
+                            return String(columnValue);
+                        })()}
+                    </div>
                 )}
-            </div>
-        ) : (
-            <div className="truncate">
-                {(() => {
-                    if (columnValue === null || columnValue === undefined) return "";
-                    if (typeof columnValue === "string") return columnValue;
-                    if (Array.isArray(columnValue)) return columnValue.join(", ");
-                    if (typeof columnValue === "object") return JSON.stringify(columnValue);
-                    return String(columnValue);
-                    })()}
-                </div>
-            )}
-        </TableCell>    
-    )
+            </TableCell>
+        )
     }
 
     return (

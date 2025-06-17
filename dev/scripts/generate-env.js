@@ -7,7 +7,7 @@ import { parse } from 'yaml'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const rootDir = resolve(__dirname, '..')
+const rootDir = resolve(__dirname, '../..')
 
 // Default configuration templates
 const ENV_TEMPLATES = {

@@ -11,3 +11,14 @@
   prefix: ;
   logs: true;
 }
+
+/* Prevent horizontal overflow */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Ensure fixed elements stay within viewport */
+.fixed {
+  max-width: 100vw;
+  box-sizing: border-box;
+}

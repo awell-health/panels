@@ -66,6 +66,7 @@ export const panelGet = async (app: FastifyInstance) => {
         cohortRule: panel.cohortRule,
         createdAt: panel.createdAt,
         updatedAt: panel.updatedAt,
+        metadata: panel.metadata || {},
       }
     },
   })

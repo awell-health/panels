@@ -54,6 +54,15 @@ export const viewDelete = async (app: FastifyInstance) => {
         })
       }
 
+      const sorts = await request.store.viewSort.find(
+        { view: { id: Number(id) } },
+        { populate: ['view'] },
+      )
+
+      for (const sort of sorts) {
+        await request.store.em.removeAndFlush(sort)
+      }
+
       await request.store.view.nativeDelete(view)
       reply.statusCode = 204
     },
