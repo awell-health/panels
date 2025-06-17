@@ -1,10 +1,10 @@
 # Step 1 : Deps image
-FROM --platform=linux/amd64 node:22.16.0-alpine3.19 AS deps
+FROM --platform=linux/amd64 node:22-alpine3.22 AS deps
 
 RUN apk update && apk add --no-cache libc6-compat
 
 ENV HOME=/home/app
-WORKDIR $HOME/node
+WORKDIR $HOME
 
 RUN corepack enable && \
     corepack prepare pnpm@10.11.0 --activate
@@ -14,8 +14,8 @@ COPY ./pnpm-lock.yaml ./
 COPY ./package.json ./
 COPY ./turbo.json ./
 COPY ./pnpm-workspace.yaml ./
-COPY ./.turbo/config.json ./.turbo/
-COPY ./.git/ ./.git/
+COPY ./.turbo/ ./.turbo/
+COPY ./tsconfig.json ./tsconfig.json
 
 COPY ./packages/ ./packages/
 
@@ -28,15 +28,13 @@ FROM deps AS builder
 RUN corepack enable && \
     corepack prepare pnpm@10.11.0 --activate
 
-COPY ./apps/services/package.json ./apps/services/
-
-RUN pnpm --filter @panels/services... install --frozen-lockfile --prefer-offline --ignore-scripts
-
 COPY ./apps/services/ ./apps/services/
 
-RUN apk add git && \
-    pnpm --filter @panels/services build && \
-    rm -rf ./.git
+RUN pnpm --filter @panels/types install --frozen-lockfile --prefer-offline --ignore-scripts && \
+    pnpm --filter @panels/services install --frozen-lockfile --prefer-offline --ignore-scripts
+
+RUN pnpm --filter @panels/types build && \
+    pnpm --filter @panels/services build
 
 # regenerate node_modules with only prod deps
 RUN pnpm --filter @panels/services... install --prod --prefer-offline --ignore-scripts --no-optional --frozen-lockfile
@@ -45,7 +43,7 @@ RUN pnpm --filter @panels/services... install --prod --prefer-offline --ignore-s
 RUN rm -rf /root/.local/share/pnpm/store
 
 # Step 3 : Run image
-FROM --platform=linux/amd64 node:22.16.0-alpine3.229@sha256:41e4389f3d988d2ed55392df4db1420ad048ae53324a8e2b7c6d19508288107e AS runner
+FROM --platform=linux/amd64 node:22-alpine3.22 AS runner
 
 # dumb-init registers signal handlers for every signal that can be caught && \
 RUN apk update && apk add --no-cache dumb-init && \
@@ -53,14 +51,14 @@ RUN apk update && apk add --no-cache dumb-init && \
 
 ENV NODE_ENV=production
 ENV HOME=/home/app
-ENV PROJECT_WORKDIR=$HOME/node
 
-WORKDIR $HOME/node
 
 USER node
 
-COPY --chown=node:node --from=builder $PROJECT_WORKDIR/ $PROJECT_WORKDIR/
+COPY --chown=node:node --from=builder $HOME/ $HOME/
+WORKDIR $HOME/apps/services
 
 ENTRYPOINT ["dumb-init"]
 
-CMD ["node", "--max-old-space-size=1512" , "--enable-source-maps", "apps/services/dist/server.js"]
+# The container will use environment variables passed at runtime
+CMD ["node", "--max-old-space-size=1512" , "--enable-source-maps", "dist/server.js"]
