@@ -811,7 +811,7 @@ export class APIStorageAdapter implements StorageAdapter {
       // Load columns and views in parallel for maximum efficiency
       const [columns, views] = await Promise.allSettled([
         this.loadPanelColumns(panel.id),
-        this.loadPanelViews(panel.id),
+        this.loadPanelViews(panel.id).then(views => views?.sort((a, b) => Number(a.id) - Number(b.id))),
       ])
 
       const enrichedViews =  views.status === 'fulfilled' && views.value && columns.status === 'fulfilled' && columns.value ? await Promise.all(views.value.map(async (vw) => {
