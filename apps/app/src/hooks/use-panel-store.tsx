@@ -105,29 +105,22 @@ export class PanelStore {
       throw new Error('Storage adapter not initialized')
     }
 
-    const newPanel: PanelDefinition = {
-      ...panel,
-      id: uuidv4(),
+    const newPanel:  Omit<PanelDefinition, 'id'> = {
+      ...panel
     }
 
-    const operationId = `panel-${newPanel.id}`
+    const operationId = `panel-${uuidv4()}`
     this.setSaveState(operationId, 'saving')
 
     try {
-      // Update local state optimistically
-      this.panels.push(newPanel)
+      const createdPanel = await this.storage.createPanel(panel)
+
+      this.panels.push(createdPanel)
+      
       this.notifyListeners()
-
-      // Sync with storage adapter
-      await this.storage.createPanel(panel)
-
       this.setSaveState(operationId, 'saved')
-      return newPanel
+      return createdPanel
     } catch (error) {
-      // Rollback local changes on failure
-      this.panels = this.panels.filter(p => p.id !== newPanel.id)
-      this.notifyListeners()
-
       this.setSaveState(operationId, 'error')
       console.error('Failed to create panel:', error)
       throw new Error(`Failed to create panel: ${error instanceof Error ? error.message : 'Unknown error'}`)

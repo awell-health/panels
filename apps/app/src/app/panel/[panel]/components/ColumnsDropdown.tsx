@@ -7,22 +7,31 @@ import { createPortal } from "react-dom"
 
 type ColumnsDropdownProps = {
     columns: ColumnDefinition[]
+    visibleColumns: ColumnDefinition[]
     onColumnVisibilityChange: (columnId: string, visible: boolean) => void
 }
 
-export function ColumnsDropdown({ columns, onColumnVisibilityChange }: ColumnsDropdownProps) {
+type ColumnWithVisibility = ColumnDefinition & { visible: boolean }
+
+export function ColumnsDropdown({ columns, visibleColumns, onColumnVisibilityChange }: ColumnsDropdownProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
     const dropdownRef = useRef<HTMLDivElement>(null)
     const buttonRef = useRef<HTMLButtonElement>(null)
+    const [columnsWithVisibility, setColumnsWithVisibility] = useState<ColumnWithVisibility[]>([])
 
     // Calculate visible vs total columns
     const { visibleCount, totalCount } = useMemo(() => {
-        const visibleCount = columns.filter(col => col.properties?.display?.visible !== false).length
+        const columnsWithVisibility = columns.map(column => ({
+            ...column,
+            visible: visibleColumns.some(visibleColumn => visibleColumn.id === column.id)
+        }))
+        const visibleCount = columnsWithVisibility.filter(col => col.visible).length
         const totalCount = columns.length
+        setColumnsWithVisibility(columnsWithVisibility)
         return { visibleCount, totalCount }
-    }, [columns])
+    }, [columns, visibleColumns])
 
     useEffect(() => {
         setMounted(true)
@@ -113,8 +122,7 @@ export function ColumnsDropdown({ columns, onColumnVisibilityChange }: ColumnsDr
             <div className="p-3">
                 <div className="text-xs font-medium text-gray-700 mb-3">Column Visibility</div>
                 <div className="space-y-2">
-                    {columns.map((column) => {
-                        const isVisible = column.properties?.display?.visible !== false
+                    {columnsWithVisibility.map((column) => {
                         return (
                             <label
                                 key={column.id}
@@ -122,11 +130,11 @@ export function ColumnsDropdown({ columns, onColumnVisibilityChange }: ColumnsDr
                             >
                                 <input
                                     type="checkbox"
-                                    checked={isVisible}
+                                    checked={column.visible}
                                     onChange={(e) => handleVisibilityChange(column.id, e.target.checked)}
                                     className="h-3 w-3 rounded border-gray-300 mr-3"
                                 />
-                                <span className={`text-xs ${isVisible ? 'text-gray-900' : 'text-gray-500'}`}>
+                                <span className={`text-xs ${column.visible ? 'text-gray-900' : 'text-gray-500'}`}>
                                     {column.name}
                                 </span>
                             </label>

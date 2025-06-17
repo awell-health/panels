@@ -14,6 +14,7 @@ interface WorklistToolbarProps {
     currentView: 'patient' | 'task' | undefined;
     setCurrentView?: (view: 'patient' | 'task') => void;
     worklistColumns: ColumnDefinition[];
+    visibleColumns: ColumnDefinition[];
     onAddColumn: () => void;
     onColumnVisibilityChange: (columnId: string, visible: boolean) => void;
 }
@@ -27,6 +28,7 @@ export default function WorklistToolbar({
     currentView,
     setCurrentView,
     worklistColumns,
+    visibleColumns,
     onAddColumn,
     onColumnVisibilityChange,
 }: WorklistToolbarProps) {
@@ -74,6 +76,7 @@ export default function WorklistToolbar({
 
                     <ColumnsDropdown
                         columns={worklistColumns}
+                        visibleColumns={visibleColumns}
                         onColumnVisibilityChange={onColumnVisibilityChange}
                     />
                 </div>

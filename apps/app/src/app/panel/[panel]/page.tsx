@@ -10,7 +10,6 @@ import { usePanelStore } from "@/hooks/use-panel-store";
 import { useSearch } from "@/hooks/use-search";
 import { arrayMove } from "@/lib/utils";
 import type { ColumnDefinition, Filter, PanelDefinition, ViewDefinition, WorklistDefinition } from "@/types/worklist";
-import { DEFAULT_WORKLIST } from "@/utils/constants";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,7 +34,7 @@ export default function WorklistPage() {
   const [tableFilters, setTableFilters] = useState<TableFilter[]>([]);
 
   const { patients, tasks, toggleTaskOwner, isLoading: isMedplumLoading } = useMedplumStore();
-  const { getPanel, createPanel, updatePanel, addView, isLoading: isPanelLoading } = usePanelStore();
+  const { getPanel, updatePanel, addView, isLoading: isPanelLoading } = usePanelStore();
 
   const router = useRouter();
 
@@ -50,15 +49,9 @@ export default function WorklistPage() {
       return;
     }
 
-    const panel = getPanel?.(panelId);
+    const panel = getPanel(panelId);
     if (!panel) {
-      if (panelId === 'default') {
-        createPanel?.(DEFAULT_WORKLIST).then(newPanel => {
-          router.push(`/panel/${newPanel.id}`);
-        }).catch(error => {
-          console.error('Failed to create default panel:', error);
-        });
-      }
+      throw new Error('Panel not found');
     } else {
       setPanelDefinition(panel);
     }
@@ -88,7 +81,7 @@ export default function WorklistPage() {
     }
 
     try {
-      await updatePanel?.(panelDefinition.id, newPanel);
+      await updatePanel(panelDefinition.id, newPanel);
       setPanelDefinition(newPanel);
     } catch (error) {
       console.error('Failed to update panel:', error);
@@ -253,6 +246,7 @@ export default function WorklistPage() {
             setCurrentView={setCurrentView}
             worklistColumns={columns}
             onAddColumn={onAddColumn}
+            visibleColumns={columns}
             onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({
               id: columnId,
               properties: {

@@ -157,16 +157,11 @@ export const adaptBackendViewToFrontend = (
   backendCalculatedColumns: ColumnInfoResponse[],
 ): ViewDefinition => {
   // Convert backend column IDs to frontend column definitions
-  const patientColumns = backendColumns
-    .filter((column) =>
-      backendView.config.columns.includes(column.id.toString()),
-    )
-    .map(adaptBackendColumnToFrontend)
-  const taskColumns = backendCalculatedColumns
-    .filter((column) =>
-      backendView.config.columns.includes(column.id.toString()),
-    )
-    .map(adaptBackendColumnToFrontend)
+  const columns = backendView.config.columns.map((columnId) => {
+    return backendColumns.find((column) => column.id.toString() === columnId)
+  })
+  .filter(column => column !== undefined)
+  .map(adaptBackendColumnToFrontend)
 
   // Extract view type and filters from metadata
   const metadata = backendView.metadata || {}
@@ -176,7 +171,7 @@ export const adaptBackendViewToFrontend = (
   const frontendView: ViewDefinition = {
     ...backendView,
     id: backendView.id.toString(),
-    columns: [...patientColumns, ...taskColumns] as ColumnDefinition[],
+    columns,
     title: backendView.name,
     filters,
     createdAt: new Date(), //TODO: get the actual createdAt from the backend

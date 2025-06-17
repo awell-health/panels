@@ -1,22 +1,33 @@
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { PanelDefinition } from '@/types/worklist';
+import { DEFAULT_WORKLIST } from '@/utils/constants';
 import { ChevronRight, LayoutGrid, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
+
 
 type PanelsTableProps = {
   panels: PanelDefinition[];
   onDeletePanel: (panelId: string) => void;
   onDeleteView: (panelId: string, viewId: string) => void;
+  createPanel: (panel: PanelDefinition) => Promise<PanelDefinition>;
 };
 
-const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDeleteView }) => {
+const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDeleteView, createPanel }) => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const onCreatePanel = () => {
+    createPanel(DEFAULT_WORKLIST).then(newPanel => {
+      router.push(`/panel/${newPanel.id}`);
+    }).catch(error => {
+      console.error('Failed to create default panel:', error);
+    });
+  }
 
   // For now, all panels are expanded by default
   return (
@@ -27,7 +38,7 @@ const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDele
           <button
             type="button"
             className="btn btn-sm bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs"
-            onClick={() => router.push('/panel/default')}
+            onClick={onCreatePanel}
           >
             <Plus className="h-3 w-3 mr-1" />
             Create new Panel

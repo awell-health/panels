@@ -182,6 +182,7 @@ export class MedplumStore {
       // Search for patients in Medplum with a limit of 1000
       const bundle = await this.client.search('Patient', {
         _count: 1000,
+        _sort: '-_lastUpdated',
       })
 
       // Return the actual FHIR Patient resources
@@ -198,6 +199,7 @@ export class MedplumStore {
       // Search for tasks in Medplum with a limit of 1000
       const bundle = await this.client.search('Task', {
         _count: 1000,
+        _sort: '-_lastUpdated',
       })
 
       // Return the actual FHIR Task resources
