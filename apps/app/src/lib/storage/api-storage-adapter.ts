@@ -4,7 +4,7 @@ import type {
   ViewDefinition,
 } from '@/types/worklist'
 import type { ColumnsResponse } from '@panels/types/columns'
-import type { ViewResponse } from '@panels/types/views'
+import type { ViewResponse, ViewSortsInfo } from '@panels/types/views'
 import {
   adaptBackendPanelsToFrontend,
   adaptBackendToFrontend,
@@ -596,6 +596,18 @@ export class APIStorageAdapter implements StorageAdapter {
       // Create view via API
       const createdView = await viewsAPI.create(backendViewInfo)
 
+      const newSortConfig: ViewSortsInfo = {
+        tenantId: this.config.tenantId,
+        userId: this.config.userId,
+        sorts: view.sortConfig?.map(sort => ({
+          columnName: sort.key,
+          direction: sort.direction,
+          order: 0,
+        })) || [],
+      }
+
+      const sortConfig = await viewsAPI.sorts.update({ id: createdView.id.toString() }, newSortConfig)
+
       const columns = await panelsAPI.columns.list(
         { id: panelId },
         this.config.tenantId,
@@ -607,6 +619,7 @@ export class APIStorageAdapter implements StorageAdapter {
         createdView,
         columns.baseColumns,
         columns.calculatedColumns,
+        sortConfig,
       )
 
       // const patientColumns = columns.baseColumns.map(
@@ -661,6 +674,18 @@ export class APIStorageAdapter implements StorageAdapter {
         panelId,
         this.config,
       )
+
+      const newSortConfig: ViewSortsInfo = {
+        tenantId: this.config.tenantId,
+        userId: this.config.userId,
+        sorts: updatedView.sortConfig?.map(sort => ({
+          columnName: sort.key,
+          direction: sort.direction,
+          order: 0,
+        })) || [],
+      }
+
+      const sortConfig = await viewsAPI.sorts.update({ id: viewId }, newSortConfig)
 
       // Update via API
       await viewsAPI.update({
@@ -731,10 +756,13 @@ export class APIStorageAdapter implements StorageAdapter {
         backendView.config.columns,
       )
 
+      const sortConfig = await viewsAPI.sorts.get({ id: viewId },this.config.tenantId, this.config.userId)
+
       const frontendView = adaptBackendViewToFrontend(
         backendView,
         columns.baseColumns,
         columns.calculatedColumns,
+        sortConfig,
       )
 
       // const patientColumns = columns.baseColumns.map(
@@ -779,11 +807,22 @@ export class APIStorageAdapter implements StorageAdapter {
     panel: PanelDefinition,
   ): Promise<PanelDefinition> {
     try {
+      const { viewsAPI } = await import('@/api/viewsAPI')
       // Load columns and views in parallel for maximum efficiency
       const [columns, views] = await Promise.allSettled([
         this.loadPanelColumns(panel.id),
         this.loadPanelViews(panel.id),
       ])
+
+      const enrichedViews =  views.status === 'fulfilled' && views.value && columns.status === 'fulfilled' && columns.value ? await Promise.all(views.value.map(async (vw) => {
+        const sortConfig = await viewsAPI.sorts.get({ id: vw.id.toString() },this.config.tenantId, this.config.userId)
+        return adaptBackendViewToFrontend(
+          vw,
+          columns.value?.baseColumns || [],
+          columns.value?.calculatedColumns || [],
+          sortConfig,
+        )
+      })) : []
 
       // Create enriched panel with all available data
       const enrichedPanel: PanelDefinition = {
@@ -800,19 +839,7 @@ export class APIStorageAdapter implements StorageAdapter {
                 .filter((column) => column.tags?.includes('panels:tasks'))
                 .map(adaptBackendColumnToFrontend)
             : panel.taskViewColumns || [],
-        views:
-          views.status === 'fulfilled' &&
-          views.value &&
-          columns.status === 'fulfilled' &&
-          columns.value
-            ? views.value.map((vw) =>
-                adaptBackendViewToFrontend(
-                  vw,
-                  columns.value?.baseColumns || [],
-                  columns.value?.calculatedColumns || [],
-                ),
-              )
-            : panel.views || [],
+        views: enrichedViews || panel.views || [],
       }
 
       return enrichedPanel

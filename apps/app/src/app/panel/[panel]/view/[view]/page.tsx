@@ -8,7 +8,7 @@ import { useMedplumStore } from "@/hooks/use-medplum-store";
 import { usePanelStore } from "@/hooks/use-panel-store";
 import { useSearch } from "@/hooks/use-search";
 import { arrayMove } from "@/lib/utils";
-import type { ColumnDefinition, Filter, PanelDefinition, ViewDefinition, WorklistDefinition } from "@/types/worklist";
+import type { ColumnDefinition, Filter, PanelDefinition, SortConfig, ViewDefinition, WorklistDefinition } from "@/types/worklist";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -201,6 +201,7 @@ export default function WorklistPage() {
         columns: viewDefinition?.columns ?? panel.taskViewColumns,
         createdAt: new Date(),
         viewType: viewDefinition?.viewType ?? 'task',
+        sortConfig: viewDefinition?.sortConfig ?? [],
       });
       if (newView) {
         router.push(`/panel/${panelId}/view/${newView.id}`);
@@ -209,6 +210,17 @@ export default function WorklistPage() {
       console.error('Failed to create new view:', error);
       // Optionally show user-friendly error message
     }
+  }
+
+  const onSortConfigUpdate = async (sortConfig: SortConfig | undefined) => {
+    if (!viewDefinition) {
+      return;
+    }
+    const newView = {
+      ...viewDefinition,
+      sortConfig: sortConfig ? [sortConfig] : [],
+    }
+    await updateView?.(panelId, viewId, newView);
   }
 
   const onViewTitleChange = async (newTitle: string) => {
@@ -257,6 +269,7 @@ export default function WorklistPage() {
             selectedRows={[]}
             toggleSelectAll={() => { }}
             worklistColumns={columns}
+            onSortConfigUpdate={onSortConfigUpdate}
             tableData={filteredData}
             handlePDFClick={() => { }}
             handleTaskClick={() => { }}
@@ -269,6 +282,7 @@ export default function WorklistPage() {
             onColumnUpdate={onColumnUpdate}
             filters={tableFilters}
             onFiltersChange={onFiltersChange}
+            initialSortConfig={viewDefinition?.sortConfig?.[0] ?? null}
           />
           <WorklistFooter
             columnsCounter={columns.length}
