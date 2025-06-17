@@ -36,6 +36,7 @@ export type ColumnDefinition = {
     display?: {
       visible?: boolean
       width?: number
+      order?: number
     }
   }
 }

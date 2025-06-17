@@ -300,11 +300,12 @@ export const panelsAPI = {
 
     update: async (
       column: ColumnInfo & IdParam,
+      panelId: IdParam,
       options = undefined,
     ): Promise<ColumnInfoResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
       const response = await fetch(
-        apiConfig.buildUrl(`/columns/${column.id}`),
+        apiConfig.buildUrl(`/panels/${panelId.id}/columns/${column.id}`),
         {
           method: 'PUT',
           headers: {

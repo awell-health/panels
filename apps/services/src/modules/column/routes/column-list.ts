@@ -17,6 +17,13 @@ const querystringSchema = z.object({
 
 type QuerystringType = z.infer<typeof querystringSchema>
 
+// Helper function to get order value, using MAX_SAFE_INTEGER for columns without order
+const getOrderValue = (col: {
+  properties?: { display?: { order?: number } }
+}) => {
+  return col.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+}
+
 export const columnList = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: IdParam
@@ -67,12 +74,20 @@ export const columnList = async (app: FastifyInstance) => {
         ...(ids && { id: { $in: idsArray.map(Number) } }),
       })
 
+      // Sort columns by order property
+      const sortedBaseColumns = [...baseColumns].sort(
+        (a, b) => getOrderValue(a) - getOrderValue(b),
+      )
+      const sortedCalculatedColumns = [...calculatedColumns].sort(
+        (a, b) => getOrderValue(a) - getOrderValue(b),
+      )
+
       return {
-        baseColumns: baseColumns.map((col) => ({
+        baseColumns: sortedBaseColumns.map((col) => ({
           ...col,
           columnType: 'base' as const,
         })),
-        calculatedColumns: calculatedColumns.map((col) => ({
+        calculatedColumns: sortedCalculatedColumns.map((col) => ({
           ...col,
           columnType: 'calculated' as const,
         })),

@@ -448,6 +448,47 @@ export class APIStorageAdapter implements StorageAdapter {
         (col) => !currentTaskKeys.has(col.key),
       )
 
+      // Find columns to update (in both current and new)
+      const patientColumnsToUpdate = currentPatientColumns.filter(
+        (currentCol) => {
+          const newCol = updatedPanel.patientViewColumns?.find(
+            (col) => col.key === currentCol.sourceField,
+          )
+          if (!newCol) return false
+
+          // Check if any properties have changed
+          return (
+            newCol.name !== currentCol.name ||
+            newCol.properties?.display?.order !==
+              currentCol.properties?.display?.order ||
+            newCol.properties?.display?.width !==
+              currentCol.properties?.display?.width ||
+            newCol.properties?.display?.visible !==
+              currentCol.properties?.display?.visible ||
+            newCol.description !== currentCol.metadata?.description
+          )
+        },
+      )
+
+      const taskColumnsToUpdate = currentTaskColumns.filter((currentCol) => {
+        const newCol = updatedPanel.taskViewColumns?.find(
+          (col) => col.key === currentCol.sourceField,
+        )
+        if (!newCol) return false
+
+        // Check if any properties have changed
+        return (
+          newCol.name !== currentCol.name ||
+          newCol.properties?.display?.order !==
+            currentCol.properties?.display?.order ||
+          newCol.properties?.display?.width !==
+            currentCol.properties?.display?.width ||
+          newCol.properties?.display?.visible !==
+            currentCol.properties?.display?.visible ||
+          newCol.description !== currentCol.metadata?.description
+        )
+      })
+
       // Delete removed columns
       const deletePromises = [
         ...patientColumnsToDelete.map((col) =>
@@ -547,8 +588,66 @@ export class APIStorageAdapter implements StorageAdapter {
         ),
       ]
 
+      // Update existing columns
+      const updatePromises = [
+        ...patientColumnsToUpdate.map((currentCol) => {
+          const newCol = updatedPanel.patientViewColumns?.find(
+            (col) => col.key === currentCol.sourceField,
+          )
+          if (!newCol) return Promise.resolve()
+
+          return panelsAPI.columns.update(
+            {
+              id: currentCol.id.toString(),
+              name: newCol.name,
+              properties: {
+                display: newCol.properties?.display,
+                validation: currentCol.properties.validation || {},
+                required: currentCol.properties.required || false,
+                unique: currentCol.properties.unique || false,
+              },
+              metadata: {
+                description: newCol.description,
+              },
+              tenantId: this.config.tenantId,
+              userId: this.config.userId,
+            },
+            { id },
+          )
+        }),
+        ...taskColumnsToUpdate.map((currentCol) => {
+          const newCol = updatedPanel.taskViewColumns?.find(
+            (col) => col.key === currentCol.sourceField,
+          )
+          if (!newCol) return Promise.resolve()
+
+          return panelsAPI.columns.update(
+            {
+              id: currentCol.id.toString(),
+              name: newCol.name,
+              properties: {
+                display: newCol.properties?.display,
+                validation: currentCol.properties.validation || {},
+                required: currentCol.properties.required || false,
+                unique: currentCol.properties.unique || false,
+              },
+              metadata: {
+                description: newCol.description,
+              },
+              tenantId: this.config.tenantId,
+              userId: this.config.userId,
+            },
+            { id },
+          )
+        }),
+      ]
+
       // Execute all column operations in parallel
-      await Promise.all([...deletePromises, ...createPromises])
+      await Promise.all([
+        ...deletePromises,
+        ...createPromises,
+        ...updatePromises,
+      ])
 
       // Invalidate panels cache since we updated one
       this.invalidateCache('panels')
@@ -599,14 +698,18 @@ export class APIStorageAdapter implements StorageAdapter {
       const newSortConfig: ViewSortsInfo = {
         tenantId: this.config.tenantId,
         userId: this.config.userId,
-        sorts: view.sortConfig?.map(sort => ({
-          columnName: sort.key,
-          direction: sort.direction,
-          order: 0,
-        })) || [],
+        sorts:
+          view.sortConfig?.map((sort) => ({
+            columnName: sort.key,
+            direction: sort.direction,
+            order: 0,
+          })) || [],
       }
 
-      const sortConfig = await viewsAPI.sorts.update({ id: createdView.id.toString() }, newSortConfig)
+      const sortConfig = await viewsAPI.sorts.update(
+        { id: createdView.id.toString() },
+        newSortConfig,
+      )
 
       const columns = await panelsAPI.columns.list(
         { id: panelId },
@@ -678,14 +781,18 @@ export class APIStorageAdapter implements StorageAdapter {
       const newSortConfig: ViewSortsInfo = {
         tenantId: this.config.tenantId,
         userId: this.config.userId,
-        sorts: updatedView.sortConfig?.map(sort => ({
-          columnName: sort.key,
-          direction: sort.direction,
-          order: 0,
-        })) || [],
+        sorts:
+          updatedView.sortConfig?.map((sort) => ({
+            columnName: sort.key,
+            direction: sort.direction,
+            order: 0,
+          })) || [],
       }
 
-      const sortConfig = await viewsAPI.sorts.update({ id: viewId }, newSortConfig)
+      const sortConfig = await viewsAPI.sorts.update(
+        { id: viewId },
+        newSortConfig,
+      )
 
       // Update via API
       await viewsAPI.update({
@@ -756,7 +863,11 @@ export class APIStorageAdapter implements StorageAdapter {
         backendView.config.columns,
       )
 
-      const sortConfig = await viewsAPI.sorts.get({ id: viewId },this.config.tenantId, this.config.userId)
+      const sortConfig = await viewsAPI.sorts.get(
+        { id: viewId },
+        this.config.tenantId,
+        this.config.userId,
+      )
 
       const frontendView = adaptBackendViewToFrontend(
         backendView,
@@ -814,15 +925,27 @@ export class APIStorageAdapter implements StorageAdapter {
         this.loadPanelViews(panel.id).then(views => views?.sort((a, b) => Number(a.id) - Number(b.id))),
       ])
 
-      const enrichedViews =  views.status === 'fulfilled' && views.value && columns.status === 'fulfilled' && columns.value ? await Promise.all(views.value.map(async (vw) => {
-        const sortConfig = await viewsAPI.sorts.get({ id: vw.id.toString() },this.config.tenantId, this.config.userId)
-        return adaptBackendViewToFrontend(
-          vw,
-          columns.value?.baseColumns || [],
-          columns.value?.calculatedColumns || [],
-          sortConfig,
-        )
-      })) : []
+      const enrichedViews =
+        views.status === 'fulfilled' &&
+        views.value &&
+        columns.status === 'fulfilled' &&
+        columns.value
+          ? await Promise.all(
+              views.value.map(async (vw) => {
+                const sortConfig = await viewsAPI.sorts.get(
+                  { id: vw.id.toString() },
+                  this.config.tenantId,
+                  this.config.userId,
+                )
+                return adaptBackendViewToFrontend(
+                  vw,
+                  columns.value?.baseColumns || [],
+                  columns.value?.calculatedColumns || [],
+                  sortConfig,
+                )
+              }),
+            )
+          : []
 
       // Create enriched panel with all available data
       const enrichedPanel: PanelDefinition = {

@@ -60,13 +60,19 @@ export default function WorklistTable({
   filters,
   onFiltersChange,
   initialSortConfig
- }: WorklistTableProps) {
+}: WorklistTableProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(initialSortConfig);
   const [activeColumn, setActiveColumn] = useState<ColumnDefinition | null>(null);
 
-  // Filter visible columns
+  // Filter visible columns and sort by order
   const visibleColumns = useMemo(() => {
-    return worklistColumns.filter(col => col.properties?.display?.visible !== false);
+    return worklistColumns
+      .filter(col => col.properties?.display?.visible !== false)
+      .sort((a, b) => {
+        const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER;
+        const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER;
+        return orderA - orderB;
+      });
   }, [worklistColumns]);
 
   const filteredAndSortedData = useMemo(() => {
@@ -120,7 +126,7 @@ export default function WorklistTable({
   const handleSort = (columnKey: string) => {
 
     const getSortConfig = (current: SortConfig | null): SortConfig | undefined => {
-      if(current?.key === columnKey) {
+      if (current?.key === columnKey) {
         return { key: columnKey, direction: current.direction === 'asc' ? 'desc' : 'asc' };
       }
       if (!current || current.key !== columnKey) {
@@ -134,9 +140,9 @@ export default function WorklistTable({
     const newSortConfig = getSortConfig(sortConfig);
     if (newSortConfig) {
       setSortConfig(newSortConfig);
-      
+
     }
-    onSortConfigUpdate(newSortConfig);  
+    onSortConfigUpdate(newSortConfig);
   };
 
   const handleFilter = (columnKey: string, value: string) => {
