@@ -11,7 +11,7 @@ export class PanelStore {
   private listeners: Array<() => void> = []
   private panels: PanelDefinition[] = []
   private storage: StorageAdapter | null = null
-  private _isLoading = false
+  private _isLoading = true
   private saveStates: Map<string, 'saving' | 'saved' | 'error'> = new Map()
 
   constructor() {
