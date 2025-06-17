@@ -365,16 +365,13 @@ export class APIStorageAdapter implements StorageAdapter {
       this.invalidateCache('panels')
 
       // Return the created panel using full adapter
-      const createdPanelAdapted = adaptBackendToFrontend(
-        createdPanel,
-        {
-          baseColumns: createdColumns.map(column => ({
-            ...column,
-            columnType: 'base'
-          })),
-          calculatedColumns: []
-        }
-      )
+      const createdPanelAdapted = adaptBackendToFrontend(createdPanel, {
+        baseColumns: createdColumns.map((column) => ({
+          ...column,
+          columnType: 'base',
+        })),
+        calculatedColumns: [],
+      })
       return createdPanelAdapted
     } catch (error) {
       console.error('Failed to create panel via API:', error)
@@ -443,9 +440,10 @@ export class APIStorageAdapter implements StorageAdapter {
       )
 
       // Find columns to create (in new but not in current)
-      const patientColumnsToCreate = updatedPanel.patientViewColumns?.filter(
-        (col) => !currentPatientKeys.has(col.key),
-      ) || []
+      const patientColumnsToCreate =
+        updatedPanel.patientViewColumns?.filter(
+          (col) => !currentPatientKeys.has(col.key),
+        ) || []
       const taskColumnsToCreate = updatedPanel.taskViewColumns?.filter(
         (col) => !currentTaskKeys.has(col.key),
       )

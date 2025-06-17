@@ -78,6 +78,7 @@ export const panelsAPI = {
         description: panel.description,
         tenantId: panel.tenantId,
         userId: panel.userId,
+        metadata: panel.metadata,
       }),
       ...(options || {}),
     })
@@ -94,12 +95,7 @@ export const panelsAPI = {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        name: panel.name,
-        description: panel.description,
-        tenantId: panel.tenantId,
-        userId: panel.userId,
-      }),
+      body: JSON.stringify(panel),
       ...(options || {}),
     })
     return response.json() as Promise<PanelResponse>

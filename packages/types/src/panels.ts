@@ -21,6 +21,7 @@ export type CohortOperator =
 export const PanelInfoSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
   tenantId: z.string(),
   userId: z.string(),
 })
@@ -45,6 +46,7 @@ export const CreatePanelResponseSchema = z.object({
   }),
   createdAt: z.date(),
   updatedAt: z.date(),
+  metadata: z.record(z.any()).optional(),
 })
 
 export type CreatePanelResponse = z.infer<typeof CreatePanelResponseSchema>
@@ -68,6 +70,7 @@ export const PanelResponseSchema = z.object({
   }),
   createdAt: z.date(),
   updatedAt: z.date(),
+  metadata: z.record(z.any()).optional(),
 })
 
 export const PanelsResponseSchema = z.array(PanelResponseSchema)
