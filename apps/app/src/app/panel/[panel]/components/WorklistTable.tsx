@@ -1,6 +1,6 @@
 "use client";
 
-import { isMatchingFhirPathCondition } from "@/lib/fhir-path";
+import { getNestedValue, isMatchingFhirPathCondition } from "@/lib/fhir-path";
 import type { ColumnDefinition } from "@/types/worklist";
 import { DndContext, type DragEndEvent, DragOverlay, type DragStartEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
@@ -22,8 +22,6 @@ interface WorklistTableProps {
   selectedRows: number[];
   toggleSelectAll: () => void;
   worklistColumns: ColumnDefinition[];
-  onAddColumn: () => void;
-  isBlank: boolean;
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   tableData: Record<string, any>[];
   handlePDFClick: () => void;
@@ -50,8 +48,6 @@ export default function WorklistTable({
   selectedRows,
   toggleSelectAll,
   worklistColumns,
-  onAddColumn,
-  isBlank,
   tableData,
   handlePDFClick,
   handleTaskClick,
@@ -89,8 +85,9 @@ export default function WorklistTable({
     if (!sortConfig) return filteredData;
 
     return [...filteredData].sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
+
+      const aValue = getNestedValue(a, sortConfig.key);
+      const bValue = getNestedValue(b, sortConfig.key);
 
       if (aValue === null || aValue === undefined) return 1;
       if (bValue === null || bValue === undefined) return -1;
