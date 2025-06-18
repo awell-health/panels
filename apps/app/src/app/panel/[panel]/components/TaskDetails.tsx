@@ -6,6 +6,8 @@ import { useEffect, useState } from "react"
 import { ExtensionDetails } from "./ExtensionDetails"
 import { SearchableAdditionalInfo } from "./SearchableAdditionalInfo"
 import { SearchableExtensionDetails } from "./SearchableExtensionDetails"
+import { JsonSearchableExtensionDetails } from "./JsonSearchableExtensionDetails"
+import { formatDate, formatDateWithType } from '@/lib/date-utils'
 
 type TaskContentProps = {
   taskData: WorklistTask
@@ -120,12 +122,10 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                       <p className="text-sm">{taskData.priority}</p>
                     </div>
                   )}
-                  {taskData.authoredOn && (
-                    <div className="bg-gray-50 p-3 rounded">
-                      <p className="text-xs font-medium text-gray-500">Authored On</p>
-                      <p className="text-sm">{new Date(taskData.authoredOn).toLocaleDateString()}</p>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-gray-500">Authored On</p>
+                    <p className="text-sm">{formatDateWithType(taskData.authoredOn)}</p>
+                  </div>
                 </div>
 
                 {taskData.executionPeriod && (
@@ -135,13 +135,13 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                       {taskData.executionPeriod.start && (
                         <div>
                           <p className="text-xs text-gray-500">Start</p>
-                          <p className="text-sm">{new Date(taskData.executionPeriod.start).toLocaleDateString()}</p>
+                          <p className="text-sm">{formatDateWithType(taskData.executionPeriod.start)}</p>
                         </div>
                       )}
                       {taskData.executionPeriod.end && (
                         <div>
                           <p className="text-xs text-gray-500">End</p>
-                          <p className="text-sm">{new Date(taskData.executionPeriod.end).toLocaleDateString()}</p>
+                          <p className="text-sm">{formatDateWithType(taskData.executionPeriod.end)}</p>
                         </div>
                       )}
                     </div>
@@ -177,7 +177,11 @@ export function TaskDetails({ taskData }: TaskContentProps) {
 
                 {taskData.extension && (
                   isFeatureEnabled('ENABLE_EXTENSION_SEARCH') ? (
-                    <SearchableExtensionDetails extensions={taskData.extension} />
+                    isFeatureEnabled('USE_JSON_VIEWER_FOR_EXTENSIONS') ? (
+                      <JsonSearchableExtensionDetails extensions={taskData.extension} />
+                    ) : (
+                      <SearchableExtensionDetails extensions={taskData.extension} />
+                    )
                   ) : (
                     <ExtensionDetails extensions={taskData.extension} />
                   )

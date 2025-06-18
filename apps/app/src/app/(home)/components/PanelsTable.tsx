@@ -4,6 +4,7 @@ import { DEFAULT_WORKLIST } from '@/utils/constants';
 import { ChevronRight, LayoutGrid, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
+import { formatDate, formatDateWithType } from '@/lib/date-utils'
 
 
 type PanelsTableProps = {
@@ -86,11 +87,6 @@ const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: stri
     setMounted(true);
   }, []);
 
-  const formatDate = (date: Date) => {
-    //return date ? date.toISOString().split('T')[0] : '';
-    return date.toString();
-  };
-
   return (
     <React.Fragment key={id}>
       <TableRow
@@ -107,7 +103,7 @@ const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: stri
           {taskViewColumns.length + patientViewColumns.length}
         </TableCell>
         <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
-          {mounted ? formatDate(createdAt) : ''}
+          {mounted ? formatDateWithType(createdAt) : ''}
         </TableCell>
         <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2 text-right">
           <button
@@ -142,7 +138,7 @@ const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: stri
               : (view.taskViewColumns?.length || 0) + (view.patientViewColumns?.length || 0)}
           </TableCell>
           <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
-            {formatDate(view.createdAt)}
+            {formatDateWithType(view.createdAt)}
           </TableCell>
           <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2 text-right">
             <button

@@ -11,6 +11,7 @@ import { useRef } from "react"
 import { TableCell, TableRow } from "../../../../components/ui/table"
 import { cn } from "../../../../lib/utils"
 import { PatientDetails } from "./PatientDetails"
+import { formatDateWithType } from "@/lib/date-utils"
 
 interface WorklistTableRowWithHoverProps {
     rowIndex: number;
@@ -74,47 +75,41 @@ export default function WorklistTableRow({
         const columnValue = getNestedValue(row, column.key);
         return (
             <TableCell
-                key={`${rowIndex}-${// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-                    colIndex}`}
+                key={`${rowIndex}-${colIndex}`}
                 className={cn("py-1 px-2 border-r border-gray-200 text-xs max-w-[200px]", "truncate")}
                 title={typeof columnValue === "string" ? columnValue : ""}
             >
                 {column.name === "Discharge Summary" && columnValue ? (
-                    // biome-ignore lint/a11y/useButtonType: <explanation>
                     <button
+                        type="button"
                         className="btn btn-ghost btn-sm text-xs h-6 px-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
                         onClick={() => handlePDFClick(columnValue, row["Patient Name"] || "Patient")}
                     >
                         <File className="h-3 w-3 mr-1" />
                         {columnValue}
                     </button>
-                ) : column.type === "tasks" && currentView === "Patient view" && row._raw?.tasks ? (
-                    formatTasksForPatientView(row._raw.tasks, row["Patient Name"], handleTaskClick)
+                ) : column.type === "date" && columnValue ? (
+                    formatDateWithType(columnValue)
                 ) : column.name === "Task Status" && columnValue ? (
                     renderTaskStatus(columnValue, row.Task, row["Patient Name"], handleTaskClick)
-                ) : column.type === "tasks" ? (
-                    // biome-ignore lint/a11y/useButtonType: <explanation>
-                    <button
-                        className="btn btn-ghost btn-sm text-xs h-6 px-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                        onClick={() =>
-                            handleTaskClick(columnValue || "", row["Task Status"] || "", row["Patient Name"] || "")
-                        }
-                    >
-                        <CheckSquare className="h-3 w-3 mr-1" />
-                        <span className="truncate">{columnValue || ""}</span>
-                    </button>
+                ) : column.type === "tasks" && currentView === "Patient view" && row._raw?.tasks ? (
+                    formatTasksForPatientView(row._raw.tasks, row["Patient Name"], handleTaskClick)
                 ) : column.type === "array" ? (
                     <div className="flex flex-wrap gap-1">
                         {Array.isArray(columnValue) ? (
-                            columnValue.map((item: unknown, index: number) => (
-                                <span
-                                    // biome-ignore lint/suspicious/noArrayIndexKey: No unique identifier available for array items
-                                    key={`${rowIndex}-${colIndex}-${index}`}
-                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
-                                >
-                                    {typeof item === 'object' ? Object.values(item as Record<string, unknown>).join(', ') : String(item)}
-                                </span>
-                            ))
+                            columnValue.map((item: unknown, index: number) => {
+                                const itemKey = typeof item === 'object'
+                                    ? JSON.stringify(item)
+                                    : String(item);
+                                return (
+                                    <span
+                                        key={`${rowIndex}-${colIndex}-${itemKey}`}
+                                        className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                                    >
+                                        {typeof item === 'object' ? Object.values(item as Record<string, unknown>).join(', ') : String(item)}
+                                    </span>
+                                );
+                            })
                         ) : (
                             <span className="text-gray-500">-</span>
                         )}
@@ -129,7 +124,7 @@ export default function WorklistTableRow({
                                     e.stopPropagation();
                                     handleAssigneeClick();
                                 }}>
-                                {columnValue}                        
+                                {columnValue}
                             </button>
                         ) : (
                             <button

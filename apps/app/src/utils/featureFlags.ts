@@ -3,10 +3,16 @@
 
 export const FEATURE_FLAGS = {
   // Enable search functionality in additional information sections
-  ENABLE_ADDITIONAL_INFO_SEARCH: true,
+  ENABLE_ADDITIONAL_INFO_SEARCH: false,
 
   // Enable search functionality in extension details
   ENABLE_EXTENSION_SEARCH: true,
+
+  // Use JSON viewer for displaying extensions
+  USE_JSON_VIEWER_FOR_EXTENSIONS: true,
+
+  // Use enhanced JSON viewer with recursive parsing
+  USE_ENHANCED_JSON_VIEWER: false,
 } as const
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS
