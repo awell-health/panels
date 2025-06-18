@@ -4,6 +4,7 @@ import type { Extension } from "@medplum/fhirtypes"
 import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { JsonViewer } from '@/components/JsonViewer'
 
 export type SearchableExtensionDetailsProps = {
     extensions: Extension[]
@@ -19,45 +20,89 @@ const SEARCH_MODE_LABELS = {
     both: 'Both'
 } as const
 
+// Fast JSON detection using regex patterns
+function isJsonString(value: string): boolean {
+    // Quick check for common JSON patterns
+    const trimmed = value.trim()
+
+    // Check if it starts with { or [ and ends with } or ]
+    if (!/^[{[]/.test(trimmed) || !/^[{[]/.test(trimmed)) {
+        return false
+    }
+
+    // Check for balanced braces/brackets
+    let stack = 0
+    let inString = false
+    let escaped = false
+
+    for (let i = 0; i < trimmed.length; i++) {
+        const char = trimmed[i]
+
+        if (escaped) {
+            escaped = false
+            continue
+        }
+
+        if (char === '\\') {
+            escaped = true
+            continue
+        }
+
+        if (char === '"' && !escaped) {
+            inString = !inString
+            continue
+        }
+
+        if (!inString) {
+            if (char === '{' || char === '[') {
+                stack++
+            } else if (char === '}' || char === ']') {
+                stack--
+                if (stack < 0) return false
+            }
+        }
+    }
+
+    return stack === 0
+}
+
 // Extract text content for searching (no JSX)
 const getExtensionTextValue = (ext: Extension): string => {
     if (ext.extension && ext.extension.length > 0) {
         // For nested extensions, concatenate all text values
-        return ext.extension.map(nestedExt => getExtensionTextValue(nestedExt)).join(' ');
+        return ext.extension.map(nestedExt => getExtensionTextValue(nestedExt)).join(' ')
     }
 
     // Handle different value types
     const value = ext.valueString || ext.valueBoolean || ext.valueInteger || ext.valueDecimal ||
         ext.valueDate || ext.valueDateTime || ext.valueTime || ext.valueCode ||
-        ext.valueReference?.reference;
-
-
+        ext.valueReference?.reference
 
     if (value === undefined || value === null) {
-        return 'No value';
+        return 'No value'
     }
 
     // Handle the case where value is literally "[object Object]" string
     if (typeof value === 'string' && value === '[object Object]') {
-        return 'Complex object (details not available)';
+        return 'Complex object (details not available)'
     }
 
     // If it's already an object, stringify it
     if (typeof value === 'object') {
-        return JSON.stringify(value, null, 2);
+        return JSON.stringify(value, null, 2)
     }
 
     // If it's a string that looks like JSON, parse and re-stringify it
-    if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+    if (typeof value === 'string' && isJsonString(value)) {
         try {
-            const jsonValue = JSON.parse(value);
-            return JSON.stringify(jsonValue, null, 2);
+            const jsonValue = JSON.parse(value)
+            return JSON.stringify(jsonValue, null, 2)
         } catch (e) {
-            return value;
+            return value
         }
     }
 
-    return String(value);
+    return String(value)
 }
 
 // Helper function to check if an extension matches the search criteria
@@ -133,7 +178,7 @@ export function SearchableExtensionDetails({
         })
     }
 
-    if (!extensions || extensions.length === 0) return null;
+    if (!extensions || extensions.length === 0) return null
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -155,13 +200,13 @@ export function SearchableExtensionDetails({
         if (ext.extension && ext.extension.length > 0) {
             // Only render if there are filtered extensions
             const filteredNestedExtensions = ext.extension.filter(nestedExt => {
-                if (!searchTerm.trim()) return true;
-                return extensionMatchesSearch(nestedExt, searchTerm, searchMode);
-            });
+                if (!searchTerm.trim()) return true
+                return extensionMatchesSearch(nestedExt, searchTerm, searchMode)
+            })
 
             if (filteredNestedExtensions.length === 0) {
                 // If no nested extensions match, render the value directly
-                return getExtensionTextValue(ext);
+                return getExtensionTextValue(ext)
             }
 
             return (
@@ -177,16 +222,16 @@ export function SearchableExtensionDetails({
                         </div>
                     ))}
                 </div>
-            );
+            )
         }
 
         // Handle different value types
         const value = ext.valueString || ext.valueBoolean || ext.valueInteger || ext.valueDecimal ||
             ext.valueDate || ext.valueDateTime || ext.valueTime || ext.valueCode ||
-            ext.valueReference?.reference;
+            ext.valueReference?.reference
 
         if (value === undefined || value === null) {
-            return 'No value';
+            return 'No value'
         }
 
         // Handle the case where value is literally "[object Object]" string
@@ -195,35 +240,34 @@ export function SearchableExtensionDetails({
                 <div className="text-gray-500 italic">
                     Complex object (details not available)
                 </div>
-            );
+            )
         }
 
-        // If it's already an object, stringify it
+        // If it's already an object, use JsonViewer
         if (typeof value === 'object') {
-            const stringValue = JSON.stringify(value, null, 2);
             return (
-                <div className="truncate" title={stringValue}>
-                    {stringValue}
-                </div>
-            );
+                <JsonViewer
+                    data={value}
+                    title={ext.url.split('/').pop() || ext.url}
+                    className="mt-1"
+                    isExpanded={false}
+                />
+            )
         }
 
-        // If it's a string that looks like JSON, parse and re-stringify it
-        if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
-            try {
-                const jsonValue = JSON.parse(value);
-                const stringValue = JSON.stringify(jsonValue, null, 2);
-                return (
-                    <div className="truncate" title={value}>
-                        {stringValue}
-                    </div>
-                );
-            } catch (e) {
-                return value;
-            }
+        // If it's a string that looks like JSON, use JsonViewer
+        if (typeof value === 'string' && isJsonString(value)) {
+            return (
+                <JsonViewer
+                    data={value}
+                    title={ext.url.split('/').pop() || ext.url}
+                    className="mt-1"
+                    isExpanded={false}
+                />
+            )
         }
 
-        return String(value);
+        return String(value)
     }
 
     return (

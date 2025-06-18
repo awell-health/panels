@@ -4,6 +4,7 @@ import { type KeyValueItem, type SearchMode, useKeyValueSearch } from '@/hooks/u
 import { ChevronDown, Search } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
+import { JsonViewer } from './JsonViewer'
 
 interface SearchableKeyValueSectionProps {
     title: string
@@ -17,6 +18,52 @@ const SEARCH_MODE_LABELS = {
     value: 'Values',
     both: 'Both'
 } as const
+
+// Fast JSON detection using regex patterns
+function isJsonString(value: string): boolean {
+    // Quick check for common JSON patterns
+    const trimmed = value.trim()
+
+    // Check if it starts with { or [ and ends with } or ]
+    if (!/^[{[]/.test(trimmed) || !/^[{[]/.test(trimmed)) {
+        return false
+    }
+
+    // Check for balanced braces/brackets
+    let stack = 0
+    let inString = false
+    let escaped = false
+
+    for (let i = 0; i < trimmed.length; i++) {
+        const char = trimmed[i]
+
+        if (escaped) {
+            escaped = false
+            continue
+        }
+
+        if (char === '\\') {
+            escaped = true
+            continue
+        }
+
+        if (char === '"' && !escaped) {
+            inString = !inString
+            continue
+        }
+
+        if (!inString) {
+            if (char === '{' || char === '[') {
+                stack++
+            } else if (char === '}' || char === ']') {
+                stack--
+                if (stack < 0) return false
+            }
+        }
+    }
+
+    return stack === 0
+}
 
 export function SearchableKeyValueSection({
     title,
@@ -148,14 +195,22 @@ export function SearchableKeyValueSection({
                 <p className="text-xs font-medium text-gray-500 mb-2">{title}</p>
                 <div className="space-y-2">
                     {filteredData.length > 0 ? (
-                        filteredData.map((item, index) => (
+                        filteredData.map((item) => (
                             <div key={item.originalIndex} className="border-b border-gray-200 pb-2 last:border-0">
                                 <p className="text-xs text-gray-500">
                                     {shouldHighlightKey ? highlightMatch(item.key, searchTerm) : item.key}
                                 </p>
-                                <p className="text-sm">
-                                    {shouldHighlightValue ? highlightMatch(item.value, searchTerm) : item.value}
-                                </p>
+                                {typeof item.value === 'string' && isJsonString(item.value) ? (
+                                    <JsonViewer
+                                        data={item.value}
+                                        title={item.key}
+                                        className="mt-1"
+                                    />
+                                ) : (
+                                    <p className="text-sm">
+                                        {shouldHighlightValue ? highlightMatch(item.value.toString(), searchTerm) : item.value.toString()}
+                                    </p>
+                                )}
                             </div>
                         ))
                     ) : hasActiveSearch ? (
