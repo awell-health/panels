@@ -30,12 +30,11 @@ export const viewUpdate = async (app: FastifyInstance) => {
     url: '/views/:id',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { name, config, tenantId, userId, metadata } = request.body
+      const { name, config, tenantId, metadata } = request.body
 
       // Only owner can update their own view
       const view = await request.store.view.findOne({
         id: Number(id),
-        ownerUserId: userId,
         tenantId,
       })
 

@@ -44,7 +44,7 @@ export const columnList = async (app: FastifyInstance) => {
     url: '/panels/:id/columns',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { tenantId, userId, tags, ids } = request.query
+      const { tenantId, tags, ids } = request.query
 
       const idsArray = Array.isArray(ids) ? ids : [ids]
 
@@ -52,7 +52,6 @@ export const columnList = async (app: FastifyInstance) => {
       const panel = await request.store.panel.findOne({
         id: Number(id),
         tenantId,
-        userId,
       })
 
       if (!panel) {

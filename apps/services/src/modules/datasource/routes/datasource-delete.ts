@@ -43,13 +43,12 @@ export const datasourceDelete = async (app: FastifyInstance) => {
     url: '/panels/:id/datasources/:dsId',
     handler: async (request, reply) => {
       const { id, dsId } = request.params
-      const { tenantId, userId } = request.body
+      const { tenantId } = request.body
 
       // First verify panel exists and user has access
       const panel = await request.store.em.findOne('Panel', {
         id: Number(id),
         tenantId,
-        userId,
       })
 
       if (!panel) {

@@ -36,7 +36,6 @@ export const viewCreate = async (app: FastifyInstance) => {
       const panel = await request.store.panel.findOne({
         id: panelId,
         tenantId,
-        userId,
       })
 
       if (!panel) {

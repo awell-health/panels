@@ -34,12 +34,11 @@ export const viewDelete = async (app: FastifyInstance) => {
     url: '/views/:id',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { tenantId, userId } = request.query
+      const { tenantId } = request.query
 
       // Only owner can delete their own view
       const view = await request.store.view.findOne({
         id: Number(id),
-        ownerUserId: userId,
         tenantId,
       })
 

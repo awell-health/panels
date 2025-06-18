@@ -35,10 +35,10 @@ export const viewList = async (app: FastifyInstance) => {
     },
     url: '/views',
     handler: async (request, reply) => {
-      const { tenantId, userId, panelId, published } = request.query
+      const { tenantId, panelId, published } = request.query
       const where: FilterQuery<View> = {
         $or: [
-          { ownerUserId: userId, tenantId }, // User's own views
+          { tenantId }, // User's own views
           { isPublished: true, tenantId }, // Published views in tenant
         ],
       }

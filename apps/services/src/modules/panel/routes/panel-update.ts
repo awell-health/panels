@@ -29,12 +29,11 @@ export const panelUpdate = async (app: FastifyInstance) => {
     url: '/panels/:id',
     handler: async (request, reply) => {
       const { id } = request.params as { id: string }
-      const { name, description, tenantId, userId, metadata } = request.body
+      const { name, description, tenantId, metadata } = request.body
 
       const panel = await request.store.panel.findOne({
         id: Number(id),
         tenantId,
-        userId,
       })
 
       if (!panel) {

@@ -40,13 +40,12 @@ export const datasourceUpdate = async (app: FastifyInstance) => {
     url: '/panels/:id/datasources/:dsId',
     handler: async (request, reply) => {
       const { id, dsId } = request.params
-      const { type, config, tenantId, userId } = request.body
+      const { type, config, tenantId } = request.body
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({
         id: Number(id),
         tenantId,
-        userId,
       })
 
       if (!panel) {
