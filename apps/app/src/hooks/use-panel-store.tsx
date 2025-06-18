@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 import { getStorageAdapter } from '@/lib/storage/storage-factory'
 import type { StorageAdapter } from '@/lib/storage/types'
+import { useAuthentication } from './use-authentication'
 
 export class PanelStore {
   private listeners: Array<() => void> = []
@@ -14,13 +15,13 @@ export class PanelStore {
   private _isLoading = true
   private saveStates: Map<string, 'saving' | 'saved' | 'error'> = new Map()
 
-  constructor() {
-    this.initializeStorage()
+  constructor(userId?: string, organizationSlug?: string) {
+    this.initializeStorage(userId, organizationSlug)
   }
 
-  private async initializeStorage() {
+  private async initializeStorage(userId?: string, organizationSlug?: string) {
     try {
-      this.storage = await getStorageAdapter()
+      this.storage = await getStorageAdapter(userId, organizationSlug)
       await this.loadPanels()
     } catch (error) {
       console.error('Failed to initialize storage adapter:', error)
@@ -296,10 +297,11 @@ let storeInstance: PanelStore | null = null
 
 // Provider component
 export function PanelStoreProvider({ children }: { children: ReactNode }) {
+  const { userId, organizationSlug } = useAuthentication()
   const [store] = useState(() => {
     if (!storeInstance) {
       console.log('Creating new PanelStore instance')
-      storeInstance = new PanelStore()
+      storeInstance = new PanelStore(userId, organizationSlug)
     }
     return storeInstance
   })

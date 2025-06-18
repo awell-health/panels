@@ -1,5 +1,6 @@
 'use client'
 
+import { useAuthentication } from '@/hooks/use-authentication'
 import { useStorageConfig } from '@/hooks/use-storage-config'
 import { getStorageConfig } from '@/lib/storage/storage-factory'
 import { Cloud, CloudOff, Database, HardDrive, Loader2, Settings } from 'lucide-react'
@@ -26,6 +27,7 @@ interface StorageStatusIndicatorProps {
 }
 
 export function StorageStatusIndicator({ className = '' }: StorageStatusIndicatorProps) {
+    const { userId, organizationSlug } = useAuthentication()
     const [status, setStatus] = useState<StorageStatus>({
         mode: 'local',
         health: 'loading',
@@ -51,7 +53,7 @@ export function StorageStatusIndicator({ className = '' }: StorageStatusIndicato
                 // Simple health check without creating new adapter instances
                 // Just check if configuration is valid
                 const isHealthy = config.mode === 'local' ||
-                    (config.mode === 'api' && config.apiConfig?.baseUrl && config.apiConfig?.tenantId)
+                    (config.mode === 'api' && organizationSlug && userId)
 
                 if (!cancelled) {
                     setStatus({
@@ -61,7 +63,11 @@ export function StorageStatusIndicator({ className = '' }: StorageStatusIndicato
                             mode: config.mode,
                             cacheEnabled: config.mode === 'api' ? storageConfig.isCacheEnabled : false,
                             cacheDuration: config.mode === 'api' ? storageConfig.cacheDurationMs : undefined,
-                            apiConfig: config.apiConfig,
+                            apiConfig: {
+                                baseUrl: config.apiConfig?.baseUrl || '',
+                                tenantId: organizationSlug || '',
+                                userId: userId || '',
+                            },
                         },
                         lastChecked: new Date(),
                     })

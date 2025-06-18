@@ -1,5 +1,4 @@
-import { MedplumProvider } from '@/contexts/medplum-context';
-import { PanelStoreProvider } from '@/hooks/use-panel-store';
+import Providers from '@/components/Providers';
 import { Inter } from "next/font/google";
 import './globals.css';
 
@@ -18,11 +17,9 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <body className={inter.className}>
-        <MedplumProvider>
-          <PanelStoreProvider>
-            {children}
-          </PanelStoreProvider>
-        </MedplumProvider>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   )
