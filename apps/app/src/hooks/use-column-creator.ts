@@ -1,3 +1,5 @@
+'use client'
+
 import {
   type ChatMessage,
   columnAiAssistantMessageHandler,
@@ -33,7 +35,7 @@ export const useColumnCreator = ({
   const handleSendMessage = async (conversation: ChatMessage[]) => {
     const result = await columnAiAssistantMessageHandler(
       conversation,
-      currentView === 'patient' ? patients : tasks,
+      currentView === 'patient' ? patients.slice(0, 2) : tasks.slice(0, 2),
       worklistDefinition ?? undefined,
     )
     if (result.needsDefinitionUpdate && result.definition) {
