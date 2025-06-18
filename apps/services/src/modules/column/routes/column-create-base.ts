@@ -38,7 +38,6 @@ export const columnCreateBase = async (app: FastifyInstance) => {
         properties,
         metadata,
         tenantId,
-        userId,
         tags,
       } = request.body
 
@@ -46,7 +45,6 @@ export const columnCreateBase = async (app: FastifyInstance) => {
       const panel = await request.store.panel.findOne({
         id: Number(id),
         tenantId,
-        userId,
       })
 
       if (!panel) {

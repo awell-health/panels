@@ -42,13 +42,13 @@ export const viewSorts = async (app: FastifyInstance) => {
     url: '/views/:id/sorts',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { tenantId, userId } = request.query
+      const { tenantId } = request.query
 
       // Verify view exists and user has access
       const view = await request.store.view.findOne({
         id: Number(id),
         $or: [
-          { ownerUserId: userId, tenantId },
+          { tenantId },
           { isPublished: true, tenantId },
         ],
       })

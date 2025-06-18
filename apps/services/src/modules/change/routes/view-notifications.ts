@@ -46,7 +46,6 @@ export const viewNotifications = async (app: FastifyInstance) => {
       } = request.query
 
       const where: FilterQuery<ViewNotification> = {
-        userId,
         view: {
           tenantId,
         },

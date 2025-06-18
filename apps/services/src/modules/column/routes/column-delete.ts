@@ -39,13 +39,12 @@ export const columnDelete = async (app: FastifyInstance) => {
     url: '/panels/:id/columns/:colId',
     handler: async (request, reply) => {
       const { id, colId } = request.params
-      const { tenantId, userId } = request.query
+      const { tenantId } = request.query
 
       // First verify panel exists and user has access
       const panel = await request.store.em.findOne('Panel', {
         id: Number(id),
         tenantId,
-        userId,
       })
 
       if (!panel) {

@@ -28,7 +28,7 @@ export const panelDelete = async (app: FastifyInstance) => {
     url: '/panels/:id',
     handler: async (request, reply) => {
       const { id } = request.params as { id: string }
-      const { tenantId, userId } = request.query as {
+      const { tenantId } = request.query as {
         tenantId: string
         userId: string
       }
@@ -36,7 +36,6 @@ export const panelDelete = async (app: FastifyInstance) => {
       const panel = await request.store.em.findOne('Panel', {
         id: Number(id),
         tenantId,
-        userId,
       })
 
       if (!panel) {

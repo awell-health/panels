@@ -26,10 +26,10 @@ export const panelList = async (app: FastifyInstance) => {
     },
     url: '/panels',
     handler: async (request, reply) => {
-      const { tenantId, userId } = request.query
+      const { tenantId } = request.query
 
       const panels = await request.store.panel.find(
-        { tenantId, userId },
+        { tenantId },
         { populate: ['dataSources', 'baseColumns', 'calculatedColumns'] },
       )
 

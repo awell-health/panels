@@ -28,13 +28,13 @@ export const panelChanges = async (app: FastifyInstance) => {
     },
     url: '/changes/panels',
     handler: async (request, reply) => {
-      const { tenantId, userId, panelId, changeType, since, limit, offset } =
+      const { tenantId, panelId, changeType, since, limit, offset } =
         request.query
 
       const where: FilterQuery<PanelChange> = {
         panel: {
           $or: [
-            { userId, tenantId }, // User's own panels
+            { tenantId }, // User's own panels
             {
               // Panels with published views in tenant
               views: {

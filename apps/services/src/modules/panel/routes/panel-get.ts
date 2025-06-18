@@ -31,7 +31,7 @@ export const panelGet = async (app: FastifyInstance) => {
     url: '/panels/:id',
     handler: async (request, reply) => {
       const { id } = request.params as { id: string }
-      const { tenantId, userId } = request.query as {
+      const { tenantId } = request.query as {
         tenantId: string
         userId: string
       }
@@ -40,7 +40,6 @@ export const panelGet = async (app: FastifyInstance) => {
         {
           id: Number(id),
           tenantId,
-          userId,
         },
         {
           populate: [

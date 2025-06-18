@@ -53,7 +53,6 @@ export const columnUpdate = async (app: FastifyInstance) => {
         dependencies,
         sourceField,
         tenantId,
-        userId,
         tags,
       } = request.body
 
@@ -61,7 +60,6 @@ export const columnUpdate = async (app: FastifyInstance) => {
       const panel = await request.store.panel.findOne({
         id: Number(id),
         tenantId,
-        userId,
       })
 
       if (!panel) {

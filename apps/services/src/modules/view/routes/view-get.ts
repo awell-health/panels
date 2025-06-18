@@ -32,13 +32,13 @@ export const viewGet = async (app: FastifyInstance) => {
     url: '/views/:id',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { tenantId, userId } = request.query
+      const { tenantId } = request.query
 
       const view = await request.store.view.findOne(
         {
           id: Number(id),
           $or: [
-            { ownerUserId: userId, tenantId }, // User's own view
+            { tenantId }, // User's own view
             { isPublished: true, tenantId }, // Published view in tenant
           ],
         },

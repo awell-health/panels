@@ -30,13 +30,12 @@ export const datasourceCreate = async (app: FastifyInstance) => {
     url: '/panels/:id/datasources',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { type, config, tenantId, userId } = request.body
+      const { type, config, tenantId } = request.body
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({
         id: Number(id),
         tenantId,
-        userId,
       })
 
       if (!panel) {
