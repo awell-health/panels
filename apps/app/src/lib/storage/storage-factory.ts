@@ -33,8 +33,6 @@ export const getStorageConfig = () => {
     mode: STORAGE_MODES.API,
     apiConfig: {
       baseUrl: process.env.NEXT_PUBLIC_APP_API_BASE_URL || '',
-      tenantId: process.env.NEXT_PUBLIC_APP_TENANT_ID || '',
-      userId: process.env.NEXT_PUBLIC_APP_USER_ID || '',
     },
   }
 
@@ -46,9 +44,7 @@ export const getStorageConfig = () => {
 const validateEnvironmentConfig = (mode: StorageMode): void => {
   if (mode === STORAGE_MODES.API) {
     const requiredVars = [
-      'NEXT_PUBLIC_APP_API_BASE_URL',
-      'NEXT_PUBLIC_APP_TENANT_ID',
-      'NEXT_PUBLIC_APP_USER_ID',
+      'NEXT_PUBLIC_APP_API_BASE_URL'
     ]
 
     const missingVars = requiredVars.filter((varName) => !process.env[varName])
@@ -64,7 +60,7 @@ const validateEnvironmentConfig = (mode: StorageMode): void => {
 /**
  * Create a storage adapter based on environment configuration
  */
-export const createStorageAdapter = async (cacheConfig?: {
+export const createStorageAdapter = async (userId?: string, organizationSlug?: string, cacheConfig?: {
   enabled?: boolean
   duration?: number
 }): Promise<StorageAdapter> => {
@@ -75,7 +71,7 @@ export const createStorageAdapter = async (cacheConfig?: {
 
   switch (mode) {
     case STORAGE_MODES.API: {
-      return new APIStorageAdapter(cacheConfig)
+      return new APIStorageAdapter(userId, organizationSlug, cacheConfig)
     }
 
     case STORAGE_MODES.LOCAL: {
@@ -98,11 +94,11 @@ let storagePromise: Promise<StorageAdapter> | null = null
  * Get the storage adapter instance (singleton pattern with race condition protection)
  * This ensures the same adapter is used throughout the application
  */
-export const getStorageAdapter = async (): Promise<StorageAdapter> => {
+export const getStorageAdapter = async (userId?: string, organizationSlug?: string): Promise<StorageAdapter> => {
   const mode = getStorageMode()
 
   if (mode === STORAGE_MODES.API) {
-    return new APIStorageAdapter()
+    return new APIStorageAdapter(userId, organizationSlug)
   }
 
   return new LocalStorageAdapter()

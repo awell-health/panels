@@ -14,6 +14,7 @@ import type { DragEndEvent } from "@dnd-kit/core";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AddIngestionModal } from "./components/AddIngestionModal";
+import { Loader2 } from "lucide-react";
 
 interface TableFilter {
   key: string;
@@ -250,7 +251,7 @@ export default function WorklistPage() {
     <>
       {isLoading ? (
         <div className="flex items-center justify-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
+          <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" aria-label="Loading Panel" />
         </div>
       ) : (
         <div className="flex flex-col h-screen">

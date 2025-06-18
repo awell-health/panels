@@ -46,7 +46,7 @@ const Home = () => {
                 onDeleteView={(panelId: string, viewId: string) => deleteView?.(panelId, viewId)}
                 createPanel={createPanel}
               />
-              <TeamTable users={users} />
+              {/* <TeamTable users={users} /> */}
             </>
           )}
 

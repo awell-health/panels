@@ -265,18 +265,3 @@ export const validateApiConfig = (config: {
   }
 }
 
-/**
- * Get API configuration from environment variables
- */
-export const getApiConfig = () => {
-  const tenantId = process.env.NEXT_PUBLIC_APP_TENANT_ID
-  const userId = process.env.NEXT_PUBLIC_APP_USER_ID
-
-  if (!tenantId || !userId) {
-    throw new Error(
-      'Missing API configuration. Please set NEXT_PUBLIC_APP_TENANT_ID and NEXT_PUBLIC_APP_USER_ID environment variables.',
-    )
-  }
-
-  return { tenantId, userId }
-}

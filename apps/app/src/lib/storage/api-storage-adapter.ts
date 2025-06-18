@@ -12,10 +12,10 @@ import {
   adaptFrontendToBackend,
   adaptFrontendViewToBackend,
   adaptBackendColumnToFrontend,
-  getApiConfig,
   validateApiConfig,
 } from './type-adapters'
 import type { StorageAdapter } from './types'
+import { useAuthentication } from '@/hooks/use-authentication'
 
 interface CacheConfig {
   enabled: boolean
@@ -42,8 +42,11 @@ export class APIStorageAdapter implements StorageAdapter {
   private cache: CacheStore = { panels: null, views: null }
   private cacheConfig: CacheConfig
 
-  constructor(cacheConfig?: Partial<CacheConfig>) {
-    this.config = getApiConfig()
+  constructor(userId?: string, organizationSlug?: string, cacheConfig?: Partial<CacheConfig>) {
+    this.config = {
+      tenantId: organizationSlug || '',
+      userId: userId || '',
+    }
     validateApiConfig(this.config)
     this.cacheConfig = {
       enabled: cacheConfig?.enabled ?? true,
