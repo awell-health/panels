@@ -24,6 +24,10 @@ export class AuthenticationStore {
         return this.user?.member_id
     }
 
+    getName = () => {
+        return this.user?.name
+    }
+
     setOrganization = (organization: StytchOrganization | null) => {
         this.organization = organization
     }
@@ -96,5 +100,6 @@ export function useAuthentication() {
     medplumSecret: store.getMedplumSecret(),
     organizationSlug: store.getOrganizationSlug(),
     userId: store.getUserId(),
+    name: store.getName(),
   }
 } 
