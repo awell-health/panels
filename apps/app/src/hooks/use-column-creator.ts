@@ -36,7 +36,7 @@ export const useColumnCreator = ({
     const result = await columnAiAssistantMessageHandler(
       conversation,
       currentView === 'patient' ? patients.slice(0, 2) : tasks.slice(0, 2),
-      worklistDefinition ?? undefined,
+      worklistDefinition ? { ...worklistDefinition, views: []} : undefined,
     )
     if (result.needsDefinitionUpdate && result.definition) {
       onDefinitionChange(result.definition)
