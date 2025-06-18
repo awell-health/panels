@@ -1,7 +1,8 @@
 'use client'
 
+import { useAuthentication } from '@/hooks/use-authentication'
 import { medplumStore } from '@/lib/medplum'
-import type { Bot, Patient, Task } from '@medplum/fhirtypes'
+import type { Bot, Patient, Practitioner, Task } from '@medplum/fhirtypes'
 import { createContext, useContext, useEffect, useState } from 'react'
 
 type MedplumContextType = {
@@ -14,7 +15,7 @@ type MedplumContextType = {
   error: Error | null
   accessToken: string | null
   addNotesToTask: (taskId: string, notes: string) => Promise<Task>
-  toggleTaskOwner: (taskId: string, authenticatedUserId: string) => Promise<Task>
+  toggleTaskOwner: (taskId: string) => Promise<Task>
 }
 
 const MedplumContext = createContext<MedplumContextType | null>(null)
@@ -28,6 +29,8 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { medplumClientId, medplumSecret, userId: authenticatedUserId, name } = useAuthentication()
+  const [practitioner, setPractitioner] = useState<Practitioner | null>(null)
 
   const updateResource = <T extends { id?: string }>(
     currentResources: T[],
@@ -50,12 +53,22 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
     const loadData = async () => {
       try {
         setIsLoading(true)
-        const [loadedPatients, loadedTasks] = await Promise.all([
+
+        if (!authenticatedUserId) {
+          console.error('No authenticated user ID found')
+          return
+        }
+
+        medplumStore.initialize(medplumClientId, medplumSecret)
+        
+        const [practitioner, loadedPatients, loadedTasks] = await Promise.all([
+          medplumStore.getOrCreatePractitioner(authenticatedUserId, name ?? authenticatedUserId),
           medplumStore.getPatients(),
           medplumStore.getTasks(),
         ])
 
         if (isMounted) {
+          setPractitioner(practitioner)
           setPatients(loadedPatients)
           setTasks(loadedTasks)
         }
@@ -108,8 +121,8 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
     return task
   }
 
-  async function toggleTaskOwner(taskId: string, authenticatedUserId: string) {
-    const task = await medplumStore.toggleTaskOwner(taskId, authenticatedUserId)
+  async function toggleTaskOwner(taskId: string) {
+    const task = await medplumStore.toggleTaskOwner(taskId, practitioner?.id ?? '')
     setTasks((currentTasks) => updateResource(currentTasks, task))
     return task
   }

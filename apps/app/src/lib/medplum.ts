@@ -29,13 +29,10 @@ export class MedplumStore {
   }
 
   // Initialize the store with client login
-  async initialize(): Promise<void> {
+  async initialize(clientId?: string, clientSecret?: string): Promise<void> {
     if (!this.initialized) {
       try {
-        const clientId = process.env.NEXT_PUBLIC_MEDPLUM_CLIENT_ID
-        const clientSecret = process.env.NEXT_PUBLIC_MEDPLUM_CLIENT_SECRET
-        const baseUrl = process.env.NEXT_PUBLIC_MEDPLUM_BASE_URL
-
+      
         if (!clientId || !clientSecret) {
           throw new Error(
             'Medplum credentials are missing. Please check your .env.local file.',
@@ -43,9 +40,8 @@ export class MedplumStore {
         }
 
         await this.client.startClientLogin(clientId, clientSecret)
-        this.initialized = true
-
         await this.initializeWebSocket()
+        this.initialized = true
       } catch (error) {
         console.error('Failed to initialize Medplum client:', error)
         throw error
@@ -148,7 +144,6 @@ export class MedplumStore {
 
   // Subscribe to tasks
   async subscribeToTasks(handler: (task: Task) => void): Promise<() => void> {
-    await this.initialize()
     return this.subscribe('Task', handler)
   }
 
@@ -156,7 +151,6 @@ export class MedplumStore {
   async subscribeToPatients(
     handler: (patient: Patient) => void,
   ): Promise<() => void> {
-    await this.initialize()
     return this.subscribe('Patient', handler)
   }
 
@@ -178,7 +172,6 @@ export class MedplumStore {
 
   async getPatients(): Promise<Patient[]> {
     try {
-      await this.initialize()
       // Search for patients in Medplum with a limit of 1000
       const bundle = await this.client.search('Patient', {
         _count: 1000,
@@ -195,7 +188,6 @@ export class MedplumStore {
 
   async getTasks(): Promise<Task[]> {
     try {
-      await this.initialize()
       // Search for tasks in Medplum with a limit of 1000
       const bundle = await this.client.search('Task', {
         _count: 1000,
@@ -233,13 +225,11 @@ export class MedplumStore {
 
   // Get the current access token
   async getAccessToken(): Promise<string | undefined> {
-    await this.initialize()
     const token = this.client.getAccessToken()
     return token
   }
 
   async addNoteToTask(taskId: string, notes: string): Promise<Task> {
-    await this.initialize()
     try {
       const task = await this.client.readResource('Task', taskId)
 
@@ -262,8 +252,28 @@ export class MedplumStore {
     }
   }
 
+  async getOrCreatePractitioner(userId: string, name: string): Promise<Practitioner> {
+    console.log('Getting or creating practitioner', userId, name)
+    
+    const practitioner = await this.client.searchOne('Practitioner', {
+      identifier: `http://panels.awellhealth.com/fhir/identifier/practitioner|${userId}`
+    })
+    if (!practitioner) {
+      console.log('Creating practitioner', userId, name)
+      const newPractitioner = await this.client.createResource({
+        identifier: [{
+          system: 'http://panels.awellhealth.com/fhir/identifier/practitioner',
+          value: userId
+        }],
+        resourceType: 'Practitioner',
+        name: [{ given: [name] }],
+      })
+      return newPractitioner
+    }
+    return practitioner
+  }
+
   async toggleTaskOwner(taskId: string, userId: string): Promise<Task> {
-    await this.initialize()
     try {
       const task = (await this.client.readResource('Task', taskId)) as Task
       const practitioner = (await this.client.readResource(
@@ -282,12 +292,14 @@ export class MedplumStore {
         return await this.client.updateResource(updatedTask)
       }
 
+      console.log('Updating task owner', practitioner.name)
+      const displayName = `${Array.isArray(practitioner.name?.[0]?.given) ? practitioner.name[0].given.join(' ') : practitioner.name?.[0]?.given ?? ''} ${Array.isArray(practitioner.name?.[0]?.family) ? practitioner.name[0].family.join(' ') : practitioner.name?.[0]?.family ?? ''}`
       // Update the task owner
       const updatedTask = {
         ...task,
         resourceType: 'Task',
         owner: {
-          display: `${practitioner.name?.[0]?.given?.[0]} ${practitioner.name?.[0]?.family}`,
+          display: displayName,
           reference: `Practitioner/${userId}`,
           type: 'Practitioner' as const,
         },

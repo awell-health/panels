@@ -285,7 +285,7 @@ export default function WorklistPage() {
               handleTaskClick={() => { }}
               handleRowHover={() => { }}
               toggleSelectRow={() => { }}
-              handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId, process.env.NEXT_PUBLIC_AUTH_USER_ID ?? '')}
+              handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
               setIsAddingIngestionSource={() => setIsAddingIngestionSource(true)}
               currentView={currentView}
               handleDragEnd={handleDragEnd}
