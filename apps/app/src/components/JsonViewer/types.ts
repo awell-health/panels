@@ -7,6 +7,11 @@ export interface JsonViewerProps {
   onModeChange?: (mode: JsonViewerMode) => void
   className?: string
   isExpanded?: boolean
+  // Search highlighting props
+  searchTerm?: string
+  searchMode?: 'key' | 'value' | 'both'
+  highlightMatches?: boolean
+  autoCollapse?: boolean
 }
 
 export interface JsonViewModeProps {
@@ -14,11 +19,21 @@ export interface JsonViewModeProps {
   level?: number
   isExpanded?: boolean
   onToggle?: () => void
+  // Search highlighting props
+  searchTerm?: string
+  searchMode?: 'key' | 'value' | 'both'
+  highlightMatches?: boolean
+  autoCollapse?: boolean
+  path?: string[]
 }
 
 export interface JsonRawModeProps {
   data: object
   className?: string
+  // Search highlighting props
+  searchTerm?: string
+  searchMode?: 'key' | 'value' | 'both'
+  highlightMatches?: boolean
 }
 
 export interface JsonToggleProps {
@@ -40,3 +55,25 @@ export interface JsonObject {
 }
 
 export type JsonArray = JsonValue[]
+
+// Search highlighting types
+export interface SearchMatch {
+  path: string[]
+  type: 'key' | 'value' | 'both'
+  startIndex: number
+  endIndex: number
+  value: string
+}
+
+export interface HighlightedJsonProps {
+  data: unknown
+  searchTerm?: string
+  searchMode?: 'key' | 'value' | 'both'
+  highlightMatches?: boolean
+  autoCollapse?: boolean
+  className?: string
+  isExpanded?: boolean
+  onToggle?: () => void
+  level?: number
+  path?: string[]
+}

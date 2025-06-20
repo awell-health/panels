@@ -2,18 +2,9 @@
 
 import type { JsonViewModeProps, JsonValue, JsonObject, JsonArray } from './types';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronRight, Package, List, Key, Hash, FileText, Check, X } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { findSearchMatches, pathContainsMatches, shouldAutoExpand } from './search-utils';
-
-function getValueIcon(value: JsonValue) {
-    if (value === null) return <X className="h-3 w-3 text-gray-400" />;
-    if (typeof value === 'boolean') return <Check className="h-3 w-3 text-green-500" />;
-    if (typeof value === 'number') return <Hash className="h-3 w-3 text-blue-500" />;
-    if (typeof value === 'string') return <FileText className="h-3 w-3 text-purple-500" />;
-    if (Array.isArray(value)) return <List className="h-3 w-3 text-orange-500" />;
-    return <Package className="h-3 w-3 text-indigo-500" />;
-}
 
 function formatValue(value: JsonValue): string {
     if (value === null) return 'null';
@@ -67,7 +58,7 @@ const getKeyHighlightClasses = (key: string, searchTerm: string, searchMode: 'ke
     return ''
 }
 
-export function JsonViewMode({
+export function SimplifiedJsonViewMode({
     data,
     level = 0,
     isExpanded = true,
@@ -111,7 +102,6 @@ export function JsonViewMode({
         const valueStr = formatValue(data as JsonValue)
         return (
             <div className="flex items-center space-x-2">
-                {getValueIcon(data as JsonValue)}
                 <span className="text-sm">
                     {highlightMatches && searchTerm ?
                         highlightText(valueStr, searchTerm, searchMode) :
@@ -138,7 +128,6 @@ export function JsonViewMode({
                 ) : (
                     <ChevronRight className="h-3 w-3 text-gray-500" />
                 )}
-                {getValueIcon(data as JsonValue)}
                 <span className="font-medium">
                     {isArray ? `Array(${items.length})` : `Object(${items.length})`}
                 </span>
@@ -160,8 +149,7 @@ export function JsonViewMode({
                         return (
                             <div key={key} className="flex items-start space-x-2">
                                 <div className="flex items-center space-x-1 text-gray-500">
-                                    <Key className="h-3 w-3" />
-                                    <span className={cn("text-xs", keyMatches)}>
+                                    <span className={cn("text-sm", keyMatches)}>
                                         {highlightMatches && searchTerm ?
                                             highlightText(key.toString(), searchTerm, searchMode) :
                                             key
@@ -170,7 +158,7 @@ export function JsonViewMode({
                                 </div>
                                 <div className="flex-1">
                                     {typeof value === 'object' && value !== null ? (
-                                        <JsonViewMode
+                                        <SimplifiedJsonViewMode
                                             data={value as JsonObject | JsonArray}
                                             level={level + 1}
                                             isExpanded={false}
@@ -182,7 +170,6 @@ export function JsonViewMode({
                                         />
                                     ) : (
                                         <div className="flex items-center space-x-2">
-                                            {getValueIcon(value as JsonValue)}
                                             <span className="text-sm">
                                                 {highlightMatches && searchTerm ?
                                                     highlightText(formatValue(value as JsonValue), searchTerm, searchMode) :

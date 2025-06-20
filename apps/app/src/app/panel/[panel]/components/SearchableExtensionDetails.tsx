@@ -4,8 +4,9 @@ import type { Extension } from "@medplum/fhirtypes"
 import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { JsonViewer } from '@/components/JsonViewer'
+import { JsonViewer, SimplifiedJsonViewer } from '@/components/JsonViewer'
 import { formatDate, formatDateWithType } from '@/lib/date-utils'
+import { isFeatureEnabled } from '@/utils/featureFlags'
 
 export type SearchableExtensionDetailsProps = {
     extensions: Extension[]
@@ -111,6 +112,52 @@ const getExtensionTextValue = (ext: Extension): string => {
     return String(value)
 }
 
+// Helper function to check if an extension contains JSON data
+const isJsonExtension = (ext: Extension): boolean => {
+    if (ext.extension && ext.extension.length > 0) {
+        // For nested extensions, check if any nested extension is JSON
+        return ext.extension.some(nestedExt => isJsonExtension(nestedExt))
+    }
+
+    // Handle different value types - exactly matching renderExtensionValue logic
+    const value = ext.valueString || ext.valueBoolean || ext.valueInteger || ext.valueDecimal ||
+        ext.valueDate || ext.valueDateTime || ext.valueTime || ext.valueCode ||
+        ext.valueReference?.reference
+
+    if (value === undefined || value === null) {
+        return false
+    }
+
+    // Handle the case where value is literally "[object Object]" string
+    if (typeof value === 'string' && value === '[object Object]') {
+        return false  // This is not treated as JSON in renderExtensionValue
+    }
+
+    // If it's already an object, it's JSON (matches renderExtensionValue)
+    if (typeof value === 'object') {
+        return true
+    }
+
+    // If it's a string that looks like JSON, it's JSON (matches renderExtensionValue)
+    if (typeof value === 'string' && isJsonString(value)) {
+        return true
+    }
+
+    return false
+}
+
+// Helper function to sort extensions with JSON first
+const sortExtensionsWithJsonFirst = (extensions: Extension[]): Extension[] => {
+    return [...extensions].sort((a, b) => {
+        const aIsJson = isJsonExtension(a)
+        const bIsJson = isJsonExtension(b)
+
+        if (aIsJson && !bIsJson) return -1  // a comes first
+        if (!aIsJson && bIsJson) return 1   // b comes first
+        return 0  // maintain original order within groups
+    })
+}
+
 // Helper function to check if an extension matches the search criteria
 const extensionMatchesSearch = (ext: Extension, searchTerm: string, searchMode: SearchMode): boolean => {
     const normalizedSearchTerm = searchTerm.toLowerCase().trim()
@@ -200,6 +247,17 @@ export function SearchableExtensionDetails({
     // Filter extensions based on search using the new recursive search
     const filteredExtensions = searchExtensions(extensions, searchTerm, searchMode)
 
+    // Sort extensions with JSON first
+    const sortedExtensions = sortExtensionsWithJsonFirst(filteredExtensions)
+
+    // // Debug logging to understand the sorting
+    // console.log('Extensions sorting debug:', {
+    //     total: filteredExtensions.length,
+    //     jsonExtensions: filteredExtensions.filter(ext => isJsonExtension(ext)).map(ext => ext.url),
+    //     nonJsonExtensions: filteredExtensions.filter(ext => !isJsonExtension(ext)).map(ext => ext.url),
+    //     sortedUrls: sortedExtensions.map(ext => ext.url)
+    // })
+
     const hasActiveSearch = searchTerm.trim().length > 0
 
     const renderExtensionValue = (ext: Extension, parentIndex?: number): React.ReactNode => {
@@ -215,9 +273,12 @@ export function SearchableExtensionDetails({
                 return getExtensionTextValue(ext)
             }
 
+            // Sort nested extensions with JSON first
+            const sortedNestedExtensions = sortExtensionsWithJsonFirst(filteredNestedExtensions)
+
             return (
                 <div className="space-y-2">
-                    {filteredNestedExtensions.map((nestedExt: Extension, nestedIndex: number) => (
+                    {sortedNestedExtensions.map((nestedExt: Extension, nestedIndex: number) => (
                         <div key={`${parentIndex}-${nestedIndex}-${nestedExt.url}`} className="bg-gray-50 p-3 rounded">
                             <div className="text-xs font-medium text-gray-500" title={`FHIR Path: extension${parentIndex !== undefined ? `[${parentIndex}]` : ''}.extension[${nestedIndex}]`}>
                                 {nestedExt.url}
@@ -249,26 +310,46 @@ export function SearchableExtensionDetails({
             )
         }
 
-        // If it's already an object, use JsonViewer
+        // If it's already an object, use appropriate JSON viewer
         if (typeof value === 'object') {
+            const hasActiveSearch = searchTerm.trim().length > 0
+            const isJson = isJsonExtension(ext)
+            const useEnhancedHighlighting = isFeatureEnabled('USE_ENHANCED_JSON_SEARCH_HIGHLIGHTING')
+
+            // Use enhanced JSON viewer with search highlighting
+            const JsonViewerComponent = isFeatureEnabled('USE_SIMPLIFIED_JSON_VIEWER') ? SimplifiedJsonViewer : JsonViewer
             return (
-                <JsonViewer
+                <JsonViewerComponent
                     data={value}
                     title={ext.url.split('/').pop() || ext.url}
                     className="mt-1"
-                    isExpanded={false}
+                    isExpanded={true}
+                    searchTerm={hasActiveSearch && isJson && useEnhancedHighlighting ? searchTerm : undefined}
+                    searchMode={hasActiveSearch && isJson && useEnhancedHighlighting ? searchMode : undefined}
+                    highlightMatches={hasActiveSearch && isJson && useEnhancedHighlighting}
+                    autoCollapse={hasActiveSearch && isJson && useEnhancedHighlighting}
                 />
             )
         }
 
-        // If it's a string that looks like JSON, use JsonViewer
+        // If it's a string that looks like JSON, use appropriate JSON viewer
         if (typeof value === 'string' && isJsonString(value)) {
+            const hasActiveSearch = searchTerm.trim().length > 0
+            const isJson = isJsonExtension(ext)
+            const useEnhancedHighlighting = isFeatureEnabled('USE_ENHANCED_JSON_SEARCH_HIGHLIGHTING')
+
+            // Use enhanced JSON viewer with search highlighting
+            const JsonViewerComponent = isFeatureEnabled('USE_SIMPLIFIED_JSON_VIEWER') ? SimplifiedJsonViewer : JsonViewer
             return (
-                <JsonViewer
+                <JsonViewerComponent
                     data={value}
                     title={ext.url.split('/').pop() || ext.url}
                     className="mt-1"
-                    isExpanded={false}
+                    isExpanded={true}
+                    searchTerm={hasActiveSearch && isJson && useEnhancedHighlighting ? searchTerm : undefined}
+                    searchMode={hasActiveSearch && isJson && useEnhancedHighlighting ? searchMode : undefined}
+                    highlightMatches={hasActiveSearch && isJson && useEnhancedHighlighting}
+                    autoCollapse={hasActiveSearch && isJson && useEnhancedHighlighting}
                 />
             )
         }
@@ -334,12 +415,12 @@ export function SearchableExtensionDetails({
                     {hasActiveSearch && (
                         <div className="flex justify-between items-center text-xs text-gray-500">
                             <span>
-                                {filteredExtensions.length === 0
+                                {sortedExtensions.length === 0
                                     ? `No results found for "${searchTerm}"`
-                                    : `Showing ${filteredExtensions.length} of ${extensions.length} results`
+                                    : `Showing ${sortedExtensions.length} of ${extensions.length} results`
                                 }
                             </span>
-                            {filteredExtensions.length > 0 && (
+                            {sortedExtensions.length > 0 && (
                                 <span className="text-blue-600">
                                     Searching in {SEARCH_MODE_LABELS[searchMode].toLowerCase()}
                                 </span>
@@ -350,7 +431,7 @@ export function SearchableExtensionDetails({
             )}
 
             <div className="space-y-2">
-                {filteredExtensions.map((ext, index) => {
+                {sortedExtensions.map((ext, index) => {
                     const sectionId = `section-${index}`
                     const isExpanded = expandedSections.has(sectionId)
 

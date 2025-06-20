@@ -3,11 +3,11 @@
 import type { JsonViewerProps, JsonViewerMode } from './types';
 import { cn } from '@/lib/utils';
 import { JsonToggle } from './JsonToggle';
-import { JsonViewMode } from './JsonViewMode';
+import { SimplifiedJsonViewMode } from './SimplifiedJsonViewMode';
 import { JsonRawMode } from './JsonRawMode';
 import { useState, useEffect } from 'react';
 
-export function JsonViewer({
+export function SimplifiedJsonViewer({
     data,
     title,
     defaultMode = 'view',
@@ -61,7 +61,7 @@ export function JsonViewer({
             <div className="border border-gray-200 rounded-lg overflow-hidden">
                 {mode === 'view' ? (
                     <div className="p-4">
-                        <JsonViewMode
+                        <SimplifiedJsonViewMode
                             data={parsedData}
                             isExpanded={isExpanded}
                             searchTerm={searchTerm}
