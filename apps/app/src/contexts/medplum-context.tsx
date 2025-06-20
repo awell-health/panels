@@ -59,7 +59,7 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        medplumStore.initialize(medplumClientId, medplumSecret)
+        await medplumStore.initialize(medplumClientId, medplumSecret)
         
         const [practitioner, loadedPatients, loadedTasks] = await Promise.all([
           medplumStore.getOrCreatePractitioner(authenticatedUserId, name ?? authenticatedUserId),
@@ -109,11 +109,12 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
 
     loadData()
     setupSubscriptions()
+    console.log('medplumClientId', medplumClientId)
 
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [medplumClientId])
 
   async function addNotesToTask(taskId: string, note: string) {
     const task = await medplumStore.addNoteToTask(taskId, note)
