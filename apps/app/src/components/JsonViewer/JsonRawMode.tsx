@@ -5,7 +5,34 @@ import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 
-export function JsonRawMode({ data, className }: JsonRawModeProps) {
+// Helper function to highlight text with search term
+const highlightText = (text: string, searchTerm: string, type: 'key' | 'value' | 'both'): React.ReactNode => {
+    if (!searchTerm.trim()) {
+        return <span>{text}</span>
+    }
+
+    const normalizedSearchTerm = searchTerm.toLowerCase().trim()
+    const normalizedText = text.toLowerCase()
+    const index = normalizedText.indexOf(normalizedSearchTerm)
+
+    if (index === -1) {
+        return <span>{text}</span>
+    }
+
+    const before = text.slice(0, index)
+    const match = text.slice(index, index + searchTerm.length)
+    const after = text.slice(index + searchTerm.length)
+
+    return (
+        <span>
+            {before}
+            <span className="bg-yellow-200 text-yellow-900 px-1 rounded">{match}</span>
+            {after}
+        </span>
+    )
+}
+
+export function JsonRawMode({ data, className, searchTerm, searchMode = 'both', highlightMatches = false }: JsonRawModeProps) {
     const [copied, setCopied] = useState(false);
     const jsonString = JSON.stringify(data, null, 2);
 
@@ -34,7 +61,12 @@ export function JsonRawMode({ data, className }: JsonRawModeProps) {
                 )}
             </button>
             <pre className="p-4 bg-gray-50 rounded text-xs font-mono overflow-x-auto">
-                <code>{jsonString}</code>
+                <code>
+                    {highlightMatches && searchTerm ?
+                        highlightText(jsonString, searchTerm, searchMode) :
+                        jsonString
+                    }
+                </code>
             </pre>
         </div>
     );

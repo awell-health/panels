@@ -310,8 +310,13 @@ export function SearchableExtensionDetails({
             )
         }
 
-        // If it's already an object, use JsonViewer
+        // If it's already an object, use appropriate JSON viewer
         if (typeof value === 'object') {
+            const hasActiveSearch = searchTerm.trim().length > 0
+            const isJson = isJsonExtension(ext)
+            const useEnhancedHighlighting = isFeatureEnabled('USE_ENHANCED_JSON_SEARCH_HIGHLIGHTING')
+
+            // Use enhanced JSON viewer with search highlighting
             const JsonViewerComponent = isFeatureEnabled('USE_SIMPLIFIED_JSON_VIEWER') ? SimplifiedJsonViewer : JsonViewer
             return (
                 <JsonViewerComponent
@@ -319,12 +324,21 @@ export function SearchableExtensionDetails({
                     title={ext.url.split('/').pop() || ext.url}
                     className="mt-1"
                     isExpanded={true}
+                    searchTerm={hasActiveSearch && isJson && useEnhancedHighlighting ? searchTerm : undefined}
+                    searchMode={hasActiveSearch && isJson && useEnhancedHighlighting ? searchMode : undefined}
+                    highlightMatches={hasActiveSearch && isJson && useEnhancedHighlighting}
+                    autoCollapse={hasActiveSearch && isJson && useEnhancedHighlighting}
                 />
             )
         }
 
-        // If it's a string that looks like JSON, use JsonViewer
+        // If it's a string that looks like JSON, use appropriate JSON viewer
         if (typeof value === 'string' && isJsonString(value)) {
+            const hasActiveSearch = searchTerm.trim().length > 0
+            const isJson = isJsonExtension(ext)
+            const useEnhancedHighlighting = isFeatureEnabled('USE_ENHANCED_JSON_SEARCH_HIGHLIGHTING')
+
+            // Use enhanced JSON viewer with search highlighting
             const JsonViewerComponent = isFeatureEnabled('USE_SIMPLIFIED_JSON_VIEWER') ? SimplifiedJsonViewer : JsonViewer
             return (
                 <JsonViewerComponent
@@ -332,6 +346,10 @@ export function SearchableExtensionDetails({
                     title={ext.url.split('/').pop() || ext.url}
                     className="mt-1"
                     isExpanded={true}
+                    searchTerm={hasActiveSearch && isJson && useEnhancedHighlighting ? searchTerm : undefined}
+                    searchMode={hasActiveSearch && isJson && useEnhancedHighlighting ? searchMode : undefined}
+                    highlightMatches={hasActiveSearch && isJson && useEnhancedHighlighting}
+                    autoCollapse={hasActiveSearch && isJson && useEnhancedHighlighting}
                 />
             )
         }

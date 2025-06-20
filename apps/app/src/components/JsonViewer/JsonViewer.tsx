@@ -14,6 +14,11 @@ export function JsonViewer({
     onModeChange,
     className,
     isExpanded = true,
+    // Search highlighting props
+    searchTerm,
+    searchMode = 'both',
+    highlightMatches = false,
+    autoCollapse = false,
 }: JsonViewerProps) {
     const [mode, setMode] = useState<JsonViewerMode>(defaultMode);
     const [parsedData, setParsedData] = useState<object | null>(null);
@@ -56,10 +61,22 @@ export function JsonViewer({
             <div className="border border-gray-200 rounded-lg overflow-hidden">
                 {mode === 'view' ? (
                     <div className="p-4">
-                        <JsonViewMode data={parsedData} isExpanded={isExpanded} />
+                        <JsonViewMode
+                            data={parsedData}
+                            isExpanded={isExpanded}
+                            searchTerm={searchTerm}
+                            searchMode={searchMode}
+                            highlightMatches={highlightMatches}
+                            autoCollapse={autoCollapse}
+                        />
                     </div>
                 ) : (
-                    <JsonRawMode data={parsedData} />
+                    <JsonRawMode
+                        data={parsedData}
+                        searchTerm={searchTerm}
+                        searchMode={searchMode}
+                        highlightMatches={highlightMatches}
+                    />
                 )}
             </div>
         </div>
