@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { Search, X } from 'lucide-react'
 import type { Extension } from "@medplum/fhirtypes"
 import { EnhancedJsonViewer } from '@/components/EnhancedJsonViewer'
+import { SimplifiedEnhancedJsonViewer } from '@/components/SimplifiedEnhancedJsonViewer'
+import { JsonViewer, SimplifiedJsonViewer } from '@/components/JsonViewer'
 import { isFeatureEnabled } from '@/utils/featureFlags'
 
 interface JsonSearchableExtensionDetailsProps {
@@ -364,10 +366,17 @@ export function JsonSearchableExtensionDetails({
                                     </p>
                                 )}
                             </div>
-                            <EnhancedJsonViewer
-                                data={result.filteredData as string | object}
-                                isExpanded={true}
-                            />
+                            {(() => {
+                                const EnhancedJsonViewerComponent = isFeatureEnabled('USE_SIMPLIFIED_JSON_VIEWER')
+                                    ? SimplifiedEnhancedJsonViewer
+                                    : EnhancedJsonViewer
+                                return (
+                                    <EnhancedJsonViewerComponent
+                                        data={result.filteredData as string | object}
+                                        isExpanded={true}
+                                    />
+                                )
+                            })()}
                         </div>
                     )
                 })}

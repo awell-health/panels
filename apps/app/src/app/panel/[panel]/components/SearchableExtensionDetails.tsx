@@ -4,8 +4,9 @@ import type { Extension } from "@medplum/fhirtypes"
 import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { JsonViewer } from '@/components/JsonViewer'
+import { JsonViewer, SimplifiedJsonViewer } from '@/components/JsonViewer'
 import { formatDate, formatDateWithType } from '@/lib/date-utils'
+import { isFeatureEnabled } from '@/utils/featureFlags'
 
 export type SearchableExtensionDetailsProps = {
     extensions: Extension[]
@@ -311,8 +312,9 @@ export function SearchableExtensionDetails({
 
         // If it's already an object, use JsonViewer
         if (typeof value === 'object') {
+            const JsonViewerComponent = isFeatureEnabled('USE_SIMPLIFIED_JSON_VIEWER') ? SimplifiedJsonViewer : JsonViewer
             return (
-                <JsonViewer
+                <JsonViewerComponent
                     data={value}
                     title={ext.url.split('/').pop() || ext.url}
                     className="mt-1"
@@ -323,8 +325,9 @@ export function SearchableExtensionDetails({
 
         // If it's a string that looks like JSON, use JsonViewer
         if (typeof value === 'string' && isJsonString(value)) {
+            const JsonViewerComponent = isFeatureEnabled('USE_SIMPLIFIED_JSON_VIEWER') ? SimplifiedJsonViewer : JsonViewer
             return (
-                <JsonViewer
+                <JsonViewerComponent
                     data={value}
                     title={ext.url.split('/').pop() || ext.url}
                     className="mt-1"
