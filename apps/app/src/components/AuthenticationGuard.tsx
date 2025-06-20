@@ -1,7 +1,6 @@
 'use client'
 
-import { useAuthentication } from '@/hooks/use-authentication'
-import { useStytchMember, useStytchMemberSession, useStytchOrganization } from '@stytch/nextjs/b2b'
+import { useStytchMemberSession } from '@stytch/nextjs/b2b'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState, type FC, type ReactNode } from 'react'
 import { useCookies } from 'react-cookie'
@@ -13,13 +12,8 @@ interface AuthenticationGuardProps {
 
 export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({ children, loadingComponent }) => {
   const [isLoading, setLoading] = useState(true)
-  const { setUser, setOrganization } = useAuthentication()
   const [cookies, setCookie] = useCookies(['stytch_session', 'auth_next_url'])
   const { session } = useStytchMemberSession()
-  const { organization } = useStytchOrganization()
-  const { member } = useStytchMember()
-  setUser(member)
-  setOrganization(organization)
   const router = useRouter();
 
   const redirectToLogin = (): void => {

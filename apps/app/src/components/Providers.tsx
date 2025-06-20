@@ -25,19 +25,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <StytchB2BProvider stytch={stytch}>
         <CookiesProvider>
-            <AuthenticationStoreProvider>
+           
                 <AuthenticationGuard loadingComponent={
                 <div className="h-screen w-full flex items-center justify-center">
                     <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" aria-label="Authenticating..." />
                 </div>
                 }>
+                     <AuthenticationStoreProvider>
                         <MedplumProvider>
                             <PanelStoreProvider>
                             {children}
                             </PanelStoreProvider>
                         </MedplumProvider>
+                    </AuthenticationStoreProvider>
                 </AuthenticationGuard>
-            </AuthenticationStoreProvider>
         </CookiesProvider>
     </StytchB2BProvider>
   );
