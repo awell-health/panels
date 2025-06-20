@@ -51,13 +51,13 @@ export default function WorklistPage() {
 
     const panel = getPanel?.(panelId);
     if (!panel) {
-      // TODO panel not found
+      router.push(`/`);
       return;
     }
     setPanelDefinition(panel);
     const view = getView?.(panelId, viewId);
     if (!view) {
-      // TODO view not found
+      router.push(`/panel/${panelId}`);
       return;
     }
     setViewDefinition(view);

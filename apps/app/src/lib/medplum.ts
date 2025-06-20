@@ -32,12 +32,13 @@ export class MedplumStore {
   async initialize(clientId?: string, clientSecret?: string): Promise<void> {
     if (!this.initialized) {
       try {
-      
+
         if (!clientId || !clientSecret) {
           throw new Error(
             'Medplum credentials are missing. Please check your .env.local file.',
           )
         }
+        console.log('Initializing Medplum client', clientId)
 
         await this.client.startClientLogin(clientId, clientSecret)
         await this.initializeWebSocket()
