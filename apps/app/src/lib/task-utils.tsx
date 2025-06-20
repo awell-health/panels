@@ -2,6 +2,7 @@
 
 import { CheckSquare, Loader2, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatDate } from '@/lib/date-utils'
 
 // Status configuration for different task states
 const STATUS_CONFIG = {
@@ -111,7 +112,7 @@ export const getTaskViewData = (tableData: Record<string, any>[]) => {
                     Task: task.description, // Always second in Task view
                     "Task Status": task.status, // Always third in Task view
                     "Task Priority": task.priority || "routine",
-                    "Task Due Date": task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "",
+                    "Task Due Date": task.dueDate ? formatDate(task.dueDate) : "",
                 }
 
                 // Add all other patient fields

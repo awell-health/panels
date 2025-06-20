@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { JsonViewer } from '@/components/JsonViewer'
+import { formatDate, formatDateWithType } from '@/lib/date-utils'
 
 export type SearchableExtensionDetailsProps = {
     extensions: Extension[]
@@ -100,6 +101,11 @@ const getExtensionTextValue = (ext: Extension): string => {
         } catch (e) {
             return value
         }
+    }
+
+    // Format date values
+    if (ext.valueDate || ext.valueDateTime || ext.valueTime) {
+        return formatDateWithType(String(value))
     }
 
     return String(value)
@@ -265,6 +271,11 @@ export function SearchableExtensionDetails({
                     isExpanded={false}
                 />
             )
+        }
+
+        // Format date values
+        if (ext.valueDate || ext.valueDateTime || ext.valueTime) {
+            return formatDateWithType(String(value))
         }
 
         return String(value)
