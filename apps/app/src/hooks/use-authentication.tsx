@@ -1,12 +1,19 @@
 "use client"
 
-import { type ReactNode, createContext, useContext, useState } from 'react'
+import { type ReactNode, createContext, useContext, useEffect, useState } from 'react'
 import type { Organization as StytchOrganization, Member as StytchMember } from '@stytch/vanilla-js/b2b'
+import { useStytchMember, useStytchOrganization } from '@stytch/nextjs/b2b'
+import { Loader2 } from 'lucide-react'
 
 export class AuthenticationStore {
 
     private user: StytchMember | null = null
     private organization: StytchOrganization | null = null
+
+    constructor(user: StytchMember | null, organization: StytchOrganization | null) {
+      this.user = user
+      this.organization = organization
+    }
 
     getUser = () => {
         return this.user
@@ -16,20 +23,12 @@ export class AuthenticationStore {
         return this.organization
     }
 
-    setUser = (user: StytchMember | null) => {
-        this.user = user
-    }
-
     getUserId = () => {
         return this.user?.member_id
     }
 
     getName = () => {
         return this.user?.name
-    }
-
-    setOrganization = (organization: StytchOrganization | null) => {
-        this.organization = organization
     }
 
     // Method to populate both user and organization at once
@@ -60,20 +59,24 @@ export class AuthenticationStore {
 // Create context
 const AuthenticationContext = createContext<AuthenticationStore | null>(null)
 
-// Create a singleton instance
-let storeInstance: AuthenticationStore | null = null
-
 // Provider component
 export function AuthenticationStoreProvider({ children }: { children: ReactNode }) {
-  const [store] = useState(() => {
-    if (!storeInstance) {
-      storeInstance = new AuthenticationStore()
+  const [storeInstance, setStoreInstance] = useState<AuthenticationStore | undefined>(undefined)
+  const { organization } = useStytchOrganization()
+  const { member } = useStytchMember()
+
+  useEffect(() => {
+    if(member?.member_id !== storeInstance?.getUserId() || organization?.organization_slug !== storeInstance?.getOrganizationSlug()) {
+      setStoreInstance(new AuthenticationStore(member, organization))
     }
-    return storeInstance
-  })
+  }, [member, organization])
+
+  if(!storeInstance) {
+    return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" aria-label="Loading Panel" /></div>
+  }
 
   return (
-    <AuthenticationContext.Provider value={store}>
+    <AuthenticationContext.Provider value={storeInstance}>
       {children}
     </AuthenticationContext.Provider>
   )
@@ -81,19 +84,16 @@ export function AuthenticationStoreProvider({ children }: { children: ReactNode 
 
 // Hook to use the store
 export function useAuthentication() {   
+  const store = useContext(AuthenticationContext)
 
-    const store = useContext(AuthenticationContext)
-
-    if (!store) {
-        throw new Error('useAuthentication must be used within an AuthenticationProvider')
-    }
+  if (!store) {
+      throw new Error('useAuthentication must be used within an AuthenticationProvider')
+  }
 
   // Return a proxy object that provides access to the store's public methods
   return {
     user: store.getUser(),
     organization: store.getOrganization(),
-    setUser: store.setUser,
-    setOrganization: store.setOrganization,
     populateStore: store.populateStore,
     clearStore: store.clearStore,
     medplumClientId: store.getMedplumClientId(),
