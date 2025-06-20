@@ -9,7 +9,7 @@ export const FEATURE_FLAGS = {
   ENABLE_EXTENSION_SEARCH: true,
 
   // Use JSON viewer for displaying extensions
-  USE_JSON_VIEWER_FOR_EXTENSIONS: true,
+  USE_JSON_VIEWER_FOR_EXTENSIONS: false,
 
   // Use enhanced JSON viewer with recursive parsing
   USE_ENHANCED_JSON_VIEWER: false,
