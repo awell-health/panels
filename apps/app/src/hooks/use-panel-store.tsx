@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { getStorageAdapter } from '@/lib/storage/storage-factory'
 import type { StorageAdapter } from '@/lib/storage/types'
 import { useAuthentication } from './use-authentication'
+import { Loader2 } from 'lucide-react'
 
 export class PanelStore {
   private listeners: Array<() => void> = []
@@ -292,22 +293,26 @@ export class PanelStore {
 // Create context
 const PanelStoreContext = createContext<PanelStore | null>(null)
 
-// Create a singleton instance
-let storeInstance: PanelStore | null = null
-
 // Provider component
 export function PanelStoreProvider({ children }: { children: ReactNode }) {
   const { userId, organizationSlug } = useAuthentication()
-  const [store] = useState(() => {
-    if (!storeInstance) {
-      console.log('Creating new PanelStore instance')
-      storeInstance = new PanelStore(userId, organizationSlug)
+  const [selectedOrganizationSlug, setSelectedOrganizationSlug] = useState<string | undefined>(undefined)
+  const [storeInstance, setStoreInstance] = useState<PanelStore | null>(null)
+
+  useEffect(() => {
+    if (!storeInstance || selectedOrganizationSlug !== organizationSlug) {
+      setSelectedOrganizationSlug(organizationSlug)
+      console.log('Creating new PanelStore instance', organizationSlug)
+      setStoreInstance(new PanelStore(userId, organizationSlug))
     }
-    return storeInstance
-  })
+  }, [organizationSlug])
+
+  if(!storeInstance) {
+    return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" aria-label="Loading Panel" /></div>
+  }
 
   return (
-    <PanelStoreContext.Provider value={store}>
+    <PanelStoreContext.Provider value={storeInstance}>
       {children}
     </PanelStoreContext.Provider>
   )
@@ -322,6 +327,7 @@ export function usePanelStore() {
   if (!store) {
     throw new Error('usePanelStore must be used within a PanelStoreProvider')
   }
+
 
   useEffect(() => {
     // Subscribe to store updates

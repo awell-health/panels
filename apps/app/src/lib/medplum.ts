@@ -38,7 +38,6 @@ export class MedplumStore {
             'Medplum credentials are missing. Please check your .env.local file.',
           )
         }
-        console.log('Initializing Medplum client', clientId)
 
         await this.client.startClientLogin(clientId, clientSecret)
         await this.initializeWebSocket()
