@@ -29,7 +29,7 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const { medplumClientId, medplumSecret, userId: authenticatedUserId, name } = useAuthentication()
+  const { medplumClientId, medplumSecret, userId: authenticatedUserId, name, email } = useAuthentication()
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null)
 
   const updateResource = <T extends { id?: string }>(
@@ -61,17 +61,16 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
 
         await medplumStore.initialize(medplumClientId, medplumSecret)
         
-        const [practitioner, loadedPatients, loadedTasks] = await Promise.all([
-          medplumStore.getOrCreatePractitioner(authenticatedUserId, name ?? authenticatedUserId),
+        const [loadedPatients, loadedTasks] = await Promise.all([
           medplumStore.getPatients(),
           medplumStore.getTasks(),
         ])
 
         if (isMounted) {
-          setPractitioner(practitioner)
           setPatients(loadedPatients)
           setTasks(loadedTasks)
         }
+
       } catch (err) {
         if (isMounted) {
           setError(err instanceof Error ? err : new Error('Failed to load data'))
@@ -107,9 +106,18 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    const getOrCreatePractitioner = async () => {
+      if (!authenticatedUserId) {
+        console.error('No authenticated user ID found')
+        return
+      }
+      const practitioner = await medplumStore.getOrCreatePractitioner(authenticatedUserId, name && name.length > 0 ? name : email ?? authenticatedUserId)
+        setPractitioner(practitioner)
+    }
+
     loadData()
     setupSubscriptions()
-    console.log('medplumClientId', medplumClientId)
+    getOrCreatePractitioner()
 
     return () => {
       isMounted = false
