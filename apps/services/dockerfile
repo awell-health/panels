@@ -15,7 +15,7 @@ COPY ./package.json ./
 COPY ./turbo.json ./
 COPY ./pnpm-workspace.yaml ./
 COPY ./tsconfig.json ./tsconfig.json
-
+COPY ./.turbo/ ./.turbo/
 COPY ./packages/ ./packages/
 
 # install all deps
@@ -50,7 +50,10 @@ ENV HOME=/home/app
 
 USER node
 
-COPY --chown=node:node --from=builder $HOME/ $HOME/
+COPY --chown=node:node --from=builder $HOME/node_modules/ $HOME/node_modules/
+COPY --chown=node:node --from=builder $HOME/apps/services/ $HOME/apps/services/
+COPY --chown=node:node --from=builder $HOME/packages/ $HOME/packages/
+
 WORKDIR $HOME/apps/services
 
 ENTRYPOINT ["dumb-init"]
