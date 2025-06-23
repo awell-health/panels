@@ -15,7 +15,6 @@ COPY ./package.json ./
 COPY ./turbo.json ./
 COPY ./pnpm-workspace.yaml ./
 COPY ./tsconfig.json ./tsconfig.json
-COPY ./.turbo/ ./.turbo/
 COPY ./packages/ ./packages/
 
 # install all deps
