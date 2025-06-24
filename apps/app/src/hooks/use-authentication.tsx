@@ -31,6 +31,10 @@ export class AuthenticationStore {
         return this.user?.name
     }
 
+    getEmail = () => {
+        return this.user?.email_address
+    }
+
     // Method to populate both user and organization at once
     populateStore = (user: StytchMember | null, organization: StytchOrganization | null) => {
         this.user = user
@@ -101,5 +105,6 @@ export function useAuthentication() {
     organizationSlug: store.getOrganizationSlug(),
     userId: store.getUserId(),
     name: store.getName(),
+    email: store.getEmail(),
   }
 } 

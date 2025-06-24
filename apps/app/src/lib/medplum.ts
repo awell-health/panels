@@ -266,7 +266,7 @@ export class MedplumStore {
           value: userId
         }],
         resourceType: 'Practitioner',
-        name: [{ given: [name] }],
+        name: name && name.length > 0 ? [{ given: [name] }] : undefined,
       })
       return newPractitioner
     }
