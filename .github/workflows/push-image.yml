@@ -35,3 +35,9 @@ jobs:
         run: |
           docker build -t europe-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPO_NAME }}/panels-api:${{ steps.extract_tag.outputs.tag }} . -f apps/services/Dockerfile
           docker push europe-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPO_NAME }}/panels-api:${{ steps.extract_tag.outputs.tag }}
+      
+      - name: Trigger release to development
+        env:
+          RELEASE_MANAGEMENT_API_KEY: ${{ secrets.RELEASE_MANAGEMENT_API_KEY }}
+          VERSION: ${{ steps.extract_tag.outputs.tag }}
+        run: sh ./.github/scripts/trigger-deploy.sh $VERSION
