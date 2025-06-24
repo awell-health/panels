@@ -10,7 +10,7 @@ response=$(curl -v --silent --show-error --fail --location --request \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer ${RELEASE_MANAGEMENT_API_KEY}" \
   -d '{
-    "application": "panels-api",
+    "application": "panels",
     "environment": "development",
     "version": "'"$1"'"
   }' 2>&1)
