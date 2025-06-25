@@ -10,8 +10,8 @@ import { CheckSquare, File } from "lucide-react"
 import { useRef } from "react"
 import { TableCell, TableRow } from "../../../../components/ui/table"
 import { cn } from "../../../../lib/utils"
-import { PatientDetails } from "./PatientDetails"
 import { formatDateWithType } from "@/lib/date-utils"
+import { PatientContext } from "./PatientContext"
 
 interface WorklistTableRowWithHoverProps {
     rowIndex: number;
@@ -52,7 +52,7 @@ export default function WorklistTableRow({
             )
         } else if (currentView === "patient") {
             openDrawer(
-                <PatientDetails
+                <PatientContext
                     patient={row as WorklistPatient}
                 />,
                 `${row.name} - Patient Details`
