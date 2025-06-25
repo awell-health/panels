@@ -1,4 +1,8 @@
-import type { PanelDefinition, ViewDefinition } from '@/types/worklist'
+import type {
+  PanelDefinition,
+  ViewDefinition,
+  ColumnDefinition,
+} from '@/types/worklist'
 import { v4 as uuidv4 } from 'uuid'
 import type { StorageAdapter } from './types'
 
@@ -60,7 +64,12 @@ export class LocalStorageAdapter implements StorageAdapter {
       // Convert Date objects to ISO strings for storage
       const panelsToStore = panels.map((panel) => ({
         ...panel,
-        createdAt: panel.createdAt.toISOString(),
+        createdAt:
+          panel.createdAt instanceof Date
+            ? panel.createdAt.toISOString()
+            : typeof panel.createdAt === 'string'
+              ? panel.createdAt
+              : new Date().toISOString(),
       }))
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(panelsToStore))
     } catch (error) {
@@ -176,6 +185,101 @@ export class LocalStorageAdapter implements StorageAdapter {
 
     panel.views = panel.views?.filter((v) => v.id !== viewId)
     await this.savePanelsToStorage(panels)
+  }
+
+  async updateColumn(
+    panelId: string,
+    columnId: string,
+    updates: Partial<ColumnDefinition>,
+  ): Promise<void> {
+    console.log('LocalStorageAdapter.updateColumn: starting update', {
+      panelId,
+      columnId,
+      updates,
+      hasTypeUpdate: !!updates.type,
+      newType: updates.type,
+    })
+
+    try {
+      const panels = await this.getPanels()
+      const panel = panels.find((p) => p.id === panelId)
+      if (!panel) {
+        throw new Error(`Panel ${panelId} not found`)
+      }
+
+      // Find and update the column in patientViewColumns
+      const patientColumnIndex = panel.patientViewColumns.findIndex(
+        (col) => col.id === columnId,
+      )
+      if (patientColumnIndex !== -1) {
+        const oldType = panel.patientViewColumns[patientColumnIndex].type
+        panel.patientViewColumns[patientColumnIndex] = {
+          ...panel.patientViewColumns[patientColumnIndex],
+          ...updates,
+        }
+        console.log(
+          'LocalStorageAdapter.updateColumn: updated patient column',
+          {
+            columnId,
+            oldType,
+            newType: panel.patientViewColumns[patientColumnIndex].type,
+          },
+        )
+      }
+
+      // Find and update the column in taskViewColumns
+      const taskColumnIndex = panel.taskViewColumns.findIndex(
+        (col) => col.id === columnId,
+      )
+      if (taskColumnIndex !== -1) {
+        const oldType = panel.taskViewColumns[taskColumnIndex].type
+        panel.taskViewColumns[taskColumnIndex] = {
+          ...panel.taskViewColumns[taskColumnIndex],
+          ...updates,
+        }
+        console.log('LocalStorageAdapter.updateColumn: updated task column', {
+          columnId,
+          oldType,
+          newType: panel.taskViewColumns[taskColumnIndex].type,
+        })
+      }
+
+      // Update views that reference this column
+      if (panel.views) {
+        for (const view of panel.views) {
+          const viewColumnIndex = view.columns.findIndex(
+            (col) => col.id === columnId,
+          )
+          if (viewColumnIndex !== -1) {
+            const oldType = view.columns[viewColumnIndex].type
+            view.columns[viewColumnIndex] = {
+              ...view.columns[viewColumnIndex],
+              ...updates,
+            }
+            console.log(
+              'LocalStorageAdapter.updateColumn: updated view column',
+              {
+                viewId: view.id,
+                columnId,
+                oldType,
+                newType: view.columns[viewColumnIndex].type,
+              },
+            )
+          }
+        }
+      }
+
+      // Save the updated panel
+      await this.savePanelsToStorage(panels)
+    } catch (error) {
+      console.error(
+        `Failed to update column ${columnId} in panel ${panelId}:`,
+        error,
+      )
+      throw new Error(
+        `Failed to update column: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
   }
 
   async getView(

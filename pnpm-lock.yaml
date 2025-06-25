@@ -141,6 +141,9 @@ importers:
       tailwind-merge:
         specifier: ^3.3.0
         version: 3.3.0
+      tinybase:
+        specifier: ^6.3.0
+        version: 6.3.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(ws@8.18.2)
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -5052,6 +5055,68 @@ packages:
   tildify@2.0.0:
     resolution: {integrity: sha512-Cc+OraorugtXNfs50hU9KS369rFXCfgGLpfCfvlc+Ud5u6VWmUQsOAa9HbTvheQdYnrdJqqv1e5oIqXppMYnSw==}
     engines: {node: '>=8'}
+
+  tinybase@6.3.0:
+    resolution: {integrity: sha512-DwPCWpfkJKaYXOE2nX6O8N5ugk4emqi/TOn4t8Xvjk8mj+2FUlatM3z/ylwg5fs6OCZrenzohvncqRm7JLnVdw==}
+    peerDependencies:
+      '@automerge/automerge-repo': ^1.2.1
+      '@cloudflare/workers-types': ^4.20250619.0
+      '@electric-sql/pglite': ^0.2.17
+      '@libsql/client': ^0.15.9
+      '@powersync/common': ^1.33.0
+      '@sqlite.org/sqlite-wasm': ^3.50.1-build1
+      '@vlcn.io/crsqlite-wasm': ^0.16.0
+      bun: ^1.2.16
+      electric-sql: ^0.12.1
+      expo: ^53.0.9
+      expo-sqlite: ^15.2.12
+      partykit: ^0.0.115
+      partysocket: ^1.1.4
+      postgres: ^3.4.7
+      react: ^19.0.0
+      react-dom: ^19.0.0
+      sqlite3: ^5.1.7
+      ws: ^8.18.2
+      yjs: ^13.6.27
+    peerDependenciesMeta:
+      '@automerge/automerge-repo':
+        optional: true
+      '@cloudflare/workers-types':
+        optional: true
+      '@electric-sql/pglite':
+        optional: true
+      '@libsql/client':
+        optional: true
+      '@powersync/common':
+        optional: true
+      '@sqlite.org/sqlite-wasm':
+        optional: true
+      '@vlcn.io/crsqlite-wasm':
+        optional: true
+      bun:
+        optional: true
+      electric-sql:
+        optional: true
+      expo:
+        optional: true
+      expo-sqlite:
+        optional: true
+      partykit:
+        optional: true
+      partysocket:
+        optional: true
+      postgres:
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      sqlite3:
+        optional: true
+      ws:
+        optional: true
+      yjs:
+        optional: true
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -10742,6 +10807,12 @@ snapshots:
   through@2.3.8: {}
 
   tildify@2.0.0: {}
+
+  tinybase@6.3.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(ws@8.18.2):
+    optionalDependencies:
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
+      ws: 8.18.2
 
   tinybench@2.9.0: {}
 

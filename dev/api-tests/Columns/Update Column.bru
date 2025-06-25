@@ -1,0 +1,38 @@
+meta {
+  name: Update Column
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/panels/{{panelId}}/columns/{{columnId}}
+  body: json {
+    {
+      "id": "{{columnId}}",
+      "name": "Updated Column Name",
+      "type": "number",
+      "properties": {
+        "display": {
+          "visible": true,
+          "order": 1
+        }
+      },
+      "tenantId": "{{tenantId}}",
+      "userId": "{{userId}}",
+      "tags": ["panels:patients"]
+    }
+  }
+  auth: {
+    type: bearer
+    token: {{authToken}}
+  }
+}
+
+headers {
+  Content-Type: application/json
+}
+
+docs {
+  name: Update Column
+  description: Update an existing column's properties including type
+} 

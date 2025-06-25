@@ -1,4 +1,8 @@
-import type { PanelDefinition, ViewDefinition } from '@/types/worklist'
+import type {
+  PanelDefinition,
+  ViewDefinition,
+  ColumnDefinition,
+} from '@/types/worklist'
 
 /**
  * Storage abstraction interface that provides a unified API
@@ -24,6 +28,13 @@ export interface StorageAdapter {
   ): Promise<void>
   deleteView(panelId: string, viewId: string): Promise<void>
   getView(panelId: string, viewId: string): Promise<ViewDefinition | null>
+
+  // Column operations
+  updateColumn(
+    panelId: string,
+    columnId: string,
+    updates: Partial<ColumnDefinition>,
+  ): Promise<void>
 
   // Loading state
   isLoading(): boolean
