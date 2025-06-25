@@ -31,6 +31,8 @@ export type WorklistTask = {
   patientName: string
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   [key: string]: any // For dynamic columns
+  // we shouldnt pass the worklist tasks inside the patient
+  patient?: WorklistPatient
 }
 
 // Helper methods
@@ -75,6 +77,12 @@ const taskToWorklistData = (
     description: task.description || '',
     patientId: patient?.id || '',
     patientName: patient ? getPatientName(patient) : '',
+    patient: patient ? {
+      ...patient,
+      id: patient.id || '',
+      name: getPatientName(patient),
+      tasks: [],
+    } : undefined,
   }
 }
 
