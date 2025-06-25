@@ -1,9 +1,6 @@
 "use client"
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store';
-import { isFeatureEnabled } from '@/utils/featureFlags';
-import { useState } from 'react';
-import { ExtensionDetails } from './ExtensionDetails';
-import { SearchableExtensionDetails } from './SearchableExtensionDetails';
+
+import type { WorklistPatient } from '@/hooks/use-medplum-store';
 
 const getFieldValue = (field: any): string => {
   if (!field) return '';
@@ -52,116 +49,39 @@ type PatientDetailsProps = {
 }
 
 export function PatientDetails({ patient }: PatientDetailsProps) {
-  const [activeTab, setActiveTab] = useState<"context" | "tasks">("context");
-
   return (
-    <div className="flex-1 overflow-y-auto flex flex-col">
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8 px-4" aria-label="Tabs">
-          <button
-            onClick={() => setActiveTab("context")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "context"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-          >
-            Context
-          </button>
-          <button
-            onClick={() => setActiveTab("tasks")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tasks"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-          >
-            Tasks
-          </button>
-        </nav>
-      </div>
-
-      <div className="p-4">
-        {activeTab === "context" && (
-          <div className="flex flex-col h-full">
-            <div className="w-full space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-3 rounded">
-                  <p className="text-xs font-medium text-gray-500">Name</p>
-                  <p className="text-sm" title="FHIR Path: name">
-                    {getFieldValue(patient.name)}
-                  </p>
-                </div>
-                <div className="bg-gray-50 p-3 rounded">
-                  <p className="text-xs font-medium text-gray-500">Gender</p>
-                  <p className="text-sm" title="FHIR Path: gender">{getFieldValue(patient.gender)}</p>
-                </div>
-                <div className="bg-gray-50 p-3 rounded">
-                  <p className="text-xs font-medium text-gray-500">Birth Date</p>
-                  <p className="text-sm" title="FHIR Path: birthDate">{getFieldValue(patient.birthDate)}</p>
-                </div>
-                {patient.telecom && (
-                  <div className="bg-gray-50 p-3 rounded">
-                    <p className="text-xs font-medium text-gray-500">Contact</p>
-                    <p className="text-sm" title="FHIR Path: telecom">{formatTelecom(patient.telecom)}</p>
-                  </div>
-                )}
-              </div>
-
-              {patient.address && (
-                <div className="bg-gray-50 p-3 rounded">
-                  <p className="text-xs font-medium text-gray-500 mb-2">Address</p>
-                  <p className="text-sm" title="FHIR Path: address">
-                    {formatAddress(patient.address)}
-                  </p>
-                </div>
-              )}
-
-              {/* Extensions */}
-              {patient.extension && (
-                isFeatureEnabled('ENABLE_EXTENSION_SEARCH') ? (
-                  <SearchableExtensionDetails extensions={patient.extension} />
-                ) : (
-                  <ExtensionDetails extensions={patient.extension} />
-                )
-              )}
-            </div>
+    <div className="flex flex-col h-full">
+      <div className="w-full">
+        <span className="text-sm font-semibold text-gray-500 gap-4">Patient Details</span>
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="bg-gray-50 p-3 rounded">
+            <p className="text-xs font-medium text-gray-500">Name</p>
+            <p className="text-sm" title="FHIR Path: name">
+              {getFieldValue(patient.name)}
+            </p>
           </div>
-        )}
-
-        {activeTab === "tasks" && (
-          <div className="flex flex-col h-full">
-            <div className="w-full space-y-4">
-              {patient.tasks && patient.tasks.length > 0 ? (
-                patient.tasks.map((task: WorklistTask, index: number) => (
-                  <div key={index} className="bg-gray-50 p-3 rounded">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">
-                          {getFieldValue(task.description)}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Status: {getFieldValue(task.status)}
-                        </p>
-                      </div>
-                      <span className={`px-2 py-1 text-xs rounded ${getFieldValue(task.priority) === 'stat' ? 'bg-red-100 text-red-800' :
-                        getFieldValue(task.priority) === 'urgent' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                        {getFieldValue(task.priority) || 'routine'}
-                      </span>
-                    </div>
-                    {task.extension && (
-                      isFeatureEnabled('ENABLE_EXTENSION_SEARCH') ? (
-                        <SearchableExtensionDetails extensions={task.extension} title="Task Details" />
-                      ) : (
-                        <ExtensionDetails extensions={task.extension} title="Task Details" />
-                      )
-                    )}
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No tasks available for this patient</p>
-              )}
+          <div className="bg-gray-50 p-3 rounded">
+            <p className="text-xs font-medium text-gray-500">Gender</p>
+            <p className="text-sm" title="FHIR Path: gender">{getFieldValue(patient.gender)}</p>
+          </div>
+          <div className="bg-gray-50 p-3 rounded">
+            <p className="text-xs font-medium text-gray-500">Birth Date</p>
+            <p className="text-sm" title="FHIR Path: birthDate">{getFieldValue(patient.birthDate)}</p>
+          </div>
+          {patient.telecom && (
+            <div className="bg-gray-50 p-3 rounded">
+              <p className="text-xs font-medium text-gray-500">Contact</p>
+              <p className="text-sm" title="FHIR Path: telecom">{formatTelecom(patient.telecom)}</p>
             </div>
+          )}
+        </div>
+
+        {patient.address && (
+          <div className="bg-gray-50 p-3 rounded">
+            <p className="text-xs font-medium text-gray-500 mb-2">Address</p>
+            <p className="text-sm" title="FHIR Path: address">
+              {formatAddress(patient.address)}
+            </p>
           </div>
         )}
       </div>

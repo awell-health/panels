@@ -8,6 +8,7 @@ import { SearchableAdditionalInfo } from "./SearchableAdditionalInfo"
 import { SearchableExtensionDetails } from "./SearchableExtensionDetails"
 import { JsonSearchableExtensionDetails } from "./JsonSearchableExtensionDetails"
 import { formatDate, formatDateWithType } from '@/lib/date-utils'
+import { PatientDetails } from './PatientDetails'
 
 type TaskContentProps = {
   taskData: WorklistTask
@@ -174,6 +175,10 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                     </div>
                   );
                 })()}
+
+                {taskData.patient && (
+                  <PatientDetails patient={taskData.patient} />
+                )}
 
                 {taskData.extension && (
                   isFeatureEnabled('ENABLE_EXTENSION_SEARCH') ? (
