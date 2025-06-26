@@ -54,15 +54,17 @@ export function TaskDetails({ taskData }: TaskContentProps) {
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8 px-4" aria-label="Tabs">
           <button
+            type="button"
             onClick={() => setActiveTab("context")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "context"
               ? "border-blue-500 text-blue-600"
               : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
           >
-            Context
+            Task
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("comments")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "comments"
               ? "border-blue-500 text-blue-600"
@@ -78,29 +80,23 @@ export function TaskDetails({ taskData }: TaskContentProps) {
           <div className="flex flex-col h-full">
 
             <>
-              <h3 className="text-sm font-medium mb-2">Context</h3>
+              <h3 className="text-sm font-medium mb-2">Complete Task</h3>
               <div className="w-full space-y-4">
                 {/* System Connectors Section */}
                 <div className="bg-gray-50 p-3 rounded">
-                  <p className="text-xs font-medium text-gray-500 mb-2">Available Connectors</p>
                   <div className="space-y-2">
                     {connectors.length > 0 ? (
                       connectors.map((connector, index) => (
-                        <div key={index} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
-                          <div>
-                            <p className="text-xs font-medium text-gray-700">
-                              {connector.connectorName}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => {
-                              window.open(connector.url, '_blank')
-                            }}
-                            className="text-blue-500 hover:text-blue-600 text-xs cursor-pointer"
-                          >
-                            Open
-                          </button>
-                        </div>
+                        <button
+                          key={`connector-${connector.connectorName}-${index}`}
+                          type="button"
+                          onClick={() => {
+                            window.open(connector.url, '_blank')
+                          }}
+                          className="w-full bg-blue-400 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-500 transition-colors duration-200 text-left"
+                        >
+                          Complete the task in {connector.connectorName}
+                        </button>
                       ))
                     ) : (
                       <p className="text-xs text-gray-500">No connectors available</p>
@@ -225,6 +221,7 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                 rows={3}
               />
               <button
+                type="button"
                 onClick={handleSubmitComment}
                 disabled={!newComment.trim()}
                 className="w-full bg-blue-500 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
