@@ -1,18 +1,11 @@
 # Step 1 : Deps image
 FROM --platform=linux/amd64 node:22-slim AS deps
 
-RUN apt-get update && apt-get install -y libc6 && \
-    rm -rf /var/lib/apt/lists/*
-
 ENV HOME=/home/app
 WORKDIR $HOME
 
-# Prevent pnpm from trying to download Node.js and set proper home directory
-ENV PNPM_HOME="/home/app/.pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-
 RUN corepack enable && \
-    corepack prepare pnpm@10.11.0 --activate
+    corepack prepare pnpm@10.11.1 --activate
 
 COPY ./.npmrc.docker /.npmrc
 COPY ./pnpm-lock.yaml ./
@@ -29,15 +22,15 @@ RUN pnpm install -w --frozen-lockfile --ignore-scripts
 FROM deps AS builder
 
 RUN corepack enable && \
-    corepack prepare pnpm@10.11.0 --activate
+    corepack prepare pnpm@10.11.1 --activate
 
-COPY ./apps/services/ ./apps/services/
+COPY ./apps/app/ ./apps/app/
 
-RUN pnpm --filter @panels/services... install --frozen-lockfile --prefer-offline --ignore-scripts
-RUN pnpm --filter @panels/services... build
+RUN pnpm --filter @panels/app... install --frozen-lockfile --prefer-offline --ignore-scripts
+RUN pnpm --filter @panels/app... build
 
 # regenerate node_modules with only prod deps
-RUN pnpm --filter @panels/services... install --prod --prefer-offline --ignore-scripts --no-optional --frozen-lockfile
+RUN pnpm --filter @panels/app... install --prod --prefer-offline --ignore-scripts --no-optional --frozen-lockfile
 
 # remove pnpm cache
 RUN rm -rf /root/.local/share/pnpm/store
@@ -55,12 +48,12 @@ ENV HOME=/home/app
 USER node
 
 COPY --chown=node:node --from=builder $HOME/node_modules/ $HOME/node_modules/
-COPY --chown=node:node --from=builder $HOME/apps/services/ $HOME/apps/services/
+COPY --chown=node:node --from=builder $HOME/apps/app/ $HOME/apps/app/
 COPY --chown=node:node --from=builder $HOME/packages/ $HOME/packages/
 
-WORKDIR $HOME/apps/services
+WORKDIR $HOME/apps/app
 
 ENTRYPOINT ["dumb-init"]
 
 # The container will use environment variables passed at runtime
-CMD ["node", "--max-old-space-size=1512" , "--enable-source-maps", "dist/server.js"]
+CMD ["npm", "start"]
