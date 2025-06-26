@@ -4,15 +4,18 @@ import { type ReactNode, createContext, useContext, useEffect, useState } from '
 import type { Organization as StytchOrganization, Member as StytchMember } from '@stytch/vanilla-js/b2b'
 import { useStytchMember, useStytchOrganization } from '@stytch/nextjs/b2b'
 import { Loader2 } from 'lucide-react'
+import { getRuntimeConfig } from '@/lib/config'
 
 export class AuthenticationStore {
 
     private user: StytchMember | null = null
     private organization: StytchOrganization | null = null
+    private environment: string | undefined = undefined
 
-    constructor(user: StytchMember | null, organization: StytchOrganization | null) {
+    constructor(user: StytchMember | null, organization: StytchOrganization | null, environment: string | undefined) {
       this.user = user
       this.organization = organization
+      this.environment = environment
     }
 
     getUser = () => {
@@ -48,10 +51,18 @@ export class AuthenticationStore {
     }
 
     getMedplumClientId = () => {
+        if(this.environment) {
+          return (this.organization?.trusted_metadata?.panels as any)?.[this.environment]?.['medplum-client-id'] ?? 
+                 (this.organization?.trusted_metadata?.panels as any)?.['medplum-client-id'] ?? undefined
+        }
         return (this.organization?.trusted_metadata?.panels as any)?.['medplum-client-id'] ?? undefined
     }
 
     getMedplumSecret = () => {
+        if(this.environment) {
+          return (this.organization?.trusted_metadata?.panels as any)?.[this.environment]?.['medplum-secret'] ?? 
+                 (this.organization?.trusted_metadata?.panels as any)?.['medplum-secret'] ?? undefined
+        }
         return (this.organization?.trusted_metadata?.panels as any)?.['medplum-secret'] ?? undefined
     }
 
@@ -70,8 +81,14 @@ export function AuthenticationStoreProvider({ children }: { children: ReactNode 
   const { member } = useStytchMember()
 
   useEffect(() => {
+
+    const createAuthStore = async () => {
+      const config = await getRuntimeConfig()
+      setStoreInstance(new AuthenticationStore(member, organization, config.environment))
+    }
+
     if(member?.member_id !== storeInstance?.getUserId() || organization?.organization_slug !== storeInstance?.getOrganizationSlug()) {
-      setStoreInstance(new AuthenticationStore(member, organization))
+      createAuthStore()
     }
   }, [member, organization])
 

@@ -9,6 +9,7 @@ export interface RuntimeConfig {
   authCookiesAllowedDomain?: string
   storageMode?: string
   storageApiBaseUrl?: string
+  environment?: string
 }
 
 // Get runtime configuration
@@ -22,5 +23,6 @@ export async function getRuntimeConfig(): Promise<RuntimeConfig> {
     authCookiesAllowedDomain: process.env.AUTH_COOKIES_ALLOWED_DOMAIN,
     storageMode: process.env.APP_STORAGE_MODE || 'local',
     storageApiBaseUrl: process.env.APP_API_BASE_URL || '',
+    environment: process.env.ENVIRONMENT || 'development',
   }
 }
