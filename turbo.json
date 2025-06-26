@@ -25,7 +25,7 @@
     "docs:build": {},
     "docs:dev": {},
     "lint": {
-      "dependsOn": ["^topo"]
+      "dependsOn": ["^lint"]
     },
     "format": {
       "dependsOn": ["^topo"]
@@ -37,7 +37,7 @@
       "dependsOn": ["^topo"]
     },
     "typecheck": {
-      "dependsOn": ["^topo"],
+      "dependsOn": ["^typecheck"],
       "outputs": ["node_modules/.cache/tsbuildinfo.json"]
     },
     "clean": {

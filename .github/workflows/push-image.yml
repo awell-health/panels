@@ -31,10 +31,15 @@ jobs:
           TAG=${GITHUB_REF#refs/tags/}
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Build and push backend image
+      - name: Build and push panels-api image
         run: |
           docker build -t europe-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPO_NAME }}/panels-api:${{ steps.extract_tag.outputs.tag }} . -f apps/services/Dockerfile
           docker push europe-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPO_NAME }}/panels-api:${{ steps.extract_tag.outputs.tag }}
+
+      - name: Build and push panels-app image
+        run: |
+          docker build -t europe-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPO_NAME }}/panels-app:${{ steps.extract_tag.outputs.tag }} . -f apps/services/Dockerfile
+          docker push europe-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPO_NAME }}/panels-app:${{ steps.extract_tag.outputs.tag }}
       
       - name: Trigger release to development
         env:

@@ -175,6 +175,19 @@ export type ColumnsResponse = z.infer<typeof ColumnsResponseSchema>
 
 export const ColumnInfoSchema = z.object({
   name: z.string().optional(),
+  type: z
+    .enum([
+      'text',
+      'number',
+      'date',
+      'boolean',
+      'select',
+      'multi_select',
+      'user',
+      'file',
+      'custom',
+    ])
+    .optional(),
   properties: ColumnPropertiesSchema.optional(),
   metadata: z.record(z.any()).optional(),
   // For calculated columns

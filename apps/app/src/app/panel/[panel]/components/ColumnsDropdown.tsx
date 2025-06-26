@@ -7,13 +7,12 @@ import { createPortal } from "react-dom"
 
 type ColumnsDropdownProps = {
     columns: ColumnDefinition[]
-    visibleColumns: ColumnDefinition[]
     onColumnVisibilityChange: (columnId: string, visible: boolean) => void
 }
 
 type ColumnWithVisibility = ColumnDefinition & { visible: boolean }
 
-export function ColumnsDropdown({ columns, visibleColumns, onColumnVisibilityChange }: ColumnsDropdownProps) {
+export function ColumnsDropdown({ columns, onColumnVisibilityChange }: ColumnsDropdownProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
@@ -23,15 +22,18 @@ export function ColumnsDropdown({ columns, visibleColumns, onColumnVisibilityCha
 
     // Calculate visible vs total columns
     const { visibleCount, totalCount } = useMemo(() => {
-        const columnsWithVisibility = columns.map(column => ({
-            ...column,
-            visible: visibleColumns.some(visibleColumn => visibleColumn.id === column.id)
-        }))
+        const columnsWithVisibility = columns.map(column => {
+            const visible = column.properties?.display?.visible !== false; // Default to true if not explicitly set to false
+            return {
+                ...column,
+                visible
+            }
+        })
         const visibleCount = columnsWithVisibility.filter(col => col.visible).length
         const totalCount = columns.length
         setColumnsWithVisibility(columnsWithVisibility)
         return { visibleCount, totalCount }
-    }, [columns, visibleColumns])
+    }, [columns])
 
     useEffect(() => {
         setMounted(true)
