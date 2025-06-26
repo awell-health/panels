@@ -1,5 +1,6 @@
 "use client"
 
+import type { Extension } from '@medplum/fhirtypes'
 import { type WorklistTask, useMedplumStore } from '@/hooks/use-medplum-store'
 import { isFeatureEnabled } from "@/utils/featureFlags"
 import { useEffect, useState } from "react"
@@ -7,11 +8,34 @@ import { ExtensionDetails } from "./ExtensionDetails"
 import { SearchableAdditionalInfo } from "./SearchableAdditionalInfo"
 import { SearchableExtensionDetails } from "./SearchableExtensionDetails"
 import { JsonSearchableExtensionDetails } from "./JsonSearchableExtensionDetails"
-import { formatDate, formatDateWithType } from '@/lib/date-utils'
-import { PatientDetails } from './PatientDetails'
+// import { formatDate, formatDateWithType } from '@/lib/date-utils'
+// import { PatientDetails } from './PatientDetails'
 
 type TaskContentProps = {
   taskData: WorklistTask
+}
+
+// Helper to recursively find and remove the summary extension
+function extractSummaryExtension(extensions: Extension[] = []): { summaryHtml: string | null, filteredExtensions: Extension[] } {
+  let summaryHtml = null
+  const filteredExtensions: Extension[] = []
+
+  for (const ext of extensions) {
+    if (ext.url?.includes('SummaryBeforeFirstTask_MainTrack')) {
+      // Prefer valueString, fallback to other value types if needed
+      summaryHtml = ext.valueString || null
+      continue // skip adding this extension
+    }
+    // If nested extensions, recurse
+    const newExt = { ...ext }
+    if (ext.extension && Array.isArray(ext.extension)) {
+      const { summaryHtml: nestedSummary, filteredExtensions: nestedFiltered } = extractSummaryExtension(ext.extension)
+      if (nestedSummary && !summaryHtml) summaryHtml = nestedSummary
+      newExt.extension = nestedFiltered
+    }
+    filteredExtensions.push(newExt)
+  }
+  return { summaryHtml, filteredExtensions }
 }
 
 export function TaskDetails({ taskData }: TaskContentProps) {
@@ -48,6 +72,8 @@ export function TaskDetails({ taskData }: TaskContentProps) {
       })
     }
   }
+
+  const { summaryHtml, filteredExtensions } = extractSummaryExtension(taskData.extension)
 
   return (
     <div className="flex-1 overflow-y-auto flex flex-col">
@@ -103,6 +129,16 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                     )}
                   </div>
                 </div>
+
+                {/* Summary Section */}
+                {summaryHtml && (
+                  <>
+                    <h3 className="text-sm font-medium mb-2">Summary</h3>
+                    <div className="bg-gray-50 p-3 rounded mb-4">
+                      <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: summaryHtml }} />
+                    </div>
+                  </>
+                )}
 
                 {/* <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-50 p-3 rounded">
@@ -177,15 +213,15 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                 )} */}
 
                 <h3 className="text-sm font-medium mb-2">Context</h3>
-                {taskData.extension && (
+                {filteredExtensions && filteredExtensions.length > 0 && (
                   isFeatureEnabled('ENABLE_EXTENSION_SEARCH') ? (
                     isFeatureEnabled('USE_JSON_VIEWER_FOR_EXTENSIONS') ? (
-                      <JsonSearchableExtensionDetails extensions={taskData.extension} />
+                      <JsonSearchableExtensionDetails extensions={filteredExtensions} />
                     ) : (
-                      <SearchableExtensionDetails extensions={taskData.extension} />
+                      <SearchableExtensionDetails extensions={filteredExtensions} />
                     )
                   ) : (
-                    <ExtensionDetails extensions={taskData.extension} />
+                    <ExtensionDetails extensions={filteredExtensions} />
                   )
                 )}
 
