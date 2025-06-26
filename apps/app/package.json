@@ -25,6 +25,7 @@
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
     "daisyui": "^5.0.43",
+    "date-fns": "^4.1.0",
     "fhirpath": "^4.3.0",
     "lucide-react": "^0.511.0",
     "next": "15.3.3",

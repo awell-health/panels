@@ -5,11 +5,9 @@ import { type WorklistTask, useMedplumStore } from '@/hooks/use-medplum-store'
 import { isFeatureEnabled } from "@/utils/featureFlags"
 import { useEffect, useState } from "react"
 import { ExtensionDetails } from "./ExtensionDetails"
+import { JsonSearchableExtensionDetails } from "./JsonSearchableExtensionDetails"
 import { SearchableAdditionalInfo } from "./SearchableAdditionalInfo"
 import { SearchableExtensionDetails } from "./SearchableExtensionDetails"
-import { JsonSearchableExtensionDetails } from "./JsonSearchableExtensionDetails"
-// import { formatDate, formatDateWithType } from '@/lib/date-utils'
-// import { PatientDetails } from './PatientDetails'
 
 type TaskContentProps = {
   taskData: WorklistTask
