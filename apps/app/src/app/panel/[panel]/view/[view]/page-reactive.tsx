@@ -201,51 +201,61 @@ export default function ReactiveWorklistViewPage() {
 
     return (
         <>
-            {panel && (
-                <WorklistNavigation panelDefinition={panel} selectedViewId={viewId} onNewView={onNewView} onViewTitleChange={onViewTitleChange} />
-            )}
+            <div className="navigation-area">
+                {panel && (
+                    <WorklistNavigation panelDefinition={panel} selectedViewId={viewId} onNewView={onNewView} onViewTitleChange={onViewTitleChange} />
+                )}
+            </div>
             {isLoading ? (
                 <div className="flex items-center justify-center h-screen">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
                 </div>
             ) : (
                 <>
-                    <WorklistToolbar
-                        searchTerm={searchTerm}
-                        onSearch={setSearchTerm}
-                        searchMode={searchMode}
-                        onSearchModeChange={setSearchMode}
-                        currentView={view?.viewType}
-                        setCurrentView={() => { }}
-                        worklistColumns={columns}
-                        onAddColumn={onAddColumn}
-                        onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({ id: columnId, properties: { display: { visible } } })}
-                    />
-                    <WorklistTable isLoading={isMedplumLoading}
-                        selectedRows={[]}
-                        toggleSelectAll={() => { }}
-                        worklistColumns={columns}
-                        onSortConfigUpdate={onSortConfigUpdate}
-                        tableData={filteredData}
-                        handlePDFClick={() => { }}
-                        handleTaskClick={() => { }}
-                        handleRowHover={() => { }}
-                        toggleSelectRow={() => { }}
-                        handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
-                        setIsAddingIngestionSource={() => { }}
-                        currentView={view?.viewType ?? 'patient'}
-                        handleDragEnd={handleDragEnd}
-                        onColumnUpdate={onColumnUpdate}
-                        filters={tableFilters}
-                        onFiltersChange={onFiltersChange}
-                        initialSortConfig={view?.sortConfig?.[0] ?? null}
-                    />
-                    <WorklistFooter
-                        columnsCounter={columns.length}
-                        rowsCounter={tableData.length}
-                        navigateToHome={() => router.push('/')}
-                        isAISidebarOpen={false}
-                    />
+                    <div className="toolbar-area">
+                        <WorklistToolbar
+                            searchTerm={searchTerm}
+                            onSearch={setSearchTerm}
+                            searchMode={searchMode}
+                            onSearchModeChange={setSearchMode}
+                            currentView={view?.viewType}
+                            setCurrentView={() => { }}
+                            worklistColumns={columns}
+                            onAddColumn={onAddColumn}
+                            onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({ id: columnId, properties: { display: { visible } } })}
+                        />
+                    </div>
+                    <div className="content-area">
+                        <div className="table-scroll-container">
+                            <WorklistTable isLoading={isMedplumLoading}
+                                selectedRows={[]}
+                                toggleSelectAll={() => { }}
+                                worklistColumns={columns}
+                                onSortConfigUpdate={onSortConfigUpdate}
+                                tableData={filteredData}
+                                handlePDFClick={() => { }}
+                                handleTaskClick={() => { }}
+                                handleRowHover={() => { }}
+                                toggleSelectRow={() => { }}
+                                handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
+                                setIsAddingIngestionSource={() => { }}
+                                currentView={view?.viewType ?? 'patient'}
+                                handleDragEnd={handleDragEnd}
+                                onColumnUpdate={onColumnUpdate}
+                                filters={tableFilters}
+                                onFiltersChange={onFiltersChange}
+                                initialSortConfig={view?.sortConfig?.[0] ?? null}
+                            />
+                        </div>
+                        <div className="footer-area">
+                            <WorklistFooter
+                                columnsCounter={columns.length}
+                                rowsCounter={tableData.length}
+                                navigateToHome={() => router.push('/')}
+                                isAISidebarOpen={false}
+                            />
+                        </div>
+                    </div>
                 </>
             )}
         </>

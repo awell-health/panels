@@ -12,6 +12,7 @@ import { useSearch } from "@/hooks/use-search";
 import { arrayMove } from "@/lib/utils";
 import type { ColumnDefinition, Filter, PanelDefinition, SortConfig, ViewDefinition, WorklistDefinition } from "@/types/worklist";
 import type { DragEndEvent } from "@dnd-kit/core";
+import { Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -275,43 +276,61 @@ export default function WorklistViewPage() {
 
   return (
     <>
-      <WorklistNavigation panelDefinition={panel} selectedViewId={viewId} onNewView={onNewView} onViewTitleChange={onViewTitleChange} />
-      <WorklistToolbar
-        searchTerm={searchTerm}
-        onSearch={setSearchTerm}
-        searchMode={searchMode}
-        onSearchModeChange={setSearchMode}
-        currentView={view?.viewType}
-        setCurrentView={() => { }}
-        worklistColumns={columns}
-        onAddColumn={onAddColumn}
-        onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({ id: columnId, properties: { display: { visible } } })}
-      />
-      <WorklistTable isLoading={isMedplumLoading}
-        selectedRows={[]}
-        toggleSelectAll={() => { }}
-        worklistColumns={columns}
-        onSortConfigUpdate={onSortConfigUpdate}
-        tableData={filteredData}
-        handlePDFClick={() => { }}
-        handleTaskClick={() => { }}
-        handleRowHover={() => { }}
-        toggleSelectRow={() => { }}
-        handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
-        setIsAddingIngestionSource={() => { }}
-        currentView={view?.viewType ?? 'patient'}
-        handleDragEnd={handleDragEnd}
-        onColumnUpdate={onColumnUpdate}
-        filters={tableFilters}
-        onFiltersChange={onFiltersChange}
-        initialSortConfig={view?.sortConfig?.[0] ?? null}
-      />
-      <WorklistFooter
-        columnsCounter={columns.length}
-        rowsCounter={tableData.length}
-        navigateToHome={() => router.push('/')}
-        isAISidebarOpen={false}
-      />
+      {/* Navigation Area */}
+      <div className="navigation-area">
+        <WorklistNavigation panelDefinition={panel} selectedViewId={viewId} onNewView={onNewView} onViewTitleChange={onViewTitleChange} />
+      </div>
+
+      {/* Toolbar Area */}
+      <div className="toolbar-area">
+        <WorklistToolbar
+          searchTerm={searchTerm}
+          onSearch={setSearchTerm}
+          searchMode={searchMode}
+          onSearchModeChange={setSearchMode}
+          currentView={view?.viewType}
+          setCurrentView={() => { }}
+          worklistColumns={columns}
+          onAddColumn={onAddColumn}
+          onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({ id: columnId, properties: { display: { visible } } })}
+        />
+      </div>
+
+      {/* Content Area */}
+      <div className="content-area">
+        <div className="table-scroll-container">
+          <WorklistTable
+            isLoading={isMedplumLoading}
+            selectedRows={[]}
+            toggleSelectAll={() => { }}
+            worklistColumns={columns}
+            onSortConfigUpdate={onSortConfigUpdate}
+            tableData={filteredData}
+            handlePDFClick={() => { }}
+            handleTaskClick={() => { }}
+            handleRowHover={() => { }}
+            toggleSelectRow={() => { }}
+            handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
+            setIsAddingIngestionSource={() => { }}
+            currentView={view?.viewType ?? 'patient'}
+            handleDragEnd={handleDragEnd}
+            onColumnUpdate={onColumnUpdate}
+            filters={tableFilters}
+            onFiltersChange={onFiltersChange}
+            initialSortConfig={view?.sortConfig?.[0] ?? null}
+          />
+        </div>
+      </div>
+
+      {/* Footer Area */}
+      <div className="footer-area">
+        <WorklistFooter
+          columnsCounter={columns.length}
+          rowsCounter={tableData.length}
+          navigateToHome={() => router.push('/')}
+          isAISidebarOpen={false}
+        />
+      </div>
     </>
   );
 }

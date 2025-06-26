@@ -239,9 +239,17 @@ export default function WorklistPage() {
 
   return (
     <>
-      <div className="flex flex-col h-screen">
-        {/* biome-ignore lint/style/noNonNullAssertion: <explanation> */}
-        <WorklistNavigation panelDefinition={panel} onNewView={onNewView} onPanelTitleChange={onPanelTitleChange} />
+      {/* Navigation Area */}
+      <div className="navigation-area">
+        <WorklistNavigation
+          panelDefinition={panel!}
+          onNewView={onNewView}
+          onPanelTitleChange={onPanelTitleChange}
+        />
+      </div>
+
+      {/* Toolbar Area */}
+      <div className="toolbar-area">
         <WorklistToolbar
           searchTerm={searchTerm}
           onSearch={setSearchTerm}
@@ -258,8 +266,13 @@ export default function WorklistPage() {
             }
           })}
         />
-        <div className="flex-1 overflow-hidden"> {/* This container prevents double scrollbars */}
-          <WorklistTable isLoading={isMedplumLoading}
+      </div>
+
+      {/* Content Area */}
+      <div className="content-area">
+        <div className="table-scroll-container">
+          <WorklistTable
+            isLoading={isMedplumLoading}
             selectedRows={[]}
             toggleSelectAll={() => { }}
             onSortConfigUpdate={setSortConfig}
@@ -278,15 +291,20 @@ export default function WorklistPage() {
             onFiltersChange={onFiltersChange}
             initialSortConfig={sortConfig ?? null}
           />
-          {isAddingIngestionSource && (
-            <AddIngestionModal
-              isOpen={isAddingIngestionSource}
-              onClose={() => setIsAddingIngestionSource(false)}
-              onSelectSource={() => { }}
-              ingestionBots={[]}
-            />
-          )}
         </div>
+
+        {isAddingIngestionSource && (
+          <AddIngestionModal
+            isOpen={isAddingIngestionSource}
+            onClose={() => setIsAddingIngestionSource(false)}
+            onSelectSource={() => { }}
+            ingestionBots={[]}
+          />
+        )}
+      </div>
+
+      {/* Footer Area */}
+      <div className="footer-area">
         <WorklistFooter
           columnsCounter={currentView === 'patient' ? panel.patientViewColumns.length : panel.taskViewColumns.length}
           rowsCounter={tableData.length}

@@ -57,8 +57,8 @@ const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDele
 
   // For now, all panels are expanded by default
   return (
-    <div className="mb-8 ml-12">
-      <div className="flex justify-between items-center mb-4 max-w-3xl">
+    <div className="mb-8">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-base font-medium">Panels</h2>
         <div className="flex gap-2">
           <button

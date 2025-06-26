@@ -31,7 +31,7 @@ export default function WorklistToolbar({
     onColumnVisibilityChange,
 }: WorklistToolbarProps) {
     return (
-        <div className="border-b border-gray-200 sticky top-0 bg-white z-10">
+        <div className="border-b border-gray-200 bg-white">
             <div className="flex items-center justify-between p-2">
                 {currentView && (
                     <div className="flex items-center space-x-3">

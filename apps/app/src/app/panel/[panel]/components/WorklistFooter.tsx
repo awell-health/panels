@@ -12,7 +12,7 @@ interface WorklistFooterProps {
 
 export default function WorklistFooter({ columnsCounter, rowsCounter, isAISidebarOpen, navigateToHome }: WorklistFooterProps) {
     return (
-        <div className="border-t border-gray-200 p-2 flex items-center justify-between fixed bottom-0 left-0 right-0 bg-white z-10">
+        <div className="border-t border-gray-200 p-2 flex items-center justify-between bg-white">
             <div className="flex items-center space-x-3">
                 <button
                     type="button"

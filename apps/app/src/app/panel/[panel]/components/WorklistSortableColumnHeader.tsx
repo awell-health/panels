@@ -35,10 +35,8 @@ export function SortableColumnHeader({ column, index, sortConfig, onSort, filter
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 1000 : 0,
     opacity: isDragging ? 0.5 : 1,
     width: column.name === "Patient Name" ? "140px" : "auto",
-    position: 'relative' as const,
   }
 
   // Get the appropriate icon based on column type
@@ -111,7 +109,7 @@ export function SortableColumnHeader({ column, index, sortConfig, onSort, filter
       }}
       style={style}
       className={cn(
-        "text-xs font-normal text-gray-700 p-2 border-r border-gray-200 relative select-none",
+        "text-xs font-normal text-gray-700 p-2 border-r border-gray-200 select-none bg-white sticky top-0 shadow-sm",
         isDragging && "bg-blue-50 border-blue-200 shadow-lg",
         isOver && !isDragging && "bg-blue-25 border-blue-100",
         "transition-colors duration-150"
