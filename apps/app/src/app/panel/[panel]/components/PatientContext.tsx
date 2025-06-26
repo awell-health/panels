@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ExtensionDetails } from './ExtensionDetails';
 import { SearchableExtensionDetails } from './SearchableExtensionDetails';
 import { PatientDetails } from './PatientDetails';
+import type { Extension } from '@medplum/fhirtypes';
 
 const getFieldValue = (field: any): string => {
   if (!field) return '';
@@ -47,6 +48,27 @@ const formatTelecom = (telecom: any): string => {
   return String(telecom);
 }
 
+// Helper to recursively find and remove the summary extension
+function extractSummaryExtension(extensions: Extension[] = []): { summaryHtml: string | null, filteredExtensions: Extension[] } {
+  let summaryHtml = null;
+  const filteredExtensions: Extension[] = [];
+
+  for (const ext of extensions) {
+    if (ext.url?.includes('SummaryBeforeFirstTask_MainTrack')) {
+      summaryHtml = ext.valueString || null;
+      continue; // skip adding this extension
+    }
+    // If nested extensions, recurse
+    const newExt = { ...ext };
+    if (ext.extension && Array.isArray(ext.extension)) {
+      const { summaryHtml: nestedSummary, filteredExtensions: nestedFiltered } = extractSummaryExtension(ext.extension);
+      if (nestedSummary && !summaryHtml) summaryHtml = nestedSummary;
+      newExt.extension = nestedFiltered;
+    }
+    filteredExtensions.push(newExt);
+  }
+  return { summaryHtml, filteredExtensions };
+}
 
 type PatientContextProps = {
   patient: WorklistPatient
@@ -55,11 +77,15 @@ type PatientContextProps = {
 export function PatientContext({ patient }: PatientContextProps) {
   const [activeTab, setActiveTab] = useState<"context" | "tasks">("context");
 
+  // Extract summary and filtered extensions
+  const { summaryHtml, filteredExtensions } = extractSummaryExtension(patient.extension);
+
   return (
     <div className="flex-1 overflow-y-auto flex flex-col">
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8 px-4" aria-label="Tabs">
           <button
+            type="button"
             onClick={() => setActiveTab("context")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "context"
               ? "border-blue-500 text-blue-600"
@@ -69,6 +95,7 @@ export function PatientContext({ patient }: PatientContextProps) {
             Context
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("tasks")}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tasks"
               ? "border-blue-500 text-blue-600"
@@ -86,12 +113,21 @@ export function PatientContext({ patient }: PatientContextProps) {
             <PatientDetails patient={patient} />
             <div className="flex flex-col h-full mt-4">
               <div className="w-full space-y-4">
+                {/* Summary Section */}
+                {summaryHtml && (
+                  <>
+                    <h3 className="text-sm font-medium mb-2">Summary</h3>
+                    <div className="bg-gray-50 p-3 rounded mb-4">
+                      <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: summaryHtml }} />
+                    </div>
+                  </>
+                )}
                 {/* Extensions */}
-                {patient.extension && (
+                {filteredExtensions && filteredExtensions.length > 0 && (
                   isFeatureEnabled('ENABLE_EXTENSION_SEARCH') ? (
-                    <SearchableExtensionDetails extensions={patient.extension} />
+                    <SearchableExtensionDetails extensions={filteredExtensions} />
                   ) : (
-                    <ExtensionDetails extensions={patient.extension} />
+                    <ExtensionDetails extensions={filteredExtensions} />
                   )
                 )}
               </div>
