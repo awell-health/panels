@@ -4,6 +4,7 @@ import { useStytchMemberSession } from '@stytch/nextjs/b2b'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState, type FC, type ReactNode } from 'react'
 import { useCookies } from 'react-cookie'
+import { getRuntimeConfig } from '@/lib/config'
 
 interface AuthenticationGuardProps {
   children: ReactNode
@@ -13,8 +14,21 @@ interface AuthenticationGuardProps {
 export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({ children, loadingComponent }) => {
   const [isLoading, setLoading] = useState(true)
   const [cookies, setCookie] = useCookies(['stytch_session', 'auth_next_url'])
+  const [authRedirectUrl, setAuthRedirectUrl] = useState<string | undefined>(undefined)
+  const [authCookiesAllowedDomain, setAuthCookiesAllowedDomain] = useState<string | undefined>(undefined)
   const { session } = useStytchMemberSession()
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      const config = await getRuntimeConfig()
+      setAuthRedirectUrl(config.authRedirectUrl)
+      setAuthCookiesAllowedDomain(config.authCookiesAllowedDomain)
+    }
+    fetchConfig()
+  }, [])
+
+
 
   const redirectToLogin = (): void => {
     setLoading(true)
@@ -24,7 +38,7 @@ export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({ children, lo
     setCookie('auth_next_url', visitedPage, {
       expires,
       path: '/',
-      domain: process.env.NEXT_PUBLIC_AUTH_COOKIES_ALLOWED_DOMAIN
+      domain: authCookiesAllowedDomain
     })
 
     // This allows customers that have SSO enabled to create links that automatically
@@ -32,13 +46,17 @@ export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({ children, lo
     // of what is saved in the browser's local storage.
     const org = new URLSearchParams(window.location.search).get('org')
     if (org) {
-      router.push(process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL + '/session-expired?org=' + org)
+      router.push(authRedirectUrl + '/session-expired?org=' + org)
     } else {
-      router.push(process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL + '/session-expired')
+      router.push(authRedirectUrl + '/session-expired')
     }
   }
 
   useEffect(() => {
+    if (!authRedirectUrl || !authCookiesAllowedDomain) {
+      return
+    }
+
     // If the guard is loading, the user is either coming from CareOps or we initiated a redirect
     // to the session expired page.
     if (isLoading) {
@@ -54,15 +72,19 @@ export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({ children, lo
         redirectToLogin()
       }
     }
-  }, [session])
+  }, [session, authRedirectUrl, authCookiesAllowedDomain])
 
   useEffect(() => {
+    if (!authRedirectUrl || !authCookiesAllowedDomain) {
+      return
+    }
+
     // If for some reason the session is still available but the cookie is gone, we should also redirect
     // to the login page as any attempt to call the APIs will fail.
     if (!cookies.stytch_session) {
       redirectToLogin()
     }
-  }, [cookies])
+  }, [cookies, authRedirectUrl, authCookiesAllowedDomain])
 
   if (isLoading) {
     return <>{loadingComponent}</>

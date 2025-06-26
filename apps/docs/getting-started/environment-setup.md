@@ -140,16 +140,16 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:3003
 NODE_ENV=development
 
 # API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_MEDPLUM_BASE_URL=http://localhost:8103
+API_URL=http://localhost:3001
+MEDPLUM_BASE_URL=http://localhost:8103
 
 # Authentication
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-nextauth-secret-change-in-production
 
 # Feature Flags
-NEXT_PUBLIC_ENABLE_DEBUG=true
-NEXT_PUBLIC_APP_ENV=development
+ENABLE_DEBUG=true
+APP_ENV=development
 ```
 
 ### Testing Environment (`.env.test`)

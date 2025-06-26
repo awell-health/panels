@@ -247,7 +247,7 @@ export const setupTest = () => {
   const mockFetch = createMockFetch()
 
   // Set test environment variables using Vitest's stubEnv
-  vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', 'https://api.test.com')
+  vi.stubEnv('APP_API_BASE_URL', 'https://api.test.com')
 
   return { mockFetch }
 }
@@ -259,11 +259,11 @@ export const cleanupTest = () => {
 
 // Helper function to set up specific environment for individual tests
 export const setTestBaseUrl = (baseUrl: string) => {
-  vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', baseUrl)
+  vi.stubEnv('APP_API_BASE_URL', baseUrl)
 }
 
 export const clearTestBaseUrl = () => {
-  vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', '')
+  vi.stubEnv('APP_API_BASE_URL', '')
 }
 
 // Common test patterns

@@ -17,10 +17,35 @@ type PanelsTableProps = {
 const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDeleteView, createPanel }) => {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleDeletePanel = async (panelId: string) => {
+    try {
+      setDeleteError(null);
+      await onDeletePanel(panelId);
+    } catch (error) {
+      console.error('Failed to delete panel:', error);
+      setDeleteError(`Failed to delete panel: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Clear error after 5 seconds
+      setTimeout(() => setDeleteError(null), 5000);
+    }
+  };
+
+  const handleDeleteView = async (panelId: string, viewId: string) => {
+    try {
+      setDeleteError(null);
+      await onDeleteView(panelId, viewId);
+    } catch (error) {
+      console.error('Failed to delete view:', error);
+      setDeleteError(`Failed to delete view: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Clear error after 5 seconds
+      setTimeout(() => setDeleteError(null), 5000);
+    }
+  };
 
   const onCreatePanel = () => {
     createPanel(DEFAULT_WORKLIST).then(newPanel => {
@@ -47,7 +72,13 @@ const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDele
         </div>
       </div>
 
-      <div className="border border-neutral-200 rounded-md overflow-hidden">
+      {deleteError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-800 text-sm">{deleteError}</p>
+        </div>
+      )}
+
+      <div className="border border-neutral-200 rounded-md overflow-hidden max-w-3xl">
         <div className="relative w-full overflow-auto">
           <table className="w-full">
             <TableHeader>
@@ -60,7 +91,7 @@ const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDele
             </TableHeader>
             <TableBody>
               {mounted && panels.map((panel) => (
-                <PanelRow key={panel.id} panel={panel} onDeletePanel={onDeletePanel} onDeleteView={onDeleteView} />
+                <PanelRow key={panel.id} panel={panel} onDeletePanel={handleDeletePanel} onDeleteView={handleDeleteView} />
               ))}
 
               {mounted && panels.length === 0 && (

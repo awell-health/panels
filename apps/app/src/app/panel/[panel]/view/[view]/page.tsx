@@ -1,4 +1,6 @@
 "use client";
+import { isFeatureEnabled } from '@/utils/featureFlags'
+import ReactiveWorklistViewPage from './page-reactive'
 import WorklistFooter from "@/app/panel/[panel]/components/WorklistFooter";
 import WorklistNavigation from "@/app/panel/[panel]/components/WorklistNavigation";
 import WorklistTable from "@/app/panel/[panel]/components/WorklistTable";
@@ -19,114 +21,119 @@ interface TableFilter {
   value: string;
 }
 
-export default function WorklistPage() {
+export default function WorklistViewPage() {
+  const isReactiveEnabled = isFeatureEnabled('ENABLE_REACTIVE_DATA_STORAGE')
+
+  // If reactive is enabled, use the reactive component
+  if (isReactiveEnabled) {
+    return <ReactiveWorklistViewPage />
+  }
+
+  // Original implementation for when reactive is disabled
   const { patients, tasks, toggleTaskOwner, isLoading: isMedplumLoading } = useMedplumStore();
-  const { getPanel, getView, updateView, addView, isLoading: isPanelLoading, panels } = usePanelStore();
+  const { getPanel, getView, updatePanel, addView, isLoading: isPanelLoading } = usePanelStore();
   const params = useParams();
   const panelId = params.panel as string;
   const viewId = params.view as string;
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
 
-  const [panelDefinition, setPanelDefinition] = useState<PanelDefinition | null>(null);
-  const [viewDefinition, setViewDefinition] = useState<ViewDefinition | null>(null);
   const [tableFilters, setTableFilters] = useState<TableFilter[]>([]);
+  const [panel, setPanel] = useState<PanelDefinition | null>(null);
+  const [view, setView] = useState<ViewDefinition | null>(null);
 
-  const searchData = viewDefinition?.viewType === 'patient' ? patients : tasks;
+  // Get panel and view data
+  useEffect(() => {
+    const currentPanel = getPanel(panelId);
+    if (currentPanel) {
+      setPanel(currentPanel);
+      const currentView = getView(panelId, viewId);
+      if (currentView) {
+        setView(currentView);
+        setTableFilters(currentView.filters.map((filter: Filter) => ({
+          key: filter.fhirPathFilter[0],
+          value: filter.fhirPathFilter[1],
+        })));
+      }
+    }
+  }, [getPanel, getView, panelId, viewId]);
+
+  const searchData = view?.viewType === 'patient' ? patients : tasks;
   // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
   const { searchTerm, setSearchTerm, searchMode, setSearchMode, filteredData } = useSearch(searchData);
 
-  const columns = viewDefinition?.columns ?? [];
+  const columns = view?.columns && view.columns.length > 0
+    ? view.columns
+    : (view?.viewType === 'patient' ? panel?.patientViewColumns ?? [] : panel?.taskViewColumns ?? []);
   const tableData = filteredData ?? [];
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // Handle panel or view not found
   useEffect(() => {
-    setIsLoading(isPanelLoading || !viewDefinition || !panelDefinition);
-  }, [isPanelLoading, panelId, viewId, viewDefinition, panelDefinition]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-  useEffect(() => {
-    if (isPanelLoading) {
+    if (!isPanelLoading && !panel) {
+      router.push('/');
       return;
     }
-
-    const panel = getPanel?.(panelId);
-    if (!panel) {
-      router.push(`/`);
-      return;
-    }
-    setPanelDefinition(panel);
-    const view = getView?.(panelId, viewId);
-    if (!view) {
+    if (!isPanelLoading && !view) {
       router.push(`/panel/${panelId}`);
       return;
     }
-    setViewDefinition(view);
-
-    setTableFilters(view.filters.map(filter => ({
-      key: filter.fhirPathFilter[0],
-      value: filter.fhirPathFilter[1],
-    })));
-  }, [panelId, viewId, isPanelLoading]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-  useEffect(() => {
-    if (isPanelLoading) {
-      return;
-    }
-
-    const panel = getPanel?.(panelId);
-    if (!panel) {
-      // TODO panel not found
-      return;
-    }
-    setPanelDefinition(panel);
-  }, [panels]);
+  }, [isPanelLoading, panel, view, router, panelId]);
 
   const onColumnUpdate = async (updates: Partial<ColumnDefinition>) => {
-    if (!viewDefinition) {
+    if (!view || !panel) {
       return;
     }
 
-    const panelColumns = viewDefinition.viewType === 'patient' ? panelDefinition?.patientViewColumns ?? [] : panelDefinition?.taskViewColumns ?? []
+    const panelColumns = view.viewType === 'patient' ? panel.patientViewColumns ?? [] : panel.taskViewColumns ?? []
 
     const newColumns = updates.properties?.display?.visible
-      ? viewDefinition.columns.some(col => col.id === updates.id)
-        ? viewDefinition.columns
-        : [...viewDefinition.columns, panelColumns.find(col => col.id === updates.id)].filter((col): col is ColumnDefinition => col !== undefined)
-      : viewDefinition.columns.filter(column => column.id !== updates.id).filter((col): col is ColumnDefinition => col !== undefined)
+      ? view.columns.some((col: ColumnDefinition) => col.id === updates.id)
+        ? view.columns
+        : [...view.columns, panelColumns.find((col: ColumnDefinition) => col.id === updates.id)].filter((col): col is ColumnDefinition => col !== undefined)
+      : view.columns.filter((column: ColumnDefinition) => column.id !== updates.id).filter((col): col is ColumnDefinition => col !== undefined)
 
     const newView = {
-      ...viewDefinition,
+      ...view,
       columns: newColumns
     }
 
+    const newPanel = {
+      ...panel,
+      views: panel.views?.map((v: ViewDefinition) => v.id === viewId ? newView : v) ?? [newView]
+    }
+
     try {
-      await updateView(panelId, viewId, newView);
-      setViewDefinition(newView);
+      await updatePanel(panel.id, newPanel);
+      setView(newView);
+      setPanel(newPanel);
     } catch (error) {
       console.error('Failed to update column:', error);
     }
   }
 
   const onFiltersChange = async (newTableFilters: TableFilter[]) => {
-    if (!viewDefinition) {
+    if (!view || !panel) {
       return;
     }
 
     // Convert table filters to view filters
-    const newFilters: Filter[] = newTableFilters.map(filter => ({
+    const newFilters: Filter[] = newTableFilters.map((filter: TableFilter) => ({
       fhirPathFilter: [filter.key, filter.value]
     }));
     const newView = {
-      ...viewDefinition,
+      ...view,
       filters: newFilters,
     }
 
+    const newPanel = {
+      ...panel,
+      views: panel.views?.map((v: ViewDefinition) => v.id === viewId ? newView : v) ?? [newView]
+    }
+
     try {
-      await updateView?.(panelId, viewId, newView);
-      setViewDefinition(newView);
+      await updatePanel(panel.id, newPanel);
       setTableFilters(newTableFilters);
+      setView(newView);
+      setPanel(newPanel);
     } catch (error) {
       console.error('Failed to update filters:', error);
     }
@@ -134,13 +141,13 @@ export default function WorklistPage() {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id || !viewDefinition) {
+    if (!over || active.id === over.id || !view || !panel) {
       return;
     }
 
     // Find the active column's index and the over column's index
-    const oldIndex = columns.findIndex(col => col.id === active.id);
-    const newIndex = columns.findIndex(col => col.id === over.id);
+    const oldIndex = columns.findIndex((col: ColumnDefinition) => col.id === active.id);
+    const newIndex = columns.findIndex((col: ColumnDefinition) => col.id === over.id);
 
     if (oldIndex === -1 || newIndex === -1) {
       return;
@@ -151,171 +158,179 @@ export default function WorklistPage() {
 
     // Update the view definition
     const newView = {
-      ...viewDefinition,
+      ...view,
       columns: reorderedColumns,
     };
 
+    const newPanel = {
+      ...panel,
+      views: panel.views?.map((v: ViewDefinition) => v.id === viewId ? newView : v) ?? [newView]
+    }
+
     try {
-      await updateView?.(panelId, viewId, newView);
-      setViewDefinition(newView);
+      await updatePanel(panel.id, newPanel);
+      setView(newView);
+      setPanel(newPanel);
     } catch (error) {
       console.error('Failed to reorder columns:', error);
     }
   }
 
   const onColumnChange = async (column: ViewDefinition | WorklistDefinition) => {
-    if (!viewDefinition) {
+    if (!view || !panel) {
       return;
     }
 
     const newView = {
-      ...viewDefinition,
+      ...view,
       ...column,
     }
 
+    const newPanel = {
+      ...panel,
+      views: panel.views?.map((v: ViewDefinition) => v.id === viewId ? newView : v) ?? [newView]
+    }
+
     try {
-      await updateView?.(panelId, viewId, newView);
-      setViewDefinition(newView);
+      await updatePanel(panel.id, newPanel);
+      setView(newView);
+      setPanel(newPanel);
     } catch (error) {
       console.error('Failed to update view:', error);
     }
   }
 
   const { onAddColumn } = useColumnCreator({
-    currentView: viewDefinition?.viewType ?? 'patient',
+    currentView: view?.viewType ?? 'patient',
     patients,
     tasks,
-    worklistDefinition: viewDefinition || undefined,
+    worklistDefinition: view || undefined,
     onDefinitionChange: onColumnChange,
   });
 
   const onNewView = async () => {
-    const panel = getPanel?.(panelId);
     if (!panel) {
       return;
     }
 
     try {
-      const newView = await addView?.(panelId, {
+      const newView = await addView(panel.id, {
         title: "New View",
-        filters: viewDefinition?.filters ?? panel.filters,
-        columns: viewDefinition?.columns ?? panel.taskViewColumns,
+        filters: view?.filters ?? panel.filters,
+        columns: view?.viewType === 'patient' ? panel.patientViewColumns : panel.taskViewColumns,
         createdAt: new Date(),
-        viewType: viewDefinition?.viewType ?? 'task',
-        sortConfig: viewDefinition?.sortConfig ?? [],
+        viewType: view?.viewType ?? 'task',
+        sortConfig: view?.sortConfig ?? [],
       });
       if (newView) {
         router.push(`/panel/${panelId}/view/${newView.id}`);
       }
     } catch (error) {
       console.error('Failed to create new view:', error);
-      // Optionally show user-friendly error message
     }
   }
 
   const onSortConfigUpdate = async (sortConfig: SortConfig | undefined) => {
-    if (!viewDefinition) {
+    if (!view || !panel) {
       return;
     }
     const newView = {
-      ...viewDefinition,
+      ...view,
       sortConfig: sortConfig ? [sortConfig] : [],
     }
-    await updateView?.(panelId, viewId, newView);
+    const newPanel = {
+      ...panel,
+      views: panel.views?.map((v: ViewDefinition) => v.id === viewId ? newView : v) ?? [newView]
+    }
+    await updatePanel(panel.id, newPanel);
+    setView(newView);
+    setPanel(newPanel);
   }
 
   const onViewTitleChange = async (newTitle: string) => {
-    if (!viewDefinition) {
+    if (!view || !panel) {
       console.log("viewDefinition not found");
       return;
     }
 
     try {
-      await updateView?.(panelId, viewId, { title: newTitle });
-      const updatedView = {
-        ...viewDefinition,
+      const newView = {
+        ...view,
         title: newTitle,
-      };
-      setViewDefinition(updatedView);
+      }
+      const newPanel = {
+        ...panel,
+        views: panel.views?.map((v: ViewDefinition) => v.id === viewId ? newView : v) ?? [newView]
+      }
+      await updatePanel(panel.id, newPanel);
+      setView(newView);
+      setPanel(newPanel);
     } catch (error) {
       console.error('Failed to update view title:', error);
-      // Optionally show user-friendly error message
     }
   };
 
+  if (!panel || !view) {
+    return null;
+  }
+
   return (
     <>
-      {isLoading ? (
-        <div className="flex items-center justify-center h-screen">
-          <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" aria-label="Loading View" />
+      {/* Navigation Area */}
+      <div className="navigation-area">
+        <WorklistNavigation panelDefinition={panel} selectedViewId={viewId} onNewView={onNewView} onViewTitleChange={onViewTitleChange} />
+      </div>
+
+      {/* Toolbar Area */}
+      <div className="toolbar-area">
+        <WorklistToolbar
+          searchTerm={searchTerm}
+          onSearch={setSearchTerm}
+          searchMode={searchMode}
+          onSearchModeChange={setSearchMode}
+          currentView={view?.viewType}
+          setCurrentView={() => { }}
+          worklistColumns={columns}
+          onAddColumn={onAddColumn}
+          onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({ id: columnId, properties: { display: { visible } } })}
+        />
+      </div>
+
+      {/* Content Area */}
+      <div className="content-area">
+        <div className="table-scroll-container">
+          <WorklistTable
+            isLoading={isMedplumLoading}
+            selectedRows={[]}
+            toggleSelectAll={() => { }}
+            worklistColumns={columns}
+            onSortConfigUpdate={onSortConfigUpdate}
+            tableData={filteredData}
+            handlePDFClick={() => { }}
+            handleTaskClick={() => { }}
+            handleRowHover={() => { }}
+            toggleSelectRow={() => { }}
+            handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
+            setIsAddingIngestionSource={() => { }}
+            currentView={view?.viewType ?? 'patient'}
+            handleDragEnd={handleDragEnd}
+            onColumnUpdate={onColumnUpdate}
+            filters={tableFilters}
+            onFiltersChange={onFiltersChange}
+            initialSortConfig={view?.sortConfig?.[0] ?? null}
+          />
         </div>
-      ) : (
-        <>
-          {/* Navigation Area */}
-          <div className="navigation-area">
-            {panelDefinition && (
-              <WorklistNavigation
-                panelDefinition={panelDefinition}
-                selectedViewId={viewId}
-                onNewView={onNewView}
-                onViewTitleChange={onViewTitleChange}
-              />
-            )}
-          </div>
+      </div>
 
-          {/* Toolbar Area */}
-          <div className="toolbar-area">
-            <WorklistToolbar
-              searchTerm={searchTerm}
-              onSearch={setSearchTerm}
-              searchMode={searchMode}
-              onSearchModeChange={setSearchMode}
-              currentView={viewDefinition?.viewType}
-              setCurrentView={() => { }}
-              worklistColumns={viewDefinition?.viewType === 'patient' ? panelDefinition?.patientViewColumns ?? [] : panelDefinition?.taskViewColumns ?? []}
-              onAddColumn={onAddColumn}
-              visibleColumns={columns}
-              onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({ id: columnId, properties: { display: { visible } } })}
-            />
-          </div>
-
-          {/* Content Area */}
-          <div className="content-area">
-            <div className="table-scroll-container">
-              <WorklistTable
-                isLoading={isMedplumLoading}
-                selectedRows={[]}
-                toggleSelectAll={() => { }}
-                worklistColumns={columns}
-                onSortConfigUpdate={onSortConfigUpdate}
-                tableData={filteredData}
-                handlePDFClick={() => { }}
-                handleTaskClick={() => { }}
-                handleRowHover={() => { }}
-                toggleSelectRow={() => { }}
-                handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
-                setIsAddingIngestionSource={() => { }}
-                currentView={viewDefinition?.viewType ?? 'patient'}
-                handleDragEnd={handleDragEnd}
-                onColumnUpdate={onColumnUpdate}
-                filters={tableFilters}
-                onFiltersChange={onFiltersChange}
-                initialSortConfig={viewDefinition?.sortConfig?.[0] ?? null}
-              />
-            </div>
-          </div>
-
-          {/* Footer Area */}
-          <div className="footer-area">
-            <WorklistFooter
-              columnsCounter={columns.length}
-              rowsCounter={tableData.length}
-              navigateToHome={() => router.push('/')}
-              isAISidebarOpen={false}
-            />
-          </div>
-        </>
-      )}
+      {/* Footer Area */}
+      <div className="footer-area">
+        <WorklistFooter
+          columnsCounter={columns.length}
+          rowsCounter={tableData.length}
+          navigateToHome={() => router.push('/')}
+          isAISidebarOpen={false}
+        />
+      </div>
     </>
   );
 }

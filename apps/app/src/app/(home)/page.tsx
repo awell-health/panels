@@ -1,5 +1,7 @@
 "use client"
 
+import { isFeatureEnabled } from '@/utils/featureFlags'
+import ReactiveHome from './page-reactive'
 import { usePanelStore } from "@/hooks/use-panel-store";
 import { Loader2, Menu } from "lucide-react";
 import PanelsTable from "./components/PanelsTable";
@@ -12,6 +14,14 @@ const users = [
 ];
 
 const Home = () => {
+  const isReactiveEnabled = isFeatureEnabled('ENABLE_REACTIVE_DATA_STORAGE')
+
+  // If reactive is enabled, use the reactive component
+  if (isReactiveEnabled) {
+    return <ReactiveHome />
+  }
+
+  // Original implementation for when reactive is disabled
   const { name } = useAuthentication()
   const { panels, isLoading: isPanelLoading, deletePanel, deleteView, createPanel } = usePanelStore();
 

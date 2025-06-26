@@ -53,3 +53,5 @@ LICENSE
 .terraform/
 dev/
 Dockerfile
+.next
+.turbo

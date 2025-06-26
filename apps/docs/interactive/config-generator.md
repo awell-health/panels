@@ -110,7 +110,7 @@ services:
     
   panels-app:
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - API_URL=http://localhost:3001
 ```
 
 #### Kubernetes Configuration

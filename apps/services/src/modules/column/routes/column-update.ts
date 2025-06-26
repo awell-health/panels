@@ -12,6 +12,7 @@ import { z } from 'zod'
 import type {
   BaseColumn,
   ColumnProperties,
+  ColumnType,
 } from '../entities/base-column.entity.js'
 import type { CalculatedColumn } from '../entities/calculated-column.entity.js'
 
@@ -47,6 +48,7 @@ export const columnUpdate = async (app: FastifyInstance) => {
       const { id, colId } = request.params
       const {
         name,
+        type,
         properties,
         metadata,
         formula,
@@ -55,6 +57,14 @@ export const columnUpdate = async (app: FastifyInstance) => {
         tenantId,
         tags,
       } = request.body
+
+      app.log.info('Column update request received:', {
+        panelId: id,
+        columnId: colId,
+        body: request.body,
+        type: type,
+        hasType: !!type,
+      })
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({
@@ -87,6 +97,7 @@ export const columnUpdate = async (app: FastifyInstance) => {
 
       // Update common fields
       if (name) column.name = name
+      if (type) column.type = type as ColumnType
       if (metadata !== undefined) column.metadata = metadata
       if (tags) column.tags = tags
 

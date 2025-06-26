@@ -262,8 +262,8 @@ pnpm dev
 # .env.local
 NEXTAUTH_URL=http://localhost:3003
 NEXTAUTH_SECRET=your-secret-key
-NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_APP_ENV=development
+API_URL=http://localhost:3001
+APP_ENV=development
 ```
 
 ### Next.js Configuration
