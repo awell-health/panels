@@ -6,10 +6,11 @@ import { v4 as uuidv4 } from 'uuid'
 import { useCell, useStore } from 'tinybase/ui-react'
 
 import { getStorageAdapter } from '@/lib/storage/storage-factory'
-import type { StorageAdapter } from '@/lib/storage/types'
+import type { StorageAdapter, StorageMode } from '@/lib/storage/types'
 import { useAuthentication } from './use-authentication'
 import { Loader2 } from 'lucide-react'
 import { ReactiveStore } from '@/lib/reactive/reactive-store'
+import { getRuntimeConfig } from '@/lib/config'
 
 export class ReactivePanelStore {
     private storage: StorageAdapter | null = null
@@ -17,14 +18,14 @@ export class ReactivePanelStore {
     private saveStates: Map<string, 'saving' | 'saved' | 'error'> = new Map()
     private initializationPromise: Promise<void> | null = null
 
-    constructor(userId?: string, organizationSlug?: string) {
-        console.log('Initializing ReactivePanelStore with', userId, organizationSlug);
-        this.initializationPromise = this.initializeStorage(userId, organizationSlug)
-    }
+        constructor(userId?: string, organizationSlug?: string, mode?: StorageMode) {
+            console.log('Initializing ReactivePanelStore with', userId, organizationSlug, mode);
+            this.initializationPromise = this.initializeStorage(userId, organizationSlug, mode)
+        }
 
-    private async initializeStorage(userId?: string, organizationSlug?: string) {
+    private async initializeStorage(userId?: string, organizationSlug?: string, mode?: StorageMode) {
         try {
-            this.storage = await getStorageAdapter(userId, organizationSlug)
+            this.storage = await getStorageAdapter(userId, mode, organizationSlug)
 
             // Get the reactive store from the storage adapter if it's a ReactiveStorageAdapter
             if (this.storage && 'getReactiveStore' in this.storage) {
@@ -312,7 +313,8 @@ export function ReactivePanelStoreProvider({ children }: { children: React.React
 
         const initializeStore = async () => {
             try {
-                const reactiveStore = new ReactivePanelStore(userId, organizationSlug)
+                const { storageMode } = await getRuntimeConfig()
+                const reactiveStore = new ReactivePanelStore(userId, organizationSlug, storageMode as StorageMode)
 
                 // Wait for initialization to complete
                 await reactiveStore.waitForInitialization()

@@ -7,7 +7,7 @@ This directory contains the API modules for panels and views, along with compreh
 ```
 src/api/
 ├── config/
-│   └── apiConfig.ts          # API configuration with environment-based base URL
+│   └── apiConfig.ts          # API configuration with runtime-based base URL
 ├── testUtils.ts              # Shared test utilities and mock data
 ├── panelsAPI.ts              # Panels API functions
 ├── panelsAPI.test.ts         # Panels API tests
@@ -18,39 +18,34 @@ src/api/
 
 ## Configuration
 
-### Environment Variables
+### Runtime Configuration
 
-The API base URL is configured through environment variables:
+The API base URL is now configured through runtime configuration using `getRuntimeConfig()`:
 
-- **`NEXT_PUBLIC_APP_API_BASE_URL`** - Primary environment variable for client-side usage
-- **`API_BASE_URL`** - Fallback for server-side usage
+- **`storageApiBaseUrl`** - Primary configuration from runtime config
+- **Fallback**: Environment variable `APP_API_BASE_URL` for backward compatibility
 - **Default**: Empty string (uses relative URLs)
 
-Example `.env` file:
-```bash
-# Development
-NEXT_PUBLIC_APP_API_BASE_URL=http://localhost:3001
-
-# Production
-NEXT_PUBLIC_APP_API_BASE_URL=https://api.yourapp.com
-
-# Testing
-NEXT_PUBLIC_APP_API_BASE_URL=https://api.test.com
-```
+The runtime configuration is fetched from the server and cached to avoid repeated server calls.
 
 ### API Configuration
 
 The `apiConfig` object in `config/apiConfig.ts` provides:
 
-- **`baseUrl`**: Resolved base URL from environment variables
-- **`buildUrl(path)`**: Helper function to build complete URLs
+- **`getBaseUrl()`**: Async function to get base URL from runtime config
+- **`buildUrl(path)`**: Async helper function to build complete URLs
+- **`buildUrlSync(path)`**: Synchronous version for backward compatibility
+- **`clearCache()`**: Clear runtime config cache
 - **`defaultOptions`**: Default fetch options with common headers
 
 ```typescript
 import { apiConfig } from './config/apiConfig'
 
-// Builds: https://api.yourapp.com/api/panels/123
-const url = apiConfig.buildUrl('/api/panels/123')
+// Async version (recommended)
+const url = await apiConfig.buildUrl('/api/panels/123')
+
+// Sync version (fallback)
+const url = apiConfig.buildUrlSync('/api/panels/123')
 ```
 
 ## Testing
@@ -226,7 +221,7 @@ const panels = await panelsAPI.all('tenant-123', 'user-123', {
 **Environment variables not working:**
 - Check your `.env` file is in the correct location
 - Restart your development server after changing environment variables
-- Use `NEXT_PUBLIC_*` prefix for client-side variables
+- Use `*` prefix for client-side variables
 
 **Type errors in tests:**
 - Ensure your mock data matches the TypeScript types

@@ -10,18 +10,49 @@ import { CookiesProvider } from 'react-cookie';
 import { AuthenticationGuard } from './AuthenticationGuard';
 import { Loader2 } from 'lucide-react';
 import { AuthenticationStoreProvider } from '@/hooks/use-authentication';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { getRuntimeConfig } from '@/lib/config';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+
+  const [authStytchPublicToken, setAuthStytchPublicToken] = useState<string | undefined>(undefined);
+  const [authCookiesAllowedDomain, setAuthCookiesAllowedDomain] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      const config = await getRuntimeConfig();
+      setAuthStytchPublicToken(config.authStytchPublicToken);
+      setAuthCookiesAllowedDomain(config.authCookiesAllowedDomain);
+    };
+    fetchConfig();
+  }, []);
+  
   const stytch = useMemo(() => {
-    return createStytchB2BUIClient(process.env.NEXT_PUBLIC_AUTH_STYTCH_PUBLIC_TOKEN!, {
+
+    if (!authStytchPublicToken || !authCookiesAllowedDomain) {
+      console.log('AUTH_STYTCH_PUBLIC_TOKEN or AUTH_COOKIES_ALLOWED_DOMAIN is not available in runtime config');
+      return undefined
+    }
+    
+    return createStytchB2BUIClient(authStytchPublicToken, {
       cookieOptions: {
         opaqueTokenCookieName: `stytch_session`,
-        domain: process.env.NEXT_PUBLIC_AUTH_COOKIES_ALLOWED_DOMAIN,
+        domain: authCookiesAllowedDomain,
         availableToSubdomains: true
       }
     });
-  }, []);
+  }, [authStytchPublicToken, authCookiesAllowedDomain ]);
+
+  // Don't render if stytch is not available
+  if (!stytch) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2 mx-auto" aria-label="Loading..." />
+        </div>
+      </div>
+    );
+  }
 
   const isReactiveEnabled = isFeatureEnabled('ENABLE_REACTIVE_DATA_STORAGE');
 

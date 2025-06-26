@@ -42,10 +42,10 @@ describe('Storage Factory', () => {
     resetStorageAdapter()
 
     // Clear environment variables
-    process.env.NEXT_PUBLIC_APP_STORAGE_MODE = undefined
-    process.env.NEXT_PUBLIC_APP_API_BASE_URL = undefined
-    process.env.NEXT_PUBLIC_APP_TENANT_ID = undefined
-    process.env.NEXT_PUBLIC_APP_USER_ID = undefined
+    process.env.APP_STORAGE_MODE = undefined
+    process.env.APP_API_BASE_URL = undefined
+    process.env.APP_TENANT_ID = undefined
+    process.env.APP_USER_ID = undefined
 
     vi.clearAllMocks()
   })
@@ -57,19 +57,19 @@ describe('Storage Factory', () => {
     })
 
     test('should return local storage for invalid values', () => {
-      mockEnv({ NEXT_PUBLIC_APP_STORAGE_MODE: 'invalid' })
+      mockEnv({ APP_STORAGE_MODE: 'invalid' })
       const mode = getStorageMode()
       expect(mode).toBe(STORAGE_MODES.LOCAL)
     })
 
     test('should return api storage when explicitly set', () => {
-      mockEnv({ NEXT_PUBLIC_APP_STORAGE_MODE: 'api' })
+      mockEnv({ APP_STORAGE_MODE: 'api' })
       const mode = getStorageMode()
       expect(mode).toBe(STORAGE_MODES.API)
     })
 
     test('should handle case insensitive values', () => {
-      mockEnv({ NEXT_PUBLIC_APP_STORAGE_MODE: 'API' })
+      mockEnv({ APP_STORAGE_MODE: 'API' })
       const mode = getStorageMode()
       expect(mode).toBe(STORAGE_MODES.API)
     })
@@ -83,7 +83,7 @@ describe('Storage Factory', () => {
     })
 
     test('should create LocalStorageAdapter when explicitly configured', async () => {
-      mockEnv({ NEXT_PUBLIC_APP_STORAGE_MODE: 'local' })
+      mockEnv({ APP_STORAGE_MODE: 'local' })
 
       const adapter = await getStorageAdapter()
 
@@ -91,10 +91,10 @@ describe('Storage Factory', () => {
     })
 
     test('should create APIStorageAdapter when configured for API mode with valid config', async () => {
-      vi.stubEnv('NEXT_PUBLIC_APP_STORAGE_MODE', 'api')
-      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', 'http://localhost:3001')
-      vi.stubEnv('NEXT_PUBLIC_APP_TENANT_ID', 'test-tenant')
-      vi.stubEnv('NEXT_PUBLIC_APP_USER_ID', 'test-user')
+      vi.stubEnv('APP_STORAGE_MODE', 'api')
+      vi.stubEnv('APP_API_BASE_URL', 'http://localhost:3001')
+      vi.stubEnv('APP_TENANT_ID', 'test-tenant')
+      vi.stubEnv('APP_USER_ID', 'test-user')
 
       const adapter = await getStorageAdapter()
 
@@ -131,10 +131,10 @@ describe('Storage Factory', () => {
 
     test('should return API storage config when in API mode', () => {
       mockEnv({
-        NEXT_PUBLIC_APP_STORAGE_MODE: 'api',
-        NEXT_PUBLIC_APP_API_BASE_URL: 'http://localhost:3001',
-        NEXT_PUBLIC_APP_TENANT_ID: 'test-tenant',
-        NEXT_PUBLIC_APP_USER_ID: 'test-user',
+        APP_STORAGE_MODE: 'api',
+        APP_API_BASE_URL: 'http://localhost:3001',
+        APP_TENANT_ID: 'test-tenant',
+        APP_USER_ID: 'test-user',
       })
 
       const config = getStorageConfig()
@@ -152,7 +152,7 @@ describe('Storage Factory', () => {
     })
 
     test('should handle missing API config gracefully', () => {
-      mockEnv({ NEXT_PUBLIC_APP_STORAGE_MODE: 'api' })
+      mockEnv({ APP_STORAGE_MODE: 'api' })
 
       const config = getStorageConfig()
 

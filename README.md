@@ -270,7 +270,7 @@ The project includes comprehensive unit testing infrastructure for API functions
 
 - **Configurable Base URL**: APIs support environment-based URL configuration
   ```typescript
-  // Environment variable: NEXT_PUBLIC_API_BASE_URL
+  // Environment variable: API_BASE_URL
   // Development: http://localhost:3001
   // Testing: https://api.test.com (or custom)
   ```
@@ -324,7 +324,7 @@ The API functions now support configurable base URLs through environment variabl
 // apps/app/src/api/config/apiConfig.ts
 export const apiConfig = {
   get baseUrl(): string {
-    return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+    return process.env.API_BASE_URL || 'http://localhost:3001'
   },
   buildUrl: (path: string): string => `${apiConfig.baseUrl}${path}`
 }

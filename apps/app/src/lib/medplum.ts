@@ -8,11 +8,7 @@ import type {
   Subscription,
   Task,
 } from '@medplum/fhirtypes'
-
-const medplum = new MedplumClient({
-  baseUrl: process.env.NEXT_PUBLIC_MEDPLUM_BASE_URL || 'http://localhost:8103',
-  cacheTime: 10000,
-})
+import { getRuntimeConfig } from './config'
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ResourceHandler = (resource: any) => void
@@ -20,17 +16,23 @@ export type ResourceHandler = (resource: any) => void
 // Data store class to handle all Medplum interactions
 export class MedplumStore {
   private client: MedplumClient
+  private socketsBaseUrl: string
   private initialized = false
-  private ws: WebSocket | null = null
   private resourceHandlers: Map<string, Set<ResourceHandler>> = new Map()
 
-  constructor() {
-    this.client = medplum
+  constructor(client: MedplumClient, socketsBaseUrl: string) {
+    this.client = client
+    this.socketsBaseUrl = socketsBaseUrl
   }
 
   // Initialize the store with client login
   async initialize(clientId?: string, clientSecret?: string): Promise<void> {
     if (!this.initialized) {
+
+      if (!this.client) {
+        throw new Error('Failed to create Medplum client')
+      }
+
       try {
 
         if (!clientId || !clientSecret) {
@@ -88,7 +90,7 @@ export class MedplumStore {
 
     // Initialize WebSocket connection
     const ws = new WebSocket(
-      `${process.env.NEXT_PUBLIC_MEDPLUM_WS_BASE_URL || 'wss://localhost:8103'}/ws/subscriptions-r4`,
+      `${this.socketsBaseUrl}/ws/subscriptions-r4`,
     )
     ws.addEventListener('open', () => {
       console.log('WebSocket open')
@@ -314,4 +316,3 @@ export class MedplumStore {
 }
 
 // Export a singleton instance
-export const medplumStore = new MedplumStore()

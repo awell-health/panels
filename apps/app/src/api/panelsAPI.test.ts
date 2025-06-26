@@ -333,7 +333,7 @@ describe('panelsAPI', () => {
   describe('environment configuration', () => {
     it('should use different base URLs based on environment', async () => {
       // Test with different environment variable
-      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', 'https://api.production.com')
+      vi.stubEnv('APP_API_BASE_URL', 'https://api.production.com')
 
       const panel = { id: 'panel-123' }
       const expectedResponse = mockResponses.panelResponse()
@@ -350,7 +350,7 @@ describe('panelsAPI', () => {
 
     it('should handle missing base URL gracefully', async () => {
       // Remove the base URL
-      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', '')
+      vi.stubEnv('APP_API_BASE_URL', '')
 
       const panel = { id: 'panel-123' }
       const expectedResponse = mockResponses.panelResponse()
