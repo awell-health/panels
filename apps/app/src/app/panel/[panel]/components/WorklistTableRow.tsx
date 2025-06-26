@@ -2,15 +2,15 @@
 
 import { TaskDetails } from "@/app/panel/[panel]/components/TaskDetails"
 import { useDrawer } from "@/contexts/DrawerContext"
+import { useDateTimeFormat } from "@/hooks/use-date-time-format"
 import type { WorklistPatient, WorklistTask } from "@/hooks/use-medplum-store"
 import { getNestedValue } from "@/lib/fhir-path"
 import { formatTasksForPatientView, renderTaskStatus } from "@/lib/task-utils"
 import type { ColumnDefinition } from "@/types/worklist"
-import { CheckSquare, File } from "lucide-react"
+import { File } from "lucide-react"
 import { useRef } from "react"
 import { TableCell, TableRow } from "../../../../components/ui/table"
 import { cn } from "../../../../lib/utils"
-import { formatDateWithType } from "@/lib/date-utils"
 import { PatientContext } from "./PatientContext"
 
 interface WorklistTableRowWithHoverProps {
@@ -41,6 +41,7 @@ export default function WorklistTableRow({
 }: WorklistTableRowWithHoverProps) {
     const rowRef = useRef<HTMLTableRowElement>(null)
     const { openDrawer } = useDrawer()
+    const { formatDateTime } = useDateTimeFormat();
 
     const handleRowClick = () => {
         if (currentView === "task") {
@@ -89,7 +90,7 @@ export default function WorklistTableRow({
                         {columnValue}
                     </button>
                 ) : column.type === "date" && columnValue ? (
-                    formatDateWithType(columnValue)
+                    formatDateTime(columnValue)
                 ) : column.name === "Task Status" && columnValue ? (
                     renderTaskStatus(columnValue, row.Task, row["Patient Name"], handleTaskClick)
                 ) : column.type === "tasks" && currentView === "Patient view" && row._raw?.tasks ? (
