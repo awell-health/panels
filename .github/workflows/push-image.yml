@@ -38,7 +38,7 @@ jobs:
 
       - name: Build and push panels-app image
         run: |
-          docker build -t europe-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPO_NAME }}/panels-app:${{ steps.extract_tag.outputs.tag }} . -f apps/services/Dockerfile
+          docker build -t europe-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPO_NAME }}/panels-app:${{ steps.extract_tag.outputs.tag }} . -f apps/app/dockerfile
           docker push europe-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPO_NAME }}/panels-app:${{ steps.extract_tag.outputs.tag }}
       
       - name: Trigger release to development
