@@ -10,6 +10,7 @@ import { useSearch } from "@/hooks/use-search";
 import { arrayMove } from "@/lib/utils";
 import type { ColumnDefinition, Filter, PanelDefinition, SortConfig, ViewDefinition, WorklistDefinition } from "@/types/worklist";
 import type { DragEndEvent } from "@dnd-kit/core";
+import { Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -89,9 +90,9 @@ export default function WorklistPage() {
 
     const panelColumns = viewDefinition.viewType === 'patient' ? panelDefinition?.patientViewColumns ?? [] : panelDefinition?.taskViewColumns ?? []
 
-    const newColumns = updates.properties?.display?.visible 
+    const newColumns = updates.properties?.display?.visible
       ? viewDefinition.columns.some(col => col.id === updates.id)
-        ? viewDefinition.columns 
+        ? viewDefinition.columns
         : [...viewDefinition.columns, panelColumns.find(col => col.id === updates.id)].filter((col): col is ColumnDefinition => col !== undefined)
       : viewDefinition.columns.filter(column => column.id !== updates.id).filter((col): col is ColumnDefinition => col !== undefined)
 
@@ -244,52 +245,75 @@ export default function WorklistPage() {
 
   return (
     <>
-      {panelDefinition && (
-        <WorklistNavigation panelDefinition={panelDefinition} selectedViewId={viewId} onNewView={onNewView} onViewTitleChange={onViewTitleChange} />
-      )}
       {isLoading ? (
         <div className="flex items-center justify-center h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
+          <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" aria-label="Loading View" />
         </div>
       ) : (
         <>
-          <WorklistToolbar
-            searchTerm={searchTerm}
-            onSearch={setSearchTerm}
-            searchMode={searchMode}
-            onSearchModeChange={setSearchMode}
-            currentView={viewDefinition?.viewType}
-            setCurrentView={() => { }}
-            worklistColumns={viewDefinition?.viewType === 'patient' ? panelDefinition?.patientViewColumns ?? [] : panelDefinition?.taskViewColumns ?? []}
-            onAddColumn={onAddColumn}
-            visibleColumns={columns}
-            onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({ id: columnId, properties: { display: { visible } } })}
-          />
-          <WorklistTable isLoading={isMedplumLoading}
-            selectedRows={[]}
-            toggleSelectAll={() => { }}
-            worklistColumns={columns}
-            onSortConfigUpdate={onSortConfigUpdate}
-            tableData={filteredData}
-            handlePDFClick={() => { }}
-            handleTaskClick={() => { }}
-            handleRowHover={() => { }}
-            toggleSelectRow={() => { }}
-            handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
-            setIsAddingIngestionSource={() => { }}
-            currentView={viewDefinition?.viewType ?? 'patient'}
-            handleDragEnd={handleDragEnd}
-            onColumnUpdate={onColumnUpdate}
-            filters={tableFilters}
-            onFiltersChange={onFiltersChange}
-            initialSortConfig={viewDefinition?.sortConfig?.[0] ?? null}
-          />
-          <WorklistFooter
-            columnsCounter={columns.length}
-            rowsCounter={tableData.length}
-            navigateToHome={() => router.push('/')}
-            isAISidebarOpen={false}
-          />
+          {/* Navigation Area */}
+          <div className="navigation-area">
+            {panelDefinition && (
+              <WorklistNavigation
+                panelDefinition={panelDefinition}
+                selectedViewId={viewId}
+                onNewView={onNewView}
+                onViewTitleChange={onViewTitleChange}
+              />
+            )}
+          </div>
+
+          {/* Toolbar Area */}
+          <div className="toolbar-area">
+            <WorklistToolbar
+              searchTerm={searchTerm}
+              onSearch={setSearchTerm}
+              searchMode={searchMode}
+              onSearchModeChange={setSearchMode}
+              currentView={viewDefinition?.viewType}
+              setCurrentView={() => { }}
+              worklistColumns={viewDefinition?.viewType === 'patient' ? panelDefinition?.patientViewColumns ?? [] : panelDefinition?.taskViewColumns ?? []}
+              onAddColumn={onAddColumn}
+              visibleColumns={columns}
+              onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({ id: columnId, properties: { display: { visible } } })}
+            />
+          </div>
+
+          {/* Content Area */}
+          <div className="content-area">
+            <div className="table-scroll-container">
+              <WorklistTable
+                isLoading={isMedplumLoading}
+                selectedRows={[]}
+                toggleSelectAll={() => { }}
+                worklistColumns={columns}
+                onSortConfigUpdate={onSortConfigUpdate}
+                tableData={filteredData}
+                handlePDFClick={() => { }}
+                handleTaskClick={() => { }}
+                handleRowHover={() => { }}
+                toggleSelectRow={() => { }}
+                handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
+                setIsAddingIngestionSource={() => { }}
+                currentView={viewDefinition?.viewType ?? 'patient'}
+                handleDragEnd={handleDragEnd}
+                onColumnUpdate={onColumnUpdate}
+                filters={tableFilters}
+                onFiltersChange={onFiltersChange}
+                initialSortConfig={viewDefinition?.sortConfig?.[0] ?? null}
+              />
+            </div>
+          </div>
+
+          {/* Footer Area */}
+          <div className="footer-area">
+            <WorklistFooter
+              columnsCounter={columns.length}
+              rowsCounter={tableData.length}
+              navigateToHome={() => router.push('/')}
+              isAISidebarOpen={false}
+            />
+          </div>
         </>
       )}
     </>

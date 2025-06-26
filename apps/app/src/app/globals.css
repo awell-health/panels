@@ -12,8 +12,201 @@
   logs: true;
 }
 
+/* Layout Grid System */
+.app-shell {
+  display: grid;
+  height: 100vh;
+  grid-template-rows: auto auto 1fr auto;
+  /* header, toolbar, content, footer */
+  grid-template-columns: 1fr 0;
+  /* content, drawer (closed by default) */
+  grid-template-areas:
+    "header header"
+    "toolbar toolbar"
+    "content drawer"
+    "footer footer";
+  transition: grid-template-columns 0.3s ease;
+  overflow: hidden;
+}
+
+.app-shell.drawer-open {
+  grid-template-columns: 1fr 400px;
+  /* content resizes, drawer takes 400px */
+}
+
+/* Grid Area Assignments */
+.navigation-area {
+  grid-area: header;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Hide scrollbars for navigation tabs container */
+.navigation-tabs-scroll {
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.navigation-tabs-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.navigation-tabs-scroll::-webkit-scrollbar-track {
+  display: none;
+}
+
+.navigation-tabs-scroll::-webkit-scrollbar-thumb {
+  display: none;
+}
+
+.toolbar-area {
+  grid-area: toolbar;
+  overflow: hidden;
+}
+
+.content-area {
+  grid-area: content;
+  min-width: 0;
+  /* Critical: allows shrinking */
+  overflow: hidden;
+}
+
+.drawer-area {
+  grid-area: drawer;
+  background: white;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+}
+
+.footer-area {
+  grid-area: footer;
+  overflow: hidden;
+}
+
+/* Table Scroll Container */
+.table-scroll-container {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+}
+
+.worklist-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+
+
+
+
+/* Responsive Drawer */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .app-shell.drawer-open {
+    grid-template-columns: 1fr 320px;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-shell.drawer-open {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "header"
+      "toolbar"
+      "drawer"
+      "footer";
+  }
+
+  .app-shell.drawer-open .content-area {
+    display: none;
+  }
+
+  .app-shell:not(.drawer-open) .content-area {
+    display: block;
+  }
+}
+
+/* Drawer Content Transitions */
+.drawer-content {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.app-shell.drawer-open .drawer-content {
+  opacity: 1;
+}
+
+/* Home Page Layout System */
+.home-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+}
+
+.home-content {
+  flex: 1;
+  padding: 1rem;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.home-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.home-menu-button {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 30;
+}
+
+.home-title-section {
+  margin-left: 3rem;
+  flex: 1;
+}
+
+.home-panels-section {
+  margin-left: 3rem;
+  max-width: 48rem;
+}
+
+/* Ensure home layout components work properly */
+.home-layout .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-layout table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/* Responsive adjustments for home layout */
+@media (max-width: 768px) {
+
+  .home-title-section,
+  .home-panels-section {
+    margin-left: 1rem;
+  }
+
+  .home-menu-button {
+    left: 0.5rem;
+    top: 0.5rem;
+  }
+}
+
 /* Prevent horizontal overflow */
-html, body {
+html,
+body {
   overflow-x: hidden;
 }
 
