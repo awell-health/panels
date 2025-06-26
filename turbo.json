@@ -27,17 +27,11 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
-    "format": {
-      "dependsOn": ["^topo"]
-    },
     "lint:fix": {
       "dependsOn": ["^topo"]
     },
-    "format:fix": {
-      "dependsOn": ["^topo"]
-    },
     "typecheck": {
-      "dependsOn": ["^typecheck"],
+      "dependsOn": ["^build", "^typecheck"],
       "outputs": ["node_modules/.cache/tsbuildinfo.json"]
     },
     "clean": {
