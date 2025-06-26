@@ -323,7 +323,7 @@ export function SearchableExtensionDetails({
                     data={value}
                     title={ext.url.split('/').pop() || ext.url}
                     className="mt-1"
-                    isExpanded={true}
+                    isExpanded={false}
                     searchTerm={hasActiveSearch && isJson && useEnhancedHighlighting ? searchTerm : undefined}
                     searchMode={hasActiveSearch && isJson && useEnhancedHighlighting ? searchMode : undefined}
                     highlightMatches={hasActiveSearch && isJson && useEnhancedHighlighting}
@@ -345,7 +345,7 @@ export function SearchableExtensionDetails({
                     data={value}
                     title={ext.url.split('/').pop() || ext.url}
                     className="mt-1"
-                    isExpanded={true}
+                    isExpanded={false}
                     searchTerm={hasActiveSearch && isJson && useEnhancedHighlighting ? searchTerm : undefined}
                     searchMode={hasActiveSearch && isJson && useEnhancedHighlighting ? searchMode : undefined}
                     highlightMatches={hasActiveSearch && isJson && useEnhancedHighlighting}

@@ -71,6 +71,7 @@ export function SimplifiedJsonViewMode({
     path = []
 }: JsonViewModeProps) {
     const [expanded, setExpanded] = useState(isExpanded);
+    const [hasBeenManuallyToggled, setHasBeenManuallyToggled] = useState(false);
 
     const isObject = typeof data === 'object' && data !== null && !Array.isArray(data);
     const isArray = Array.isArray(data);
@@ -85,16 +86,17 @@ export function SimplifiedJsonViewMode({
 
     // Auto-expand/collapse based on search matches - only run when necessary
     useEffect(() => {
-        if (highlightMatches && searchTerm && autoCollapse) {
+        if (highlightMatches && searchTerm && autoCollapse && !hasBeenManuallyToggled) {
             const shouldExpand = shouldAutoExpand(path, matches, autoCollapse)
             if (shouldExpand !== expanded) {
                 setExpanded(shouldExpand)
             }
         }
-    }, [matches, searchTerm, highlightMatches, autoCollapse, path, expanded])
+    }, [matches, searchTerm, highlightMatches, autoCollapse, path, expanded, hasBeenManuallyToggled])
 
     const handleToggle = () => {
         setExpanded(!expanded);
+        setHasBeenManuallyToggled(true);
         onToggle?.();
     };
 
