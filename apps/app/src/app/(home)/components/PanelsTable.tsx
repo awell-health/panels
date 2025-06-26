@@ -4,7 +4,7 @@ import { DEFAULT_WORKLIST } from '@/utils/constants';
 import { ChevronRight, LayoutGrid, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-import { formatDate, formatDateWithType } from '@/lib/date-utils'
+import { useDateTimeFormat } from '@/hooks/use-date-time-format';
 
 
 type PanelsTableProps = {
@@ -57,7 +57,7 @@ const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDele
 
   // For now, all panels are expanded by default
   return (
-    <div className="mb-8">
+    <>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-base font-medium">Panels</h2>
         <div className="flex gap-2">
@@ -78,7 +78,7 @@ const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDele
         </div>
       )}
 
-      <div className="border border-neutral-200 rounded-md overflow-hidden max-w-3xl">
+      <div className="border border-neutral-200 rounded-md overflow-hidden">
         <div className="relative w-full overflow-auto">
           <table className="w-full">
             <TableHeader>
@@ -105,18 +105,14 @@ const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDele
           </table>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
 const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: string) => void, onDeleteView: (panelId: string, viewId: string) => void }> = ({ panel, onDeletePanel, onDeleteView }) => {
   const { id, title, taskViewColumns, patientViewColumns, createdAt, views } = panel;
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const { formatDateTime } = useDateTimeFormat();
 
   return (
     <React.Fragment key={id}>
@@ -134,7 +130,7 @@ const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: stri
           {taskViewColumns.length + patientViewColumns.length}
         </TableCell>
         <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
-          {mounted ? formatDateWithType(createdAt) : ''}
+          {formatDateTime(createdAt)}
         </TableCell>
         <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2 text-right">
           <button
@@ -151,7 +147,7 @@ const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: stri
         </TableCell>
       </TableRow>
 
-      {mounted && views?.map((view) => (
+      {views?.map((view) => (
         <TableRow
           key={view.id}
           className="border-b transition-colors hover:bg-neutral-50 cursor-pointer"
@@ -169,7 +165,7 @@ const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: stri
               : (view.taskViewColumns?.length || 0) + (view.patientViewColumns?.length || 0)}
           </TableCell>
           <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
-            {formatDateWithType(view.createdAt)}
+            {formatDateTime(view.createdAt)}
           </TableCell>
           <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2 text-right">
             <button

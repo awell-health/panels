@@ -5,8 +5,8 @@ import { ChevronDown, ChevronRight, Search } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { JsonViewer, SimplifiedJsonViewer } from '@/components/JsonViewer'
-import { formatDate, formatDateWithType } from '@/lib/date-utils'
 import { isFeatureEnabled } from '@/utils/featureFlags'
+import { useDateTimeFormat } from "@/hooks/use-date-time-format"
 
 export type SearchableExtensionDetailsProps = {
     extensions: Extension[]
@@ -106,7 +106,8 @@ const getExtensionTextValue = (ext: Extension): string => {
 
     // Format date values
     if (ext.valueDate || ext.valueDateTime || ext.valueTime) {
-        return formatDateWithType(String(value))
+        // TODO: Decide if we want to format dates here. If so this will need to be refactored.
+        return String(value)
     }
 
     return String(value)
@@ -212,6 +213,7 @@ export function SearchableExtensionDetails({
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
     const dropdownRef = useRef<HTMLDivElement>(null)
+    const { formatDateTime } = useDateTimeFormat();
 
     // Initialize all sections as expanded
     useEffect(() => {
@@ -249,14 +251,6 @@ export function SearchableExtensionDetails({
 
     // Sort extensions with JSON first
     const sortedExtensions = sortExtensionsWithJsonFirst(filteredExtensions)
-
-    // // Debug logging to understand the sorting
-    // console.log('Extensions sorting debug:', {
-    //     total: filteredExtensions.length,
-    //     jsonExtensions: filteredExtensions.filter(ext => isJsonExtension(ext)).map(ext => ext.url),
-    //     nonJsonExtensions: filteredExtensions.filter(ext => !isJsonExtension(ext)).map(ext => ext.url),
-    //     sortedUrls: sortedExtensions.map(ext => ext.url)
-    // })
 
     const hasActiveSearch = searchTerm.trim().length > 0
 
@@ -390,7 +384,7 @@ export function SearchableExtensionDetails({
 
         // Format date values
         if (ext.valueDate || ext.valueDateTime || ext.valueTime) {
-            return formatDateWithType(String(value))
+            return formatDateTime(String(value))
         }
 
         return String(value)

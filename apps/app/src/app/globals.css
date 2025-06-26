@@ -99,9 +99,31 @@
   min-width: 100%;
 }
 
+/* Home Page Grid Layout */
+.home-grid {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "preferences"
+    "content";
+}
 
+@media (min-width: 1024px) {
+  .home-grid {
+    grid-template-columns: 320px 1fr;
+    grid-template-areas: "preferences content";
+    align-items: start;
+  }
+}
 
+.home-preferences {
+  grid-area: preferences;
+}
 
+.home-content {
+  grid-area: content;
+}
 
 /* Responsive Drawer */
 @media (max-width: 1023px) and (min-width: 768px) {
@@ -137,71 +159,6 @@
 
 .app-shell.drawer-open .drawer-content {
   opacity: 1;
-}
-
-/* Home Page Layout System */
-.home-layout {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: white;
-}
-
-.home-content {
-  flex: 1;
-  padding: 1rem;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-.home-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  position: relative;
-}
-
-.home-menu-button {
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  z-index: 30;
-}
-
-.home-title-section {
-  margin-left: 3rem;
-  flex: 1;
-}
-
-.home-panels-section {
-  margin-left: 3rem;
-  max-width: 48rem;
-}
-
-/* Ensure home layout components work properly */
-.home-layout .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.home-layout table {
-  border-collapse: collapse;
-  width: 100%;
-}
-
-/* Responsive adjustments for home layout */
-@media (max-width: 768px) {
-
-  .home-title-section,
-  .home-panels-section {
-    margin-left: 1rem;
-  }
-
-  .home-menu-button {
-    left: 0.5rem;
-    top: 0.5rem;
-  }
 }
 
 /* Prevent horizontal overflow */
