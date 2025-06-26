@@ -8,6 +8,8 @@ import { getStorageAdapter } from '@/lib/storage/storage-factory'
 import type { StorageAdapter } from '@/lib/storage/types'
 import { useAuthentication } from './use-authentication'
 import { Loader2 } from 'lucide-react'
+import { getRuntimeConfig } from '@/lib/config'
+import { StorageMode } from '@/lib/storage/storage-factory'
 
 export class PanelStore {
   private listeners: Array<() => void> = []
@@ -16,13 +18,13 @@ export class PanelStore {
   private _isLoading = true
   private saveStates: Map<string, 'saving' | 'saved' | 'error'> = new Map()
 
-  constructor(userId?: string, organizationSlug?: string) {
-    this.initializeStorage(userId, organizationSlug)
-  }
+    constructor(userId?: string, organizationSlug?: string, mode?: StorageMode) {
+      this.initializeStorage(userId, organizationSlug, mode)
+    }
 
-  private async initializeStorage(userId?: string, organizationSlug?: string) {
+  private async initializeStorage(userId?: string, organizationSlug?: string, mode?: StorageMode) {
     try {
-      this.storage = await getStorageAdapter(userId, organizationSlug)
+      this.storage = await getStorageAdapter(userId, mode, organizationSlug)
       await this.loadPanels()
     } catch (error) {
       console.error('Failed to initialize storage adapter:', error)
@@ -298,13 +300,18 @@ export function PanelStoreProvider({ children }: { children: ReactNode }) {
   const { userId, organizationSlug } = useAuthentication()
   const [selectedOrganizationSlug, setSelectedOrganizationSlug] = useState<string | undefined>(undefined)
   const [storeInstance, setStoreInstance] = useState<PanelStore | null>(null)
+  
 
   useEffect(() => {
-    if (!storeInstance || selectedOrganizationSlug !== organizationSlug) {
-      setSelectedOrganizationSlug(organizationSlug)
-      console.log('Creating new PanelStore instance', organizationSlug)
-      setStoreInstance(new PanelStore(userId, organizationSlug))
+    const createStore = async () => {
+      const { storageMode } = await getRuntimeConfig()
+      if (!storeInstance || selectedOrganizationSlug !== organizationSlug) {
+        setSelectedOrganizationSlug(organizationSlug)
+        console.log('Creating new PanelStore instance', organizationSlug, storageMode)
+        setStoreInstance(new PanelStore(userId, organizationSlug, storageMode as StorageMode))
+      }
     }
+    createStore()
   }, [organizationSlug])
 
   if(!storeInstance) {

@@ -2,7 +2,7 @@
 
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useStorageConfig } from '@/hooks/use-storage-config'
-import { getStorageConfig } from '@/lib/storage/storage-factory'
+import { getRuntimeConfig } from '@/lib/config'
 import { Cloud, CloudOff, Database, HardDrive, Loader2, Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -48,23 +48,23 @@ export function StorageStatusIndicator({ className = '' }: StorageStatusIndicato
                     setStatus(prev => ({ ...prev, health: 'loading' }))
                 }
 
-                const config = getStorageConfig()
+                const { storageMode, storageApiBaseUrl } = await getRuntimeConfig()
 
                 // Simple health check without creating new adapter instances
                 // Just check if configuration is valid
-                const isHealthy = config.mode === 'local' ||
-                    (config.mode === 'api' && organizationSlug && userId)
+                const isHealthy = storageMode === 'local' ||
+                    (storageMode === 'api' && organizationSlug && userId)
 
                 if (!cancelled) {
                     setStatus({
-                        mode: config.mode as 'local' | 'api',
+                        mode: storageMode as 'local' | 'api',
                         health: isHealthy ? 'healthy' : 'error',
                         details: {
-                            mode: config.mode,
-                            cacheEnabled: config.mode === 'api' ? storageConfig.isCacheEnabled : false,
-                            cacheDuration: config.mode === 'api' ? storageConfig.cacheDurationMs : undefined,
+                            mode: storageMode || 'local',
+                            cacheEnabled: storageMode  === 'api' ? storageConfig.isCacheEnabled : false,
+                            cacheDuration: storageMode  === 'api' ? storageConfig.cacheDurationMs : undefined,
                             apiConfig: {
-                                baseUrl: config.apiConfig?.baseUrl || '',
+                                baseUrl: storageApiBaseUrl || '',
                                 tenantId: organizationSlug || '',
                                 userId: userId || '',
                             },

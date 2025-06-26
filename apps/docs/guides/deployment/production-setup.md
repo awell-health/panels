@@ -149,7 +149,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: ${API_BASE_URL}
+      API_URL: ${API_BASE_URL}
       NEXTAUTH_URL: ${APP_BASE_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
     networks:

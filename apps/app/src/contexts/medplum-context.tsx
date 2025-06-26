@@ -1,7 +1,9 @@
 'use client'
 
 import { useAuthentication } from '@/hooks/use-authentication'
-import { medplumStore } from '@/lib/medplum'
+import { getRuntimeConfig } from '@/lib/config'
+import { MedplumStore } from '@/lib/medplum'
+import { MedplumClient } from '@medplum/core'
 import type { Bot, Patient, Practitioner, Task } from '@medplum/fhirtypes'
 import { createContext, useContext, useEffect, useState } from 'react'
 
@@ -31,6 +33,7 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const { medplumClientId, medplumSecret, userId: authenticatedUserId, name, email } = useAuthentication()
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null)
+  const [medplumStore, setMedplumStore] = useState<MedplumStore | null>(null)
 
   const updateResource = <T extends { id?: string }>(
     currentResources: T[],
@@ -48,18 +51,40 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    const initializeMedplumStore = async () => {
+      const { medplumBaseUrl, medplumWsBaseUrl } = await getRuntimeConfig()
+      const client = new MedplumClient({
+        baseUrl: medplumBaseUrl || 'http://localhost:8103',
+        cacheTime: 10000,
+      })
+      
+      if(!medplumBaseUrl || !medplumWsBaseUrl) {
+        console.error('Medplum base URL or Medplum WebSocket base URL is not set', medplumBaseUrl, medplumWsBaseUrl)
+        return
+      }
+
+      const store = new MedplumStore(client, medplumWsBaseUrl)
+      await store.initialize(medplumClientId, medplumSecret)
+      setMedplumStore(store)
+  } 
+
+  initializeMedplumStore()
+
+  }, [medplumClientId])
+
+  useEffect(() => {
     let isMounted = true
+
+    if (!medplumStore) {
+      return
+    }
 
     const loadData = async () => {
       try {
         setIsLoading(true)
 
-        if (!authenticatedUserId) {
-          console.error('No authenticated user ID found')
-          return
-        }
 
-        await medplumStore.initialize(medplumClientId, medplumSecret)
+
         
         const [loadedPatients, loadedTasks] = await Promise.all([
           medplumStore.getPatients(),
@@ -122,16 +147,16 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false
     }
-  }, [medplumClientId])
+  }, [medplumStore])
 
   async function addNotesToTask(taskId: string, note: string) {
-    const task = await medplumStore.addNoteToTask(taskId, note)
+    const task = await medplumStore!.addNoteToTask(taskId, note)
     setTasks((currentTasks) => updateResource(currentTasks, task))
     return task
   }
 
   async function toggleTaskOwner(taskId: string) {
-    const task = await medplumStore.toggleTaskOwner(taskId, practitioner?.id ?? '')
+    const task = await medplumStore!.toggleTaskOwner(taskId, practitioner?.id ?? '')
     setTasks((currentTasks) => updateResource(currentTasks, task))
     return task
   }
