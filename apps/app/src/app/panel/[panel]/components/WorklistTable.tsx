@@ -83,8 +83,8 @@ export default function WorklistTable({
     if (filters && filters.length > 0) {
       filteredData = tableData.filter(row => {
         return filters.every(filter => {
-          // TODO this is very basic, we need to support more complex FHIRPath expressions
-          const fhirPath = `${filter.key}.lower() = '${filter.value.toLowerCase()}'`;
+          // Use partial matching with contains() for more user-friendly filtering
+          const fhirPath = `${filter.key}.lower().contains('${filter.value.toLowerCase()}')`;
           return isMatchingFhirPathCondition(row, fhirPath);
         });
       });

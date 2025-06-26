@@ -142,6 +142,9 @@ export default function ReactiveWorklistPage() {
             return;
         }
 
+        // ✅ OPTIMISTIC UPDATE: Apply filters immediately to UI
+        setTableFilters(newTableFilters);
+
         // Convert table filters to view filters
         const newFilters: Filter[] = newTableFilters.map(filter => ({
             fhirPathFilter: [filter.key, filter.value]
@@ -153,7 +156,7 @@ export default function ReactiveWorklistPage() {
 
         try {
             await updatePanel?.(panelId, newPanel);
-            setTableFilters(newTableFilters);
+            // Filters already applied to UI above
         } catch (error) {
             console.error('Failed to update filters:', error);
         }

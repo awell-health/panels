@@ -1,16 +1,14 @@
 "use client"
 
-import type { PanelDefinition, ViewDefinition, ColumnDefinition } from '@/types/worklist'
-import { type ReactNode, createContext, useContext, useEffect, useState } from 'react'
+import type { ColumnDefinition, PanelDefinition, ViewDefinition } from '@/types/worklist'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
-import { useCell, useStore } from 'tinybase/ui-react'
 
+import { getRuntimeConfig } from '@/lib/config'
+import { ReactiveStore } from '@/lib/reactive/reactive-store'
 import { getStorageAdapter } from '@/lib/storage/storage-factory'
 import type { StorageAdapter, StorageMode } from '@/lib/storage/types'
 import { useAuthentication } from './use-authentication'
-import { Loader2 } from 'lucide-react'
-import { ReactiveStore } from '@/lib/reactive/reactive-store'
-import { getRuntimeConfig } from '@/lib/config'
 
 export class ReactivePanelStore {
     private storage: StorageAdapter | null = null
@@ -18,10 +16,10 @@ export class ReactivePanelStore {
     private saveStates: Map<string, 'saving' | 'saved' | 'error'> = new Map()
     private initializationPromise: Promise<void> | null = null
 
-        constructor(userId?: string, organizationSlug?: string, mode?: StorageMode) {
-            console.log('Initializing ReactivePanelStore with', userId, organizationSlug, mode);
-            this.initializationPromise = this.initializeStorage(userId, organizationSlug, mode)
-        }
+    constructor(userId?: string, organizationSlug?: string, mode?: StorageMode) {
+        console.log('Initializing ReactivePanelStore with', userId, organizationSlug, mode);
+        this.initializationPromise = this.initializeStorage(userId, organizationSlug, mode)
+    }
 
     private async initializeStorage(userId?: string, organizationSlug?: string, mode?: StorageMode) {
         try {
@@ -281,15 +279,23 @@ export class ReactivePanelStore {
         const operationId = `column-${panelId}-${columnId}`
         this.setSaveState(operationId, 'saving')
 
-        try {
-            // Update in backend API
-            await this.storage.updateColumn(panelId, columnId, updates)
+        // Store original state for rollback
+        const originalPanel = this.reactiveStore?.getPanel(panelId)
 
-            // Update reactive store
+        try {
+            // ✅ OPTIMISTIC UPDATE: Update reactive store first for immediate UI feedback
             this.reactiveStore?.updateColumn(panelId, columnId, updates)
+
+            // Then sync with backend API
+            await this.storage.updateColumn(panelId, columnId, updates)
 
             this.setSaveState(operationId, 'saved')
         } catch (error) {
+            // Rollback optimistic update on API failure
+            if (originalPanel) {
+                this.reactiveStore?.setPanel(originalPanel)
+            }
+
             this.setSaveState(operationId, 'error')
             console.error('Failed to update column:', error)
             throw new Error(`Failed to update column: ${error instanceof Error ? error.message : 'Unknown error'}`)
