@@ -42,7 +42,11 @@ export class APIStorageAdapter implements StorageAdapter {
   private cache: CacheStore = { panels: null, views: null }
   private cacheConfig: CacheConfig
 
-  constructor(userId?: string, organizationSlug?: string, cacheConfig?: Partial<CacheConfig>) {
+  constructor(
+    userId?: string,
+    organizationSlug?: string,
+    cacheConfig?: Partial<CacheConfig>,
+  ) {
     this.config = {
       tenantId: organizationSlug || '',
       userId: userId || '',
@@ -671,8 +675,9 @@ export class APIStorageAdapter implements StorageAdapter {
         id: id,
       })
 
-      // Invalidate panels cache since we deleted one
+      // Invalidate all caches since panel deletion affects everything
       this.invalidateCache('panels')
+      this.invalidateCache('views')
     } catch (error) {
       console.error(`Failed to delete panel ${id} via API:`, error)
       throw new Error(
@@ -838,6 +843,97 @@ export class APIStorageAdapter implements StorageAdapter {
     }
   }
 
+  async updateColumn(
+    panelId: string,
+    columnId: string,
+    updates: Partial<ColumnDefinition>,
+  ): Promise<void> {
+    try {
+      const { panelsAPI } = await import('@/api/panelsAPI')
+      const { viewsAPI } = await import('@/api/viewsAPI')
+
+      // Get current column to preserve original tags
+      const currentColumns = await this.loadPanelColumns(panelId)
+      const currentColumn = currentColumns?.baseColumns.find(
+        (col) => col.id.toString() === columnId,
+      )
+
+      if (!currentColumn) {
+        throw new Error(`Column ${columnId} not found in panel ${panelId}`)
+      }
+
+      // Preserve original tags - don't change them based on column type
+      const originalTags = currentColumn.tags || []
+
+      // Map frontend column types to backend types
+      const typeMapping: Record<
+        string,
+        | 'text'
+        | 'number'
+        | 'date'
+        | 'boolean'
+        | 'select'
+        | 'multi_select'
+        | 'user'
+        | 'file'
+        | 'custom'
+      > = {
+        string: 'text',
+        number: 'number',
+        date: 'date',
+        boolean: 'boolean',
+        select: 'select',
+        array: 'multi_select',
+        assignee: 'user',
+      }
+
+      // Convert frontend column updates to backend format
+      const backendUpdates = {
+        id: columnId,
+        tenantId: this.config.tenantId,
+        userId: this.config.userId,
+        name: updates.name,
+        type: updates.type ? typeMapping[updates.type] || 'text' : undefined, // Map frontend type to backend type
+        properties: updates.properties,
+        metadata: updates.description
+          ? { description: updates.description }
+          : undefined,
+        // Preserve original tags instead of changing them
+        tags: originalTags,
+      }
+
+      // Update via API
+      await panelsAPI.columns.update(backendUpdates, { id: panelId })
+
+      // If column name was changed, update all views that reference this column
+      if (updates.name && updates.name !== currentColumn.name) {
+        // Get all views for this panel
+        const views = await this.loadPanelViews(panelId)
+
+        // Update each view that references this column
+        for (const view of views) {
+          const viewColumns = view.config.columns || []
+          if (viewColumns.includes(columnId)) {
+            // The column ID stays the same, but we need to refresh the view data
+            // This will be handled by cache invalidation below
+          }
+        }
+      }
+
+      // Invalidate both panels and views cache since column changes affect both
+      this.invalidateCache('panels')
+      this.invalidateCache('views', panelId)
+    } catch (error) {
+      console.error(
+        `Failed to update column ${columnId} in panel ${panelId}:`,
+        error,
+      )
+      throw new Error(
+        `Failed to update column: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
   async getView(
     panelId: string,
     viewId: string,
@@ -925,7 +1021,9 @@ export class APIStorageAdapter implements StorageAdapter {
       // Load columns and views in parallel for maximum efficiency
       const [columns, views] = await Promise.allSettled([
         this.loadPanelColumns(panel.id),
-        this.loadPanelViews(panel.id).then(views => views?.sort((a, b) => Number(a.id) - Number(b.id))),
+        this.loadPanelViews(panel.id).then((views) =>
+          views?.sort((a, b) => Number(a.id) - Number(b.id)),
+        ),
       ])
 
       const enrichedViews =

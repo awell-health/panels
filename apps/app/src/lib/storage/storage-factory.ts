@@ -1,10 +1,13 @@
 import { APIStorageAdapter } from './api-storage-adapter'
 import { LocalStorageAdapter } from './local-storage-adapter'
+import { ReactiveStorageAdapter } from './reactive-storage-adapter'
 import type { StorageAdapter } from './types'
+import { isFeatureEnabled } from '@/utils/featureFlags'
 
 export const STORAGE_MODES = {
   LOCAL: 'local',
   API: 'api',
+  REACTIVE: 'reactive',
 } as const
 
 export type StorageMode = (typeof STORAGE_MODES)[keyof typeof STORAGE_MODES]
@@ -13,6 +16,11 @@ export type StorageMode = (typeof STORAGE_MODES)[keyof typeof STORAGE_MODES]
  * Get the storage mode from environment variables
  */
 export const getStorageMode = (): StorageMode => {
+  // Check if reactive storage is enabled via feature flag
+  if (isFeatureEnabled('ENABLE_REACTIVE_DATA_STORAGE')) {
+    return STORAGE_MODES.REACTIVE
+  }
+
   const mode = process.env.NEXT_PUBLIC_APP_STORAGE_MODE
   return mode === STORAGE_MODES.API ? STORAGE_MODES.API : STORAGE_MODES.LOCAL
 }
@@ -29,13 +37,18 @@ export const getStorageConfig = () => {
     }
   }
 
+  if (mode === STORAGE_MODES.REACTIVE) {
+    return {
+      mode: STORAGE_MODES.REACTIVE,
+    }
+  }
+
   return {
     mode: STORAGE_MODES.API,
     apiConfig: {
       baseUrl: process.env.NEXT_PUBLIC_APP_API_BASE_URL || '',
     },
   }
-
 }
 
 /**
@@ -43,9 +56,7 @@ export const getStorageConfig = () => {
  */
 const validateEnvironmentConfig = (mode: StorageMode): void => {
   if (mode === STORAGE_MODES.API) {
-    const requiredVars = [
-      'NEXT_PUBLIC_APP_API_BASE_URL'
-    ]
+    const requiredVars = ['NEXT_PUBLIC_APP_API_BASE_URL']
 
     const missingVars = requiredVars.filter((varName) => !process.env[varName])
 
@@ -60,16 +71,24 @@ const validateEnvironmentConfig = (mode: StorageMode): void => {
 /**
  * Create a storage adapter based on environment configuration
  */
-export const createStorageAdapter = async (userId?: string, organizationSlug?: string, cacheConfig?: {
-  enabled?: boolean
-  duration?: number
-}): Promise<StorageAdapter> => {
+export const createStorageAdapter = async (
+  userId?: string,
+  organizationSlug?: string,
+  cacheConfig?: {
+    enabled?: boolean
+    duration?: number
+  },
+): Promise<StorageAdapter> => {
   const mode = getStorageMode()
 
   // Validate environment configuration
   validateEnvironmentConfig(mode)
 
   switch (mode) {
+    case STORAGE_MODES.REACTIVE: {
+      return new ReactiveStorageAdapter(userId, organizationSlug)
+    }
+
     case STORAGE_MODES.API: {
       return new APIStorageAdapter(userId, organizationSlug, cacheConfig)
     }
@@ -85,30 +104,62 @@ export const createStorageAdapter = async (userId?: string, organizationSlug?: s
 }
 
 /**
- * Singleton instance for consistent usage across the application
+ * Singleton instances for consistent usage across the application
  */
-let storageInstance: StorageAdapter | null = null
-let storagePromise: Promise<StorageAdapter> | null = null
+const storageInstances = new Map<string, StorageAdapter>()
 
 /**
  * Get the storage adapter instance (singleton pattern with race condition protection)
  * This ensures the same adapter is used throughout the application
  */
-export const getStorageAdapter = async (userId?: string, organizationSlug?: string): Promise<StorageAdapter> => {
+export const getStorageAdapter = async (
+  userId?: string,
+  organizationSlug?: string,
+): Promise<StorageAdapter> => {
   const mode = getStorageMode()
 
-  if (mode === STORAGE_MODES.API) {
-    return new APIStorageAdapter(userId, organizationSlug)
+  // Create a unique key for this configuration
+  const key = `${mode}-${userId || 'no-user'}-${organizationSlug || 'no-org'}`
+
+  // Check if we already have an instance for this configuration
+  const existingInstance = storageInstances.get(key)
+  if (existingInstance) {
+    return existingInstance
   }
 
-  return new LocalStorageAdapter()
+  // Create new instance based on mode
+  let adapter: StorageAdapter
+
+  switch (mode) {
+    case STORAGE_MODES.REACTIVE: {
+      adapter = new ReactiveStorageAdapter(userId, organizationSlug)
+      break
+    }
+
+    case STORAGE_MODES.API: {
+      adapter = new APIStorageAdapter(userId, organizationSlug)
+      break
+    }
+
+    case STORAGE_MODES.LOCAL: {
+      adapter = new LocalStorageAdapter()
+      break
+    }
+
+    default: {
+      throw new Error(`Unknown storage mode: ${mode}`)
+    }
+  }
+
+  // Store the instance for future use
+  storageInstances.set(key, adapter)
+  return adapter
 }
 
 /**
- * Reset the storage adapter instance
+ * Reset the storage adapter instances
  * Useful for testing or when switching storage modes
  */
 export const resetStorageAdapter = (): void => {
-  storageInstance = null
-  storagePromise = null
+  storageInstances.clear()
 }

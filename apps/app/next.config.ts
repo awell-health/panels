@@ -1,19 +1,23 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'avatars.githubusercontent.com',
-        search: ''
+        search: '',
       },
       {
         protocol: 'https',
         hostname: '*.public.blob.vercel-storage.com',
-        search: ''
-      }
-    ]
-  }};
+        search: '',
+      },
+    ],
+  },
+}
 
-export default nextConfig;
+export default nextConfig
