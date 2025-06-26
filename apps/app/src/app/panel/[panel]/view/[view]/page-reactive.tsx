@@ -201,17 +201,17 @@ export default function ReactiveWorklistViewPage() {
 
     return (
         <>
-            <div className="navigation-area">
-                {panel && (
-                    <WorklistNavigation panelDefinition={panel} selectedViewId={viewId} onNewView={onNewView} onViewTitleChange={onViewTitleChange} />
-                )}
-            </div>
             {isLoading ? (
                 <div className="flex items-center justify-center h-screen">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
                 </div>
             ) : (
                 <>
+                    <div className="navigation-area">
+                        {panel && (
+                            <WorklistNavigation panelDefinition={panel} selectedViewId={viewId} onNewView={onNewView} onViewTitleChange={onViewTitleChange} />
+                        )}
+                    </div>
                     <div className="toolbar-area">
                         <WorklistToolbar
                             searchTerm={searchTerm}
@@ -247,14 +247,14 @@ export default function ReactiveWorklistViewPage() {
                                 initialSortConfig={view?.sortConfig?.[0] ?? null}
                             />
                         </div>
-                        <div className="footer-area">
-                            <WorklistFooter
-                                columnsCounter={columns.length}
-                                rowsCounter={tableData.length}
-                                navigateToHome={() => router.push('/')}
-                                isAISidebarOpen={false}
-                            />
-                        </div>
+                    </div>
+                    <div className="footer-area">
+                        <WorklistFooter
+                            columnsCounter={columns.length}
+                            rowsCounter={tableData.length}
+                            navigateToHome={() => router.push('/')}
+                            isAISidebarOpen={false}
+                        />
                     </div>
                 </>
             )}

@@ -21,10 +21,10 @@
   grid-template-columns: 1fr 0;
   /* content, drawer (closed by default) */
   grid-template-areas:
-    "header header"
-    "toolbar toolbar"
+    "header drawer"
+    "toolbar drawer"
     "content drawer"
-    "footer footer";
+    "footer drawer";
   transition: grid-template-columns 0.3s ease;
   overflow: hidden;
 }

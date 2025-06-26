@@ -485,7 +485,7 @@ function WorklistNavigationReactive({
   return (
     <>
       <div className="bg-gray-50 relative pt-4">
-        <div className="h-9 flex items-end px-2 overflow-x-auto scrollbar-none">
+        <div className="h-10 flex items-end px-2 overflow-x-auto overflow-y-hidden navigation-tabs-scroll">
           <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gray-200" />
           <div className="flex items-end min-w-0">
             {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
