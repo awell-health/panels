@@ -278,16 +278,50 @@ export function SearchableExtensionDetails({
 
             return (
                 <div className="space-y-2">
-                    {sortedNestedExtensions.map((nestedExt: Extension, nestedIndex: number) => (
-                        <div key={`${parentIndex}-${nestedIndex}-${nestedExt.url}`} className="bg-gray-50 p-3 rounded">
-                            <div className="text-xs font-medium text-gray-500" title={`FHIR Path: extension${parentIndex !== undefined ? `[${parentIndex}]` : ''}.extension[${nestedIndex}]`}>
-                                {nestedExt.url}
+                    {sortedNestedExtensions.map((nestedExt: Extension, nestedIndex: number) => {
+                        const shouldRenderAsKeyValue = !isJsonExtension(nestedExt) &&
+                            (!nestedExt.extension || nestedExt.extension.length === 0)
+
+                        if (shouldRenderAsKeyValue) {
+                            const nestedKey = nestedExt.url.split('/').pop() || nestedExt.url
+                            const nestedValue = getExtensionTextValue(nestedExt)
+                            const isKeyLong = nestedKey.length > 30
+                            const isValueLong = String(nestedValue).length > 40
+
+                            if (!isKeyLong && !isValueLong) {
+                                // One-line layout
+                                return (
+                                    <div key={`${parentIndex}-${nestedIndex}-${nestedExt.url}`} className="flex items-start w-full space-x-2 text-sm">
+                                        <span className="font-medium min-w-0 flex-shrink-0 truncate max-w-[40%] text-sm text-gray-500" title={nestedKey}>
+                                            {nestedKey}:
+                                        </span>
+                                        <span className="text-sm break-words whitespace-pre-wrap flex-1">
+                                            {nestedValue}
+                                        </span>
+                                    </div>
+                                )
+                            }
+                            // Stacked layout
+                            return (
+                                <div key={`${parentIndex}-${nestedIndex}-${nestedExt.url}`} className="flex flex-col w-full text-sm">
+                                    <span className="font-medium text-sm mb-0.5 text-gray-500">{nestedKey}:</span>
+                                    <span className="text-sm break-words whitespace-pre-wrap pl-2">{nestedValue}</span>
+                                </div>
+                            )
+                        }
+
+                        // Use the original layout for JSON objects and nested extensions
+                        return (
+                            <div key={`${parentIndex}-${nestedIndex}-${nestedExt.url}`} className="flex flex-col w-full text-sm"> {/* bg-gray-50 p-3 rounded */}
+                                <div className="text-sm font-medium text-gray-500" title={`FHIR Path: extension${parentIndex !== undefined ? `[${parentIndex}]` : ''}.extension[${nestedIndex}]`}>
+                                    {nestedExt.url.split('/').pop() || nestedExt.url}:
+                                </div>
+                                <div className="text-sm">
+                                    {renderExtensionValue(nestedExt, nestedIndex)}
+                                </div>
                             </div>
-                            <div className="text-sm">
-                                {renderExtensionValue(nestedExt, nestedIndex)}
-                            </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
             )
         }
@@ -321,8 +355,8 @@ export function SearchableExtensionDetails({
             return (
                 <JsonViewerComponent
                     data={value}
-                    title={ext.url.split('/').pop() || ext.url}
-                    className="mt-1"
+                    title="a"
+                    className="mt-0"
                     isExpanded={false}
                     searchTerm={hasActiveSearch && isJson && useEnhancedHighlighting ? searchTerm : undefined}
                     searchMode={hasActiveSearch && isJson && useEnhancedHighlighting ? searchMode : undefined}
@@ -343,8 +377,8 @@ export function SearchableExtensionDetails({
             return (
                 <JsonViewerComponent
                     data={value}
-                    title={ext.url.split('/').pop() || ext.url}
-                    className="mt-1"
+                    title=" "
+                    className="mt-0"
                     isExpanded={false}
                     searchTerm={hasActiveSearch && isJson && useEnhancedHighlighting ? searchTerm : undefined}
                     searchMode={hasActiveSearch && isJson && useEnhancedHighlighting ? searchMode : undefined}

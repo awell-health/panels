@@ -104,7 +104,7 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-50 p-3 rounded">
                     <p className="text-xs font-medium text-gray-500">Status</p>
                     <p className="text-sm">{taskData.status}</p>
@@ -123,9 +123,9 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                     <p className="text-xs text-gray-500">Authored On</p>
                     <p className="text-sm">{formatDateWithType(taskData.authoredOn)}</p>
                   </div>
-                </div>
+                </div> */}
 
-                {taskData.executionPeriod && (
+                {/* {taskData.executionPeriod && (
                   <div className="bg-gray-50 p-3 rounded">
                     <p className="text-xs font-medium text-gray-500 mb-2">Execution Period</p>
                     <div className="grid grid-cols-2 gap-4">
@@ -143,7 +143,7 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                       )}
                     </div>
                   </div>
-                )}
+                )} */}
 
                 {taskData.input && taskData.input.length > 0 && (() => {
                   // Filter out connector inputs (same logic as used for connectors section)
@@ -172,10 +172,11 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                   );
                 })()}
 
-                {taskData.patient && (
+                {/* {taskData.patient && (
                   <PatientDetails patient={taskData.patient} />
-                )}
+                )} */}
 
+                <h3 className="text-sm font-medium mb-2">Context</h3>
                 {taskData.extension && (
                   isFeatureEnabled('ENABLE_EXTENSION_SEARCH') ? (
                     isFeatureEnabled('USE_JSON_VIEWER_FOR_EXTENSIONS') ? (
