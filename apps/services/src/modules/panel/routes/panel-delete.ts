@@ -7,7 +7,6 @@ import {
 } from '@panels/types'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
-import type { CalculatedColumn } from '../../column/entities/calculated-column.entity.js'
 
 export const panelDelete = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
