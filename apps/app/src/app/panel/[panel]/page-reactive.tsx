@@ -214,63 +214,71 @@ export default function ReactiveWorklistPage() {
                     <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" aria-label="Loading Panel" />
                 </div>
             ) : (
-                <div className="flex flex-col h-screen">
-                    {panel && (
-                        <WorklistNavigation panelDefinition={panel} onNewView={onNewView} onPanelTitleChange={onPanelTitleChange} />
-                    )}
-                    <WorklistToolbar
-                        key={`${panelId}-${currentView}-${columns.length}`}
-                        searchTerm={searchTerm}
-                        onSearch={setSearchTerm}
-                        searchMode={searchMode}
-                        onSearchModeChange={setSearchMode}
-                        currentView={currentView}
-                        setCurrentView={setCurrentView}
-                        worklistColumns={columns}
-                        onAddColumn={onAddColumn}
-                        onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({
-                            id: columnId,
-                            properties: {
-                                display: { visible }
-                            }
-                        })}
-                    />
-                    <div className="flex-1 overflow-hidden">
-                        <WorklistTable isLoading={isMedplumLoading}
-                            selectedRows={[]}
-                            toggleSelectAll={() => { }}
-                            onSortConfigUpdate={setSortConfig}
-                            worklistColumns={columns}
-                            tableData={filteredData}
-                            handlePDFClick={() => { }}
-                            handleTaskClick={() => { }}
-                            handleRowHover={() => { }}
-                            toggleSelectRow={() => { }}
-                            handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
-                            setIsAddingIngestionSource={() => setIsAddingIngestionSource(true)}
-                            currentView={currentView}
-                            handleDragEnd={handleDragEnd}
-                            onColumnUpdate={onColumnUpdate}
-                            filters={tableFilters}
-                            onFiltersChange={onFiltersChange}
-                            initialSortConfig={sortConfig ?? null}
-                        />
-                        {isAddingIngestionSource && (
-                            <AddIngestionModal
-                                isOpen={isAddingIngestionSource}
-                                onClose={() => setIsAddingIngestionSource(false)}
-                                onSelectSource={() => { }}
-                                ingestionBots={[]}
-                            />
+                <>
+                    <div className="navigation-area">
+                        {panel && (
+                            <WorklistNavigation panelDefinition={panel} onNewView={onNewView} onPanelTitleChange={onPanelTitleChange} />
                         )}
                     </div>
-                    <WorklistFooter
-                        columnsCounter={columns.length}
-                        rowsCounter={tableData.length}
-                        navigateToHome={() => router.push('/')}
-                        isAISidebarOpen={false}
-                    />
-                </div>
+                    <div className="toolbar-area">
+                        <WorklistToolbar
+                            key={`${panelId}-${currentView}-${columns.length}`}
+                            searchTerm={searchTerm}
+                            onSearch={setSearchTerm}
+                            searchMode={searchMode}
+                            onSearchModeChange={setSearchMode}
+                            currentView={currentView}
+                            setCurrentView={setCurrentView}
+                            worklistColumns={columns}
+                            onAddColumn={onAddColumn}
+                            onColumnVisibilityChange={(columnId, visible) => onColumnUpdate({
+                                id: columnId,
+                                properties: {
+                                    display: { visible }
+                                }
+                            })}
+                        />
+                    </div>
+                    <div className="content-area">
+                        <div className="table-scroll-container">
+                            <WorklistTable isLoading={isMedplumLoading}
+                                selectedRows={[]}
+                                toggleSelectAll={() => { }}
+                                onSortConfigUpdate={setSortConfig}
+                                worklistColumns={columns}
+                                tableData={filteredData}
+                                handlePDFClick={() => { }}
+                                handleTaskClick={() => { }}
+                                handleRowHover={() => { }}
+                                toggleSelectRow={() => { }}
+                                handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
+                                setIsAddingIngestionSource={() => setIsAddingIngestionSource(true)}
+                                currentView={currentView}
+                                handleDragEnd={handleDragEnd}
+                                onColumnUpdate={onColumnUpdate}
+                                filters={tableFilters}
+                                onFiltersChange={onFiltersChange}
+                                initialSortConfig={sortConfig ?? null}
+                            />
+                            {isAddingIngestionSource && (
+                                <AddIngestionModal
+                                    isOpen={isAddingIngestionSource}
+                                    onClose={() => setIsAddingIngestionSource(false)}
+                                    onSelectSource={() => { }}
+                                    ingestionBots={[]}
+                                />
+                            )}
+                        </div>
+                    </div>
+                    <div className="footer-area">
+                        <WorklistFooter
+                            columnsCounter={columns.length}
+                            rowsCounter={tableData.length}
+                            navigateToHome={() => router.push('/')}
+                            isAISidebarOpen={false}
+                        />
+                    </div>
+                </>
             )}
         </>
     );
