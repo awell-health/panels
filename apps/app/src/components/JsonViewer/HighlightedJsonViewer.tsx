@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { HighlightedJsonProps } from './types'
 import {
@@ -26,6 +26,7 @@ export const HighlightedJsonViewer: React.FC<HighlightedJsonProps> = ({
 }) => {
     const [isExpanded, setIsExpanded] = useState(initialExpanded)
     const [matches, setMatches] = useState<ReturnType<typeof findSearchMatches>>([])
+    const hasBeenManuallyToggled = useRef(false)
 
     // Find matches when search term or data changes
     useEffect(() => {
@@ -39,7 +40,7 @@ export const HighlightedJsonViewer: React.FC<HighlightedJsonProps> = ({
 
     // Auto-expand/collapse based on search matches
     useEffect(() => {
-        if (highlightMatches && searchTerm) {
+        if (highlightMatches && searchTerm && !hasBeenManuallyToggled.current) {
             const shouldExpand = shouldAutoExpand(path, matches, autoCollapse)
             setIsExpanded(shouldExpand)
         }
@@ -48,6 +49,7 @@ export const HighlightedJsonViewer: React.FC<HighlightedJsonProps> = ({
     const handleToggle = () => {
         const newExpanded = !isExpanded
         setIsExpanded(newExpanded)
+        hasBeenManuallyToggled.current = true
         onToggle?.()
     }
 
