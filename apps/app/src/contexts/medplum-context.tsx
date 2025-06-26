@@ -57,8 +57,8 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
         baseUrl: medplumBaseUrl || 'http://localhost:8103',
         cacheTime: 10000,
       })
-      
-      if(!medplumBaseUrl || !medplumWsBaseUrl) {
+
+      if (!medplumBaseUrl || !medplumWsBaseUrl) {
         console.error('Medplum base URL or Medplum WebSocket base URL is not set', medplumBaseUrl, medplumWsBaseUrl)
         return
       }
@@ -66,15 +66,13 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
       const store = new MedplumStore(client, medplumWsBaseUrl)
       await store.initialize(medplumClientId, medplumSecret)
       setMedplumStore(store)
-  } 
+    }
 
-  initializeMedplumStore()
+    initializeMedplumStore()
 
   }, [medplumClientId])
 
   useEffect(() => {
-    let isMounted = true
-
     if (!medplumStore) {
       return
     }
@@ -83,27 +81,16 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
       try {
         setIsLoading(true)
 
-
-
-        
         const [loadedPatients, loadedTasks] = await Promise.all([
           medplumStore.getPatients(),
           medplumStore.getTasks(),
         ])
-
-        if (isMounted) {
-          setPatients(loadedPatients)
-          setTasks(loadedTasks)
-        }
-
+        setPatients(loadedPatients)
+        setTasks(loadedTasks)
       } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err : new Error('Failed to load data'))
-        }
+        setError(err instanceof Error ? err : new Error('Failed to load data'))
       } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
+        setIsLoading(false)
       }
     }
 
@@ -112,22 +99,16 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
         // These subscriptions will be set up only once and shared across all components
         await Promise.all([
           medplumStore.subscribeToPatients((updatedPatient) => {
-            if (isMounted) {
-              setPatients((currentPatients) =>
-                updateResource(currentPatients, updatedPatient),
-              )
-            }
+            setPatients((currentPatients) =>
+              updateResource(currentPatients, updatedPatient),
+            )
           }),
           medplumStore.subscribeToTasks((updatedTask) => {
-            if (isMounted) {
-              setTasks((currentTasks) => updateResource(currentTasks, updatedTask))
-            }
+            setTasks((currentTasks) => updateResource(currentTasks, updatedTask))
           }),
         ])
       } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err : new Error('Failed to setup subscriptions'))
-        }
+        setError(err instanceof Error ? err : new Error('Failed to setup subscriptions'))
       }
     }
 
@@ -137,16 +118,12 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
         return
       }
       const practitioner = await medplumStore.getOrCreatePractitioner(authenticatedUserId, name && name.length > 0 ? name : email ?? authenticatedUserId)
-        setPractitioner(practitioner)
+      setPractitioner(practitioner)
     }
 
     loadData()
     setupSubscriptions()
     getOrCreatePractitioner()
-
-    return () => {
-      isMounted = false
-    }
   }, [medplumStore])
 
   async function addNotesToTask(taskId: string, note: string) {

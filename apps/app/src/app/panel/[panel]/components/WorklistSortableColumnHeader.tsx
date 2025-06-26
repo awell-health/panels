@@ -8,7 +8,7 @@ import type { ColumnDefinition } from "@/types/worklist"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Calendar, GripVertical, Hash, MoreVertical, Text, ToggleLeft } from "lucide-react"
-import { useRef, useState } from "react"
+import { useRef, useState, useCallback } from "react"
 import { ColumnMenu } from "./WorklistColumnMenu"
 
 type SortableColumnHeaderProps = {
@@ -63,7 +63,14 @@ export function SortableColumnHeader({ column, index, sortConfig, onSort, filter
   const toggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation()
 
-    if (!isMenuOpen && headerRef.current) {
+    // If menu is open, close it
+    if (isMenuOpen) {
+      setIsMenuOpen(false)
+      return
+    }
+
+    // If menu is closed, open it and calculate position
+    if (headerRef.current) {
       const rect = headerRef.current.getBoundingClientRect()
       const menuWidth = 264 // Menu width (260px) + some margin
 
@@ -78,9 +85,8 @@ export function SortableColumnHeader({ column, index, sortConfig, onSort, filter
         top: rect.bottom + window.scrollY,
         left: left,
       })
+      setIsMenuOpen(true)
     }
-
-    setIsMenuOpen(!isMenuOpen)
   }
 
   // Sample options for demonstration
@@ -165,21 +171,21 @@ export function SortableColumnHeader({ column, index, sortConfig, onSort, filter
             "flex items-center",
             isDragging && "pointer-events-none"
           )}>
-            {/* Filter button */}
+            {/* Combined filter and menu button */}
             <button
               type="button"
               className={cn(
-                "h-5 w-5 p-0 hover:bg-gray-100 rounded-full flex items-center justify-center",
+                "h-5 w-10 px-1 hover:bg-gray-100 rounded-full flex items-center justify-center gap-1",
                 filterValue ? "text-blue-500 bg-blue-20" : "text-gray-500"
               )}
               onClick={isDragging ? undefined : toggleMenu}
               disabled={isDragging}
-              aria-label="Filter column"
+              aria-label="Column options and filter"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
+                width="9"
+                height="9"
                 viewBox="0 0 24 24"
                 fill={filterValue ? "currentColor" : "none"}
                 stroke="currentColor"
@@ -189,15 +195,6 @@ export function SortableColumnHeader({ column, index, sortConfig, onSort, filter
               >
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
               </svg>
-            </button>
-            {/* Menu button */}
-            <button
-              type="button"
-              className="h-5 w-5 p-0 text-gray-500 hover:bg-gray-100 rounded-full"
-              onClick={isDragging ? undefined : toggleMenu}
-              disabled={isDragging}
-              aria-label="Column options"
-            >
               <MoreVertical className="h-3 w-3" />
             </button>
           </div>

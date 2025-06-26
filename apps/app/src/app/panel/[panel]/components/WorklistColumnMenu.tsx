@@ -1,7 +1,7 @@
 "use client"
 
 import type { ColumnDefinition } from "@/types/worklist"
-import { ArrowUpDown, Calendar, Database, Hash, Text, ToggleLeft } from "lucide-react"
+import { ArrowUpDown, Calendar, Database, Hash, Text, ToggleLeft, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
@@ -19,18 +19,12 @@ type ColumnMenuProps = {
 
 export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConfig, filterValue, onFilter, onColumnUpdate }: ColumnMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
-  const [mounted, setMounted] = useState(false)
   const [localFilterValue, setLocalFilterValue] = useState(filterValue)
   const [localColumnKey, setLocalColumnKey] = useState(column.key)
   const [localColumnName, setLocalColumnName] = useState(column.name)
   const [localColumnDescription, setLocalColumnDescription] = useState(column.description)
   const [localColumnType, setLocalColumnType] = useState(column.type)
   const [localColumnSource, setLocalColumnSource] = useState(column.source === 'Metriport' ? 'Awell' : column.source)
-  // Set mounted state after component mounts (for SSR compatibility)
-  useEffect(() => {
-    setMounted(true)
-    return () => setMounted(false)
-  }, [])
 
   // Update local values when props change
   useEffect(() => {
@@ -51,6 +45,7 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
         return;
       }
       if (menuRef.current && !menuRef.current.contains(target)) {
+        event.stopPropagation()
         onClose()
       }
     }
@@ -120,7 +115,7 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
     onClose()
   }
 
-  if (!isOpen || !mounted) return null
+  if (!isOpen) return null
 
   const menuContent = (
     <div
@@ -131,6 +126,21 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
         left: `${position.left}px`,
       }}
     >
+      {/* Header with close button */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+        <div className="flex items-center">
+          {getTypeIcon()}
+          <span className="text-xs font-medium text-gray-700">{column.name}</span>
+        </div>
+        <button
+          type="button"
+          className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full flex items-center justify-center"
+          onClick={onClose}
+          aria-label="Close menu"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
       <div className="py-1">
         {/* Sort option */}
         {/* biome-ignore lint/a11y/useButtonType: <explanation> */}

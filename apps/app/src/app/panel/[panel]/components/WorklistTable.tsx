@@ -19,7 +19,7 @@ interface TableFilter {
 interface WorklistTableProps {
   isLoading: boolean;
   tableContainerRef?: React.RefObject<HTMLDivElement>;
-  selectedRows: number[];
+  selectedRows: string[];
   toggleSelectAll: () => void;
   worklistColumns: ColumnDefinition[];
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -28,7 +28,7 @@ interface WorklistTableProps {
   handleTaskClick: () => void;
   handleDragEnd?: (event: DragEndEvent) => void;
   handleRowHover: () => void;
-  toggleSelectRow: (row: number) => void;
+  toggleSelectRow: (rowId: string) => void;
   setIsAddingIngestionSource: (open: boolean) => void;
   handleAssigneeClick: (taskId: string) => void;
   onColumnUpdate: (updates: Partial<ColumnDefinition>) => void;
@@ -37,6 +37,7 @@ interface WorklistTableProps {
   filters: TableFilter[];
   onFiltersChange: (filters: TableFilter[]) => void;
   initialSortConfig: SortConfig | null;
+  currentUserName?: string;
 }
 
 
@@ -59,7 +60,8 @@ export default function WorklistTable({
   handleDragEnd,
   filters,
   onFiltersChange,
-  initialSortConfig
+  initialSortConfig,
+  currentUserName
 }: WorklistTableProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(initialSortConfig);
   const [activeColumn, setActiveColumn] = useState<ColumnDefinition | null>(null);
@@ -81,8 +83,8 @@ export default function WorklistTable({
     if (filters && filters.length > 0) {
       filteredData = tableData.filter(row => {
         return filters.every(filter => {
-          // TODO this is very basic, we need to support more complex FHIRPath expressions
-          const fhirPath = `${filter.key}.lower() = '${filter.value.toLowerCase()}'`;
+          // Use partial matching with contains() for more user-friendly filtering
+          const fhirPath = `${filter.key}.lower().contains('${filter.value.toLowerCase()}')`;
           return isMatchingFhirPathCondition(row, fhirPath);
         });
       });
@@ -273,6 +275,7 @@ export default function WorklistTable({
                     handleTaskClick={handleTaskClick}
                     currentView={currentView}
                     onRowHover={handleRowHover}
+                    currentUserName={currentUserName}
                   />
                 ))
               ) : (

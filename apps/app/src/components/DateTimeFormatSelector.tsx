@@ -54,8 +54,8 @@ export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelecto
   }
 
   // Sample dates for preview
-  const sampleDate = new Date('2024-12-31') // Date only (00:00:00 time)
-  const sampleDateTime = new Date('2024-12-31T14:30:00') // Date with time
+  const sampleDate = '2024-12-31'
+  const sampleDateTime = '2024-12-31T14:30:00'
 
   return (
     <div className={`relative ${className}`}>

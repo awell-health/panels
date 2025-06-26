@@ -342,7 +342,6 @@ function WorklistNavigationRegular({
         onConfirm={handleDeleteViewConfirm}
         title="Delete View"
         message={`Are you sure you want to delete the view "${viewToDelete?.title}"? This action cannot be undone.`}
-        itemName={viewToDelete?.title || ''}
         isDeleting={!!deletingViewId}
       />
     </>
@@ -673,7 +672,6 @@ function WorklistNavigationReactive({
         onConfirm={handleDeleteViewConfirm}
         title="Delete View"
         message={`Are you sure you want to delete the view "${viewToDelete?.title}"? This action cannot be undone.`}
-        itemName={viewToDelete?.title || ''}
         isDeleting={!!deletingViewId}
       />
     </>
