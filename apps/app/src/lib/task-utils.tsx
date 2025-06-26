@@ -1,8 +1,7 @@
 "use client"
 
-import { CheckSquare, Loader2, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { formatDate } from '@/lib/date-utils'
+import { AlertTriangle, CheckSquare, Loader2 } from "lucide-react"
 
 // Status configuration for different task states
 const STATUS_CONFIG = {
