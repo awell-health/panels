@@ -4,18 +4,19 @@ import WorklistFooter from "@/app/panel/[panel]/components/WorklistFooter";
 import WorklistNavigation from "@/app/panel/[panel]/components/WorklistNavigation";
 import WorklistTable from "@/app/panel/[panel]/components/WorklistTable";
 import WorklistToolbar from "@/app/panel/[panel]/components/WorklistToolbar";
+import { useAuthentication } from "@/hooks/use-authentication";
 import { useColumnCreator } from "@/hooks/use-column-creator";
-import { type WorklistPatient, type WorklistTask, useMedplumStore } from "@/hooks/use-medplum-store";
-import { useReactivePanelStore } from "@/hooks/use-reactive-panel-store";
+import { useMedplumStore } from "@/hooks/use-medplum-store";
 import { useReactivePanel } from "@/hooks/use-reactive-data";
+import { useReactivePanelStore } from "@/hooks/use-reactive-panel-store";
 import { useSearch } from "@/hooks/use-search";
 import { arrayMove } from "@/lib/utils";
-import type { ColumnDefinition, Filter, PanelDefinition, SortConfig, ViewDefinition, WorklistDefinition } from "@/types/worklist";
+import type { ColumnDefinition, Filter, SortConfig, ViewDefinition, WorklistDefinition } from "@/types/worklist";
 import type { DragEndEvent } from "@dnd-kit/core";
+import { Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AddIngestionModal } from "./components/AddIngestionModal";
-import { Loader2 } from "lucide-react";
 
 interface TableFilter {
     key: string;
@@ -29,7 +30,9 @@ export default function ReactiveWorklistPage() {
     const [isAddingIngestionSource, setIsAddingIngestionSource] = useState(false);
     const [tableFilters, setTableFilters] = useState<TableFilter[]>([]);
     const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined);
+    const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
+    const { name: currentUserName } = useAuthentication();
     const { patients, tasks, toggleTaskOwner, isLoading: isMedplumLoading } = useMedplumStore();
     const { updatePanel, addView, updateColumn } = useReactivePanelStore();
     const { panel, isLoading: isPanelLoading, error: panelError } = useReactivePanel(panelId);
@@ -156,6 +159,14 @@ export default function ReactiveWorklistPage() {
         }
     }
 
+    const toggleSelectRow = (rowId: string) => {
+        setSelectedRows(prev => prev.includes(rowId) ? prev.filter(id => id !== rowId) : [...prev, rowId]);
+    };
+
+    const toggleSelectAll = () => {
+        setSelectedRows(prev => prev.length === filteredData.length ? [] : filteredData.map(item => item.id));
+    };
+
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
         if (!over || active.id === over.id || !panel) {
@@ -242,16 +253,17 @@ export default function ReactiveWorklistPage() {
                     <div className="content-area">
                         <div className="table-scroll-container">
                             <WorklistTable isLoading={isMedplumLoading}
-                                selectedRows={[]}
-                                toggleSelectAll={() => { }}
+                                selectedRows={selectedRows}
+                                toggleSelectAll={toggleSelectAll}
                                 onSortConfigUpdate={setSortConfig}
                                 worklistColumns={columns}
                                 tableData={filteredData}
                                 handlePDFClick={() => { }}
                                 handleTaskClick={() => { }}
                                 handleRowHover={() => { }}
-                                toggleSelectRow={() => { }}
+                                toggleSelectRow={toggleSelectRow}
                                 handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
+                                currentUserName={currentUserName}
                                 setIsAddingIngestionSource={() => setIsAddingIngestionSource(true)}
                                 currentView={currentView}
                                 handleDragEnd={handleDragEnd}

@@ -277,27 +277,27 @@ export class MedplumStore {
 
   async toggleTaskOwner(taskId: string, userId: string): Promise<Task> {
     try {
-      const task = (await this.client.readResource('Task', taskId)) as Task
-      const practitioner = (await this.client.readResource(
-        'Practitioner',
-        userId,
-      )) as Practitioner
-
+      const [task, practitioner] = await Promise.all([
+        this.client.readResource('Task', taskId) as Promise<Task>,
+        this.client.readResource('Practitioner', userId) as Promise<Practitioner>
+      ])
       if (task.owner?.reference === `Practitioner/${userId}`) {
-
-        // Remove the owner from the task
-        const updatedTask = {
+        // Remove the owner from the task - OPTIMISTIC RESPONSE
+        const optimisticTask = {
           ...task,
           owner: undefined,
         } as Task
 
-        return await this.client.updateResource(updatedTask)
+        // Perform actual update in background
+        this.performTaskUpdateInBackground(optimisticTask, 'removeOwner')
+        
+        return optimisticTask
       }
 
-      console.log('Updating task owner', practitioner.name)
       const displayName = `${Array.isArray(practitioner.name?.[0]?.given) ? practitioner.name[0].given.join(' ') : practitioner.name?.[0]?.given ?? ''} ${Array.isArray(practitioner.name?.[0]?.family) ? practitioner.name[0].family.join(' ') : practitioner.name?.[0]?.family ?? ''}`
-      // Update the task owner
-      const updatedTask = {
+      
+      // Update the task owner - OPTIMISTIC RESPONSE
+      const optimisticTask = {
         ...task,
         resourceType: 'Task',
         owner: {
@@ -307,10 +307,27 @@ export class MedplumStore {
         },
       } as Task
 
-      return (await this.client.updateResource(updatedTask)) as Task
+      // Perform actual update in background
+      this.performTaskUpdateInBackground(optimisticTask, 'setOwner')
+      
+      return optimisticTask
     } catch (error) {
       console.error('Error updating task owner:', error)
       throw error
+    }
+  }
+
+  // Background task update method
+  private async performTaskUpdateInBackground(
+    updatedTask: Task, 
+    operation: 'setOwner' | 'removeOwner'
+  ): Promise<void> {
+    try {
+      await this.client.updateResource(updatedTask)
+    } catch (error) {
+      console.error(`Background task update failed for ${operation}:`, error)
+      // TODO: Consider implementing retry logic or notifying UI of failure
+      // For now, we could trigger a refresh or show an error notification
     }
   }
 }

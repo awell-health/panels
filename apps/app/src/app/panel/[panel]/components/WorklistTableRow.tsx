@@ -16,8 +16,8 @@ import { PatientContext } from "./PatientContext"
 interface WorklistTableRowWithHoverProps {
     rowIndex: number;
     onRowHover: (rowIndex: number, isHovered: boolean, rect: DOMRect | null) => void;
-    selectedRows: number[];
-    toggleSelectRow: (rowIndex: number) => void;
+    selectedRows: string[];
+    toggleSelectRow: (rowId: string) => void;
     columns: ColumnDefinition[];
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     row: Record<string, any>;
@@ -25,6 +25,7 @@ interface WorklistTableRowWithHoverProps {
     handleTaskClick: (task: string, taskStatus: string, patientName: string) => void;
     handleAssigneeClick: () => void;
     currentView: string;
+    currentUserName?: string;
 }
 
 export default function WorklistTableRow({
@@ -37,7 +38,8 @@ export default function WorklistTableRow({
     handleTaskClick,
     handleAssigneeClick,
     currentView,
-    row
+    row,
+    currentUserName
 }: WorklistTableRowWithHoverProps) {
     const rowRef = useRef<HTMLTableRowElement>(null)
     const { openDrawer } = useDrawer()
@@ -118,15 +120,31 @@ export default function WorklistTableRow({
                 ) : column.type === "assignee" ? (
                     <div className="flex items-center">
                         {columnValue ? (
-                            <button
-                                type="button"
-                                className="text-xs text-gray-700 hover:text-blue-600"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAssigneeClick();
-                                }}>
-                                {columnValue}
-                            </button>
+                            (() => {
+                                // TODO: Replace with proper id
+                                const isCurrentUser = columnValue.toLowerCase().trim() === currentUserName?.toLowerCase().trim();
+                                return (
+                                    <button
+                                        type="button"
+                                        className={`group flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${isCurrentUser
+                                            ? "text-gray-700 hover:text-red-600 hover:bg-red-50"
+                                            : "text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+                                            }`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleAssigneeClick();
+                                        }}
+                                        title={isCurrentUser ? "Unassign" : "Reassign to me"}
+                                    >
+                                        <span>{columnValue}</span>
+                                        {isCurrentUser ? (
+                                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500">×</span>
+                                        ) : (
+                                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500">→</span>
+                                        )}
+                                    </button>
+                                );
+                            })()
                         ) : (
                             <button
                                 type="button"
@@ -169,8 +187,14 @@ export default function WorklistTableRow({
                     <input
                         type="checkbox"
                         className="h-4 w-4 rounded border-gray-300"
-                        checked={selectedRows.includes(rowIndex)}
-                        onChange={() => toggleSelectRow(rowIndex)}
+                        checked={selectedRows.includes(row.id)}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                        }}
+                        onChange={(e) => {
+                            e.stopPropagation();
+                            toggleSelectRow(row.id);
+                        }}
                     />
                 </div>
             </TableCell>
