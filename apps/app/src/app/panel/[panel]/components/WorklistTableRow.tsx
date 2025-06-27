@@ -1,9 +1,6 @@
 "use client"
 
-import { TaskDetails } from "@/app/panel/[panel]/components/TaskDetails"
-import { useDrawer } from "@/contexts/DrawerContext"
 import { useDateTimeFormat } from "@/hooks/use-date-time-format"
-import type { WorklistPatient, WorklistTask } from "@/hooks/use-medplum-store"
 import { getNestedValue } from "@/lib/fhir-path"
 import { formatTasksForPatientView, renderTaskStatus } from "@/lib/task-utils"
 import type { ColumnDefinition } from "@/types/worklist"
@@ -11,7 +8,6 @@ import { File } from "lucide-react"
 import { useRef } from "react"
 import { TableCell, TableRow } from "../../../../components/ui/table"
 import { cn } from "../../../../lib/utils"
-import { PatientContext } from "./PatientContext"
 
 interface WorklistTableRowWithHoverProps {
     rowIndex: number;
@@ -25,6 +21,7 @@ interface WorklistTableRowWithHoverProps {
     handleTaskClick: (task: string, taskStatus: string, patientName: string) => void;
     handleAssigneeClick: () => void;
     currentView: string;
+    onRowClick: (row: Record<string, any>) => void;
     currentUserName?: string;
 }
 
@@ -37,30 +34,16 @@ export default function WorklistTableRow({
     handlePDFClick,
     handleTaskClick,
     handleAssigneeClick,
+    onRowClick,
     currentView,
     row,
     currentUserName
 }: WorklistTableRowWithHoverProps) {
     const rowRef = useRef<HTMLTableRowElement>(null)
-    const { openDrawer } = useDrawer()
     const { formatDateTime } = useDateTimeFormat();
 
     const handleRowClick = () => {
-        if (currentView === "task") {
-            openDrawer(
-                <TaskDetails
-                    taskData={row as WorklistTask}
-                />,
-                row.description || "Task Details"
-            )
-        } else if (currentView === "patient") {
-            openDrawer(
-                <PatientContext
-                    patient={row as WorklistPatient}
-                />,
-                `${row.name} - Patient Details`
-            )
-        }
+        onRowClick(row)
     }
 
     // Handle hover events
@@ -74,19 +57,37 @@ export default function WorklistTableRow({
         onRowHover(rowIndex, false, null)
     }
 
+    const truncateText = (text: string, maxLength: number = 30): string => {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + "...";
+    };
+
+    const getDisplayValue = (value: unknown): string => {
+        if (value === null || value === undefined) return "";
+        if (typeof value === "string") return value;
+        if (Array.isArray(value)) return value.join(", ");
+        if (typeof value === "object") return JSON.stringify(value);
+        return String(value);
+    };
+
     const renderColumnValue = (column: ColumnDefinition, colIndex: number) => {
         const columnValue = getNestedValue(row, column.key);
+        const fullDisplayValue = getDisplayValue(columnValue);
+
         return (
             <TableCell
                 key={`${rowIndex}-${colIndex}`}
                 className={cn("py-1 px-2 border-r border-gray-200 text-xs max-w-[200px]", "truncate")}
-                title={typeof columnValue === "string" ? columnValue : ""}
+                title={fullDisplayValue}
             >
                 {column.name === "Discharge Summary" && columnValue ? (
                     <button
                         type="button"
                         className="btn btn-ghost btn-sm text-xs h-6 px-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                        onClick={() => handlePDFClick(columnValue, row["Patient Name"] || "Patient")}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handlePDFClick(columnValue, row["Patient Name"] || "Patient")
+                        }}
                     >
                         <File className="h-3 w-3 mr-1" />
                         {columnValue}
@@ -160,13 +161,7 @@ export default function WorklistTableRow({
                     </div>
                 ) : (
                     <div className="truncate">
-                        {(() => {
-                            if (columnValue === null || columnValue === undefined) return "";
-                            if (typeof columnValue === "string") return columnValue;
-                            if (Array.isArray(columnValue)) return columnValue.join(", ");
-                            if (typeof columnValue === "object") return JSON.stringify(columnValue);
-                            return String(columnValue);
-                        })()}
+                        {truncateText(fullDisplayValue)}
                     </div>
                 )}
             </TableCell>

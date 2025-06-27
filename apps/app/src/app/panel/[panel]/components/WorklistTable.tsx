@@ -6,10 +6,14 @@ import { DndContext, type DragEndEvent, DragOverlay, type DragStartEvent, Keyboa
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { Loader2 } from "lucide-react";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table";
 import { SortableColumnHeader } from "./WorklistSortableColumnHeader";
 import WorklistTableRow from "./WorklistTableRow";
+import { useDrawer } from "@/contexts/DrawerContext";
+import type { WorklistPatient, WorklistTask } from "@/hooks/use-medplum-store";
+import { TaskDetails } from "./TaskDetails";
+import { PatientContext } from "./PatientContext";
 
 interface TableFilter {
   key: string;
@@ -63,8 +67,35 @@ export default function WorklistTable({
   initialSortConfig,
   currentUserName
 }: WorklistTableProps) {
+  console.log('🔄 WorklistTable rendering...', {
+    tableDataLength: tableData.length,
+    worklistColumnsLength: worklistColumns.length,
+    currentView,
+    timestamp: new Date().toISOString()
+  });
+
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(initialSortConfig);
   const [activeColumn, setActiveColumn] = useState<ColumnDefinition | null>(null);
+  const { openDrawer } = useDrawer();
+
+  // Centralized row click handler - optimized with useCallback
+  const handleRowClick = useCallback((row: Record<string, any>) => {
+    if (currentView === "task") {
+      openDrawer(
+        <TaskDetails
+          taskData={row as WorklistTask}
+        />,
+        row.description || "Task Details"
+      )
+    } else if (currentView === "patient") {
+      openDrawer(
+        <PatientContext
+          patient={row as WorklistPatient}
+        />,
+        `${row.name} - Patient Details`
+      )
+    }
+  }, [currentView, openDrawer]);
 
   // Filter visible columns and sort by order
   const visibleColumns = useMemo(() => {
@@ -273,8 +304,9 @@ export default function WorklistTable({
                     toggleSelectRow={toggleSelectRow}
                     handlePDFClick={handlePDFClick}
                     handleTaskClick={handleTaskClick}
-                    currentView={currentView}
+                    onRowClick={handleRowClick}
                     onRowHover={handleRowHover}
+                    currentView={currentView}
                     currentUserName={currentUserName}
                   />
                 ))
