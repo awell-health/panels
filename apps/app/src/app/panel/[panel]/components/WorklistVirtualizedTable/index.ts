@@ -1,6 +1,7 @@
 export { VirtualizedWorklistTable } from "./VirtualizedWorklistTable";
 export { StickyGridProvider, useStickyGridContext } from "./StickyContext";
 export { VirtualizedCell } from "./VirtualizedCell";
+export { StickyHeader } from "./StickyHeader";
 export { SortableHeaderColumn } from "./SortableHeaderColumn";
 export * from "./cells";
 export * from "./constants"; 

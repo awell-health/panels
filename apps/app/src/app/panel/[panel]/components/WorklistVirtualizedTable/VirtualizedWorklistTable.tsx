@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useCallback, useMemo, useState } from "react";
+import { forwardRef, useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { VariableSizeGrid } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { ColumnDefinition } from "@/types/worklist";
@@ -9,6 +9,7 @@ import { DndContext, type DragEndEvent, DragOverlay, type DragStartEvent, Keyboa
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { StickyGridProvider } from "./StickyContext";
 import { VirtualizedCell } from "./VirtualizedCell";
+import { StickyHeader } from "./StickyHeader";
 import {
   calculateColumnWidthByTitle,
   SELECTION_COLUMN_WIDTH,
@@ -45,13 +46,7 @@ interface VirtualizedWorklistTableProps {
   handleDragEnd?: (event: DragEndEvent) => void;
 }
 
-// Inner element component for the grid
-const InnerElement = forwardRef<HTMLDivElement, any>(({ children, ...rest }, ref) => (
-  <div ref={ref} {...rest}>
-    {children}
-  </div>
-));
-InnerElement.displayName = "InnerElement";
+
 
 export function VirtualizedWorklistTable({
   isLoading,
@@ -78,6 +73,9 @@ export function VirtualizedWorklistTable({
   // Drag and drop state
   const [activeColumn, setActiveColumn] = useState<ColumnDefinition | null>(null);
 
+  // Grid ref for resetting cached dimensions
+  const gridRef = useRef<VariableSizeGrid>(null);
+
   // Filter visible columns and sort by order
   const visibleColumns = useMemo(() => {
     return worklistColumns
@@ -88,6 +86,22 @@ export function VirtualizedWorklistTable({
         return orderA - orderB;
       });
   }, [worklistColumns]);
+
+  // Create a stable key for grid re-rendering
+  const gridKey = useMemo(() => {
+    const columnIds = visibleColumns.map(col => col.id).join('-');
+    return `${currentView}-${columnIds}`;
+  }, [currentView, visibleColumns]);
+
+  // Reset grid dimensions when view or columns change
+  useEffect(() => {
+    if (gridRef.current) {
+      // Reset cached column widths
+      gridRef.current.resetAfterColumnIndex(0);
+      // Reset cached row heights  
+      gridRef.current.resetAfterRowIndex(0);
+    }
+  }, [currentView, visibleColumns]);
 
   // Apply filtering and sorting to data
   const filteredAndSortedData = useMemo(() => {
@@ -359,8 +373,28 @@ export function VirtualizedWorklistTable({
                 return getColumnWidth(columnIndex, width);
               };
 
+              // Custom inner element that renders sticky header
+              const CustomInnerElement = forwardRef<HTMLDivElement, any>(({ children, ...rest }, ref) => (
+                <div ref={ref} {...rest}>
+                  <StickyHeader
+                    key={gridKey} // Force header re-render when view changes
+                    selectedRows={selectedRows}
+                    toggleSelectAll={toggleSelectAll}
+                    tableDataLength={filteredAndSortedData.length}
+                    containerWidth={width}
+                    getColumnWidth={getColumnWidth}
+                  />
+                  <div style={{ paddingTop: HEADER_HEIGHT }}>
+                    {children}
+                  </div>
+                </div>
+              ));
+              CustomInnerElement.displayName = "CustomInnerElement";
+
               return (
                 <VariableSizeGrid
+                  ref={gridRef}
+                  key={gridKey} // Force re-render when view or columns change
                   height={height}
                   width={width}
                   columnCount={visibleColumns.length + 1} // +1 for selection column
@@ -371,7 +405,7 @@ export function VirtualizedWorklistTable({
                     ...rowData,
                     containerWidth: width, // Pass container width to cells
                   }}
-                  innerElementType={InnerElement}
+                  innerElementType={CustomInnerElement}
                 >
                   {VirtualizedCell}
                 </VariableSizeGrid>
