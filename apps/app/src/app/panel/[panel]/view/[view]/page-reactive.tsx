@@ -1,7 +1,7 @@
 "use client";
 import WorklistFooter from "@/app/panel/[panel]/components/WorklistFooter";
 import WorklistNavigation from "@/app/panel/[panel]/components/WorklistNavigation";
-import WorklistTable from "@/app/panel/[panel]/components/WorklistTable";
+import { VirtualizedWorklistTable } from "@/app/panel/[panel]/components/WorklistVirtualizedTable";
 import WorklistToolbar from "@/app/panel/[panel]/components/WorklistToolbar";
 import { useColumnCreator } from "@/hooks/use-column-creator";
 import { useMedplumStore } from "@/hooks/use-medplum-store";
@@ -12,7 +12,11 @@ import { arrayMove } from "@/lib/utils";
 import type { ColumnDefinition, Filter, PanelDefinition, SortConfig, ViewDefinition, WorklistDefinition } from "@/types/worklist";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useDrawer } from "@/contexts/DrawerContext";
+import { TaskDetails } from "@/app/panel/[panel]/components/TaskDetails";
+import { PatientContext } from "@/app/panel/[panel]/components/PatientContext";
+import type { WorklistPatient, WorklistTask } from "@/hooks/use-medplum-store";
 
 interface TableFilter {
     key: string;
@@ -22,6 +26,7 @@ interface TableFilter {
 export default function ReactiveWorklistViewPage() {
     const { patients, tasks, toggleTaskOwner, isLoading: isMedplumLoading } = useMedplumStore();
     const { updatePanel, updateView, addView, updateColumn } = useReactivePanelStore();
+    const { openDrawer } = useDrawer();
     const params = useParams();
     const panelId = params.panel as string;
     const viewId = params.view as string;
@@ -185,6 +190,25 @@ export default function ReactiveWorklistViewPage() {
         await updateView?.(panelId, viewId, newView);
     }
 
+    // Centralized row click handler - optimized with useCallback
+    const handleRowClick = useCallback((row: Record<string, any>) => {
+        if (view?.viewType === "task") {
+            openDrawer(
+                <TaskDetails
+                    taskData={row as WorklistTask}
+                />,
+                row.description || "Task Details"
+            );
+        } else if (view?.viewType === "patient") {
+            openDrawer(
+                <PatientContext
+                    patient={row as WorklistPatient}
+                />,
+                `${row.name} - Patient Details`
+            );
+        }
+    }, [view?.viewType, openDrawer]);
+
     const onViewTitleChange = async (newTitle: string) => {
         if (!view) {
             return;
@@ -227,7 +251,8 @@ export default function ReactiveWorklistViewPage() {
                     </div>
                     <div className="content-area">
                         <div className="table-scroll-container">
-                            <WorklistTable isLoading={isMedplumLoading}
+                            <VirtualizedWorklistTable
+                                isLoading={isMedplumLoading}
                                 selectedRows={[]}
                                 toggleSelectAll={() => { }}
                                 worklistColumns={columns}
@@ -238,13 +263,13 @@ export default function ReactiveWorklistViewPage() {
                                 handleRowHover={() => { }}
                                 toggleSelectRow={() => { }}
                                 handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
-                                setIsAddingIngestionSource={() => { }}
                                 currentView={view?.viewType ?? 'patient'}
-                                handleDragEnd={handleDragEnd}
                                 onColumnUpdate={onColumnUpdate}
                                 filters={tableFilters}
                                 onFiltersChange={onFiltersChange}
                                 initialSortConfig={view?.sortConfig?.[0] ?? null}
+                                onRowClick={handleRowClick}
+                                handleDragEnd={handleDragEnd}
                             />
                         </div>
                     </div>

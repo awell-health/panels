@@ -2,7 +2,7 @@
 
 import WorklistFooter from "@/app/panel/[panel]/components/WorklistFooter";
 import WorklistNavigation from "@/app/panel/[panel]/components/WorklistNavigation";
-import WorklistTable from "@/app/panel/[panel]/components/WorklistTable";
+import { VirtualizedWorklistTable } from "@/app/panel/[panel]/components/WorklistVirtualizedTable";
 import WorklistToolbar from "@/app/panel/[panel]/components/WorklistToolbar";
 import { useAuthentication } from "@/hooks/use-authentication";
 import { useColumnCreator } from "@/hooks/use-column-creator";
@@ -15,8 +15,12 @@ import type { ColumnDefinition, Filter, SortConfig, ViewDefinition, WorklistDefi
 import type { DragEndEvent } from "@dnd-kit/core";
 import { Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AddIngestionModal } from "./components/AddIngestionModal";
+import { useDrawer } from "@/contexts/DrawerContext";
+import { TaskDetails } from "./components/TaskDetails";
+import { PatientContext } from "./components/PatientContext";
+import type { WorklistPatient, WorklistTask } from "@/hooks/use-medplum-store";
 
 interface TableFilter {
     key: string;
@@ -36,6 +40,7 @@ export default function ReactiveWorklistPage() {
     const { patients, tasks, toggleTaskOwner, isLoading: isMedplumLoading } = useMedplumStore();
     const { updatePanel, addView, updateColumn } = useReactivePanelStore();
     const { panel, isLoading: isPanelLoading, error: panelError } = useReactivePanel(panelId);
+    const { openDrawer } = useDrawer();
 
     const router = useRouter();
 
@@ -170,6 +175,25 @@ export default function ReactiveWorklistPage() {
         setSelectedRows(prev => prev.length === filteredData.length ? [] : filteredData.map(item => item.id));
     };
 
+    // Centralized row click handler - optimized with useCallback
+    const handleRowClick = useCallback((row: Record<string, any>) => {
+        if (currentView === "task") {
+            openDrawer(
+                <TaskDetails
+                    taskData={row as WorklistTask}
+                />,
+                row.description || "Task Details"
+            );
+        } else if (currentView === "patient") {
+            openDrawer(
+                <PatientContext
+                    patient={row as WorklistPatient}
+                />,
+                `${row.name} - Patient Details`
+            );
+        }
+    }, [currentView, openDrawer]);
+
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
         if (!over || active.id === over.id || !panel) {
@@ -255,7 +279,8 @@ export default function ReactiveWorklistPage() {
                     </div>
                     <div className="content-area">
                         <div className="table-scroll-container">
-                            <WorklistTable isLoading={isMedplumLoading}
+                            <VirtualizedWorklistTable
+                                isLoading={isMedplumLoading}
                                 selectedRows={selectedRows}
                                 toggleSelectAll={toggleSelectAll}
                                 onSortConfigUpdate={setSortConfig}
@@ -267,13 +292,13 @@ export default function ReactiveWorklistPage() {
                                 toggleSelectRow={toggleSelectRow}
                                 handleAssigneeClick={(taskId: string) => toggleTaskOwner(taskId)}
                                 currentUserName={currentUserName}
-                                setIsAddingIngestionSource={() => setIsAddingIngestionSource(true)}
                                 currentView={currentView}
-                                handleDragEnd={handleDragEnd}
                                 onColumnUpdate={onColumnUpdate}
                                 filters={tableFilters}
                                 onFiltersChange={onFiltersChange}
                                 initialSortConfig={sortConfig ?? null}
+                                onRowClick={handleRowClick}
+                                handleDragEnd={handleDragEnd}
                             />
                             {isAddingIngestionSource && (
                                 <AddIngestionModal
