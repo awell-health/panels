@@ -13,6 +13,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useMemo,
 } from 'react'
 
 export class AuthenticationStore {
@@ -121,28 +122,27 @@ const AuthenticationContext = createContext<AuthenticationStore | null>(null)
 export function AuthenticationStoreProvider({
   children,
 }: { children: ReactNode }) {
-  const [storeInstance, setStoreInstance] = useState<
-    AuthenticationStore | undefined
-  >(undefined)
   const { organization } = useStytchOrganization()
   const { member } = useStytchMember()
+  const [config, setConfig] = useState<{ environment?: string }>({})
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are fine
+  // Fetch config once
   useEffect(() => {
-    const createAuthStore = async () => {
-      const config = await getRuntimeConfig()
-      setStoreInstance(
-        new AuthenticationStore(member, organization, config.environment),
-      )
+    const fetchConfig = async () => {
+      const runtimeConfig = await getRuntimeConfig()
+      setConfig({ environment: runtimeConfig.environment })
     }
+    fetchConfig()
+  }, [])
 
-    if (
-      member?.member_id !== storeInstance?.getUserId() ||
-      organization?.organization_slug !== storeInstance?.getOrganizationSlug()
-    ) {
-      createAuthStore()
+  // Create store instance with useMemo to prevent unnecessary recreations
+  const storeInstance = useMemo(() => {
+    if (!member || !organization || !config.environment) {
+      return undefined
     }
-  }, [member, organization])
+    
+    return new AuthenticationStore(member, organization, config.environment)
+  }, [member?.member_id, organization?.organization_slug, config.environment])
 
   if (!storeInstance) {
     return (
@@ -172,17 +172,38 @@ export function useAuthentication() {
     )
   }
 
-  // Return a proxy object that provides access to the store's public methods
-  return {
-    user: store.getUser(),
-    organization: store.getOrganization(),
+  // Get the current values once
+  const currentUser = store.getUser()
+  const currentOrganization = store.getOrganization()
+  const currentMedplumClientId = store.getMedplumClientId()
+  const currentMedplumSecret = store.getMedplumSecret()
+  const currentOrganizationSlug = store.getOrganizationSlug()
+  const currentUserId = store.getUserId()
+  const currentName = store.getName()
+  const currentEmail = store.getEmail()
+
+  // Use useMemo to create a stable object that only changes when the underlying data changes
+  const authData = useMemo(() => ({
+    user: currentUser,
+    organization: currentOrganization,
     populateStore: store.populateStore,
     clearStore: store.clearStore,
-    medplumClientId: store.getMedplumClientId(),
-    medplumSecret: store.getMedplumSecret(),
-    organizationSlug: store.getOrganizationSlug(),
-    userId: store.getUserId(),
-    name: store.getName(),
-    email: store.getEmail(),
-  }
+    medplumClientId: currentMedplumClientId,
+    medplumSecret: currentMedplumSecret,
+    organizationSlug: currentOrganizationSlug,
+    userId: currentUserId,
+    name: currentName,
+    email: currentEmail,
+  }), [
+    currentUser?.member_id,
+    currentOrganization?.organization_slug,
+    currentMedplumClientId,
+    currentMedplumSecret,
+    currentOrganizationSlug,
+    currentUserId,
+    currentName,
+    currentEmail,
+  ])
+
+  return authData
 }

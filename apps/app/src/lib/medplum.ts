@@ -8,7 +8,6 @@ import type {
   Subscription,
   Task,
 } from '@medplum/fhirtypes'
-import { getRuntimeConfig } from './config'
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ResourceHandler = (resource: any) => void
@@ -39,7 +38,6 @@ export class MedplumStore {
           )
         }
 
-        await this.client.startClientLogin(clientId, clientSecret)
         await this.initializeWebSocket()
         this.initialized = true
       } catch (error) {
@@ -254,8 +252,6 @@ export class MedplumStore {
     userId: string,
     name: string,
   ): Promise<Practitioner> {
-    console.log('Getting or creating practitioner', userId, name)
-
     const practitioner = await this.client.searchOne('Practitioner', {
       identifier: `http://panels.awellhealth.com/fhir/identifier/practitioner|${userId}`,
     })
