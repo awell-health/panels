@@ -1,49 +1,38 @@
 'use client'
 
-import { MedplumProvider } from '@/contexts/medplum-context'
+import { MedplumClientProvider } from '@/contexts/MedplumClientProvider'
 import { ReactivePanelStoreProvider } from '@/hooks/use-reactive-panel-store'
 import { StytchB2BProvider } from '@stytch/nextjs/b2b'
-import { createStytchB2BUIClient } from '@stytch/nextjs/b2b/ui'
 import { CookiesProvider } from 'react-cookie'
 import { AuthenticationGuard } from './AuthenticationGuard'
 import { Loader2 } from 'lucide-react'
 import { AuthenticationStoreProvider } from '@/hooks/use-authentication'
-import { useEffect, useMemo, useState } from 'react'
-import { getRuntimeConfig } from '@/lib/config'
+import { useEffect, useState } from 'react'
+import { getStytchClient } from '@/lib/stytch-client'
+import type { StytchB2BUIClient, StytchProjectConfiguration } from '@stytch/vanilla-js/dist/b2b'
 
-export default function Providers({ children }: { children: React.ReactNode }) {
+export default function Providers({ children }: { children: React.ReactNode }) {  
   const [authStytchPublicToken, setAuthStytchPublicToken] = useState<
     string | undefined
   >(undefined)
   const [authCookiesAllowedDomain, setAuthCookiesAllowedDomain] = useState<
     string | undefined
   >(undefined)
+  const [stytch, setStytch] = useState<StytchB2BUIClient<Partial<StytchProjectConfiguration>> | null>(null)
+
 
   useEffect(() => {
-    const fetchConfig = async () => {
-      const config = await getRuntimeConfig()
-      setAuthStytchPublicToken(config.authStytchPublicToken)
-      setAuthCookiesAllowedDomain(config.authCookiesAllowedDomain)
+    const initializeStytch = async () => {
+      try {
+        const client = await getStytchClient()
+        setStytch(client)
+      } catch (error) {
+        console.error('Failed to initialize Stytch client:', error)
+      }
     }
-    fetchConfig()
+
+    initializeStytch()
   }, [])
-
-  const stytch = useMemo(() => {
-    if (!authStytchPublicToken || !authCookiesAllowedDomain) {
-      console.log(
-        'AUTH_STYTCH_PUBLIC_TOKEN or AUTH_COOKIES_ALLOWED_DOMAIN is not available in runtime config',
-      )
-      return undefined
-    }
-
-    return createStytchB2BUIClient(authStytchPublicToken, {
-      cookieOptions: {
-        opaqueTokenCookieName: 'stytch_session',
-        domain: authCookiesAllowedDomain,
-        availableToSubdomains: true,
-      },
-    })
-  }, [authStytchPublicToken, authCookiesAllowedDomain])
 
   // Don't render if stytch is not available
   if (!stytch) {
@@ -74,11 +63,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }
         >
           <AuthenticationStoreProvider>
-            <MedplumProvider>
+            <MedplumClientProvider>
               <ReactivePanelStoreProvider>
                 {children}
               </ReactivePanelStoreProvider>
-            </MedplumProvider>
+            </MedplumClientProvider>
           </AuthenticationStoreProvider>
         </AuthenticationGuard>
       </CookiesProvider>

@@ -1,4 +1,4 @@
-import { useMedplum } from '@/contexts/medplum-context'
+import { useMedplum } from '@/contexts/MedplumClientProvider'
 import type { Patient, Task } from '@medplum/fhirtypes'
 import { useMemo } from 'react'
 
