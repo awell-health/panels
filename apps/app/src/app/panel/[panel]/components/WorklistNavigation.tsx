@@ -92,7 +92,10 @@ export default function WorklistNavigation({
   const handleDeleteViewConfirm = async () => {
     if (!viewToDelete) return
 
+    // Close the modal immediately to prevent showing "undefined" during optimistic update
+    setShowDeleteModal(false)
     setDeletingViewId(viewToDelete.id)
+
     try {
       if (viewToDelete.id === panelDefinition.id) {
         // Deleting the panel
@@ -110,7 +113,6 @@ export default function WorklistNavigation({
       console.error('Failed to delete:', error)
     } finally {
       setDeletingViewId(null)
-      setShowDeleteModal(false)
       setViewToDelete(null)
     }
   }
@@ -251,6 +253,9 @@ export default function WorklistNavigation({
                 onMouseEnter={() => setHoveredViewId(view.id)}
                 onMouseLeave={() => setHoveredViewId(null)}
                 onKeyDown={(e) => {
+                  // Don't handle keyboard events if we're editing the view title
+                  if (editingViewId === view.id) return
+
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
                     e.stopPropagation()
@@ -364,8 +369,12 @@ export default function WorklistNavigation({
         isOpen={showDeleteModal}
         onClose={handleDeleteModalClose}
         onConfirm={handleDeleteViewConfirm}
-        title="Delete View"
-        message={`Are you sure you want to delete the view "${viewToDelete?.title}"? This action cannot be undone.`}
+        title={
+          viewToDelete?.id === panelDefinition.id
+            ? 'Delete Panel'
+            : 'Delete View'
+        }
+        message={`Are you sure you want to delete the ${viewToDelete?.id === panelDefinition.id ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
         isDeleting={!!deletingViewId}
       />
     </>
