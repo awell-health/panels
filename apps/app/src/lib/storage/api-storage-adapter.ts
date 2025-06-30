@@ -900,6 +900,7 @@ export class APIStorageAdapter implements StorageAdapter {
           : undefined,
         // Preserve original tags instead of changing them
         tags: originalTags,
+        ...(updates.key ? { sourceField: updates.key } : {}),
       }
 
       // Update via API

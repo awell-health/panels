@@ -58,14 +58,6 @@ export const columnUpdate = async (app: FastifyInstance) => {
         tags,
       } = request.body
 
-      app.log.info('Column update request received:', {
-        panelId: id,
-        columnId: colId,
-        body: request.body,
-        type: type,
-        hasType: !!type,
-      })
-
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({
         id: Number(id),
