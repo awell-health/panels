@@ -111,6 +111,20 @@ export default function WorklistViewPage() {
     try {
       // Update the column in the panel first
       await updateColumn?.(panelId, updates.id, updates)
+
+      // If the view has its own columns, update them as well
+      if (view.columns && view.columns.length > 0) {
+        const updatedColumns = view.columns.map((col) =>
+          col.id === updates.id ? { ...col, ...updates } : col,
+        )
+
+        const updatedView = {
+          ...view,
+          columns: updatedColumns,
+        }
+
+        await updateView?.(panelId, viewId, updatedView)
+      }
     } catch (error) {
       console.error('Failed to update column:', error)
     }
@@ -262,6 +276,23 @@ export default function WorklistViewPage() {
     }
   }
 
+  const onViewTypeChange = async (newViewType: 'patient' | 'task') => {
+    if (!view || view.viewType === newViewType) {
+      return
+    }
+
+    try {
+      const updatedView = {
+        ...view,
+        viewType: newViewType,
+      }
+
+      await updateView?.(panelId, viewId, updatedView)
+    } catch (error) {
+      console.error('Failed to update view type:', error)
+    }
+  }
+
   const isLoading = isPanelLoading || isViewLoading || !panel || !view
 
   return (
@@ -289,7 +320,7 @@ export default function WorklistViewPage() {
               searchMode={searchMode}
               onSearchModeChange={setSearchMode}
               currentView={view?.viewType}
-              setCurrentView={() => {}}
+              setCurrentView={onViewTypeChange}
               worklistColumns={columns}
               onAddColumn={onAddColumn}
               onColumnVisibilityChange={(columnId, visible) =>
