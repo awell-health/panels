@@ -24,6 +24,9 @@
     },
     "docs:build": {},
     "docs:dev": {},
+    "format": {
+      "cache": false
+    },
     "lint": {
       "dependsOn": ["^lint"]
     },
