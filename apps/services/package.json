@@ -41,12 +41,12 @@
     "@types/figlet": "^1.7.0",
     "@types/node": "^22.15.29",
     "esbuild": "^0.25.5",
-    "tsconfig-paths": "^4.2.0",
     "fastify-tsconfig": "^3.0.0",
     "npm-run-all": "^4.1.5",
     "rimraf": "^6.0.1",
     "tsc-alias": "^1.8.8",
     "tsc-files": "^1.1.4",
+    "tsconfig-paths": "^4.2.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3"
@@ -77,8 +77,8 @@
     "nanoid": "^5.1.5",
     "ts-node": "^10.9.2",
     "vite-tsconfig-paths": "^5.1.4",
-    "zod": "^3.25.64",
-    "zod-to-json-schema": "^3.24.5"
+    "zod": "^3.25.67",
+    "zod-to-json-schema": "^3.24.6"
   },
   "mikro-orm": {
     "useTsNode": true,

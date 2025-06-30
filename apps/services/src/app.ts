@@ -19,11 +19,12 @@ export async function createApp(
 
   const app = Fastify(
     Object.assign(opts, {
-      logger: {
-        transport: {
-          target: '@fastify/one-line-logger',
-        },
-      },
+      logger: true,
+      //   logger: {
+      //     transport: {
+      //       target: '@fastify/one-line-logger',
+      //     },
+      //   },
     }),
   )
   app.setValidatorCompiler(validatorCompiler)
