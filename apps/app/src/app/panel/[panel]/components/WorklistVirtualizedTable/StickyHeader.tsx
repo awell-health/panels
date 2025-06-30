@@ -9,15 +9,13 @@ interface StickyHeaderProps {
   selectedRows: string[];
   toggleSelectAll: () => void;
   tableDataLength: number;
-  containerWidth: number;
-  getColumnWidth: (columnIndex: number, containerWidth?: number) => number;
+  getColumnWidth: (columnIndex: number) => number;
 }
 
 export function StickyHeader({
   selectedRows,
   toggleSelectAll,
   tableDataLength,
-  containerWidth,
   getColumnWidth
 }: StickyHeaderProps) {
   const { columns, onSort, sortConfig, onFilter, filters, onColumnUpdate } = useStickyGridContext();
@@ -50,7 +48,7 @@ export function StickyHeader({
         {columns.map((column, index) => (
           <div
             key={column.id}
-            style={{ width: getColumnWidth(index + 1, containerWidth) }}
+            style={{ width: getColumnWidth(index + 1) }}
             className="border-r border-b border-gray-200"
           >
             <SortableHeaderColumn

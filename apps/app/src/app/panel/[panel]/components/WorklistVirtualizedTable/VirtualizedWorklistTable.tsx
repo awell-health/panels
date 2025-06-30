@@ -73,6 +73,9 @@ export function VirtualizedWorklistTable({
   // Drag and drop state
   const [activeColumn, setActiveColumn] = useState<ColumnDefinition | null>(null);
 
+  // Row hover state
+  const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
+
   // Grid ref for resetting cached dimensions
   const gridRef = useRef<VariableSizeGrid>(null);
 
@@ -165,50 +168,16 @@ export function VirtualizedWorklistTable({
     );
   }, [visibleColumns]);
 
-  // Calculate adjusted column widths to fill available space
-  const getColumnWidthsAndTotal = useCallback((containerWidth: number) => {
-    const baseWidths = visibleColumns.map((_, index) => getBaseColumnWidth(index));
-    const baseTotalWidth = baseWidths.reduce((acc, width) => acc + width, 0) + SELECTION_COLUMN_WIDTH;
-
-    // If base total is less than container width, expand columns proportionally
-    if (baseTotalWidth < containerWidth) {
-      const availableExtraWidth = containerWidth - baseTotalWidth;
-      const totalBaseColumnsWidth = baseWidths.reduce((acc, width) => acc + width, 0);
-
-      const adjustedWidths = baseWidths.map(baseWidth => {
-        const proportion = baseWidth / totalBaseColumnsWidth;
-        return baseWidth + (availableExtraWidth * proportion);
-      });
-
-      return {
-        columnWidths: adjustedWidths,
-        totalWidth: containerWidth
-      };
-    }
-
-    // If base total is greater than or equal to container width, use base widths
-    return {
-      columnWidths: baseWidths,
-      totalWidth: baseTotalWidth
-    };
-  }, [visibleColumns, getBaseColumnWidth]);
-
   // Calculate column width for grid (includes selection column at index 0)
-  const getColumnWidth = useCallback((columnIndex: number, containerWidth?: number) => {
+  const getColumnWidth = useCallback((columnIndex: number) => {
     // Selection column
     if (columnIndex === 0) {
       return SELECTION_COLUMN_WIDTH;
     }
 
-    // Data columns - use container width if available for proper distribution
-    if (containerWidth) {
-      const { columnWidths } = getColumnWidthsAndTotal(containerWidth);
-      return columnWidths[columnIndex - 1] || MIN_COLUMN_WIDTH;
-    }
-
-    // Fallback to base width calculation
+    // Data columns
     return getBaseColumnWidth(columnIndex - 1);
-  }, [getBaseColumnWidth, getColumnWidthsAndTotal]);
+  }, [getBaseColumnWidth]);
 
   // Handle sorting
   const handleSort = useCallback((columnKey: string) => {
@@ -289,18 +258,25 @@ export function VirtualizedWorklistTable({
     }
   }, []);
 
+  // Handle internal row hover - manages local state and calls parent handler
+  const handleInternalRowHover = useCallback((rowIndex: number, isHovered: boolean, rect: DOMRect | null) => {
+    setHoveredRowIndex(isHovered ? rowIndex : null);
+    handleRowHover(rowIndex, isHovered, rect);
+  }, [handleRowHover]);
+
   // Prepare data for rows - uses filtered and sorted data
   const rowData = useMemo(() => ({
     rows: filteredAndSortedData,
     selectedRows,
     toggleSelectRow,
     onRowClick,
-    onRowHover: handleRowHover,
+    onRowHover: handleInternalRowHover,
     onPDFClick: handlePDFClick,
     onTaskClick: handleTaskClick,
     onAssigneeClick: handleAssigneeClick,
     currentView,
     currentUserName,
+    hoveredRowIndex,
     // Header-specific data
     toggleSelectAll,
     tableDataLength: filteredAndSortedData.length,
@@ -309,12 +285,13 @@ export function VirtualizedWorklistTable({
     selectedRows,
     toggleSelectRow,
     onRowClick,
-    handleRowHover,
+    handleInternalRowHover,
     handlePDFClick,
     handleTaskClick,
     handleAssigneeClick,
     currentView,
     currentUserName,
+    hoveredRowIndex,
     toggleSelectAll,
   ]);
 
@@ -328,7 +305,6 @@ export function VirtualizedWorklistTable({
     stickyIndices: [0], // First row is header
     columns: visibleColumns,
     getColumnWidth,
-    getColumnWidthsAndTotal,
     onSort: handleSort,
     sortConfig: initialSortConfig,
     onFilter: handleFilter,
@@ -337,7 +313,6 @@ export function VirtualizedWorklistTable({
   }), [
     visibleColumns,
     getColumnWidth,
-    getColumnWidthsAndTotal,
     handleSort,
     initialSortConfig,
     handleFilter,
@@ -370,7 +345,7 @@ export function VirtualizedWorklistTable({
             {({ height, width }) => {
               // Create a closure that captures the container width
               const getColumnWidthWithContainer = (columnIndex: number) => {
-                return getColumnWidth(columnIndex, width);
+                return getColumnWidth(columnIndex);
               };
 
               // Custom inner element that renders sticky header
@@ -381,7 +356,6 @@ export function VirtualizedWorklistTable({
                     selectedRows={selectedRows}
                     toggleSelectAll={toggleSelectAll}
                     tableDataLength={filteredAndSortedData.length}
-                    containerWidth={width}
                     getColumnWidth={getColumnWidth}
                   />
                   <div style={{ paddingTop: HEADER_HEIGHT }}>
@@ -403,7 +377,6 @@ export function VirtualizedWorklistTable({
                   rowHeight={getRowHeight}
                   itemData={{
                     ...rowData,
-                    containerWidth: width, // Pass container width to cells
                   }}
                   innerElementType={CustomInnerElement}
                 >

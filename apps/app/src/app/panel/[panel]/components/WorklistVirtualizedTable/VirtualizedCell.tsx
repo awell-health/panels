@@ -1,10 +1,9 @@
 "use client";
 
+import { getNestedValue } from "@/lib/fhir-path";
 import { cn } from "@/lib/utils";
 import { CellFactory } from "./cells";
 import { useStickyGridContext } from "./StickyContext";
-import { SELECTION_COLUMN_WIDTH, HEADER_HEIGHT } from "./constants";
-import { SortableHeaderColumn } from "./SortableHeaderColumn";
 
 interface VirtualizedCellProps {
   rowIndex: number;
@@ -21,6 +20,7 @@ interface VirtualizedCellProps {
     onAssigneeClick: (taskId: string) => void;
     currentView: string;
     currentUserName?: string;
+    hoveredRowIndex: number | null;
     // Header-specific data
     toggleSelectAll: () => void;
     tableDataLength: number;
@@ -41,6 +41,7 @@ export function VirtualizedCell({ rowIndex, columnIndex, style, data }: Virtuali
     onAssigneeClick,
     currentView,
     currentUserName,
+    hoveredRowIndex,
   } = data;
 
   // Skip header row - it's rendered in the custom inner element
@@ -56,10 +57,15 @@ export function VirtualizedCell({ rowIndex, columnIndex, style, data }: Virtuali
 
     if (!row) return null;
 
+    const isHovered = hoveredRowIndex === dataRowIndex;
+
     return (
       <div
         style={style}
-        className="bg-white border-r border-b border-gray-200 flex items-center justify-center hover:bg-gray-50"
+        className={cn(
+          "border-r border-b border-gray-200 flex items-center justify-center cursor-pointer",
+          isHovered ? "bg-gray-50" : "bg-white"
+        )}
         onClick={(e) => {
           e.stopPropagation();
           onRowClick(row);
@@ -93,18 +99,21 @@ export function VirtualizedCell({ rowIndex, columnIndex, style, data }: Virtuali
 
   if (!row) return null;
 
+  const isHovered = hoveredRowIndex === dataRowIndex;
+
   return (
     <div
       style={style}
       className={cn(
-        "bg-white border-r border-b border-gray-200 hover:bg-gray-50 cursor-pointer"
+        "border-r border-b border-gray-200 cursor-pointer",
+        isHovered ? "bg-gray-50" : "bg-white"
       )}
       onClick={() => onRowClick(row)}
       onMouseEnter={() => onRowHover(dataRowIndex, true, null)}
       onMouseLeave={() => onRowHover(dataRowIndex, false, null)}
     >
       <CellFactory
-        value={row[column.key] || row[column.name]}
+        value={getNestedValue(row, column.key)}
         column={column}
         row={row}
         rowIndex={dataRowIndex}
