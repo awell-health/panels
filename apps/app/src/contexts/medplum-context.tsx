@@ -31,7 +31,13 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const { medplumClientId, medplumSecret, userId: authenticatedUserId, name, email } = useAuthentication()
+  const {
+    medplumClientId,
+    medplumSecret,
+    userId: authenticatedUserId,
+    name,
+    email,
+  } = useAuthentication()
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null)
   const [medplumStore, setMedplumStore] = useState<MedplumStore | null>(null)
 
@@ -50,6 +56,7 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
     return newResources
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are fine
   useEffect(() => {
     const initializeMedplumStore = async () => {
       const { medplumBaseUrl, medplumWsBaseUrl } = await getRuntimeConfig()
@@ -59,7 +66,11 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (!medplumBaseUrl || !medplumWsBaseUrl) {
-        console.error('Medplum base URL or Medplum WebSocket base URL is not set', medplumBaseUrl, medplumWsBaseUrl)
+        console.error(
+          'Medplum base URL or Medplum WebSocket base URL is not set',
+          medplumBaseUrl,
+          medplumWsBaseUrl,
+        )
         return
       }
 
@@ -69,9 +80,9 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
     }
 
     initializeMedplumStore()
-
   }, [medplumClientId])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deps are fine
   useEffect(() => {
     if (!medplumStore) {
       return
@@ -104,11 +115,17 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
             )
           }),
           medplumStore.subscribeToTasks((updatedTask) => {
-            setTasks((currentTasks) => updateResource(currentTasks, updatedTask))
+            setTasks((currentTasks) =>
+              updateResource(currentTasks, updatedTask),
+            )
           }),
         ])
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to setup subscriptions'))
+        setError(
+          err instanceof Error
+            ? err
+            : new Error('Failed to setup subscriptions'),
+        )
       }
     }
 
@@ -117,7 +134,10 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
         console.error('No authenticated user ID found')
         return
       }
-      const practitioner = await medplumStore.getOrCreatePractitioner(authenticatedUserId, name && name.length > 0 ? name : email ?? authenticatedUserId)
+      const practitioner = await medplumStore.getOrCreatePractitioner(
+        authenticatedUserId,
+        name && name.length > 0 ? name : (email ?? authenticatedUserId),
+      )
       setPractitioner(practitioner)
     }
 
@@ -127,13 +147,18 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
   }, [medplumStore])
 
   async function addNotesToTask(taskId: string, note: string) {
+    // biome-ignore lint/style/noNonNullAssertion: medplumStore is initialized
     const task = await medplumStore!.addNoteToTask(taskId, note)
     setTasks((currentTasks) => updateResource(currentTasks, task))
     return task
   }
 
   async function toggleTaskOwner(taskId: string) {
-    const task = await medplumStore!.toggleTaskOwner(taskId, practitioner?.id ?? '')
+    // biome-ignore lint/style/noNonNullAssertion: medplumStore is initialized
+    const task = await medplumStore!.toggleTaskOwner(
+      taskId,
+      practitioner?.id ?? '',
+    )
     setTasks((currentTasks) => updateResource(currentTasks, task))
     return task
   }
@@ -151,7 +176,9 @@ export function MedplumProvider({ children }: { children: React.ReactNode }) {
     toggleTaskOwner,
   }
 
-  return <MedplumContext.Provider value={value}>{children}</MedplumContext.Provider>
+  return (
+    <MedplumContext.Provider value={value}>{children}</MedplumContext.Provider>
+  )
 }
 
 export function useMedplum() {
@@ -160,4 +187,4 @@ export function useMedplum() {
     throw new Error('useMedplum must be used within a MedplumProvider')
   }
   return context
-} 
+}

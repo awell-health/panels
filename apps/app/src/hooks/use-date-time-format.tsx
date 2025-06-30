@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useStytchOrganization } from '@stytch/nextjs/b2b'
 import { format as formatDateFns, isValid, parseISO } from 'date-fns'
@@ -6,46 +6,46 @@ import { useCallback, useEffect, useState } from 'react'
 
 // Predefined date-only formats
 export const DATE_FORMATS = {
-  'US_DATE': {
+  US_DATE: {
     label: 'US Format (MM/DD/YYYY)',
     pattern: 'MM/dd/yyyy',
-    example: '12/31/2024'
+    example: '12/31/2024',
   },
-  'EU_DATE': {
+  EU_DATE: {
     label: 'European Format (DD/MM/YYYY)',
     pattern: 'dd/MM/yyyy',
-    example: '31/12/2024'
+    example: '31/12/2024',
   },
-  'ISO_DATE': {
+  ISO_DATE: {
     label: 'ISO Format (YYYY-MM-DD)',
     pattern: 'yyyy-MM-dd',
-    example: '2024-12-31'
-  }
+    example: '2024-12-31',
+  },
 } as const
 
 // Predefined date+time formats
 export const DATE_TIME_FORMATS = {
-  'US_DATETIME': {
+  US_DATETIME: {
     label: 'US Format with Time (MM/DD/YYYY h:mm AM/PM)',
     pattern: 'MM/dd/yyyy h:mm a',
-    example: '12/31/2024 2:30 PM'
+    example: '12/31/2024 2:30 PM',
   },
-  'EU_DATETIME': {
+  EU_DATETIME: {
     label: 'European Format with Time (DD/MM/YYYY HH:mm)',
     pattern: 'dd/MM/yyyy HH:mm',
-    example: '31/12/2024 14:30'
+    example: '31/12/2024 14:30',
   },
-  'ISO_DATETIME': {
+  ISO_DATETIME: {
     label: 'ISO Format with Time (YYYY-MM-DD HH:mm)',
     pattern: 'yyyy-MM-dd HH:mm',
-    example: '2024-12-31 14:30'
-  }
+    example: '2024-12-31 14:30',
+  },
 } as const
 
 export type DateFormatKey = keyof typeof DATE_FORMATS
 export type DateTimeFormatKey = keyof typeof DATE_TIME_FORMATS
-export type DateFormat = typeof DATE_FORMATS[DateFormatKey]
-export type DateTimeFormat = typeof DATE_TIME_FORMATS[DateTimeFormatKey]
+export type DateFormat = (typeof DATE_FORMATS)[DateFormatKey]
+export type DateTimeFormat = (typeof DATE_TIME_FORMATS)[DateTimeFormatKey]
 
 const DEFAULT_DATE_FORMAT: DateFormatKey = 'US_DATE'
 const DEFAULT_DATETIME_FORMAT: DateTimeFormatKey = 'US_DATETIME'
@@ -102,19 +102,27 @@ const hasTimeInfo = (date: string | Date): boolean => {
       /\s\d{1,2}:\d{2}/, // Space followed by time
     ]
 
-    return timePatterns.some(pattern => pattern.test(date))
+    return timePatterns.some((pattern) => pattern.test(date))
+    // biome-ignore lint/style/noUselessElse: better safe than sorry
   } else if (date instanceof Date) {
     // For Date objects, check if time components are meaningful
     // If all time components are 0, likely a date-only value
-    return date.getHours() !== 0 || date.getMinutes() !== 0 || date.getSeconds() !== 0 || date.getMilliseconds() !== 0
+    return (
+      date.getHours() !== 0 ||
+      date.getMinutes() !== 0 ||
+      date.getSeconds() !== 0 ||
+      date.getMilliseconds() !== 0
+    )
   }
 
   return false
 }
 
 export function useDateTimeFormat(): UseDateTimeFormatReturn {
-  const [selectedDateFormat, setSelectedDateFormat] = useState<DateFormatKey>(getStoredDateFormat)
-  const [selectedDateTimeFormat, setSelectedDateTimeFormat] = useState<DateTimeFormatKey>(getStoredDateTimeFormat)
+  const [selectedDateFormat, setSelectedDateFormat] =
+    useState<DateFormatKey>(getStoredDateFormat)
+  const [selectedDateTimeFormat, setSelectedDateTimeFormat] =
+    useState<DateTimeFormatKey>(getStoredDateTimeFormat)
 
   const { organization } = useStytchOrganization()
 
@@ -125,6 +133,7 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
 
     // First try to load from organization trusted metadata
     if (organization?.trusted_metadata?.panels) {
+      // biome-ignore lint/suspicious/noExplicitAny: figure out how to type metadata
       const panelsData = organization.trusted_metadata.panels as any
       savedDateFormat = panelsData?.dateFormat as DateFormatKey
       savedDateTimeFormat = panelsData?.dateTimeFormat as DateTimeFormatKey
@@ -173,45 +182,54 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
     }
 
     window.addEventListener('storage', handleStorageChange)
-    window.addEventListener('localStorageChange', handleCustomStorageChange as EventListener)
+    window.addEventListener(
+      'localStorageChange',
+      handleCustomStorageChange as EventListener,
+    )
 
     return () => {
       window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('localStorageChange', handleCustomStorageChange as EventListener)
+      window.removeEventListener(
+        'localStorageChange',
+        handleCustomStorageChange as EventListener,
+      )
     }
   }, [])
 
   // Format date/time using the appropriate format based on whether time info is present
-  const formatDateTime = useCallback((date: string | Date | null | undefined): string => {
-    if (!date) return ''
+  const formatDateTime = useCallback(
+    (date: string | Date | null | undefined): string => {
+      if (!date) return ''
 
-    try {
-      let dateObj: Date
+      try {
+        let dateObj: Date
 
-      if (typeof date === 'string') {
-        dateObj = date.includes('T') ? parseISO(date) : new Date(date)
-      } else {
-        dateObj = date
-      }
+        if (typeof date === 'string') {
+          dateObj = date.includes('T') ? parseISO(date) : new Date(date)
+        } else {
+          dateObj = date
+        }
 
-      if (!isValid(dateObj)) {
+        if (!isValid(dateObj)) {
+          return String(date)
+        }
+
+        // Determine if this date has time information
+        const hasTime = hasTimeInfo(date)
+
+        // Use appropriate format based on time presence
+        const formatConfig = hasTime
+          ? DATE_TIME_FORMATS[selectedDateTimeFormat]
+          : DATE_FORMATS[selectedDateFormat]
+
+        return formatDateFns(dateObj, formatConfig.pattern)
+      } catch (error) {
+        console.error('Error formatting date:', error)
         return String(date)
       }
-
-      // Determine if this date has time information
-      const hasTime = hasTimeInfo(date)
-
-      // Use appropriate format based on time presence
-      const formatConfig = hasTime
-        ? DATE_TIME_FORMATS[selectedDateTimeFormat]
-        : DATE_FORMATS[selectedDateFormat]
-
-      return formatDateFns(dateObj, formatConfig.pattern)
-    } catch (error) {
-      console.error('Error formatting date:', error)
-      return String(date)
-    }
-  }, [selectedDateFormat, selectedDateTimeFormat])
+    },
+    [selectedDateFormat, selectedDateTimeFormat],
+  )
 
   const updateDateFormat = useCallback(async (formatKey: DateFormatKey) => {
     try {
@@ -219,9 +237,11 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
       setSelectedDateFormat(formatKey)
 
       // Dispatch custom event for same-tab synchronization
-      window.dispatchEvent(new CustomEvent('localStorageChange', {
-        detail: { key: STORAGE_KEY_DATE, value: formatKey }
-      }))
+      window.dispatchEvent(
+        new CustomEvent('localStorageChange', {
+          detail: { key: STORAGE_KEY_DATE, value: formatKey },
+        }),
+      )
 
       console.log(`Date format updated to: ${DATE_FORMATS[formatKey].label}`)
     } catch (error) {
@@ -229,21 +249,28 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
     }
   }, [])
 
-  const updateDateTimeFormat = useCallback(async (formatKey: DateTimeFormatKey) => {
-    try {
-      localStorage.setItem(STORAGE_KEY_DATETIME, formatKey)
-      setSelectedDateTimeFormat(formatKey)
+  const updateDateTimeFormat = useCallback(
+    async (formatKey: DateTimeFormatKey) => {
+      try {
+        localStorage.setItem(STORAGE_KEY_DATETIME, formatKey)
+        setSelectedDateTimeFormat(formatKey)
 
-      // Dispatch custom event for same-tab synchronization
-      window.dispatchEvent(new CustomEvent('localStorageChange', {
-        detail: { key: STORAGE_KEY_DATETIME, value: formatKey }
-      }))
+        // Dispatch custom event for same-tab synchronization
+        window.dispatchEvent(
+          new CustomEvent('localStorageChange', {
+            detail: { key: STORAGE_KEY_DATETIME, value: formatKey },
+          }),
+        )
 
-      console.log(`Date/time format updated to: ${DATE_TIME_FORMATS[formatKey].label}`)
-    } catch (error) {
-      console.error('Failed to update date/time format:', error)
-    }
-  }, [])
+        console.log(
+          `Date/time format updated to: ${DATE_TIME_FORMATS[formatKey].label}`,
+        )
+      } catch (error) {
+        console.error('Failed to update date/time format:', error)
+      }
+    },
+    [],
+  )
 
   return {
     selectedDateFormat,
@@ -256,4 +283,4 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
     updateDateFormat,
     updateDateTimeFormat,
   }
-} 
+}

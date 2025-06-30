@@ -1,26 +1,28 @@
-"use client";
+'use client'
 
-import { formatTasksForPatientView, renderTaskStatus } from "@/lib/task-utils";
-import { BaseCell } from "./BaseCell";
-import type { InteractiveCellProps } from "./types";
+import { formatTasksForPatientView, renderTaskStatus } from '@/lib/task-utils'
+import { BaseCell } from './BaseCell'
+import type { InteractiveCellProps } from './types'
 
 export function TasksCell(props: InteractiveCellProps) {
-  const { value, column, row, onTaskClick, currentView } = props;
+  const { value, column, row, onTaskClick, currentView } = props
 
   return (
     <BaseCell {...props}>
-      {column.name === "Task Status" && value ? (
+      {column.name === 'Task Status' && value ? (
         renderTaskStatus(
           String(value),
           row.Task,
-          row["Patient Name"],
-          onTaskClick || (() => { })
+          row['Patient Name'],
+          onTaskClick || (() => {}),
         )
-      ) : column.type === "tasks" && currentView === "Patient view" && row._raw?.tasks ? (
+      ) : column.type === 'tasks' &&
+        currentView === 'Patient view' &&
+        row._raw?.tasks ? (
         formatTasksForPatientView(
           row._raw.tasks,
-          row["Patient Name"],
-          onTaskClick || (() => { })
+          row['Patient Name'],
+          onTaskClick || (() => {}),
         )
       ) : (
         <div className="truncate">
@@ -28,5 +30,5 @@ export function TasksCell(props: InteractiveCellProps) {
         </div>
       )}
     </BaseCell>
-  );
-} 
+  )
+}

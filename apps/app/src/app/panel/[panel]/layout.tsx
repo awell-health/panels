@@ -1,16 +1,16 @@
-"use client"
+'use client'
 
 import AppShell from '@/components/AppShell'
 import { DrawerProvider } from '@/contexts/DrawerContext'
 
 export default function DashboardLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode
+  children: React.ReactNode
 }) {
-    return (
-        <DrawerProvider>
-            <AppShell>{children}</AppShell>
-        </DrawerProvider>
-    )
+  return (
+    <DrawerProvider>
+      <AppShell>{children}</AppShell>
+    </DrawerProvider>
+  )
 }

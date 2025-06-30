@@ -1,7 +1,8 @@
 import { getRuntimeConfig } from '@/lib/config'
 
 // Cache for runtime config to avoid repeated server calls
-let runtimeConfigCache: Awaited<ReturnType<typeof getRuntimeConfig>> | null = null
+let runtimeConfigCache: Awaited<ReturnType<typeof getRuntimeConfig>> | null =
+  null
 
 export const apiConfig = {
   // Dynamic getter for base URL that fetches from runtime config
@@ -26,7 +27,6 @@ export const apiConfig = {
     const cleanPath = path.startsWith('/') ? path : `/${path}`
     return `${cleanBase}${cleanPath}`
   },
-
 
   // Clear cache (useful for testing or when config changes)
   clearCache: (): void => {

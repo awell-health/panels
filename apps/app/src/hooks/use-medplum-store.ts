@@ -77,12 +77,14 @@ const taskToWorklistData = (
     description: task.description || '',
     patientId: patient?.id || '',
     patientName: patient ? getPatientName(patient) : '',
-    patient: patient ? {
-      ...patient,
-      id: patient.id || '',
-      name: getPatientName(patient),
-      tasks: [],
-    } : undefined,
+    patient: patient
+      ? {
+          ...patient,
+          id: patient.id || '',
+          name: getPatientName(patient),
+          tasks: [],
+        }
+      : undefined,
   }
 }
 

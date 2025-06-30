@@ -1,8 +1,8 @@
-import Providers from '@/components/Providers';
-import { Inter } from "next/font/google";
-import './globals.css';
+import Providers from '@/components/Providers'
+import { Inter } from 'next/font/google'
+import './globals.css'
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'Worklist App',
@@ -17,9 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <body className={inter.className}>
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

@@ -1,4 +1,4 @@
-import { MedplumClient } from '@medplum/core'
+import type { MedplumClient } from '@medplum/core'
 import type {
   Bot,
   Bundle,
@@ -28,13 +28,11 @@ export class MedplumStore {
   // Initialize the store with client login
   async initialize(clientId?: string, clientSecret?: string): Promise<void> {
     if (!this.initialized) {
-
       if (!this.client) {
         throw new Error('Failed to create Medplum client')
       }
 
       try {
-
         if (!clientId || !clientSecret) {
           throw new Error(
             'Medplum credentials are missing. Please check your .env.local file.',
@@ -89,9 +87,7 @@ export class MedplumStore {
       ''
 
     // Initialize WebSocket connection
-    const ws = new WebSocket(
-      `${this.socketsBaseUrl}/ws/subscriptions-r4`,
-    )
+    const ws = new WebSocket(`${this.socketsBaseUrl}/ws/subscriptions-r4`)
     ws.addEventListener('open', () => {
       console.log('WebSocket open')
       // Bind both tokens
@@ -254,19 +250,25 @@ export class MedplumStore {
     }
   }
 
-  async getOrCreatePractitioner(userId: string, name: string): Promise<Practitioner> {
+  async getOrCreatePractitioner(
+    userId: string,
+    name: string,
+  ): Promise<Practitioner> {
     console.log('Getting or creating practitioner', userId, name)
-    
+
     const practitioner = await this.client.searchOne('Practitioner', {
-      identifier: `http://panels.awellhealth.com/fhir/identifier/practitioner|${userId}`
+      identifier: `http://panels.awellhealth.com/fhir/identifier/practitioner|${userId}`,
     })
     if (!practitioner) {
       console.log('Creating practitioner', userId, name)
       const newPractitioner = await this.client.createResource({
-        identifier: [{
-          system: 'http://panels.awellhealth.com/fhir/identifier/practitioner',
-          value: userId
-        }],
+        identifier: [
+          {
+            system:
+              'http://panels.awellhealth.com/fhir/identifier/practitioner',
+            value: userId,
+          },
+        ],
         resourceType: 'Practitioner',
         name: name && name.length > 0 ? [{ given: [name] }] : undefined,
       })
@@ -279,7 +281,10 @@ export class MedplumStore {
     try {
       const [task, practitioner] = await Promise.all([
         this.client.readResource('Task', taskId) as Promise<Task>,
-        this.client.readResource('Practitioner', userId) as Promise<Practitioner>
+        this.client.readResource(
+          'Practitioner',
+          userId,
+        ) as Promise<Practitioner>,
       ])
       if (task.owner?.reference === `Practitioner/${userId}`) {
         // Remove the owner from the task - OPTIMISTIC RESPONSE
@@ -290,12 +295,12 @@ export class MedplumStore {
 
         // Perform actual update in background
         this.performTaskUpdateInBackground(optimisticTask, 'removeOwner')
-        
+
         return optimisticTask
       }
 
-      const displayName = `${Array.isArray(practitioner.name?.[0]?.given) ? practitioner.name[0].given.join(' ') : practitioner.name?.[0]?.given ?? ''} ${Array.isArray(practitioner.name?.[0]?.family) ? practitioner.name[0].family.join(' ') : practitioner.name?.[0]?.family ?? ''}`
-      
+      const displayName = `${Array.isArray(practitioner.name?.[0]?.given) ? practitioner.name[0].given.join(' ') : (practitioner.name?.[0]?.given ?? '')} ${Array.isArray(practitioner.name?.[0]?.family) ? practitioner.name[0].family.join(' ') : (practitioner.name?.[0]?.family ?? '')}`
+
       // Update the task owner - OPTIMISTIC RESPONSE
       const optimisticTask = {
         ...task,
@@ -309,7 +314,7 @@ export class MedplumStore {
 
       // Perform actual update in background
       this.performTaskUpdateInBackground(optimisticTask, 'setOwner')
-      
+
       return optimisticTask
     } catch (error) {
       console.error('Error updating task owner:', error)
@@ -319,8 +324,8 @@ export class MedplumStore {
 
   // Background task update method
   private async performTaskUpdateInBackground(
-    updatedTask: Task, 
-    operation: 'setOwner' | 'removeOwner'
+    updatedTask: Task,
+    operation: 'setOwner' | 'removeOwner',
   ): Promise<void> {
     try {
       await this.client.updateResource(updatedTask)

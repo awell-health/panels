@@ -10,7 +10,6 @@ import fhirpath from 'fhirpath'
  * @returns The value at the specified path, or an empty string if not found
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export const getNestedValue = (
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   obj: Record<string, any>,

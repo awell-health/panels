@@ -37,13 +37,18 @@ export const viewsAPI = {
     options?: Record<string, unknown>,
   ): Promise<ViewResponse> => {
     const apiConfig = await getApiConfig()
-    const response = await fetch(await apiConfig.buildUrl(`/views/${view.id}?tenantId=${tenantId}&userId=${userId}`), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      await apiConfig.buildUrl(
+        `/views/${view.id}?tenantId=${tenantId}&userId=${userId}`,
+      ),
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        ...(options || {}),
       },
-      ...(options || {}),
-    })
+    )
     return response.json() as Promise<ViewResponse>
   },
 
@@ -68,14 +73,17 @@ export const viewsAPI = {
     options = undefined,
   ): Promise<ViewResponse> => {
     const apiConfig = await getApiConfig()
-    const response = await fetch(await apiConfig.buildUrl(`/views/${view.id}`), {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      await apiConfig.buildUrl(`/views/${view.id}`),
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(view),
+        ...(options || {}),
       },
-      body: JSON.stringify(view),
-      ...(options || {}),
-    })
+    )
     return response.json() as Promise<ViewResponse>
   },
 
@@ -86,10 +94,15 @@ export const viewsAPI = {
     options = undefined,
   ): Promise<void> => {
     const apiConfig = await getApiConfig()
-    await fetch(await apiConfig.buildUrl(`/views/${view.id}?tenantId=${tenantId}&userId=${userId}`), {
-      method: 'DELETE',
-      ...(options || {}),
-    })
+    await fetch(
+      await apiConfig.buildUrl(
+        `/views/${view.id}?tenantId=${tenantId}&userId=${userId}`,
+      ),
+      {
+        method: 'DELETE',
+        ...(options || {}),
+      },
+    )
   },
 
   publishing: {

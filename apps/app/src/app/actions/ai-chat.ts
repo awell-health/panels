@@ -1,44 +1,52 @@
-"use server"
+'use server'
 
-import { ViewDefinition, WorklistDefinition } from "@/types/worklist"
-import { OpenAI } from "openai"
-import { ChatCompletionMessageParam } from "openai/resources/chat/completions"
-
+import type { ViewDefinition, WorklistDefinition } from '@/types/worklist'
+import { OpenAI } from 'openai'
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 
 export type ChatMessage = {
-    role: "user" | "assistant"
-    content: string
-  }
+  role: 'user' | 'assistant'
+  content: string
+}
 
 // TODO: Move this to the backend service
 /**
  * TODO start using proper FHIR to extract the data structure
  * https://awellhealth.slack.com/archives/C06JLPNJZMG/p1748532575499539?thread_ts=1748525675.878809&cid=C06JLPNJZMG
  */
- export const columnAiAssistantMessageHandler = async (messages: ChatMessage[], data: any[], currentDefinition?: WorklistDefinition | ViewDefinition): Promise<{ response: string, needsDefinitionUpdate: boolean, definition?: WorklistDefinition | ViewDefinition }> => {
+export const columnAiAssistantMessageHandler = async (
+  messages: ChatMessage[],
+  // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+  data: any[],
+  currentDefinition?: WorklistDefinition | ViewDefinition,
+): Promise<{
+  response: string
+  needsDefinitionUpdate: boolean
+  definition?: WorklistDefinition | ViewDefinition
+}> => {
+  const reducedData = data.slice(0, 2).map((item) => {
+    // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+    const reduceValue = (value: any): any => {
+      if (typeof value === 'string') {
+        return value.substring(0, 75)
+      }
+      if (Array.isArray(value)) {
+        return value.map(reduceValue)
+      }
+      if (value && typeof value === 'object') {
+        const reducedObj = { ...value }
+        for (const key of Object.keys(reducedObj)) {
+          reducedObj[key] = reduceValue(reducedObj[key])
+        }
+        return reducedObj
+      }
+      return value
+    }
 
-    const reducedData = data.slice(0, 2).map(item => {
-        const reduceValue = (value: any): any => {
-            if (typeof value === 'string') {
-                return value.substring(0, 75);
-            }
-            if (Array.isArray(value)) {
-                return value.map(reduceValue);
-            }
-            if (value && typeof value === 'object') {
-                const reducedObj = { ...value };
-                Object.keys(reducedObj).forEach(key => {
-                    reducedObj[key] = reduceValue(reducedObj[key]);
-                });
-                return reducedObj;
-            }
-            return value;
-        };
-        
-        return reduceValue(item);
-    });
-    
-    const prompt = `You are a helpful assistant that helps users add columns to their view.
+    return reduceValue(item)
+  })
+
+  const prompt = `You are a helpful assistant that helps users add columns to their view.
             
             Current worklist definition:
             ${JSON.stringify(currentDefinition, null, 2)}
@@ -98,57 +106,65 @@ export type ChatMessage = {
             Be concise and clear in your explanations.
             When suggesting changes, always include the complete updated worklist definition in a JSON code block. Never add comments to the worklist JSON definition.
 `
-    const response = await chatWithAI(messages, prompt);
+  const response = await chatWithAI(messages, prompt)
 
-    const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
-    if (jsonMatch) {
-        console.log("jsonMatch", jsonMatch)
-        const updatedDefinition = JSON.parse(jsonMatch[1])
-        console.log("updatedDefinition", updatedDefinition)
+  const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
+  if (jsonMatch) {
+    console.log('jsonMatch', jsonMatch)
+    const updatedDefinition = JSON.parse(jsonMatch[1])
+    console.log('updatedDefinition', updatedDefinition)
 
-       return {
-        response: response,
-        needsDefinitionUpdate: true,
-        definition: updatedDefinition
-       }
-    }
     return {
-        response: response,
-        needsDefinitionUpdate: false
+      response: response,
+      needsDefinitionUpdate: true,
+      definition: updatedDefinition,
     }
- }
-  
-export async function chatWithAI(messages: ChatMessage[], botDescription?: string): Promise<string> {
-    try {
-        const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-        });
+  }
+  return {
+    response: response,
+    needsDefinitionUpdate: false,
+  }
+}
 
-        const systemMessage: ChatCompletionMessageParam = {
-        role: 'system',
-        content: botDescription || 'You are a helpful assistant that helps users set up healthcare ingestion integrations.',
-        };
+export async function chatWithAI(
+  messages: ChatMessage[],
+  botDescription?: string,
+): Promise<string> {
+  try {
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
 
-        const formattedMessages: ChatCompletionMessageParam[] = [
-        systemMessage,
-        ...messages.map(msg => ({
-            role: msg.role,
-            content: msg.content,
-        }))
-        ];
-
-        console.log("Sending another message", messages[messages.length - 1])
-
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4-turbo-preview',
-            messages: formattedMessages,
-            temperature: 0.2,
-            max_tokens: 4096,
-        });
-
-        return response.choices[0].message.content || 'I apologize, but I could not generate a response.';
-    } catch (error) {
-        console.error('Error in chatWithAI:', error);
-        throw new Error('Failed to process chat request');
+    const systemMessage: ChatCompletionMessageParam = {
+      role: 'system',
+      content:
+        botDescription ||
+        'You are a helpful assistant that helps users set up healthcare ingestion integrations.',
     }
+
+    const formattedMessages: ChatCompletionMessageParam[] = [
+      systemMessage,
+      ...messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      })),
+    ]
+
+    console.log('Sending another message', messages[messages.length - 1])
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: formattedMessages,
+      temperature: 0.2,
+      max_tokens: 4096,
+    })
+
+    return (
+      response.choices[0].message.content ||
+      'I apologize, but I could not generate a response.'
+    )
+  } catch (error) {
+    console.error('Error in chatWithAI:', error)
+    throw new Error('Failed to process chat request')
+  }
 }

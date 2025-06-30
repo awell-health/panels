@@ -10,7 +10,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "test": "vitest"
+    "test": "vitest",
+    "lint": "biome lint ./src",
+    "format": "biome format ./src"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
