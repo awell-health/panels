@@ -251,6 +251,9 @@ export default function WorklistNavigation({
                 onMouseEnter={() => setHoveredViewId(view.id)}
                 onMouseLeave={() => setHoveredViewId(null)}
                 onKeyDown={(e) => {
+                  // Don't handle keyboard events if we're editing the view title
+                  if (editingViewId === view.id) return
+
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
                     e.stopPropagation()
