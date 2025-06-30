@@ -92,7 +92,10 @@ export default function WorklistNavigation({
   const handleDeleteViewConfirm = async () => {
     if (!viewToDelete) return
 
+    // Close the modal immediately to prevent showing "undefined" during optimistic update
+    setShowDeleteModal(false)
     setDeletingViewId(viewToDelete.id)
+
     try {
       if (viewToDelete.id === panelDefinition.id) {
         // Deleting the panel
@@ -110,7 +113,6 @@ export default function WorklistNavigation({
       console.error('Failed to delete:', error)
     } finally {
       setDeletingViewId(null)
-      setShowDeleteModal(false)
       setViewToDelete(null)
     }
   }
