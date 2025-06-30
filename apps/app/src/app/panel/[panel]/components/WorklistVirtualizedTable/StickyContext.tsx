@@ -6,8 +6,7 @@ import type { ColumnDefinition } from "@/types/worklist";
 interface StickyGridContextValue {
   stickyIndices: number[];
   columns: ColumnDefinition[];
-  getColumnWidth: (index: number, containerWidth?: number) => number;
-  getColumnWidthsAndTotal: (containerWidth: number) => { columnWidths: number[]; totalWidth: number };
+  getColumnWidth: (index: number) => number;
   onSort?: (columnKey: string) => void;
   sortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
   onFilter?: (columnKey: string, value: string) => void;
