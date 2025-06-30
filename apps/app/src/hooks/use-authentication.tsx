@@ -142,7 +142,7 @@ export function AuthenticationStoreProvider({
     }
     
     return new AuthenticationStore(member, organization, config.environment)
-  }, [member?.member_id, organization?.organization_slug, config.environment])
+  }, [member, organization, config.environment])
 
   if (!storeInstance) {
     return (
@@ -195,8 +195,10 @@ export function useAuthentication() {
     name: currentName,
     email: currentEmail,
   }), [
-    currentUser?.member_id,
-    currentOrganization?.organization_slug,
+    currentUser,
+    currentOrganization,
+    store.populateStore,
+    store.clearStore,
     currentMedplumClientId,
     currentMedplumSecret,
     currentOrganizationSlug,

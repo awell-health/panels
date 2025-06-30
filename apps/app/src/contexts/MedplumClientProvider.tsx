@@ -213,7 +213,7 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
     if (medplumClientId && medplumSecret) {
       initializeMedplumStore()
     }
-  }, [medplumClientId, medplumSecret, initializeWithExistingToken])
+  }, [medplumClientId, medplumSecret, initializeWithExistingToken, medplumStore])
 
   // Load data and setup subscriptions
   useEffect(() => {
@@ -304,7 +304,7 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
       }
       isInitializedRef.current = false
     }
-  }, [medplumStore, updateResource])
+  }, [medplumStore, updateResource, authenticatedUserId, name, email])
 
   const addNotesToTask = useCallback(async (taskId: string, note: string) => {
     if (!medplumStore) {

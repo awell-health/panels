@@ -3,15 +3,13 @@
 import { MedplumClientProvider } from '@/contexts/MedplumClientProvider'
 import { ReactivePanelStoreProvider } from '@/hooks/use-reactive-panel-store'
 import { StytchB2BProvider } from '@stytch/nextjs/b2b'
-import { createStytchB2BUIClient } from '@stytch/nextjs/b2b/ui'
 import { CookiesProvider } from 'react-cookie'
 import { AuthenticationGuard } from './AuthenticationGuard'
 import { Loader2 } from 'lucide-react'
 import { AuthenticationStoreProvider } from '@/hooks/use-authentication'
-import { useEffect, useMemo, useState } from 'react'
-import { getRuntimeConfig } from '@/lib/config'
+import { useEffect, useState } from 'react'
 import { getStytchClient } from '@/lib/stytch-client'
-import { StytchB2BUIClient, StytchProjectConfiguration } from '@stytch/vanilla-js/dist/b2b'
+import type { StytchB2BUIClient, StytchProjectConfiguration } from '@stytch/vanilla-js/dist/b2b'
 
 export default function Providers({ children }: { children: React.ReactNode }) {  
   const [authStytchPublicToken, setAuthStytchPublicToken] = useState<
