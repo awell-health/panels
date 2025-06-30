@@ -369,8 +369,12 @@ export default function WorklistNavigation({
         isOpen={showDeleteModal}
         onClose={handleDeleteModalClose}
         onConfirm={handleDeleteViewConfirm}
-        title="Delete View"
-        message={`Are you sure you want to delete the view "${viewToDelete?.title}"? This action cannot be undone.`}
+        title={
+          viewToDelete?.id === panelDefinition.id
+            ? 'Delete Panel'
+            : 'Delete View'
+        }
+        message={`Are you sure you want to delete the ${viewToDelete?.id === panelDefinition.id ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
         isDeleting={!!deletingViewId}
       />
     </>
