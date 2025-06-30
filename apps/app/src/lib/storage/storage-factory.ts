@@ -2,7 +2,6 @@ import { APIStorageAdapter } from './api-storage-adapter'
 import { LocalStorageAdapter } from './local-storage-adapter'
 import { ReactiveStorageAdapter } from './reactive-storage-adapter'
 import type { StorageAdapter } from './types'
-import { isFeatureEnabled } from '@/utils/featureFlags'
 
 export const STORAGE_MODES = {
   LOCAL: 'local',
@@ -13,10 +12,11 @@ export const STORAGE_MODES = {
 export type StorageMode = (typeof STORAGE_MODES)[keyof typeof STORAGE_MODES]
 
 export const getReactiveStorageModeIfAvailable = (mode?: StorageMode): StorageMode => {
-  if (isFeatureEnabled('ENABLE_REACTIVE_DATA_STORAGE') && mode === STORAGE_MODES.API) {
+  // Always use reactive storage for API mode
+  if (mode === STORAGE_MODES.API) {
     return STORAGE_MODES.REACTIVE
   }
-  return mode || STORAGE_MODES.API
+  return mode || STORAGE_MODES.REACTIVE
 }
 
 /**

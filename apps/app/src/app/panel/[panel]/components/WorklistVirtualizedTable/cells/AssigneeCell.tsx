@@ -15,9 +15,9 @@ export function AssigneeCell(props: InteractiveCellProps) {
             return (
               <button
                 type="button"
-                className={`group flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${isCurrentUser
-                    ? "text-gray-700 hover:text-red-600 hover:bg-red-50"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+                className={`group flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors cursor-pointer ${isCurrentUser
+                  ? "text-gray-700 hover:text-red-600 hover:bg-red-50"
+                  : "text-gray-700 hover:text-blue-600 hover:bg-blue-50"
                   }`}
                 onClick={(e) => {
                   e.stopPropagation();

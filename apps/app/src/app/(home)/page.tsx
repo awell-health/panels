@@ -1,8 +1,7 @@
 "use client"
 
-import { isFeatureEnabled } from '@/utils/featureFlags'
-import ReactiveHome from './page-reactive'
-import { usePanelStore } from "@/hooks/use-panel-store";
+import { useReactivePanelStore } from "@/hooks/use-reactive-panel-store";
+import { useReactivePanels } from "@/hooks/use-reactive-data";
 import { Loader2, Menu } from "lucide-react";
 import PanelsTable from "./components/PanelsTable";
 import TeamTable from "./components/TeamTable";
@@ -15,16 +14,9 @@ const users = [
 ];
 
 const Home = () => {
-  const isReactiveEnabled = isFeatureEnabled('ENABLE_REACTIVE_DATA_STORAGE')
-
-  // If reactive is enabled, use the reactive component
-  if (isReactiveEnabled) {
-    return <ReactiveHome />
-  }
-
-  // Original implementation for when reactive is disabled
   const { name } = useAuthentication()
-  const { panels, isLoading: isPanelLoading, deletePanel, deleteView, createPanel } = usePanelStore();
+  const { panels, isLoading: isPanelLoading, error: panelError } = useReactivePanels();
+  const { deletePanel, deleteView, createPanel } = useReactivePanelStore();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,7 +24,10 @@ const Home = () => {
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-center mb-6">
-            <button className="btn btn-ghost btn-sm mr-4">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm mr-4"
+            >
               <Menu className="h-4 w-4" />
             </button>
             <div>
@@ -58,6 +53,10 @@ const Home = () => {
                 <div className="flex flex-col items-center">
                   <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" />
                 </div>
+              </div>
+            ) : panelError ? (
+              <div className="flex justify-center items-center py-12 text-red-500">
+                <div>Error loading panels: {panelError}</div>
               </div>
             ) : (
               <PanelsTable

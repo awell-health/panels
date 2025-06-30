@@ -19,9 +19,6 @@ export const FEATURE_FLAGS = {
 
   // Use enhanced JSON search highlighting with smart collapsing
   USE_ENHANCED_JSON_SEARCH_HIGHLIGHTING: true,
-
-  // Enable reactive data storage with TinyBase
-  ENABLE_REACTIVE_DATA_STORAGE: true,
 } as const
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS
