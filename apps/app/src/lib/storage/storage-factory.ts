@@ -11,7 +11,9 @@ export const STORAGE_MODES = {
 
 export type StorageMode = (typeof STORAGE_MODES)[keyof typeof STORAGE_MODES]
 
-export const getReactiveStorageModeIfAvailable = (mode?: StorageMode): StorageMode => {
+export const getReactiveStorageModeIfAvailable = (
+  mode?: StorageMode,
+): StorageMode => {
   // Always use reactive storage for API mode
   if (mode === STORAGE_MODES.API) {
     return STORAGE_MODES.REACTIVE
@@ -25,12 +27,12 @@ export const getReactiveStorageModeIfAvailable = (mode?: StorageMode): StorageMo
 export const createStorageAdapter = async (
   userId?: string,
   organizationSlug?: string,
-  mode?: StorageMode, cacheConfig?: {
+  mode?: StorageMode,
+  cacheConfig?: {
     enabled?: boolean
     duration?: number
   },
 ): Promise<StorageAdapter> => {
-
   const modeOrReactive = getReactiveStorageModeIfAvailable(mode)
 
   switch (modeOrReactive) {
@@ -62,11 +64,10 @@ const storageInstances = new Map<string, StorageAdapter>()
  * This ensures the same adapter is used throughout the application
  */
 export const getStorageAdapter = async (
-  userId?: string, 
+  userId?: string,
   mode?: StorageMode,
   organizationSlug?: string,
 ): Promise<StorageAdapter> => {
-
   // Create a unique key for this configuration
   const key = `${mode}-${userId || 'no-user'}-${organizationSlug || 'no-org'}`
 

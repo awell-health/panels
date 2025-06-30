@@ -4,11 +4,16 @@
 @tailwind utilities;
 
 @plugin "daisyui" {
+  /* biome-ignore lint/correctness/noUnknownProperty: Not sure biome helps with this */
   themes: light --default, dark --prefersdark;
+  /* biome-ignore lint/correctness/noUnknownProperty: Not sure biome helps with this */
   root: ":root";
+  /* biome-ignore lint/correctness/noUnknownProperty: Not sure biome helps with this */
   include: ;
+  /* biome-ignore lint/correctness/noUnknownProperty: Not sure biome helps with this */
   exclude: ;
   prefix: ;
+  /* biome-ignore lint/correctness/noUnknownProperty: Not sure biome helps with this */
   logs: true;
 }
 

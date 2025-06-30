@@ -1,9 +1,17 @@
-"use client"
+'use client'
 
-import type { ColumnDefinition } from "@/types/worklist"
-import { ArrowUpDown, Calendar, Database, Hash, Text, ToggleLeft, X } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
-import { createPortal } from "react-dom"
+import type { ColumnDefinition } from '@/types/worklist'
+import {
+  ArrowUpDown,
+  Calendar,
+  Database,
+  Hash,
+  Text,
+  ToggleLeft,
+  X,
+} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 type ColumnMenuProps = {
   column: ColumnDefinition
@@ -17,14 +25,28 @@ type ColumnMenuProps = {
   onColumnUpdate?: (updates: Partial<ColumnDefinition>) => void
 }
 
-export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConfig, filterValue, onFilter, onColumnUpdate }: ColumnMenuProps) {
+export function ColumnMenu({
+  column,
+  isOpen,
+  onClose,
+  position,
+  onSort,
+  sortConfig,
+  filterValue,
+  onFilter,
+  onColumnUpdate,
+}: ColumnMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [localFilterValue, setLocalFilterValue] = useState(filterValue)
   const [localColumnKey, setLocalColumnKey] = useState(column.key)
   const [localColumnName, setLocalColumnName] = useState(column.name)
-  const [localColumnDescription, setLocalColumnDescription] = useState(column.description)
+  const [localColumnDescription, setLocalColumnDescription] = useState(
+    column.description,
+  )
   const [localColumnType, setLocalColumnType] = useState(column.type)
-  const [localColumnSource, setLocalColumnSource] = useState(column.source === 'Metriport' ? 'Awell' : column.source)
+  const [localColumnSource, setLocalColumnSource] = useState(
+    column.source === 'Metriport' ? 'Awell' : column.source,
+  )
 
   // Update local values when props change
   useEffect(() => {
@@ -33,16 +55,22 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
     setLocalColumnName(column.name)
     setLocalColumnDescription(column.description)
     setLocalColumnType(column.type)
-    setLocalColumnSource(column.source === 'Metriport' ? 'Awell' : column.source)
+    setLocalColumnSource(
+      column.source === 'Metriport' ? 'Awell' : column.source,
+    )
   }, [filterValue, column])
 
   // Close menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      const target = event.target as HTMLElement;
+      const target = event.target as HTMLElement
       // Don't close if clicking on any input element
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
-        return;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT'
+      ) {
+        return
       }
       if (menuRef.current && !menuRef.current.contains(target)) {
         event.stopPropagation()
@@ -51,11 +79,11 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
     }
 
     if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
+      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen, onClose])
 
@@ -65,33 +93,41 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
     const isAscending = sortConfig?.direction === 'asc'
 
     switch (column.type) {
-      case "number":
+      case 'number':
         return isSorted
-          ? (isAscending ? "Sort large → small" : "Sort small → large")
-          : "Sort small → large"
-      case "date":
+          ? isAscending
+            ? 'Sort large → small'
+            : 'Sort small → large'
+          : 'Sort small → large'
+      case 'date':
         return isSorted
-          ? (isAscending ? "Sort new → old" : "Sort old → new")
-          : "Sort old → new"
-      case "boolean":
+          ? isAscending
+            ? 'Sort new → old'
+            : 'Sort old → new'
+          : 'Sort old → new'
+      case 'boolean':
         return isSorted
-          ? (isAscending ? "Sort true → false" : "Sort false → true")
-          : "Sort false → true"
+          ? isAscending
+            ? 'Sort true → false'
+            : 'Sort false → true'
+          : 'Sort false → true'
       default:
         return isSorted
-          ? (isAscending ? "Sort Z → A" : "Sort A → Z")
-          : "Sort A → Z"
+          ? isAscending
+            ? 'Sort Z → A'
+            : 'Sort A → Z'
+          : 'Sort A → Z'
     }
   }
 
   // Get type icon based on column type
   const getTypeIcon = () => {
     switch (column.type) {
-      case "date":
+      case 'date':
         return <Calendar className="h-3.5 w-3.5 mr-2 text-gray-500" />
-      case "number":
+      case 'number':
         return <Hash className="h-3.5 w-3.5 mr-2 text-gray-500" />
-      case "boolean":
+      case 'boolean':
         return <ToggleLeft className="h-3.5 w-3.5 mr-2 text-gray-500" />
       default:
         return <Text className="h-3.5 w-3.5 mr-2 text-gray-500" />
@@ -130,7 +166,9 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
         <div className="flex items-center">
           {getTypeIcon()}
-          <span className="text-xs font-medium text-gray-700">{column.name}</span>
+          <span className="text-xs font-medium text-gray-700">
+            {column.name}
+          </span>
         </div>
         <button
           type="button"
@@ -158,9 +196,12 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
         {/* Filter section */}
         <div className="px-3 py-2 border-b border-gray-100">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs text-gray-500">Filter:</label>
+            <label htmlFor="filter-input" className="text-xs text-gray-500">
+              Filter:
+            </label>
             {filterValue && (
               <button
+                type="button"
                 className="text-xs text-blue-500 hover:text-blue-600"
                 onClick={handleFilterClear}
               >
@@ -183,6 +224,7 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
               placeholder="Filter..."
             />
             <button
+              type="button"
               className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
               onClick={handleFilterApply}
             >
@@ -194,19 +236,32 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
         {/* Hide Column Option */}
         <div className="px-3 py-2 border-b border-gray-100">
           <button
+            type="button"
             className="flex items-center w-full px-0 py-1 text-xs font-normal text-left hover:bg-gray-50 rounded"
             onClick={() => {
               onColumnUpdate?.({
                 id: column.id,
                 properties: {
-                  display: { visible: false }
-                }
+                  display: { visible: false },
+                },
               })
               onClose()
             }}
           >
-            <svg className="h-3.5 w-3.5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.464 8.464M14.12 14.12l1.415 1.415M14.12 14.12L9.878 9.878m4.242 4.242L8.464 15.536" />
+            <svg
+              className="h-3.5 w-3.5 mr-2 text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-label="Hide Column"
+            >
+              <title>Hide Column</title>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L8.464 8.464M14.12 14.12l1.415 1.415M14.12 14.12L9.878 9.878m4.242 4.242L8.464 15.536"
+              />
             </svg>
             Hide Column
           </button>
@@ -216,7 +271,12 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
         <div className="px-3 py-2 border-b border-gray-100">
           <div className="space-y-2">
             <div>
-              <label htmlFor="column-name" className="block text-xs text-gray-500 mb-1">Column Name:</label>
+              <label
+                htmlFor="column-name"
+                className="block text-xs text-gray-500 mb-1"
+              >
+                Column Name:
+              </label>
               <input
                 id="column-name"
                 type="text"
@@ -232,7 +292,12 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
               />
             </div>
             <div>
-              <label htmlFor="column-description" className="block text-xs text-gray-500 mb-1">Column Description:</label>
+              <label
+                htmlFor="column-description"
+                className="block text-xs text-gray-500 mb-1"
+              >
+                Column Description:
+              </label>
               <textarea
                 id="column-description"
                 value={localColumnDescription}
@@ -248,11 +313,18 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
               />
             </div>
             <div>
-              <label htmlFor="column-type" className="block text-xs text-gray-500 mb-1">Column Type:</label>
+              <label
+                htmlFor="column-type"
+                className="block text-xs text-gray-500 mb-1"
+              >
+                Column Type:
+              </label>
               <select
                 id="column-type"
                 value={localColumnType}
-                onChange={(e) => setLocalColumnType(e.target.value as ColumnDefinition['type'])}
+                onChange={(e) =>
+                  setLocalColumnType(e.target.value as ColumnDefinition['type'])
+                }
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => {
                   if (e.key === ' ') {
@@ -272,7 +344,12 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
               </select>
             </div>
             <div>
-              <label htmlFor="column-key" className="block text-xs text-gray-500 mb-1">Column Key:</label>
+              <label
+                htmlFor="column-key"
+                className="block text-xs text-gray-500 mb-1"
+              >
+                Column Key:
+              </label>
               <input
                 id="column-key"
                 type="text"
@@ -289,7 +366,9 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
             </div>
             <div className="flex items-center">
               <Database className="h-3.5 w-3.5 mr-2 text-gray-500" />
-              <label htmlFor="column-source" className="text-xs text-gray-500">Source:</label>
+              <label htmlFor="column-source" className="text-xs text-gray-500">
+                Source:
+              </label>
             </div>
             <input
               id="column-source"
@@ -332,7 +411,10 @@ export function ColumnMenu({ column, isOpen, onClose, position, onSort, sortConf
             {column.options.map((option, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
               <div key={index} className="flex items-center py-1">
-                <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: option.color }} />
+                <div
+                  className="w-3 h-3 rounded-full mr-2"
+                  style={{ backgroundColor: option.color }}
+                />
                 <span>{option.value}</span>
               </div>
             ))}

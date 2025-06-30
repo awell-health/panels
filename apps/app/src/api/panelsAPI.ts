@@ -90,14 +90,17 @@ export const panelsAPI = {
     options = undefined,
   ): Promise<PanelResponse> => {
     const { apiConfig } = await import('./config/apiConfig')
-    const response = await fetch(await apiConfig.buildUrl(`/panels/${panel.id}`), {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      await apiConfig.buildUrl(`/panels/${panel.id}`),
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(panel),
+        ...(options || {}),
       },
-      body: JSON.stringify(panel),
-      ...(options || {}),
-    })
+    )
     return response.json() as Promise<PanelResponse>
   },
 

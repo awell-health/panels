@@ -1,24 +1,28 @@
-"use client";
+'use client'
 
-import { useStickyGridContext } from "./StickyContext";
-import { SortableHeaderColumn } from "./SortableHeaderColumn";
-import { SELECTION_COLUMN_WIDTH, HEADER_HEIGHT } from "./constants";
-import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import { useStickyGridContext } from './StickyContext'
+import { SortableHeaderColumn } from './SortableHeaderColumn'
+import { SELECTION_COLUMN_WIDTH, HEADER_HEIGHT } from './constants'
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable'
 
 interface StickyHeaderProps {
-  selectedRows: string[];
-  toggleSelectAll: () => void;
-  tableDataLength: number;
-  getColumnWidth: (columnIndex: number) => number;
+  selectedRows: string[]
+  toggleSelectAll: () => void
+  tableDataLength: number
+  getColumnWidth: (columnIndex: number) => number
 }
 
 export function StickyHeader({
   selectedRows,
   toggleSelectAll,
   tableDataLength,
-  getColumnWidth
+  getColumnWidth,
 }: StickyHeaderProps) {
-  const { columns, onSort, sortConfig, onFilter, filters, onColumnUpdate } = useStickyGridContext();
+  const { columns, onSort, sortConfig, onFilter, filters, onColumnUpdate } =
+    useStickyGridContext()
 
   return (
     <div
@@ -33,7 +37,9 @@ export function StickyHeader({
         <input
           type="checkbox"
           className="h-4 w-4 rounded border-gray-300"
-          checked={selectedRows.length > 0 && selectedRows.length === tableDataLength}
+          checked={
+            selectedRows.length > 0 && selectedRows.length === tableDataLength
+          }
           onChange={toggleSelectAll}
           aria-label="Select all rows"
           title="Select all rows"
@@ -42,7 +48,7 @@ export function StickyHeader({
 
       {/* Column headers */}
       <SortableContext
-        items={columns.map(col => col.id)}
+        items={columns.map((col) => col.id)}
         strategy={horizontalListSortingStrategy}
       >
         {columns.map((column, index) => (
@@ -61,13 +67,15 @@ export function StickyHeader({
               }}
               sortConfig={sortConfig}
               onSort={() => onSort?.(column.key)}
-              filterValue={filters?.find(f => f.key === column.key)?.value ?? ''}
+              filterValue={
+                filters?.find((f) => f.key === column.key)?.value ?? ''
+              }
               onFilter={(value: string) => onFilter?.(column.key, value)}
-              onColumnUpdate={onColumnUpdate || (() => { })}
+              onColumnUpdate={onColumnUpdate || (() => {})}
             />
           </div>
         ))}
       </SortableContext>
     </div>
-  );
-} 
+  )
+}

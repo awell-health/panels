@@ -2,8 +2,6 @@ import type { PanelDefinition, ViewDefinition } from '@/types/worklist'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { LocalStorageAdapter } from './local-storage-adapter'
 
-
-
 // Mock localStorage
 const localStorageMock = (() => {
   let store: Record<string, string> = {}

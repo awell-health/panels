@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
 import {
   useDateTimeFormat,
   type DateFormatKey,
-  type DateTimeFormatKey
+  type DateTimeFormatKey,
 } from '@/hooks/use-date-time-format'
 import { Calendar, Check, ChevronDown, Clock } from 'lucide-react'
 import { useState } from 'react'
@@ -12,7 +12,9 @@ interface DateTimeFormatSelectorProps {
   className?: string
 }
 
-export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelectorProps) {
+export function DateTimeFormatSelector({
+  className = '',
+}: DateTimeFormatSelectorProps) {
   const {
     selectedDateFormat,
     selectedDateTimeFormat,
@@ -75,7 +77,9 @@ export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelecto
 
             {/* Current date format display */}
             <div className="mb-3">
-              <div className="text-xs text-gray-500 mb-1">Preview (date only):</div>
+              <div className="text-xs text-gray-500 mb-1">
+                Preview (date only):
+              </div>
               <div className="text-sm font-mono bg-white p-2 rounded border">
                 {formatDateTime(sampleDate)}
               </div>
@@ -84,6 +88,7 @@ export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelecto
             {/* Date format selector */}
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setIsDateOpen(!isDateOpen)}
                 disabled={isUpdating}
                 className="w-full flex items-center justify-between p-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -91,7 +96,9 @@ export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelecto
                 <span className="text-sm text-gray-700">
                   {dateFormatConfig.label}
                 </span>
-                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isDateOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`h-4 w-4 text-gray-400 transition-transform ${isDateOpen ? 'rotate-180' : ''}`}
+                />
               </button>
 
               {/* Date format dropdown menu */}
@@ -99,14 +106,21 @@ export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelecto
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20 max-h-64 overflow-y-auto">
                   {Object.entries(availableDateFormats).map(([key, format]) => (
                     <button
+                      type="button"
                       key={key}
-                      onClick={() => handleDateFormatChange(key as DateFormatKey)}
+                      onClick={() =>
+                        handleDateFormatChange(key as DateFormatKey)
+                      }
                       disabled={isUpdating}
                       className="w-full px-3 py-2 text-left hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
                     >
                       <div className="flex-1">
-                        <div className="text-sm text-gray-900">{format.label}</div>
-                        <div className="text-xs text-gray-500 font-mono">{format.example}</div>
+                        <div className="text-sm text-gray-900">
+                          {format.label}
+                        </div>
+                        <div className="text-xs text-gray-500 font-mono">
+                          {format.example}
+                        </div>
                       </div>
                       {selectedDateFormat === key && (
                         <Check className="h-4 w-4 text-blue-600" />
@@ -124,12 +138,16 @@ export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelecto
           <div className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <Clock className="h-4 w-4 text-gray-600" />
-              <h3 className="text-sm font-medium text-gray-900">Date + Time Format</h3>
+              <h3 className="text-sm font-medium text-gray-900">
+                Date + Time Format
+              </h3>
             </div>
 
             {/* Current date+time format display */}
             <div className="mb-3">
-              <div className="text-xs text-gray-500 mb-1">Preview (date with time):</div>
+              <div className="text-xs text-gray-500 mb-1">
+                Preview (date with time):
+              </div>
               <div className="text-sm font-mono bg-white p-2 rounded border">
                 {formatDateTime(sampleDateTime)}
               </div>
@@ -138,6 +156,7 @@ export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelecto
             {/* Date+time format selector */}
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setIsDateTimeOpen(!isDateTimeOpen)}
                 disabled={isUpdating}
                 className="w-full flex items-center justify-between p-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -145,28 +164,39 @@ export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelecto
                 <span className="text-sm text-gray-700">
                   {dateTimeFormatConfig.label}
                 </span>
-                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isDateTimeOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`h-4 w-4 text-gray-400 transition-transform ${isDateTimeOpen ? 'rotate-180' : ''}`}
+                />
               </button>
 
               {/* Date+time format dropdown menu */}
               {isDateTimeOpen && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20 max-h-64 overflow-y-auto">
-                  {Object.entries(availableDateTimeFormats).map(([key, format]) => (
-                    <button
-                      key={key}
-                      onClick={() => handleDateTimeFormatChange(key as DateTimeFormatKey)}
-                      disabled={isUpdating}
-                      className="w-full px-3 py-2 text-left hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
-                    >
-                      <div className="flex-1">
-                        <div className="text-sm text-gray-900">{format.label}</div>
-                        <div className="text-xs text-gray-500 font-mono">{format.example}</div>
-                      </div>
-                      {selectedDateTimeFormat === key && (
-                        <Check className="h-4 w-4 text-blue-600" />
-                      )}
-                    </button>
-                  ))}
+                  {Object.entries(availableDateTimeFormats).map(
+                    ([key, format]) => (
+                      <button
+                        type="button"
+                        key={key}
+                        onClick={() =>
+                          handleDateTimeFormatChange(key as DateTimeFormatKey)
+                        }
+                        disabled={isUpdating}
+                        className="w-full px-3 py-2 text-left hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+                      >
+                        <div className="flex-1">
+                          <div className="text-sm text-gray-900">
+                            {format.label}
+                          </div>
+                          <div className="text-xs text-gray-500 font-mono">
+                            {format.example}
+                          </div>
+                        </div>
+                        {selectedDateTimeFormat === key && (
+                          <Check className="h-4 w-4 text-blue-600" />
+                        )}
+                      </button>
+                    ),
+                  )}
                 </div>
               )}
             </div>
@@ -176,6 +206,7 @@ export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelecto
 
       {/* Backdrop to close dropdowns */}
       {(isDateOpen || isDateTimeOpen) && (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: This is a backdrop
         <div
           className="fixed inset-0 z-10"
           onClick={() => {
@@ -186,4 +217,4 @@ export function DateTimeFormatSelector({ className = '' }: DateTimeFormatSelecto
       )}
     </div>
   )
-} 
+}

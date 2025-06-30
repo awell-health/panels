@@ -1,20 +1,23 @@
-"use client"
+'use client'
 
 import type { Extension } from '@medplum/fhirtypes'
 import { type WorklistTask, useMedplumStore } from '@/hooks/use-medplum-store'
-import { isFeatureEnabled } from "@/utils/featureFlags"
-import { useEffect, useState } from "react"
-import { ExtensionDetails } from "./ExtensionDetails"
-import { JsonSearchableExtensionDetails } from "./JsonSearchableExtensionDetails"
-import { SearchableAdditionalInfo } from "./SearchableAdditionalInfo"
-import { SearchableExtensionDetails } from "./SearchableExtensionDetails"
+import { isFeatureEnabled } from '@/utils/featureFlags'
+import { useEffect, useState } from 'react'
+import { ExtensionDetails } from './ExtensionDetails'
+import { JsonSearchableExtensionDetails } from './JsonSearchableExtensionDetails'
+import { SearchableAdditionalInfo } from './SearchableAdditionalInfo'
+import { SearchableExtensionDetails } from './SearchableExtensionDetails'
 
 type TaskContentProps = {
   taskData: WorklistTask
 }
 
 // Helper to recursively find and remove the summary extension
-function extractSummaryExtension(extensions: Extension[] = []): { summaryHtml: string | null, filteredExtensions: Extension[] } {
+function extractSummaryExtension(extensions: Extension[] = []): {
+  summaryHtml: string | null
+  filteredExtensions: Extension[]
+} {
   let summaryHtml = null
   const filteredExtensions: Extension[] = []
 
@@ -27,7 +30,8 @@ function extractSummaryExtension(extensions: Extension[] = []): { summaryHtml: s
     // If nested extensions, recurse
     const newExt = { ...ext }
     if (ext.extension && Array.isArray(ext.extension)) {
-      const { summaryHtml: nestedSummary, filteredExtensions: nestedFiltered } = extractSummaryExtension(ext.extension)
+      const { summaryHtml: nestedSummary, filteredExtensions: nestedFiltered } =
+        extractSummaryExtension(ext.extension)
       if (nestedSummary && !summaryHtml) summaryHtml = nestedSummary
       newExt.extension = nestedFiltered
     }
@@ -37,23 +41,30 @@ function extractSummaryExtension(extensions: Extension[] = []): { summaryHtml: s
 }
 
 export function TaskDetails({ taskData }: TaskContentProps) {
-  const [activeTab, setActiveTab] = useState<"context" | "comments">("context");
-  const [newComment, setNewComment] = useState("")
+  const [activeTab, setActiveTab] = useState<'context' | 'comments'>('context')
+  const [newComment, setNewComment] = useState('')
   const [task, setTask] = useState(taskData)
-  const [connectors, setConnectors] = useState<{ connectorName: string, url: string }[]>([])
+  const [connectors, setConnectors] = useState<
+    { connectorName: string; url: string }[]
+  >([])
 
   useEffect(() => {
     setTask(taskData)
 
     // Extract connectors from task input
-    const extractedConnectors = taskData.input
-      ?.filter((input: any) =>
-        input.type?.coding?.[0]?.system === 'http://awellhealth.com/fhir/connector-type'
-      )
-      .map((input: any) => ({
-        connectorName: input.type.coding[0].display,
-        url: input.valueUrl
-      })) || []
+    const extractedConnectors =
+      taskData.input
+        ?.filter(
+          // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+          (input: any) =>
+            input.type?.coding?.[0]?.system ===
+            'http://awellhealth.com/fhir/connector-type',
+        )
+        // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+        .map((input: any) => ({
+          connectorName: input.type.coding[0].display,
+          url: input.valueUrl,
+        })) || []
 
     setConnectors(extractedConnectors)
   }, [taskData])
@@ -63,7 +74,7 @@ export function TaskDetails({ taskData }: TaskContentProps) {
   const handleSubmitComment = async () => {
     if (newComment.trim() && taskData.id) {
       const task = await addNotesToTask(taskData.id, newComment.trim())
-      setNewComment("")
+      setNewComment('')
       setTask({
         ...taskData,
         ...task,
@@ -71,7 +82,9 @@ export function TaskDetails({ taskData }: TaskContentProps) {
     }
   }
 
-  const { summaryHtml, filteredExtensions } = extractSummaryExtension(taskData.extension)
+  const { summaryHtml, filteredExtensions } = extractSummaryExtension(
+    taskData.extension,
+  )
 
   return (
     <div className="flex-1 overflow-y-auto flex flex-col">
@@ -79,30 +92,31 @@ export function TaskDetails({ taskData }: TaskContentProps) {
         <nav className="flex space-x-8 px-4" aria-label="Tabs">
           <button
             type="button"
-            onClick={() => setActiveTab("context")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "context"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+            onClick={() => setActiveTab('context')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'context'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
           >
             Task
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("comments")}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "comments"
-              ? "border-blue-500 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
+            onClick={() => setActiveTab('comments')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'comments'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
           >
             Comments
           </button>
         </nav>
       </div>
       <div className="flex-1 overflow-y-auto p-4 flex flex-col">
-        {activeTab === "context" && (
+        {activeTab === 'context' && (
           <div className="flex flex-col h-full">
-
             <>
               <h3 className="text-sm font-medium mb-2">Complete Task</h3>
               <div className="w-full space-y-4">
@@ -123,7 +137,9 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                         </button>
                       ))
                     ) : (
-                      <p className="text-xs text-gray-500">No connectors available</p>
+                      <p className="text-xs text-gray-500">
+                        No connectors available
+                      </p>
                     )}
                   </div>
                 </div>
@@ -133,7 +149,11 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                   <>
                     <h3 className="text-sm font-medium mb-2">Summary</h3>
                     <div className="bg-gray-50 p-3 rounded mb-4">
-                      <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: summaryHtml }} />
+                      <div
+                        className="prose prose-sm max-w-none"
+                        // biome-ignore lint/security/noDangerouslySetInnerHtml: html is safe
+                        dangerouslySetInnerHTML={{ __html: summaryHtml }}
+                      />
                     </div>
                   </>
                 )}
@@ -179,70 +199,97 @@ export function TaskDetails({ taskData }: TaskContentProps) {
                   </div>
                 )} */}
 
-                {taskData.input && taskData.input.length > 0 && (() => {
-                  // Filter out connector inputs (same logic as used for connectors section)
-                  const nonConnectorInputs = taskData.input.filter((input: any) =>
-                    input.type?.coding?.[0]?.system !== 'http://awellhealth.com/fhir/connector-type'
-                  );
+                {taskData.input &&
+                  taskData.input.length > 0 &&
+                  (() => {
+                    // Filter out connector inputs (same logic as used for connectors section)
+                    const nonConnectorInputs = taskData.input.filter(
+                      // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+                      (input: any) =>
+                        input.type?.coding?.[0]?.system !==
+                        'http://awellhealth.com/fhir/connector-type',
+                    )
 
-                  if (nonConnectorInputs.length === 0) return null;
+                    if (nonConnectorInputs.length === 0) return null
 
-                  return isFeatureEnabled('ENABLE_ADDITIONAL_INFO_SEARCH') ? (
-                    <SearchableAdditionalInfo input={nonConnectorInputs} />
-                  ) : (
-                    <div className="bg-gray-50 p-3 rounded">
-                      <p className="text-xs font-medium text-gray-500 mb-2">Additional Information</p>
-                      <div className="space-y-2">
-                        {nonConnectorInputs.map((input: any, index: number) => (
-                          <div key={index} className="border-b border-gray-200 pb-2 last:border-0">
-                            <p className="text-xs text-gray-500">
-                              {input.type?.coding?.[0]?.display || 'Unknown Field'}
-                            </p>
-                            <p className="text-sm">{input.valueString}</p>
-                          </div>
-                        ))}
+                    return isFeatureEnabled('ENABLE_ADDITIONAL_INFO_SEARCH') ? (
+                      <SearchableAdditionalInfo input={nonConnectorInputs} />
+                    ) : (
+                      <div className="bg-gray-50 p-3 rounded">
+                        <p className="text-xs font-medium text-gray-500 mb-2">
+                          Additional Information
+                        </p>
+                        <div className="space-y-2">
+                          {nonConnectorInputs.map(
+                            // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+                            (input: any, index: number) => (
+                              <div
+                                key={input.id ?? index}
+                                className="border-b border-gray-200 pb-2 last:border-0"
+                              >
+                                <p className="text-xs text-gray-500">
+                                  {input.type?.coding?.[0]?.display ||
+                                    'Unknown Field'}
+                                </p>
+                                <p className="text-sm">{input.valueString}</p>
+                              </div>
+                            ),
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })()}
+                    )
+                  })()}
 
                 {/* {taskData.patient && (
                   <PatientDetails patient={taskData.patient} />
                 )} */}
 
                 <h3 className="text-sm font-medium mb-2">Context</h3>
-                {filteredExtensions && filteredExtensions.length > 0 && (
-                  isFeatureEnabled('ENABLE_EXTENSION_SEARCH') ? (
+                {filteredExtensions &&
+                  filteredExtensions.length > 0 &&
+                  (isFeatureEnabled('ENABLE_EXTENSION_SEARCH') ? (
                     isFeatureEnabled('USE_JSON_VIEWER_FOR_EXTENSIONS') ? (
-                      <JsonSearchableExtensionDetails extensions={filteredExtensions} />
+                      <JsonSearchableExtensionDetails
+                        extensions={filteredExtensions}
+                      />
                     ) : (
-                      <SearchableExtensionDetails extensions={filteredExtensions} />
+                      <SearchableExtensionDetails
+                        extensions={filteredExtensions}
+                      />
                     )
                   ) : (
                     <ExtensionDetails extensions={filteredExtensions} />
-                  )
-                )}
-
+                  ))}
               </div>
             </>
           </div>
         )}
 
-        {activeTab === "comments" && (
+        {activeTab === 'comments' && (
           <div className="flex flex-col items-center justify-center">
             <h3 className="text-sm font-medium mb-2">Comments</h3>
             {task.note && task.note.length > 0 && (
               <div className="bg-gray-50 p-3 rounded w-full mb-4">
                 <p className="text-xs font-medium text-gray-500 mb-2">Notes</p>
                 <div className="space-y-4">
-                  {task.note.map((note: any, index: number) => (
-                    <div key={index} className="bg-white p-3 rounded-md shadow-sm">
-                      <p className="text-sm text-gray-800 mb-1">{note.text}</p>
-                      <p className="text-xs text-gray-500">
-                        {note.time ? new Date(note.time).toLocaleString() : 'No timestamp'}
-                      </p>
-                    </div>
-                  ))}
+                  {task.note.map(
+                    // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+                    (note: any, index: number) => (
+                      <div
+                        key={note.id ?? index}
+                        className="bg-white p-3 rounded-md shadow-sm"
+                      >
+                        <p className="text-sm text-gray-800 mb-1">
+                          {note.text}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {note.time
+                            ? new Date(note.time).toLocaleString()
+                            : 'No timestamp'}
+                        </p>
+                      </div>
+                    ),
+                  )}
                 </div>
               </div>
             )}
@@ -269,4 +316,4 @@ export function TaskDetails({ taskData }: TaskContentProps) {
       </div>
     </div>
   )
-} 
+}

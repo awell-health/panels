@@ -1,49 +1,65 @@
-"use client";
+'use client'
 
-import { getNestedValue, isMatchingFhirPathCondition } from "@/lib/fhir-path";
-import type { ColumnDefinition, SortConfig } from "@/types/worklist";
-import { DndContext, type DragEndEvent, DragOverlay, type DragStartEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
-import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
-import { Loader2 } from "lucide-react";
-import type React from "react";
-import { useMemo, useState, useCallback } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table";
-import { SortableColumnHeader } from "./WorklistSortableColumnHeader";
-import WorklistTableRow from "./WorklistTableRow";
-import { useDrawer } from "@/contexts/DrawerContext";
-import type { WorklistPatient, WorklistTask } from "@/hooks/use-medplum-store";
-import { TaskDetails } from "./TaskDetails";
-import { PatientContext } from "./PatientContext";
+import { getNestedValue, isMatchingFhirPathCondition } from '@/lib/fhir-path'
+import type { ColumnDefinition, SortConfig } from '@/types/worklist'
+import {
+  DndContext,
+  type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import { restrictToHorizontalAxis } from '@dnd-kit/modifiers'
+import { Loader2 } from 'lucide-react'
+import type React from 'react'
+import { useMemo, useState, useCallback } from 'react'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../../../components/ui/table'
+import { SortableColumnHeader } from './WorklistSortableColumnHeader'
+import WorklistTableRow from './WorklistTableRow'
+import { useDrawer } from '@/contexts/DrawerContext'
+import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
+import { TaskDetails } from './TaskDetails'
+import { PatientContext } from './PatientContext'
 
 interface TableFilter {
-  key: string;
-  value: string;
+  key: string
+  value: string
 }
 
 interface WorklistTableProps {
-  isLoading: boolean;
-  tableContainerRef?: React.RefObject<HTMLDivElement>;
-  selectedRows: string[];
-  toggleSelectAll: () => void;
-  worklistColumns: ColumnDefinition[];
+  isLoading: boolean
+  tableContainerRef?: React.RefObject<HTMLDivElement>
+  selectedRows: string[]
+  toggleSelectAll: () => void
+  worklistColumns: ColumnDefinition[]
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  tableData: Record<string, any>[];
-  handlePDFClick: () => void;
-  handleTaskClick: () => void;
-  handleDragEnd?: (event: DragEndEvent) => void;
-  handleRowHover: () => void;
-  toggleSelectRow: (rowId: string) => void;
-  setIsAddingIngestionSource: (open: boolean) => void;
-  handleAssigneeClick: (taskId: string) => void;
-  onColumnUpdate: (updates: Partial<ColumnDefinition>) => void;
-  onSortConfigUpdate: (sortConfig: SortConfig | undefined) => void;
-  currentView: string;
-  filters: TableFilter[];
-  onFiltersChange: (filters: TableFilter[]) => void;
-  initialSortConfig: SortConfig | null;
-  currentUserName?: string;
+  tableData: Record<string, any>[]
+  handlePDFClick: () => void
+  handleTaskClick: () => void
+  handleDragEnd?: (event: DragEndEvent) => void
+  handleRowHover: () => void
+  toggleSelectRow: (rowId: string) => void
+  setIsAddingIngestionSource: (open: boolean) => void
+  handleAssigneeClick: (taskId: string) => void
+  onColumnUpdate: (updates: Partial<ColumnDefinition>) => void
+  onSortConfigUpdate: (sortConfig: SortConfig | undefined) => void
+  currentView: string
+  filters: TableFilter[]
+  onFiltersChange: (filters: TableFilter[]) => void
+  initialSortConfig: SortConfig | null
+  currentUserName?: string
 }
-
 
 export default function WorklistTable({
   isLoading,
@@ -65,137 +81,143 @@ export default function WorklistTable({
   filters,
   onFiltersChange,
   initialSortConfig,
-  currentUserName
+  currentUserName,
 }: WorklistTableProps) {
   console.log('🔄 WorklistTable rendering...', {
     tableDataLength: tableData.length,
     worklistColumnsLength: worklistColumns.length,
     currentView,
-    timestamp: new Date().toISOString()
-  });
+    timestamp: new Date().toISOString(),
+  })
 
-  const [sortConfig, setSortConfig] = useState<SortConfig | null>(initialSortConfig);
-  const [activeColumn, setActiveColumn] = useState<ColumnDefinition | null>(null);
-  const { openDrawer } = useDrawer();
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(
+    initialSortConfig,
+  )
+  const [activeColumn, setActiveColumn] = useState<ColumnDefinition | null>(
+    null,
+  )
+  const { openDrawer } = useDrawer()
 
   // Centralized row click handler - optimized with useCallback
-  const handleRowClick = useCallback((row: Record<string, any>) => {
-    if (currentView === "task") {
-      openDrawer(
-        <TaskDetails
-          taskData={row as WorklistTask}
-        />,
-        row.description || "Task Details"
-      )
-    } else if (currentView === "patient") {
-      openDrawer(
-        <PatientContext
-          patient={row as WorklistPatient}
-        />,
-        `${row.name} - Patient Details`
-      )
-    }
-  }, [currentView, openDrawer]);
+  const handleRowClick = useCallback(
+    // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+    (row: Record<string, any>) => {
+      if (currentView === 'task') {
+        openDrawer(
+          <TaskDetails taskData={row as WorklistTask} />,
+          row.description || 'Task Details',
+        )
+      } else if (currentView === 'patient') {
+        openDrawer(
+          <PatientContext patient={row as WorklistPatient} />,
+          `${row.name} - Patient Details`,
+        )
+      }
+    },
+    [currentView, openDrawer],
+  )
 
   // Filter visible columns and sort by order
   const visibleColumns = useMemo(() => {
     return worklistColumns
-      .filter(col => col.properties?.display?.visible !== false)
+      .filter((col) => col.properties?.display?.visible !== false)
       .sort((a, b) => {
-        const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER;
-        const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER;
-        return orderA - orderB;
-      });
-  }, [worklistColumns]);
+        const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+        const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+        return orderA - orderB
+      })
+  }, [worklistColumns])
 
   const filteredAndSortedData = useMemo(() => {
     // First apply filters
-    let filteredData = tableData;
+    let filteredData = tableData
     if (filters && filters.length > 0) {
-      filteredData = tableData.filter(row => {
-        return filters.every(filter => {
+      filteredData = tableData.filter((row) => {
+        return filters.every((filter) => {
           // Use partial matching with contains() for more user-friendly filtering
-          const fhirPath = `${filter.key}.lower().contains('${filter.value.toLowerCase()}')`;
-          return isMatchingFhirPathCondition(row, fhirPath);
-        });
-      });
+          const fhirPath = `${filter.key}.lower().contains('${filter.value.toLowerCase()}')`
+          return isMatchingFhirPathCondition(row, fhirPath)
+        })
+      })
     }
 
     // Then apply sorting
-    if (!sortConfig) return filteredData;
+    if (!sortConfig) return filteredData
 
     return [...filteredData].sort((a, b) => {
+      const aValue = getNestedValue(a, sortConfig.key)
+      const bValue = getNestedValue(b, sortConfig.key)
 
-      const aValue = getNestedValue(a, sortConfig.key);
-      const bValue = getNestedValue(b, sortConfig.key);
-
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
+      if (aValue === null || aValue === undefined) return 1
+      if (bValue === null || bValue === undefined) return -1
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         return sortConfig.direction === 'asc'
           ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
+          : bValue.localeCompare(aValue)
       }
 
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortConfig.direction === 'asc'
           ? aValue - bValue
-          : bValue - aValue;
+          : bValue - aValue
       }
 
       if (aValue instanceof Date && bValue instanceof Date) {
         return sortConfig.direction === 'asc'
           ? aValue.getTime() - bValue.getTime()
-          : bValue.getTime() - aValue.getTime();
+          : bValue.getTime() - aValue.getTime()
       }
 
       return sortConfig.direction === 'asc'
         ? String(aValue).localeCompare(String(bValue))
-        : String(bValue).localeCompare(String(aValue));
-    });
-  }, [tableData, sortConfig, filters]);
+        : String(bValue).localeCompare(String(aValue))
+    })
+  }, [tableData, sortConfig, filters])
 
   const handleSort = (columnKey: string) => {
-
-    const getSortConfig = (current: SortConfig | null): SortConfig | undefined => {
+    const getSortConfig = (
+      current: SortConfig | null,
+    ): SortConfig | undefined => {
       if (current?.key === columnKey) {
-        return { key: columnKey, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+        return {
+          key: columnKey,
+          direction: current.direction === 'asc' ? 'desc' : 'asc',
+        }
       }
       if (!current || current.key !== columnKey) {
-        return { key: columnKey, direction: 'desc' };
+        return { key: columnKey, direction: 'desc' }
       }
       if (current.direction === 'asc') {
-        return { key: columnKey, direction: 'desc' };
+        return { key: columnKey, direction: 'desc' }
       }
-      return undefined;
+      return undefined
     }
-    const newSortConfig = getSortConfig(sortConfig);
+    const newSortConfig = getSortConfig(sortConfig)
     if (newSortConfig) {
-      setSortConfig(newSortConfig);
-
+      setSortConfig(newSortConfig)
     }
-    onSortConfigUpdate(newSortConfig);
-  };
+    onSortConfigUpdate(newSortConfig)
+  }
 
   const handleFilter = (columnKey: string, value: string) => {
-    const newFilters = filters ? filters.filter(f => f.key !== columnKey) : [];
+    const newFilters = filters ? filters.filter((f) => f.key !== columnKey) : []
     if (value) {
-      newFilters.push({ key: columnKey, value });
+      newFilters.push({ key: columnKey, value })
     }
-    onFiltersChange(newFilters);
-  };
+    onFiltersChange(newFilters)
+  }
 
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const column = visibleColumns.find(col => col.id === active.id);
-    setActiveColumn(column || null);
-  };
+    const { active } = event
+    const column = visibleColumns.find((col) => col.id === active.id)
+    setActiveColumn(column || null)
+  }
 
   const handleDragEndWithStart = (event: DragEndEvent) => {
-    setActiveColumn(null);
-    handleDragEnd?.(event);
-  };
+    setActiveColumn(null)
+    handleDragEnd?.(event)
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -209,32 +231,80 @@ export default function WorklistTable({
   // Get type icon for drag overlay
   const getTypeIcon = (column: ColumnDefinition) => {
     switch (column.type) {
-      case "date":
+      case 'date':
         return (
-          <svg className="h-3.5 w-3.5 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" role="img">
+          <svg
+            className="h-3.5 w-3.5 mr-1.5 text-gray-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            role="img"
+          >
             <title>Date column</title>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
           </svg>
         )
-      case "number":
+      case 'number':
         return (
-          <svg className="h-3.5 w-3.5 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" role="img">
+          <svg
+            className="h-3.5 w-3.5 mr-1.5 text-gray-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            role="img"
+          >
             <title>Number column</title>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
+            />
           </svg>
         )
-      case "boolean":
+      case 'boolean':
         return (
-          <svg className="h-3.5 w-3.5 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" role="img">
+          <svg
+            className="h-3.5 w-3.5 mr-1.5 text-gray-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            role="img"
+          >
             <title>Boolean column</title>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
           </svg>
         )
       default:
         return (
-          <svg className="h-3.5 w-3.5 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" role="img">
+          <svg
+            className="h-3.5 w-3.5 mr-1.5 text-gray-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            role="img"
+          >
             <title>Text column</title>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h7"
+            />
           </svg>
         )
     }
@@ -258,7 +328,10 @@ export default function WorklistTable({
                     <input
                       type="checkbox"
                       className="h-4 w-4 rounded border-gray-300"
-                      checked={selectedRows.length > 0 && selectedRows.length === tableData.length}
+                      checked={
+                        selectedRows.length > 0 &&
+                        selectedRows.length === tableData.length
+                      }
                       onChange={toggleSelectAll}
                       aria-label="Select all rows"
                       title="Select all rows"
@@ -272,7 +345,9 @@ export default function WorklistTable({
                     index={visibleColumns.indexOf(column)}
                     sortConfig={sortConfig}
                     onSort={() => handleSort(column.key)}
-                    filterValue={filters?.find(f => f.key === column.key)?.value ?? ''}
+                    filterValue={
+                      filters?.find((f) => f.key === column.key)?.value ?? ''
+                    }
                     onFilter={(value) => handleFilter(column.key, value)}
                     onColumnUpdate={onColumnUpdate}
                   />
@@ -283,11 +358,19 @@ export default function WorklistTable({
             <TableBody>
               {isLoading && filteredAndSortedData.length === 0 ? (
                 <TableRow className="border-b border-gray-200">
-                  <TableCell colSpan={visibleColumns.length + 3} className="h-32">
+                  <TableCell
+                    colSpan={visibleColumns.length + 3}
+                    className="h-32"
+                  >
                     <div className="h-full flex items-center justify-center">
                       <div className="flex flex-col items-center">
-                        <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" aria-label="Loading" />
-                        <p className="text-sm text-gray-500 font-normal">Building your worklist...</p>
+                        <Loader2
+                          className="h-8 w-8 text-blue-500 animate-spin mb-2"
+                          aria-label="Loading"
+                        />
+                        <p className="text-sm text-gray-500 font-normal">
+                          Building your worklist...
+                        </p>
                       </div>
                     </div>
                   </TableCell>
@@ -298,7 +381,7 @@ export default function WorklistTable({
                     key={String(row.id ?? rowIndex)}
                     row={row}
                     rowIndex={rowIndex}
-                    handleAssigneeClick={() => handleAssigneeClick(row["id"])}
+                    handleAssigneeClick={() => handleAssigneeClick(row.id)}
                     columns={visibleColumns}
                     selectedRows={selectedRows}
                     toggleSelectRow={toggleSelectRow}
@@ -318,7 +401,7 @@ export default function WorklistTable({
                         type="checkbox"
                         className="h-4 w-4 rounded border-gray-300"
                         checked={false}
-                        onChange={() => { }}
+                        onChange={() => {}}
                         disabled
                         aria-label="No rows to select"
                       />
@@ -341,7 +424,7 @@ export default function WorklistTable({
                       type="checkbox"
                       className="h-4 w-4 rounded border-gray-300"
                       checked={false}
-                      onChange={() => { }}
+                      onChange={() => {}}
                       disabled
                       aria-label="Add data row"
                     />

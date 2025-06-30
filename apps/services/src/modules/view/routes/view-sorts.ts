@@ -47,10 +47,7 @@ export const viewSorts = async (app: FastifyInstance) => {
       // Verify view exists and user has access
       const view = await request.store.view.findOne({
         id: Number(id),
-        $or: [
-          { tenantId },
-          { isPublished: true, tenantId },
-        ],
+        $or: [{ tenantId }, { isPublished: true, tenantId }],
       })
 
       if (!view) {

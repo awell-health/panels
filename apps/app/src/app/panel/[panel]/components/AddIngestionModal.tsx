@@ -1,9 +1,14 @@
-"use client"
+'use client'
 
-import { useState, useRef } from "react"
-import { Search, X } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Bot } from "@medplum/fhirtypes"
+import { useState, useRef } from 'react'
+import { Search, X } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import type { Bot } from '@medplum/fhirtypes'
 
 type AddIngestionModalProps = {
   isOpen: boolean
@@ -28,9 +33,9 @@ function getColorForService(name: string) {
 // Function to get initials from service name
 function getInitials(name: string) {
   return name
-    .split(" ")
+    .split(' ')
     .map((word) => word[0])
-    .join("")
+    .join('')
     .toUpperCase()
     .substring(0, 2)
 }
@@ -39,41 +44,76 @@ function getInitials(name: string) {
 const sourceData = {
   categories: [
     {
-      name: "Suggested",
+      name: 'Suggested',
       services: [
-        { name: "Awell Tasks", favicon: "https://logo.clearbit.com/awellhealth.com", enabled: true },
-        { name: "Healthie Tasks", favicon: "https://logo.clearbit.com/gethealthie.com" },
-        { name: "Elation", favicon: "https://logo.clearbit.com/elationhealth.com" },
+        {
+          name: 'Awell Tasks',
+          favicon: 'https://logo.clearbit.com/awellhealth.com',
+          enabled: true,
+        },
+        {
+          name: 'Healthie Tasks',
+          favicon: 'https://logo.clearbit.com/gethealthie.com',
+        },
+        {
+          name: 'Elation',
+          favicon: 'https://logo.clearbit.com/elationhealth.com',
+        },
       ],
     },
     {
-      name: "Electronic Health Records",
+      name: 'Electronic Health Records',
       services: [
-        { name: "Epic", favicon: "https://logo.clearbit.com/epic.com" },
-        { name: "Cerner", favicon: "https://logo.clearbit.com/cerner.com" },
-        { name: "Athenahealth", favicon: "https://logo.clearbit.com/athenahealth.com" },
-        { name: "Canvas Medical", favicon: "https://logo.clearbit.com/canvasmedical.com" },
-        { name: "Elation", favicon: "https://logo.clearbit.com/elationhealth.com" },
-        { name: "Healthie", favicon: "https://logo.clearbit.com/gethealthie.com" },
+        { name: 'Epic', favicon: 'https://logo.clearbit.com/epic.com' },
+        { name: 'Cerner', favicon: 'https://logo.clearbit.com/cerner.com' },
+        {
+          name: 'Athenahealth',
+          favicon: 'https://logo.clearbit.com/athenahealth.com',
+        },
+        {
+          name: 'Canvas Medical',
+          favicon: 'https://logo.clearbit.com/canvasmedical.com',
+        },
+        {
+          name: 'Elation',
+          favicon: 'https://logo.clearbit.com/elationhealth.com',
+        },
+        {
+          name: 'Healthie',
+          favicon: 'https://logo.clearbit.com/gethealthie.com',
+        },
       ],
     },
     {
-      name: "HIEs & Data Aggregators",
+      name: 'HIEs & Data Aggregators',
       services: [
-        { name: "Metriport", favicon: "https://logo.clearbit.com/metriport.com" },
-        { name: "Redox", favicon: "https://logo.clearbit.com/redoxengine.com" },
-        { name: "Particle Health", favicon: "https://logo.clearbit.com/particlehealth.com" },
-        { name: "1upHealth", favicon: "https://logo.clearbit.com/1up.health" },
-        { name: "Health Gorilla", favicon: "https://logo.clearbit.com/healthgorilla.com" },
-        { name: "Datavant", favicon: "https://logo.clearbit.com/datavant.com" },
+        {
+          name: 'Metriport',
+          favicon: 'https://logo.clearbit.com/metriport.com',
+        },
+        { name: 'Redox', favicon: 'https://logo.clearbit.com/redoxengine.com' },
+        {
+          name: 'Particle Health',
+          favicon: 'https://logo.clearbit.com/particlehealth.com',
+        },
+        { name: '1upHealth', favicon: 'https://logo.clearbit.com/1up.health' },
+        {
+          name: 'Health Gorilla',
+          favicon: 'https://logo.clearbit.com/healthgorilla.com',
+        },
+        { name: 'Datavant', favicon: 'https://logo.clearbit.com/datavant.com' },
       ],
     },
     // Other categories remain the same...
   ],
 }
 
-export function AddIngestionModal({ isOpen, onClose, onSelectSource }: AddIngestionModalProps) {
-  const [searchQuery, setSearchQuery] = useState("")
+export function AddIngestionModal({
+  isOpen,
+  onClose,
+  onSelectSource,
+}: AddIngestionModalProps) {
+  const [searchQuery, setSearchQuery] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Filter categories and services based on search query
@@ -88,7 +128,9 @@ export function AddIngestionModal({ isOpen, onClose, onSelectSource }: AddIngest
       }
     })
     .filter(
-      (category) => category.name.toLowerCase().includes(searchQuery.toLowerCase()) || category.services.length > 0,
+      (category) =>
+        category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        category.services.length > 0,
     )
 
   // Handle service selection
@@ -103,8 +145,15 @@ export function AddIngestionModal({ isOpen, onClose, onSelectSource }: AddIngest
       <DialogContent className="overflow-hidden max-h-[85vh] flex flex-col p-0 m-0">
         <DialogHeader className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-medium">Add source</DialogTitle>
-            <button onClick={onClose} className="rounded-full p-1 hover:bg-gray-100" aria-label="Close">
+            <DialogTitle className="text-lg font-medium">
+              Add source
+            </DialogTitle>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full p-1 hover:bg-gray-100"
+              aria-label="Close"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -122,8 +171,10 @@ export function AddIngestionModal({ isOpen, onClose, onSelectSource }: AddIngest
 
         <div ref={containerRef} className="flex-1 overflow-y-auto">
           {filteredCategories.map((category, categoryIndex) => (
-            <div key={categoryIndex} className="relative">
-              <div className="bg-white py-3 px-4 font-medium text-sm sticky top-0 z-10 border-b border-gray-200">{category.name}</div>
+            <div key={`${category.name}-${categoryIndex}`} className="relative">
+              <div className="bg-white py-3 px-4 font-medium text-sm sticky top-0 z-10 border-b border-gray-200">
+                {category.name}
+              </div>
               <div className="px-4">
                 {category.services.map((service, serviceIndex) => {
                   const bgColor = getColorForService(service.name)
@@ -131,11 +182,18 @@ export function AddIngestionModal({ isOpen, onClose, onSelectSource }: AddIngest
 
                   return (
                     <div
-                      key={serviceIndex}
+                      key={`${service.name}-${serviceIndex}`}
                       className={`flex items-center py-3 px-2 hover:bg-gray-50 rounded-md cursor-pointer ${
-                        service.enabled ? "bg-blue-50" : ""
+                        service.enabled ? 'bg-blue-50' : ''
                       }`}
-                      onClick={() => handleServiceClick(category.name, service.name)}
+                      onClick={() =>
+                        handleServiceClick(category.name, service.name)
+                      }
+                      onKeyUp={(e) => {
+                        if (e.key === 'Enter') {
+                          handleServiceClick(category.name, service.name)
+                        }
+                      }}
                     >
                       <div
                         className="w-8 h-8 mr-3 flex-shrink-0 rounded-md flex items-center justify-center text-white text-xs font-medium"
@@ -144,7 +202,12 @@ export function AddIngestionModal({ isOpen, onClose, onSelectSource }: AddIngest
                         {initials}
                       </div>
                       <div>
-                        <span className="text-sm" style={{ color: service.enabled ? "#000" : "#666" }}>{service.name}</span>
+                        <span
+                          className="text-sm"
+                          style={{ color: service.enabled ? '#000' : '#666' }}
+                        >
+                          {service.name}
+                        </span>
                         {!service.enabled && (
                           <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
                             Coming soon

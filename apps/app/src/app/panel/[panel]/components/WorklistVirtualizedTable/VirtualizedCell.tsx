@@ -1,35 +1,46 @@
-"use client";
+'use client'
 
-import { getNestedValue } from "@/lib/fhir-path";
-import { cn } from "@/lib/utils";
-import { CellFactory } from "./cells";
-import { useStickyGridContext } from "./StickyContext";
+import { getNestedValue } from '@/lib/fhir-path'
+import { cn } from '@/lib/utils'
+import { CellFactory } from './cells'
+import { useStickyGridContext } from './StickyContext'
 
 interface VirtualizedCellProps {
-  rowIndex: number;
-  columnIndex: number;
-  style: React.CSSProperties;
+  rowIndex: number
+  columnIndex: number
+  style: React.CSSProperties
   data: {
-    rows: Record<string, any>[];
-    selectedRows: string[];
-    toggleSelectRow: (rowId: string) => void;
-    onRowClick: (row: Record<string, any>) => void;
-    onRowHover: (rowIndex: number, isHovered: boolean, rect: DOMRect | null) => void;
-    onPDFClick: (pdfUrl: string, patientName: string) => void;
-    onTaskClick: (task: string, taskStatus: string, patientName: string) => void;
-    onAssigneeClick: (taskId: string) => void;
-    currentView: string;
-    currentUserName?: string;
-    hoveredRowIndex: number | null;
+    // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+    rows: Record<string, any>[]
+    selectedRows: string[]
+    toggleSelectRow: (rowId: string) => void
+    // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+    onRowClick: (row: Record<string, any>) => void
+    onRowHover: (
+      rowIndex: number,
+      isHovered: boolean,
+      rect: DOMRect | null,
+    ) => void
+    onPDFClick: (pdfUrl: string, patientName: string) => void
+    onTaskClick: (task: string, taskStatus: string, patientName: string) => void
+    onAssigneeClick: (taskId: string) => void
+    currentView: string
+    currentUserName?: string
+    hoveredRowIndex: number | null
     // Header-specific data
-    toggleSelectAll: () => void;
-    tableDataLength: number;
-    containerWidth?: number;
-  };
+    toggleSelectAll: () => void
+    tableDataLength: number
+    containerWidth?: number
+  }
 }
 
-export function VirtualizedCell({ rowIndex, columnIndex, style, data }: VirtualizedCellProps) {
-  const { columns } = useStickyGridContext();
+export function VirtualizedCell({
+  rowIndex,
+  columnIndex,
+  style,
+  data,
+}: VirtualizedCellProps) {
+  const { columns } = useStickyGridContext()
   const {
     rows,
     selectedRows,
@@ -42,75 +53,87 @@ export function VirtualizedCell({ rowIndex, columnIndex, style, data }: Virtuali
     currentView,
     currentUserName,
     hoveredRowIndex,
-  } = data;
+  } = data
 
   // Skip header row - it's rendered in the custom inner element
   if (rowIndex === 0) {
-    return null;
+    return null
   }
 
   // Selection column (columnIndex === 0)
   if (columnIndex === 0) {
     // Data row checkbox
-    const dataRowIndex = rowIndex - 1;
-    const row = rows[dataRowIndex];
+    const dataRowIndex = rowIndex - 1
+    const row = rows[dataRowIndex]
 
-    if (!row) return null;
+    if (!row) return null
 
-    const isHovered = hoveredRowIndex === dataRowIndex;
+    const isHovered = hoveredRowIndex === dataRowIndex
 
     return (
       <div
         style={style}
         className={cn(
-          "border-r border-b border-gray-200 flex items-center justify-center cursor-pointer",
-          isHovered ? "bg-gray-50" : "bg-white"
+          'border-r border-b border-gray-200 flex items-center justify-center cursor-pointer',
+          isHovered ? 'bg-gray-50' : 'bg-white',
         )}
         onClick={(e) => {
-          e.stopPropagation();
-          onRowClick(row);
+          e.stopPropagation()
+          onRowClick(row)
         }}
         onMouseEnter={() => onRowHover(dataRowIndex, true, null)}
         onMouseLeave={() => onRowHover(dataRowIndex, false, null)}
+        onKeyDown={(e) => {
+          if (e.key === ' ') {
+            e.stopPropagation()
+            toggleSelectRow(row.id)
+          }
+        }}
       >
         <input
           type="checkbox"
           className="h-4 w-4 rounded border-gray-300"
           checked={selectedRows.includes(row.id)}
           onClick={(e) => {
-            e.stopPropagation();
+            e.stopPropagation()
           }}
           onChange={(e) => {
-            e.stopPropagation();
-            toggleSelectRow(row.id);
+            e.stopPropagation()
+            toggleSelectRow(row.id)
           }}
         />
       </div>
-    );
+    )
   }
 
   // Get the column for data columns (columnIndex > 0)
-  const column = columns[columnIndex - 1];
-  if (!column) return null;
+  const column = columns[columnIndex - 1]
+  if (!column) return null
 
   // Data cell (rowIndex > 0, columnIndex > 0)
-  const dataRowIndex = rowIndex - 1;
-  const row = rows[dataRowIndex];
+  const dataRowIndex = rowIndex - 1
+  const row = rows[dataRowIndex]
 
-  if (!row) return null;
+  if (!row) return null
 
-  const isHovered = hoveredRowIndex === dataRowIndex;
+  const isHovered = hoveredRowIndex === dataRowIndex
 
   return (
     <div
       style={style}
       className={cn(
-        "border-r border-b border-gray-200 cursor-pointer",
-        isHovered ? "bg-gray-50" : "bg-white"
+        'border-r border-b border-gray-200 cursor-pointer',
+        isHovered ? 'bg-gray-50' : 'bg-white',
       )}
       onClick={() => onRowClick(row)}
       onMouseEnter={() => onRowHover(dataRowIndex, true, null)}
       onMouseLeave={() => onRowHover(dataRowIndex, false, null)}
+      onKeyDown={(e) => {
+        if (e.key === ' ') {
+          e.stopPropagation()
+          onRowClick(row)
+        }
+      }}
     >
       <CellFactory
         value={getNestedValue(row, column.key)}
@@ -125,5 +148,5 @@ export function VirtualizedCell({ rowIndex, columnIndex, style, data }: Virtuali
         currentUserName={currentUserName}
       />
     </div>
-  );
-} 
+  )
+}

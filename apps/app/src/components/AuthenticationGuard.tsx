@@ -11,13 +11,20 @@ interface AuthenticationGuardProps {
   loadingComponent: ReactNode
 }
 
-export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({ children, loadingComponent }) => {
+export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({
+  children,
+  loadingComponent,
+}) => {
   const [isLoading, setLoading] = useState(true)
   const [cookies, setCookie] = useCookies(['stytch_session', 'auth_next_url'])
-  const [authRedirectUrl, setAuthRedirectUrl] = useState<string | undefined>(undefined)
-  const [authCookiesAllowedDomain, setAuthCookiesAllowedDomain] = useState<string | undefined>(undefined)
+  const [authRedirectUrl, setAuthRedirectUrl] = useState<string | undefined>(
+    undefined,
+  )
+  const [authCookiesAllowedDomain, setAuthCookiesAllowedDomain] = useState<
+    string | undefined
+  >(undefined)
   const { session } = useStytchMemberSession()
-  const router = useRouter();
+  const router = useRouter()
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -28,8 +35,6 @@ export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({ children, lo
     fetchConfig()
   }, [])
 
-
-
   const redirectToLogin = (): void => {
     setLoading(true)
     const visitedPage = window.location.href
@@ -38,7 +43,7 @@ export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({ children, lo
     setCookie('auth_next_url', visitedPage, {
       expires,
       path: '/',
-      domain: authCookiesAllowedDomain
+      domain: authCookiesAllowedDomain,
     })
 
     // This allows customers that have SSO enabled to create links that automatically
@@ -46,12 +51,13 @@ export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({ children, lo
     // of what is saved in the browser's local storage.
     const org = new URLSearchParams(window.location.search).get('org')
     if (org) {
-      router.push(authRedirectUrl + '/session-expired?org=' + org)
+      router.push(`${authRedirectUrl}/session-expired?org=${org}`)
     } else {
-      router.push(authRedirectUrl + '/session-expired')
+      router.push(`${authRedirectUrl}/session-expired`)
     }
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dependencies are fine
   useEffect(() => {
     if (!authRedirectUrl || !authCookiesAllowedDomain) {
       return
@@ -74,6 +80,7 @@ export const AuthenticationGuard: FC<AuthenticationGuardProps> = ({ children, lo
     }
   }, [session, authRedirectUrl, authCookiesAllowedDomain])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dependencies are fine
   useEffect(() => {
     if (!authRedirectUrl || !authCookiesAllowedDomain) {
       return

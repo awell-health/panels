@@ -1,58 +1,74 @@
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { PanelDefinition } from '@/types/worklist';
-import { DEFAULT_WORKLIST } from '@/utils/constants';
-import { ChevronRight, LayoutGrid, Plus, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
-import { useDateTimeFormat } from '@/hooks/use-date-time-format';
-
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import type { PanelDefinition } from '@/types/worklist'
+import { DEFAULT_WORKLIST } from '@/utils/constants'
+import { ChevronRight, LayoutGrid, Plus, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import React, { useEffect, useState } from 'react'
+import { useDateTimeFormat } from '@/hooks/use-date-time-format'
 
 type PanelsTableProps = {
-  panels: PanelDefinition[];
-  onDeletePanel: (panelId: string) => void;
-  onDeleteView: (panelId: string, viewId: string) => void;
-  createPanel: (panel: PanelDefinition) => Promise<PanelDefinition>;
-};
+  panels: PanelDefinition[]
+  onDeletePanel: (panelId: string) => void
+  onDeleteView: (panelId: string, viewId: string) => void
+  createPanel: (panel: PanelDefinition) => Promise<PanelDefinition>
+}
 
-const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDeleteView, createPanel }) => {
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+const PanelsTable: React.FC<PanelsTableProps> = ({
+  panels,
+  onDeletePanel,
+  onDeleteView,
+  createPanel,
+}) => {
+  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setMounted(true)
+  }, [])
 
   const handleDeletePanel = async (panelId: string) => {
     try {
-      setDeleteError(null);
-      await onDeletePanel(panelId);
+      setDeleteError(null)
+      await onDeletePanel(panelId)
     } catch (error) {
-      console.error('Failed to delete panel:', error);
-      setDeleteError(`Failed to delete panel: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Failed to delete panel:', error)
+      setDeleteError(
+        `Failed to delete panel: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
       // Clear error after 5 seconds
-      setTimeout(() => setDeleteError(null), 5000);
+      setTimeout(() => setDeleteError(null), 5000)
     }
-  };
+  }
 
   const handleDeleteView = async (panelId: string, viewId: string) => {
     try {
-      setDeleteError(null);
-      await onDeleteView(panelId, viewId);
+      setDeleteError(null)
+      await onDeleteView(panelId, viewId)
     } catch (error) {
-      console.error('Failed to delete view:', error);
-      setDeleteError(`Failed to delete view: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Failed to delete view:', error)
+      setDeleteError(
+        `Failed to delete view: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
       // Clear error after 5 seconds
-      setTimeout(() => setDeleteError(null), 5000);
+      setTimeout(() => setDeleteError(null), 5000)
     }
-  };
+  }
 
   const onCreatePanel = () => {
-    createPanel(DEFAULT_WORKLIST).then(newPanel => {
-      router.push(`/panel/${newPanel.id}`);
-    }).catch(error => {
-      console.error('Failed to create default panel:', error);
-    });
+    createPanel(DEFAULT_WORKLIST)
+      .then((newPanel) => {
+        router.push(`/panel/${newPanel.id}`)
+      })
+      .catch((error) => {
+        console.error('Failed to create default panel:', error)
+      })
   }
 
   // For now, all panels are expanded by default
@@ -83,20 +99,35 @@ const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDele
           <table className="w-full">
             <TableHeader>
               <TableRow className="bg-neutral-50">
-                <TableHead className="text-xs font-medium text-neutral-500 py-2">Name</TableHead>
-                <TableHead className="text-xs font-medium text-neutral-500 py-2">Columns</TableHead>
-                <TableHead className="text-xs font-medium text-neutral-500 py-2">Created</TableHead>
+                <TableHead className="text-xs font-medium text-neutral-500 py-2">
+                  Name
+                </TableHead>
+                <TableHead className="text-xs font-medium text-neutral-500 py-2">
+                  Columns
+                </TableHead>
+                <TableHead className="text-xs font-medium text-neutral-500 py-2">
+                  Created
+                </TableHead>
                 <TableHead className="text-xs font-medium text-neutral-500 py-2 w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mounted && panels.map((panel) => (
-                <PanelRow key={panel.id} panel={panel} onDeletePanel={handleDeletePanel} onDeleteView={handleDeleteView} />
-              ))}
+              {mounted &&
+                panels.map((panel) => (
+                  <PanelRow
+                    key={panel.id}
+                    panel={panel}
+                    onDeletePanel={handleDeletePanel}
+                    onDeleteView={handleDeleteView}
+                  />
+                ))}
 
               {mounted && panels.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4 text-neutral-500 text-sm">
+                  <TableCell
+                    colSpan={4}
+                    className="text-center py-4 text-neutral-500 text-sm"
+                  >
                     No panels yet
                   </TableCell>
                 </TableRow>
@@ -106,13 +137,18 @@ const PanelsTable: React.FC<PanelsTableProps> = ({ panels, onDeletePanel, onDele
         </div>
       </div>
     </>
-  );
-};
+  )
+}
 
-const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: string) => void, onDeleteView: (panelId: string, viewId: string) => void }> = ({ panel, onDeletePanel, onDeleteView }) => {
-  const { id, title, taskViewColumns, patientViewColumns, createdAt, views } = panel;
-  const router = useRouter();
-  const { formatDateTime } = useDateTimeFormat();
+const PanelRow: React.FC<{
+  panel: PanelDefinition
+  onDeletePanel: (panelId: string) => void
+  onDeleteView: (panelId: string, viewId: string) => void
+}> = ({ panel, onDeletePanel, onDeleteView }) => {
+  const { id, title, taskViewColumns, patientViewColumns, createdAt, views } =
+    panel
+  const router = useRouter()
+  const { formatDateTime } = useDateTimeFormat()
 
   return (
     <React.Fragment key={id}>
@@ -137,8 +173,8 @@ const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: stri
             type="button"
             className="h-6 w-6 p-0 rounded-full hover:bg-neutral-100"
             onClick={(e) => {
-              e.stopPropagation();
-              onDeletePanel(id);
+              e.stopPropagation()
+              onDeletePanel(id)
             }}
             aria-label="Remove from history"
           >
@@ -162,7 +198,8 @@ const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: stri
           <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
             {view.columns
               ? view.columns.length
-              : (view.taskViewColumns?.length || 0) + (view.patientViewColumns?.length || 0)}
+              : (view.taskViewColumns?.length || 0) +
+                (view.patientViewColumns?.length || 0)}
           </TableCell>
           <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
             {formatDateTime(view.createdAt)}
@@ -172,8 +209,8 @@ const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: stri
               type="button"
               className="h-6 w-6 p-0 rounded-full hover:bg-neutral-100"
               onClick={(e) => {
-                e.stopPropagation();
-                onDeleteView(id, view.id);
+                e.stopPropagation()
+                onDeleteView(id, view.id)
               }}
               aria-label="Remove from history"
             >
@@ -183,7 +220,7 @@ const PanelRow: React.FC<{ panel: PanelDefinition, onDeletePanel: (panelId: stri
         </TableRow>
       ))}
     </React.Fragment>
-  );
-};
+  )
+}
 
-export default PanelsTable; 
+export default PanelsTable

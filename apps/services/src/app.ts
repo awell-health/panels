@@ -40,7 +40,7 @@ export async function createApp(
     origin: true,
     methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    credentials: true,
   })
   await app.register(autoload, {
     dir: resolve(__dirname, 'plugins'),

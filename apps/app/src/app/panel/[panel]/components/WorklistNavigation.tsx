@@ -1,17 +1,24 @@
-"use client";
-import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
-import { useReactivePanelStore } from "@/hooks/use-reactive-panel-store";
-import { PanelDefinition, ViewDefinition } from "@/types/worklist";
-import { AlertCircle, CheckCircle, LayoutGrid, Loader2, Plus, X } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+'use client'
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
+import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
+import type { PanelDefinition, ViewDefinition } from '@/types/worklist'
+import {
+  AlertCircle,
+  CheckCircle,
+  LayoutGrid,
+  Loader2,
+  Plus,
+  X,
+} from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 interface WorklistNavigationProps {
-  panelDefinition: PanelDefinition;
-  onNewView: () => void;
-  selectedViewId?: string;
-  onPanelTitleChange?: (newTitle: string) => void;
-  onViewTitleChange?: (newTitle: string) => void;
+  panelDefinition: PanelDefinition
+  onNewView: () => void
+  selectedViewId?: string
+  onPanelTitleChange?: (newTitle: string) => void
+  onViewTitleChange?: (newTitle: string) => void
 }
 
 export default function WorklistNavigation({
@@ -19,101 +26,105 @@ export default function WorklistNavigation({
   onNewView,
   selectedViewId,
   onPanelTitleChange,
-  onViewTitleChange
+  onViewTitleChange,
 }: WorklistNavigationProps) {
-  const { deletePanel, deleteView, updatePanel, updateView } = useReactivePanelStore();
-  const router = useRouter();
-  const [editingPanel, setEditingPanel] = useState(false);
-  const [editingViewId, setEditingViewId] = useState<string | null>(null);
-  const [panelTitle, setPanelTitle] = useState(panelDefinition.title);
-  const [viewTitles, setViewTitles] = useState<Record<string, string>>({});
-  const [hoveredViewId, setHoveredViewId] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [viewToDelete, setViewToDelete] = useState<{ id: string; title: string } | null>(null);
-  const [deletingViewId, setDeletingViewId] = useState<string | null>(null);
+  const { deletePanel, deleteView, updatePanel, updateView } =
+    useReactivePanelStore()
+  const router = useRouter()
+  const [editingPanel, setEditingPanel] = useState(false)
+  const [editingViewId, setEditingViewId] = useState<string | null>(null)
+  const [panelTitle, setPanelTitle] = useState(panelDefinition.title)
+  const [viewTitles, setViewTitles] = useState<Record<string, string>>({})
+  const [hoveredViewId, setHoveredViewId] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [viewToDelete, setViewToDelete] = useState<{
+    id: string
+    title: string
+  } | null>(null)
+  const [deletingViewId, setDeletingViewId] = useState<string | null>(null)
 
   useEffect(() => {
-    setPanelTitle(panelDefinition.title);
-    const initialViewTitles: Record<string, string> = {};
-    panelDefinition.views?.forEach(view => {
-      initialViewTitles[view.id] = view.title || '';
-    });
-    setViewTitles(initialViewTitles);
-  }, [panelDefinition]);
+    setPanelTitle(panelDefinition.title)
+    const initialViewTitles: Record<string, string> = {}
+    for (const view of panelDefinition.views || []) {
+      initialViewTitles[view.id] = view.title || ''
+    }
+    setViewTitles(initialViewTitles)
+  }, [panelDefinition])
 
   const handleViewClick = (view: ViewDefinition) => {
-    if (view.id === selectedViewId) return;
-    router.push(`/panel/${panelDefinition.id}/view/${view.id}`);
-  };
+    if (view.id === selectedViewId) return
+    router.push(`/panel/${panelDefinition.id}/view/${view.id}`)
+  }
 
   const handlePanelClick = () => {
     if (selectedViewId) {
-      router.push(`/panel/${panelDefinition.id}`);
+      router.push(`/panel/${panelDefinition.id}`)
     }
-  };
+  }
 
   const handlePanelTitleSubmit = () => {
     if (panelTitle.trim() && panelTitle.trim() !== panelDefinition.title) {
-      onPanelTitleChange?.(panelTitle.trim());
+      onPanelTitleChange?.(panelTitle.trim())
     } else {
-      setPanelTitle(panelDefinition.title);
+      setPanelTitle(panelDefinition.title)
     }
-    setEditingPanel(false);
-  };
+    setEditingPanel(false)
+  }
 
   const handleViewTitleSubmit = (viewId: string) => {
-    const newTitle = viewTitles[viewId]?.trim() || '';
-    const currentView = panelDefinition.views?.find(v => v.id === viewId);
+    const newTitle = viewTitles[viewId]?.trim() || ''
+    const currentView = panelDefinition.views?.find((v) => v.id === viewId)
 
     if (newTitle && newTitle !== (currentView?.title || '')) {
-      onViewTitleChange?.(newTitle);
+      onViewTitleChange?.(newTitle)
     } else {
-      setViewTitles(prev => ({ ...prev, [viewId]: currentView?.title || '' }));
+      setViewTitles((prev) => ({ ...prev, [viewId]: currentView?.title || '' }))
     }
-    setEditingViewId(null);
-  };
+    setEditingViewId(null)
+  }
 
   const handleDeleteViewClick = (viewId: string, viewTitle: string) => {
-    setViewToDelete({ id: viewId, title: viewTitle });
-    setShowDeleteModal(true);
-  };
+    setViewToDelete({ id: viewId, title: viewTitle })
+    setShowDeleteModal(true)
+  }
 
   const handleDeleteViewConfirm = async () => {
-    if (!viewToDelete) return;
+    if (!viewToDelete) return
 
-    setDeletingViewId(viewToDelete.id);
+    setDeletingViewId(viewToDelete.id)
     try {
       if (viewToDelete.id === panelDefinition.id) {
         // Deleting the panel
-        await deletePanel?.(viewToDelete.id);
-        router.push('/');
+        await deletePanel?.(viewToDelete.id)
+        router.push('/')
       } else {
         // Deleting a view
-        await deleteView?.(panelDefinition.id, viewToDelete.id);
+        await deleteView?.(panelDefinition.id, viewToDelete.id)
         // Navigate to panel if we're deleting the currently selected view
         if (selectedViewId === viewToDelete.id) {
-          router.push(`/panel/${panelDefinition.id}`);
+          router.push(`/panel/${panelDefinition.id}`)
         }
       }
     } catch (error) {
-      console.error('Failed to delete:', error);
+      console.error('Failed to delete:', error)
     } finally {
-      setDeletingViewId(null);
-      setShowDeleteModal(false);
-      setViewToDelete(null);
+      setDeletingViewId(null)
+      setShowDeleteModal(false)
+      setViewToDelete(null)
     }
-  };
+  }
 
   const handleDeleteModalClose = () => {
-    setShowDeleteModal(false);
-    setViewToDelete(null);
-    setDeletingViewId(null);
-  };
+    setShowDeleteModal(false)
+    setViewToDelete(null)
+    setDeletingViewId(null)
+  }
 
   const getSaveStatusIcon = (entityId: string) => {
     // For now, we'll always show saved status since reactive updates are immediate
-    return null;
-  };
+    return null
+  }
 
   return (
     <>
@@ -125,40 +136,43 @@ export default function WorklistNavigation({
             <div
               className="relative ml-2 mb-[-1px] cursor-pointer flex-shrink-0"
               onClick={(e) => {
-                e.stopPropagation();
+                e.stopPropagation()
                 if (!selectedViewId) {
-                  setEditingPanel(true);
+                  setEditingPanel(true)
                 } else {
-                  handlePanelClick();
+                  handlePanelClick()
                 }
               }}
               onKeyDown={(e) => {
                 // Don't handle keyboard events if we're editing the panel title
-                if (editingPanel) return;
+                if (editingPanel) return
 
                 if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  e.stopPropagation();
+                  e.preventDefault()
+                  e.stopPropagation()
                   if (!selectedViewId) {
-                    setEditingPanel(true);
+                    setEditingPanel(true)
                   } else {
-                    handlePanelClick();
+                    handlePanelClick()
                   }
                 }
               }}
-              role="button"
-              tabIndex={0}
             >
-              <div className={`
+              <div
+                className={`
                   h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
-                  ${editingPanel
-                  ? 'bg-slate-50 border-blue-200' // Highlight when editing
-                  : !selectedViewId
-                    ? 'bg-white border-gray-200'
-                    : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
-                }
-                `}>
-                <LayoutGrid className={`h-3 w-3 mr-2 ${!selectedViewId ? 'text-yellow-800' : 'text-gray-500'}`} />
+                  ${
+                    editingPanel
+                      ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                      : !selectedViewId
+                        ? 'bg-white border-gray-200'
+                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                  }
+                `}
+              >
+                <LayoutGrid
+                  className={`h-3 w-3 mr-2 ${!selectedViewId ? 'text-yellow-800' : 'text-gray-500'}`}
+                />
                 {editingPanel ? (
                   <div className="flex items-center w-full">
                     <input
@@ -169,16 +183,21 @@ export default function WorklistNavigation({
                       onBlur={handlePanelTitleSubmit}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          handlePanelTitleSubmit();
+                          handlePanelTitleSubmit()
                         } else if (e.key === 'Escape') {
-                          setPanelTitle(panelDefinition.title);
-                          setEditingPanel(false);
+                          setPanelTitle(panelDefinition.title)
+                          setEditingPanel(false)
                         }
                       }}
                       className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-xs"
                     />
                     {panelTitle.trim() !== panelDefinition.title && (
-                      <span className="text-xs text-orange-500 ml-1" title="Unsaved changes">•</span>
+                      <span
+                        className="text-xs text-orange-500 ml-1"
+                        title="Unsaved changes"
+                      >
+                        •
+                      </span>
                     )}
                     {getSaveStatusIcon(panelDefinition.id)}
                   </div>
@@ -187,11 +206,18 @@ export default function WorklistNavigation({
                     <span
                       className="text-xs font-normal text-gray-600 cursor-pointer"
                       onClick={(e) => {
-                        e.stopPropagation();
+                        e.stopPropagation()
                         if (!selectedViewId) {
-                          setEditingPanel(true);
+                          setEditingPanel(true)
                         } else {
-                          handlePanelClick();
+                          handlePanelClick()
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handlePanelClick()
                         }
                       }}
                     >
@@ -202,8 +228,11 @@ export default function WorklistNavigation({
                       type="button"
                       className="ml-2 text-gray-400 hover:text-gray-600"
                       onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteViewClick(panelDefinition.id, panelDefinition.title);
+                        e.stopPropagation()
+                        handleDeleteViewClick(
+                          panelDefinition.id,
+                          panelDefinition.title,
+                        )
                       }}
                     >
                       <X className="h-3 w-3" />
@@ -221,36 +250,60 @@ export default function WorklistNavigation({
                 onClick={() => handleViewClick(view)}
                 onMouseEnter={() => setHoveredViewId(view.id)}
                 onMouseLeave={() => setHoveredViewId(null)}
-              >
-                <div className={`
-                    h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
-                    ${editingViewId === view.id
-                    ? 'bg-slate-50 border-blue-200' // Highlight when editing
-                    : view.id === selectedViewId
-                      ? 'bg-white border-gray-200'
-                      : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleViewClick(view)
                   }
-                  `}>
+                }}
+              >
+                <div
+                  className={`
+                    h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
+                    ${
+                      editingViewId === view.id
+                        ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                        : view.id === selectedViewId
+                          ? 'bg-white border-gray-200'
+                          : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                    }
+                  `}
+                >
                   {editingViewId === view.id ? (
                     <div className="flex items-center w-full">
                       <input
                         type="text"
                         value={viewTitles[view.id] || ''}
                         placeholder="Enter view name..."
-                        onChange={(e) => setViewTitles(prev => ({ ...prev, [view.id]: e.target.value }))}
+                        onChange={(e) =>
+                          setViewTitles((prev) => ({
+                            ...prev,
+                            [view.id]: e.target.value,
+                          }))
+                        }
                         onBlur={() => handleViewTitleSubmit(view.id)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            handleViewTitleSubmit(view.id);
+                            handleViewTitleSubmit(view.id)
                           } else if (e.key === 'Escape') {
-                            setViewTitles(prev => ({ ...prev, [view.id]: view.title || '' }));
-                            setEditingViewId(null);
+                            setViewTitles((prev) => ({
+                              ...prev,
+                              [view.id]: view.title || '',
+                            }))
+                            setEditingViewId(null)
                           }
                         }}
                         className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-xs"
                       />
-                      {(viewTitles[view.id] || '').trim() !== (view.title || '') && (
-                        <span className="text-xs text-orange-500 ml-1" title="Unsaved changes">•</span>
+                      {(viewTitles[view.id] || '').trim() !==
+                        (view.title || '') && (
+                        <span
+                          className="text-xs text-orange-500 ml-1"
+                          title="Unsaved changes"
+                        >
+                          •
+                        </span>
                       )}
                       {getSaveStatusIcon(view.id)}
                     </div>
@@ -259,11 +312,18 @@ export default function WorklistNavigation({
                       <span
                         className="text-xs font-normal text-gray-600 cursor-pointer"
                         onClick={(e) => {
-                          e.stopPropagation();
+                          e.stopPropagation()
                           if (view.id === selectedViewId) {
-                            setEditingViewId(view.id);
+                            setEditingViewId(view.id)
                           } else {
-                            handleViewClick(view);
+                            handleViewClick(view)
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleViewClick(view)
                           }
                         }}
                       >
@@ -274,8 +334,8 @@ export default function WorklistNavigation({
                         type="button"
                         className="ml-2 text-gray-400 hover:text-gray-600"
                         onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteViewClick(view.id, view.title || '');
+                          e.stopPropagation()
+                          handleDeleteViewClick(view.id, view.title || '')
                         }}
                       >
                         <X className="h-3 w-3" />
@@ -309,5 +369,5 @@ export default function WorklistNavigation({
         isDeleting={!!deletingViewId}
       />
     </>
-  );
+  )
 }
