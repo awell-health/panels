@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Send } from 'lucide-react'
 import type { ChatMessage } from '@/app/actions/ai-chat'
 import ReactMarkdown from 'react-markdown'
@@ -22,6 +22,8 @@ export default function AIConversationDrawer({
     Promise.resolve("Hi, I'm your Assistant. How can I help you?"),
 }: AIConversationDrawerProps) {
   const [inputMessage, setInputMessage] = useState('')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const {
     messages,
@@ -35,6 +37,25 @@ export default function AIConversationDrawer({
     maxRetries: 3,
     retryDelay: 1000
   })
+
+  // Auto-scroll to bottom when messages change or processing state changes
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end'
+        })
+      }
+    }
+
+    // Only scroll if there are messages or if processing is happening
+    if (messages.length > 0 || isAnyMessageProcessing || isInitialLoading) {
+      // Use a small delay to ensure DOM has been updated
+      const timeoutId = setTimeout(scrollToBottom, 100)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [messages.length, isAnyMessageProcessing, isInitialLoading])
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isAnyMessageProcessing) return
@@ -150,7 +171,7 @@ export default function AIConversationDrawer({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4" ref={scrollContainerRef}>
         {isInitialLoading ? (
           <div className="flex justify-start">
             <div className="bg-gray-100 text-gray-900 rounded-lg p-4">
@@ -164,6 +185,8 @@ export default function AIConversationDrawer({
           <>
             {messages.map(renderMessage)}
             {getProcessingIndicator()}
+            {/* Invisible element to scroll to */}
+            <div ref={messagesEndRef} />
           </>
         )}
       </div>
