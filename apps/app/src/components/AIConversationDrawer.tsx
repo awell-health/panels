@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Send } from 'lucide-react'
 import type { ChatMessage } from '@/app/actions/ai-chat'
 import ReactMarkdown from 'react-markdown'
+import { logger } from '@/lib/logger'
 
 interface AIConversationDrawerProps {
   onClose: () => void
@@ -32,8 +33,21 @@ export default function AIConversationDrawer({
       try {
         const initialMessage = await getInitialMessage()
         setConversation([{ role: 'assistant', content: initialMessage }])
+        logger.info({
+          messageLength: initialMessage.length,
+          operationType: 'ai-conversation',
+          component: 'AIConversationDrawer',
+          action: 'load-initial-message',
+        }, 'Successfully loaded initial AI conversation message')
       } catch (error) {
-        console.error('Error loading initial message:', error)
+        logger.error({
+          retryAvailable: true,
+          operationType: 'ai-conversation',
+          component: 'AIConversationDrawer',
+          action: 'load-initial-message',
+        }, 'Failed to load initial AI conversation message',
+          error instanceof Error ? error : new Error(String(error)))
+
         setConversation([
           {
             role: 'assistant',
@@ -58,11 +72,21 @@ export default function AIConversationDrawer({
       { role: 'user', content: message },
     ]
     setConversation(updatedConversation)
+    const userMessage = message
     setMessage('')
     setIsLoading(true)
 
+    logger.info({
+      messageLength: userMessage.length,
+      conversationLength: updatedConversation.length,
+      operationType: 'ai-conversation',
+      component: 'AIConversationDrawer',
+      action: 'send-message',
+    }, 'User sending message to AI conversation')
+
     try {
       const botResponse = await onSendMessage(updatedConversation)
+
       // Add bot response to conversation
       setConversation((prev) => [
         ...prev,
@@ -71,8 +95,24 @@ export default function AIConversationDrawer({
           content: botResponse,
         },
       ])
+
+      logger.info({
+        responseLength: botResponse.length,
+        conversationLength: updatedConversation.length + 1,
+        operationType: 'ai-conversation',
+        component: 'AIConversationDrawer',
+        action: 'receive-response',
+      }, 'Successfully received AI response')
     } catch (error) {
-      console.error('Error sending message:', error)
+      logger.error({
+        messageLength: userMessage.length,
+        conversationLength: updatedConversation.length,
+        operationType: 'ai-conversation',
+        component: 'AIConversationDrawer',
+        action: 'send-message',
+      }, 'Failed to process AI conversation message',
+        error instanceof Error ? error : new Error(String(error)))
+
       setConversation((prev) => [
         ...prev,
         {
@@ -107,11 +147,10 @@ export default function AIConversationDrawer({
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg p-4 ${
-                    msg.role === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-900'
-                  }`}
+                  className={`max-w-[80%] rounded-lg p-4 ${msg.role === 'user'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-900'
+                    }`}
                 >
                   {msg.role === 'assistant' ? (
                     <div className="prose prose-sm max-w-none">

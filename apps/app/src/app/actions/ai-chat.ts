@@ -3,6 +3,7 @@
 import type { ViewDefinition, WorklistDefinition } from '@/types/worklist'
 import { OpenAI } from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
+import { logger } from '@/lib/logger'
 
 export type ChatMessage = {
   role: 'user' | 'assistant'
@@ -110,14 +111,53 @@ export const columnAiAssistantMessageHandler = async (
 
   const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
   if (jsonMatch) {
-    console.log('jsonMatch', jsonMatch)
-    const updatedDefinition = JSON.parse(jsonMatch[1])
-    console.log('updatedDefinition', updatedDefinition)
+    logger.debug(
+      {
+        jsonMatch: jsonMatch[1],
+        operationType: 'ai-chat',
+        component: 'column-assistant',
+        action: 'parse-definition',
+      },
+      'Found JSON definition in AI response',
+    )
 
-    return {
-      response: response,
-      needsDefinitionUpdate: true,
-      definition: updatedDefinition,
+    try {
+      const updatedDefinition = JSON.parse(jsonMatch[1])
+      logger.info(
+        {
+          definitionType: updatedDefinition.title ? 'worklist' : 'view',
+          columnCount:
+            (updatedDefinition.taskViewColumns?.length || 0) +
+            (updatedDefinition.patientViewColumns?.length || 0),
+          operationType: 'ai-chat',
+          component: 'column-assistant',
+          action: 'definition-update',
+        },
+        'Successfully parsed worklist definition from AI response',
+      )
+
+      return {
+        response: response,
+        needsDefinitionUpdate: true,
+        definition: updatedDefinition,
+      }
+    } catch (error) {
+      logger.error(
+        {
+          rawJson: jsonMatch[1],
+          responseLength: response.length,
+          operationType: 'ai-chat',
+          component: 'column-assistant',
+          action: 'parse-definition',
+        },
+        'Failed to parse JSON definition from AI response',
+        error instanceof Error ? error : new Error(String(error)),
+      )
+
+      return {
+        response: response,
+        needsDefinitionUpdate: false,
+      }
     }
   }
   return {
@@ -150,7 +190,18 @@ export async function chatWithAI(
       })),
     ]
 
-    console.log('Sending another message', messages[messages.length - 1])
+    logger.info(
+      {
+        messageCount: messages.length,
+        lastMessageLength: messages[messages.length - 1]?.content.length || 0,
+        model: 'gpt-4-turbo-preview',
+        hasCustomBotDescription: !!botDescription,
+        operationType: 'ai-chat',
+        component: 'openai-client',
+        action: 'send-message',
+      },
+      'Sending message to OpenAI',
+    )
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
@@ -159,12 +210,39 @@ export async function chatWithAI(
       max_tokens: 4096,
     })
 
-    return (
+    const responseContent =
       response.choices[0].message.content ||
       'I apologize, but I could not generate a response.'
+
+    logger.info(
+      {
+        responseLength: responseContent.length,
+        tokensUsed: response.usage?.total_tokens,
+        promptTokens: response.usage?.prompt_tokens,
+        completionTokens: response.usage?.completion_tokens,
+        finishReason: response.choices[0].finish_reason,
+        operationType: 'ai-chat',
+        component: 'openai-client',
+        action: 'receive-response',
+      },
+      'Successfully received OpenAI response',
     )
+
+    return responseContent
   } catch (error) {
-    console.error('Error in chatWithAI:', error)
+    logger.error(
+      {
+        messageCount: messages.length,
+        model: 'gpt-4-turbo-preview',
+        hasApiKey: !!process.env.OPENAI_API_KEY,
+        operationType: 'ai-chat',
+        component: 'openai-client',
+        action: 'api-error',
+      },
+      'Failed to process chat request with OpenAI',
+      error instanceof Error ? error : new Error(String(error)),
+    )
+
     throw new Error('Failed to process chat request')
   }
 }
