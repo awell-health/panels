@@ -16,20 +16,32 @@ export default function RightDrawer({
   children,
 }: RightDrawerProps) {
   return (
-    <div className="drawer-area">
-      <div className={`drawer-content ${open ? '' : 'opacity-0'}`}>
-        <div className="flex flex-col h-full">
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-xs font-normal text-gray-700">{title}</h2>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm btn-circle text-xs font-normal text-gray-700"
-              onClick={onClose}
-            >
-              ✕
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 text-xs font-normal text-gray-700">
+    <div
+      className="bg-white shadow-[-2px_0_8px_rgba(0,0,0,0.1)] overflow-hidden"
+      style={{ gridArea: 'drawer' }}
+    >
+      <div
+        className={`
+          h-full flex flex-col transition-opacity duration-300 ease-in-out
+          ${open ? 'opacity-100' : 'opacity-0'}
+        `}
+      >
+        {/* Fixed Header - Always Visible */}
+        <div className="flex-shrink-0 p-4 border-b border-gray-200 flex items-center justify-between bg-white">
+          <h2 className="text-xs font-normal text-gray-700">{title}</h2>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm btn-circle text-xs font-normal text-gray-700 hover:bg-gray-100"
+            onClick={onClose}
+            aria-label="Close drawer"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable Content Area - Both horizontal and vertical scrolling */}
+        <div className="flex-1 overflow-auto p-4 text-xs font-normal text-gray-700">
+          <div className="drawer-content">
             {children}
           </div>
         </div>

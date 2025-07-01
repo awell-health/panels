@@ -4,6 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 import { Send } from 'lucide-react'
 import type { ChatMessage } from '@/app/actions/ai-chat'
 import ReactMarkdown from 'react-markdown'
+import { logger } from '@/lib/logger'
+import { useAIConversation } from '@/hooks/use-ai-conversation'
+import MessageStatus from '@/components/MessageStatus'
+import { getConversationErrorMessage, mapErrorToUserFriendly } from '@/lib/error-messages'
 
 interface AIConversationDrawerProps {
   onClose: () => void
@@ -15,147 +19,215 @@ export default function AIConversationDrawer({
   onClose,
   onSendMessage,
   getInitialMessage = () =>
-    Promise.resolve("Hi, I'm the your Assistant. How can I help you?"),
+    Promise.resolve("Hi, I'm your Assistant. How can I help you?"),
 }: AIConversationDrawerProps) {
-  const [message, setMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isInitialLoading, setIsInitialLoading] = useState(true)
-  const [conversation, setConversation] = useState<ChatMessage[]>([])
-  const initialMessageLoaded = useRef(false)
+  const [inputMessage, setInputMessage] = useState('')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  // Load initial message
+  const {
+    messages,
+    isInitialLoading,
+    sendMessage,
+    retryMessage,
+    isAnyMessageProcessing
+  } = useAIConversation({
+    onSendMessage,
+    getInitialMessage,
+    maxRetries: 3,
+    retryDelay: 1000
+  })
+
+  // Auto-scroll to bottom when messages change or processing state changes
   useEffect(() => {
-    const loadInitialMessage = async () => {
-      if (initialMessageLoaded.current) return
-      initialMessageLoaded.current = true
-
-      try {
-        const initialMessage = await getInitialMessage()
-        setConversation([{ role: 'assistant', content: initialMessage }])
-      } catch (error) {
-        console.error('Error loading initial message:', error)
-        setConversation([
-          {
-            role: 'assistant',
-            content:
-              'I apologize, but I encountered an error while loading the initial message. Please try again.',
-          },
-        ])
-      } finally {
-        setIsInitialLoading(false)
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end'
+        })
       }
     }
 
-    loadInitialMessage()
-  }, [getInitialMessage])
+    // Only scroll if there are messages or if processing is happening
+    if (messages.length > 0 || isAnyMessageProcessing || isInitialLoading) {
+      // Use a small delay to ensure DOM has been updated
+      const timeoutId = setTimeout(scrollToBottom, 100)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [messages.length, isAnyMessageProcessing, isInitialLoading])
 
   const handleSendMessage = async () => {
-    if (!message.trim()) return
+    if (!inputMessage.trim() || isAnyMessageProcessing) return
 
-    // Add user message to conversation
-    const updatedConversation: ChatMessage[] = [
-      ...conversation,
-      { role: 'user', content: message },
-    ]
-    setConversation(updatedConversation)
-    setMessage('')
-    setIsLoading(true)
+    const messageToSend = inputMessage
+    setInputMessage('')
 
-    try {
-      const botResponse = await onSendMessage(updatedConversation)
-      // Add bot response to conversation
-      setConversation((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: botResponse,
-        },
-      ])
-    } catch (error) {
-      console.error('Error sending message:', error)
-      setConversation((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content:
-            'I apologize, but I encountered an error while processing your message. Please try again.',
-        },
-      ])
-    } finally {
-      setIsLoading(false)
-    }
+    logger.info({
+      messageLength: messageToSend.length,
+      conversationLength: messages.length,
+      operationType: 'ai-conversation',
+      component: 'AIConversationDrawer',
+      action: 'send-message',
+    }, 'User sending message to AI conversation')
+
+    await sendMessage(messageToSend)
+  }
+
+  const handleRetryMessage = async (messageId: string) => {
+    logger.info({
+      messageId,
+      conversationLength: messages.length,
+      operationType: 'ai-conversation',
+      component: 'AIConversationDrawer',
+      action: 'retry-message',
+    }, 'User retrying failed message')
+
+    await retryMessage(messageId)
+  }
+
+  const getProcessingIndicator = () => {
+    if (!isAnyMessageProcessing) return null
+
+    return (
+      <div className="flex justify-start">
+        <div className="bg-gray-100 text-gray-900 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent" />
+            <span className="text-sm text-gray-500">Agent is analyzing your request...</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const renderMessage = (message: typeof messages[0], index: number) => {
+    const isUser = message.role === 'user'
+    const showStatus = isUser && (message.status !== 'sent' || message.error)
+
+    return (
+      <div key={message.id} className="space-y-2">
+        <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+          <div
+            className={`max-w-[80%] rounded-lg p-4 ${isUser
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-100 text-gray-900'
+              }`}
+          >
+            {message.role === 'assistant' ? (
+              <div className="prose prose-sm max-w-none">
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              </div>
+            ) : (
+              message.content
+            )}
+          </div>
+        </div>
+
+        {/* Message Status for User Messages */}
+        {showStatus && (
+          <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+            <MessageStatus
+              status={message.status}
+              onRetry={() => handleRetryMessage(message.id)}
+              retryCount={message.retryCount}
+              maxRetries={3}
+              error={message.error ? getConversationErrorMessage(
+                message.error,
+                {
+                  retryCount: message.retryCount,
+                  messageContent: message.content,
+                  isOnline: navigator?.onLine
+                }
+              ) : undefined}
+              className="mt-1 mr-4"
+            />
+          </div>
+        )}
+
+        {/* Enhanced Error Message for Failed Messages */}
+        {isUser && message.status === 'failed' && message.error && (
+          <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+            <div className="max-w-[80%] mr-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
+                <div className="flex items-start space-x-2">
+                  <div className="text-red-600 font-medium">
+                    {mapErrorToUserFriendly(message.error).title}
+                  </div>
+                </div>
+                <div className="text-red-700 mt-1">
+                  {mapErrorToUserFriendly(message.error, {
+                    retryCount: message.retryCount,
+                    isOnline: navigator?.onLine
+                  }).actionable}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4" ref={scrollContainerRef}>
         {isInitialLoading ? (
           <div className="flex justify-start">
             <div className="bg-gray-100 text-gray-900 rounded-lg p-4">
               <div className="flex items-center space-x-2">
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent" />
-                <span className="text-sm text-gray-500">Thinking...</span>
+                <span className="text-sm text-gray-500">Agent is loading...</span>
               </div>
             </div>
           </div>
         ) : (
           <>
-            {conversation.map((msg, index) => (
-              <div
-                // biome-ignore lint/suspicious/noArrayIndexKey: message don't have an id
-                key={index}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-lg p-4 ${
-                    msg.role === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
-                  {msg.role === 'assistant' ? (
-                    <div className="prose prose-sm max-w-none">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
-                  ) : (
-                    msg.content
-                  )}
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 text-gray-900 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent" />
-                    <span className="text-sm text-gray-500">Thinking...</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            {messages.map(renderMessage)}
+            {getProcessingIndicator()}
+            {/* Invisible element to scroll to */}
+            <div ref={messagesEndRef} />
           </>
         )}
       </div>
+
+      {/* Input Section */}
       <div className="border-t border-gray-200 p-4">
         <div className="flex space-x-2">
           <input
             type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Type your message..."
-            disabled={isInitialLoading}
-            className="flex-1 px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+            placeholder={
+              isAnyMessageProcessing
+                ? "Please wait for the current message to complete..."
+                : "Type your message..."
+            }
+            disabled={isInitialLoading || isAnyMessageProcessing}
+            className="flex-1 px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           />
           <button
             type="button"
             onClick={handleSendMessage}
-            disabled={isLoading || isInitialLoading}
-            className={`px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-500 ${isLoading || isInitialLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isInitialLoading || isAnyMessageProcessing || !inputMessage.trim()}
+            className={`px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${isInitialLoading || isAnyMessageProcessing || !inputMessage.trim()
+              ? 'opacity-50 cursor-not-allowed'
+              : ''
+              }`}
+            aria-label="Send message"
           >
             <Send className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Connection Status */}
+        {typeof navigator !== 'undefined' && !navigator.onLine && (
+          <div className="mt-2 flex items-center space-x-2 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+            <div className="h-2 w-2 bg-amber-500 rounded-full" />
+            <span>You're currently offline. Messages will be sent when your connection is restored.</span>
+          </div>
+        )}
       </div>
     </div>
   )
