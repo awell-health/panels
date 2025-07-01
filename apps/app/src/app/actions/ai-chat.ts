@@ -1,14 +1,22 @@
 'use server'
 
+import { logger } from '@/lib/logger'
 import type { ViewDefinition, WorklistDefinition } from '@/types/worklist'
+import { wrapOpenAI } from 'langsmith/wrappers'
 import { OpenAI } from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
-import { logger } from '@/lib/logger'
 
 export type ChatMessage = {
   role: 'user' | 'assistant'
   content: string
 }
+
+// Create OpenAI client wrapped with LangSmith tracing
+const openai = wrapOpenAI(
+  new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  }),
+)
 
 // TODO: Move this to the backend service
 /**
@@ -20,6 +28,7 @@ export const columnAiAssistantMessageHandler = async (
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   data: any[],
   currentDefinition?: WorklistDefinition | ViewDefinition,
+  userName?: string,
 ): Promise<{
   response: string
   needsDefinitionUpdate: boolean
@@ -107,7 +116,7 @@ export const columnAiAssistantMessageHandler = async (
             Be concise and clear in your explanations.
             When suggesting changes, always include the complete updated worklist definition in a JSON code block. Never add comments to the worklist JSON definition.
 `
-  const response = await chatWithAI(messages, prompt)
+  const response = await chatWithAI(messages, prompt, userName)
 
   const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
   if (jsonMatch) {
@@ -169,12 +178,9 @@ export const columnAiAssistantMessageHandler = async (
 export async function chatWithAI(
   messages: ChatMessage[],
   botDescription?: string,
+  userName?: string,
 ): Promise<string> {
   try {
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    })
-
     const systemMessage: ChatCompletionMessageParam = {
       role: 'system',
       content:
@@ -199,16 +205,29 @@ export async function chatWithAI(
         operationType: 'ai-chat',
         component: 'openai-client',
         action: 'send-message',
+        userName,
       },
-      'Sending message to OpenAI',
+      'Sending message to OpenAI with LangSmith tracing',
     )
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: formattedMessages,
-      temperature: 0.2,
-      max_tokens: 4096,
-    })
+    const response = await openai.chat.completions.create(
+      {
+        model: 'gpt-4-turbo-preview',
+        messages: formattedMessages,
+        temperature: 0.2,
+        max_tokens: 4096,
+      },
+      {
+        langsmithExtra: {
+          metadata: {
+            userName: userName || 'anonymous',
+            operationType: 'ai-chat',
+            component: 'openai-client',
+          },
+          tags: ['healthcare-ai', 'column-assistant'],
+        },
+      },
+    )
 
     const responseContent =
       response.choices[0].message.content ||
@@ -224,6 +243,7 @@ export async function chatWithAI(
         operationType: 'ai-chat',
         component: 'openai-client',
         action: 'receive-response',
+        userName,
       },
       'Successfully received OpenAI response',
     )
@@ -238,6 +258,7 @@ export async function chatWithAI(
         operationType: 'ai-chat',
         component: 'openai-client',
         action: 'api-error',
+        userName,
       },
       'Failed to process chat request with OpenAI',
       error instanceof Error ? error : new Error(String(error)),

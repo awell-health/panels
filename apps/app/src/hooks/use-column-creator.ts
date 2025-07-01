@@ -97,6 +97,7 @@ export const useColumnCreator = ({
         conversation,
         currentView === 'patient' ? patients.slice(0, 2) : tasks.slice(0, 2),
         worklistDefinition ? { ...worklistDefinition, views: [] } : undefined,
+        user?.name,
       )
 
       if (result.needsDefinitionUpdate && result.definition) {

@@ -30,6 +30,7 @@
     "daisyui": "^5.0.43",
     "date-fns": "^4.1.0",
     "fhirpath": "^4.3.0",
+    "langsmith": "^0.3.36",
     "lucide-react": "^0.511.0",
     "next": "15.3.3",
     "next-auth": "5.0.0-beta.25",
