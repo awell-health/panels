@@ -11,12 +11,14 @@ import { useReactivePanel } from '@/hooks/use-reactive-data'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
+import { applyColumnChangesToPanel } from '@/lib/column-utils'
 import type {
   ColumnDefinition,
   Filter,
   SortConfig,
   ViewDefinition,
   WorklistDefinition,
+  ColumnChangesResponse,
 } from '@/types/worklist'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Loader2 } from 'lucide-react'
@@ -92,31 +94,24 @@ export default function WorklistPage() {
     }
   }, [isPanelLoading, panel, panelError, router])
 
-  const onColumnChange = async (
-    column: WorklistDefinition | ViewDefinition,
-  ) => {
-    if (!panel) {
-      return
-    }
-
-    const newPanel = {
-      ...panel,
-      ...column,
-    }
+  const handleColumnChanges = async (columnChanges: ColumnChangesResponse) => {
+    if (!panel) return
 
     try {
-      await updatePanel(panel.id, newPanel)
+      const updatedPanel = applyColumnChangesToPanel(panel, columnChanges.changes)
+      await updatePanel(panel.id, updatedPanel)
     } catch (error) {
-      console.error('Failed to update panel:', error)
+      console.error('Failed to apply column changes to panel:', error)
     }
   }
 
   const { onAddColumn } = useColumnCreator({
-    currentView,
+    currentViewType: currentView,
     patients,
     tasks,
-    worklistDefinition: panel || undefined,
-    onDefinitionChange: onColumnChange,
+    panelDefinition: panel || undefined,
+    // No currentViewId - we're working at panel level
+    onColumnChanges: handleColumnChanges,
   })
 
   const onNewView = async () => {
@@ -331,9 +326,9 @@ export default function WorklistPage() {
                 onSortConfigUpdate={setSortConfig}
                 worklistColumns={columns}
                 tableData={filteredData}
-                handlePDFClick={() => {}}
-                handleTaskClick={() => {}}
-                handleRowHover={() => {}}
+                handlePDFClick={() => { }}
+                handleTaskClick={() => { }}
+                handleRowHover={() => { }}
                 toggleSelectRow={toggleSelectRow}
                 handleAssigneeClick={(taskId: string) =>
                   toggleTaskOwner(taskId)
@@ -351,7 +346,7 @@ export default function WorklistPage() {
                 <AddIngestionModal
                   isOpen={isAddingIngestionSource}
                   onClose={() => setIsAddingIngestionSource(false)}
-                  onSelectSource={() => {}}
+                  onSelectSource={() => { }}
                   ingestionBots={[]}
                 />
               )}

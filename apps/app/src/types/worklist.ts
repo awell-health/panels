@@ -71,3 +71,17 @@ export type ViewDefinition = {
   viewType: 'task' | 'patient'
   sortConfig?: SortConfig[]
 }
+
+export type ColumnChangeOperation = 'create' | 'update' | 'delete'
+
+export type ColumnChange = {
+  id: string
+  operation: ColumnChangeOperation
+  column?: Partial<ColumnDefinition> // Only needed for create/update
+  viewType: 'patient' | 'task' // Which view type this change applies to
+}
+
+export type ColumnChangesResponse = {
+  changes: ColumnChange[]
+  explanation: string // AI's explanation of what it's doing
+}

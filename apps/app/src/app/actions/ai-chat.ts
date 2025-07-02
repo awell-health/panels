@@ -1,7 +1,11 @@
 'use server'
 
 import { logger } from '@/lib/logger'
-import type { ViewDefinition, WorklistDefinition } from '@/types/worklist'
+import type {
+  ViewDefinition,
+  WorklistDefinition,
+  ColumnChangesResponse,
+} from '@/types/worklist'
 import { wrapOpenAI } from 'langsmith/wrappers'
 import { OpenAI } from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
@@ -27,12 +31,15 @@ export const columnAiAssistantMessageHandler = async (
   messages: ChatMessage[],
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   data: any[],
-  currentDefinition?: WorklistDefinition | ViewDefinition,
   userName?: string,
+  context?: {
+    currentViewId?: string
+    currentViewType: 'patient' | 'task'
+    panelDefinition?: WorklistDefinition
+  },
 ): Promise<{
   response: string
-  needsDefinitionUpdate: boolean
-  definition?: WorklistDefinition | ViewDefinition
+  columnChanges?: ColumnChangesResponse
 }> => {
   const reducedData = data.slice(0, 2).map((item) => {
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
@@ -56,16 +63,40 @@ export const columnAiAssistantMessageHandler = async (
     return reduceValue(item)
   })
 
-  const prompt = `You are **DataFlow**, a knowledgeable and efficient healthcare data assistant specializing in designing and optimizing **worklist columns** for clinical workflows. Your primary goal is to help users create meaningful, actionable columns that enhance care delivery and operational efficiency.
+  // Build current context information
+  const contextInfo = context?.currentViewId
+    ? `**Working Context:** View (ID: ${context.currentViewId}) - ${context.currentViewType} view type`
+    : `**Working Context:** Panel - ${context?.currentViewType} view type`
 
-You work exclusively with **FHIR data** and help users transform complex healthcare data into clear, useful worklist views for clinicians, care coordinators, and administrative staff.
+  // Build context-specific column management rules
+  const columnManagementRules = context?.currentViewId
+    ? `**When working on a VIEW:**
+- You are adding columns to make them visible in this specific view
+- If a column already exists at the panel level: use a "create" operation with the existing column's ID and full definition
+- If a column doesn't exist at the panel level: use a "create" operation with a new ID and definition
+- The system will handle adding new columns to the panel first, then referencing them in the view
+
+**Example**: User asks to "add Care Flow ID column to this view"
+- Check panel columns for "Care Flow ID" 
+- If found (e.g., ID "457"): create operation with id "457" and existing definition
+- If not found: create operation with new ID and new definition`
+    : `**When working on a PANEL:**
+- Check existing panel columns to avoid duplicates
+- New columns added here become available to all views
+- Use descriptive, unique column names and IDs`
+
+  const prompt = `You are **DataFlow**, a knowledgeable and efficient healthcare data assistant specializing in designing and optimizing **panel columns** for clinical workflows. Your primary goal is to help users create meaningful, actionable columns that enhance care delivery and operational efficiency.
+
+You work exclusively with **FHIR data** and help users transform complex healthcare data into clear, useful panel views for clinicians, care coordinators, and administrative staff.
 
 ---
 
 ### Current Context:
 
-**Worklist Definition:**
-${JSON.stringify(currentDefinition, null, 2)}
+${contextInfo}
+
+**Panel Definition:**
+${JSON.stringify(context?.panelDefinition, null, 2)}
 
 **Available FHIR Data Sample:**
 ${JSON.stringify(reducedData, null, 2)}
@@ -94,7 +125,7 @@ ${JSON.stringify(reducedData, null, 2)}
 
 ### Your Limitations:
 
-- **One worklist at a time**: You can only work on the current worklist definition
+- **One panel at a time**: You can only work on the current panel definition
 - **FHIR data only**: You work exclusively with FHIR-compliant healthcare data
 - **No data creation**: You cannot add data that doesn't exist in the source
 - **Clinical guidance**: You provide data insights, not clinical recommendations
@@ -121,7 +152,7 @@ ${JSON.stringify(reducedData, null, 2)}
 - **Provide alternatives** when multiple options exist
 
 #### 4. **Execute Changes**:
-- **Create comprehensive worklist definitions** with proper structure
+- **Create comprehensive panel definitions** with proper structure
 - **Use appropriate data types** for each column
 - **Write efficient FHIRPath expressions**
 - **Include meaningful descriptions** for clinical users
@@ -169,33 +200,43 @@ ${JSON.stringify(reducedData, null, 2)}
 
 ---
 
-### Column Definition Structure:
+### Column Changes Response Structure:
 
-When updating worklist definitions, use this exact structure:
+When making column changes, respond with this exact JSON structure:
 
 \`\`\`json
 {
-  "title": "Clear, descriptive worklist title",
-  "taskViewColumns": [
+  "changes": [
     {
       "id": "unique_column_id",
-      "name": "User-friendly column name",
-      "type": "string|number|date|boolean|tasks|select|array",
-      "key": "fhirpath.expression.here",
-      "description": "Clinical context and purpose"
+      "operation": "create|update|delete",
+      "viewType": "patient|task",
+      "column": {
+        "id": "unique_column_id",
+        "name": "User-friendly column name",
+        "type": "string|number|date|boolean|tasks|select|array",
+        "key": "fhirpath.expression.here",
+        "description": "Clinical context and purpose"
+      }
     }
   ],
-  "patientViewColumns": [
-    {
-      "id": "unique_column_id", 
-      "name": "User-friendly column name",
-      "type": "string|number|date|boolean|tasks|select|array",
-      "key": "fhirpath.expression.here",
-      "description": "Clinical context and purpose"
-    }
-  ]
+  "explanation": "Brief explanation of changes made"
 }
 \`\`\`
+
+**Operation Types:**
+- **"create"**: Add a new column (requires full column definition)
+- **"update"**: Modify existing column (requires column.id + changed properties)
+- **"delete"**: Remove column (only requires id and viewType)
+
+**Guidelines:**
+- Only include columns that need to be changed
+- For updates, only include the properties that are changing
+- Always specify the correct viewType for each change
+- Provide clear explanation of what you're doing
+
+**Column Management Rules:**
+${columnManagementRules}
 
 ---
 
@@ -226,7 +267,7 @@ When updating worklist definitions, use this exact structure:
 
 ---
 
-Be helpful, accurate, and focused on creating meaningful healthcare worklists that enhance patient care and operational efficiency.`
+Be helpful, accurate, and focused on creating meaningful healthcare panels and views that enhance patient care and operational efficiency.`
   const response = await chatWithAI(messages, prompt, userName)
 
   const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
@@ -236,30 +277,32 @@ Be helpful, accurate, and focused on creating meaningful healthcare worklists th
         jsonMatch: jsonMatch[1],
         operationType: 'ai-chat',
         component: 'column-assistant',
-        action: 'parse-definition',
+        action: 'parse-column-changes',
       },
-      'Found JSON definition in AI response',
+      'Found JSON column changes in AI response',
     )
 
     try {
-      const updatedDefinition = JSON.parse(jsonMatch[1])
-      logger.info(
-        {
-          definitionType: updatedDefinition.title ? 'worklist' : 'view',
-          columnCount:
-            (updatedDefinition.taskViewColumns?.length || 0) +
-            (updatedDefinition.patientViewColumns?.length || 0),
-          operationType: 'ai-chat',
-          component: 'column-assistant',
-          action: 'definition-update',
-        },
-        'Successfully parsed worklist definition from AI response',
-      )
+      const changesResponse: ColumnChangesResponse = JSON.parse(jsonMatch[1])
 
-      return {
-        response: response,
-        needsDefinitionUpdate: true,
-        definition: updatedDefinition,
+      // Validate the response structure
+      if (changesResponse.changes && Array.isArray(changesResponse.changes)) {
+        logger.info(
+          {
+            changeCount: changesResponse.changes.length,
+            operations: changesResponse.changes.map((c) => c.operation),
+            viewTypes: changesResponse.changes.map((c) => c.viewType),
+            operationType: 'ai-chat',
+            component: 'column-assistant',
+            action: 'column-changes-parsed',
+          },
+          'Successfully parsed column changes from AI response',
+        )
+
+        return {
+          response: response,
+          columnChanges: changesResponse,
+        }
       }
     } catch (error) {
       logger.error(
@@ -268,21 +311,16 @@ Be helpful, accurate, and focused on creating meaningful healthcare worklists th
           responseLength: response.length,
           operationType: 'ai-chat',
           component: 'column-assistant',
-          action: 'parse-definition',
+          action: 'parse-column-changes',
         },
-        'Failed to parse JSON definition from AI response',
+        'Failed to parse column changes from AI response',
         error instanceof Error ? error : new Error(String(error)),
       )
-
-      return {
-        response: response,
-        needsDefinitionUpdate: false,
-      }
     }
   }
+
   return {
     response: response,
-    needsDefinitionUpdate: false,
   }
 }
 
