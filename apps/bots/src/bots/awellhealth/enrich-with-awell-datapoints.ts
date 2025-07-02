@@ -1,8 +1,32 @@
 import type { BotEvent, MedplumClient } from '@medplum/core';
-import type { Task, Patient, HumanName, Address } from '@medplum/fhirtypes';
+import type { Task, Extension } from '@medplum/fhirtypes';
 
 let GRAPHQL_ENDPOINT = '';
 let API_KEY = '';
+
+interface GraphQLError {
+  message: string;
+  locations?: Array<{ line: number; column: number }>;
+  path?: string[];
+}
+
+interface DataPointDefinitionsResponse {
+  data: { 
+    pathwayDataPointDefinitions: { 
+      data_point_definitions: DataPointDefinition[] 
+    } 
+  };
+  errors?: GraphQLError[];
+}
+
+interface DataPointsResponse {
+  data: { 
+    pathwayDataPoints: { 
+      dataPoints: DataPoint[] 
+    } 
+  };
+  errors?: GraphQLError[];
+}
 
 const GET_DATA_POINT_DEFINITIONS_QUERY = `
   query GetPathwayDataPointDefinitions(
@@ -28,6 +52,7 @@ const GET_DATA_POINT_QUERY = `
         serialized_value
         data_point_definition_id
         valueType
+        date
       }
     }
   }
@@ -42,6 +67,12 @@ interface DataPoint {
   serialized_value: string;
   data_point_definition_id: string;
   valueType: string;
+  date: string;
+}
+
+interface SeparatedDataPoints {
+  jsonDataPoints: DataPoint[];
+  nonJsonDataPoints: DataPoint[];
 }
 
 async function fetchDataPointDefinitions(releaseId: string): Promise<DataPointDefinition[]> {
@@ -58,7 +89,7 @@ async function fetchDataPointDefinitions(releaseId: string): Promise<DataPointDe
     })
   });
 
-  const data = await response.json() as { data: { pathwayDataPointDefinitions: { data_point_definitions: DataPointDefinition[] } }, errors?: any };
+  const data = await response.json() as DataPointDefinitionsResponse;
   const definitions = data.data.pathwayDataPointDefinitions.data_point_definitions;
   console.log(`Retrieved ${definitions.length} data point definitions`);
   return definitions;
@@ -66,6 +97,10 @@ async function fetchDataPointDefinitions(releaseId: string): Promise<DataPointDe
 
 async function fetchDataPoints(pathwayId: string): Promise<DataPoint[]> {
   console.log(`Fetching data points for pathway ID: ${pathwayId}`);
+
+  // For now lets only fetch the latest 1000 data points, that should be enough
+  // we will need to review this strategy later on anyways as we want to classify data
+  // if this is not enough we can use the pagination to fetch all data points.
   const response = await fetch(GRAPHQL_ENDPOINT, {
     method: 'POST',
     headers: {
@@ -74,24 +109,67 @@ async function fetchDataPoints(pathwayId: string): Promise<DataPoint[]> {
     },
     body: JSON.stringify({
       query: GET_DATA_POINT_QUERY,
-      variables: { pathway_id: pathwayId }
+      variables: { pathway_id: pathwayId },
+      pagination: {
+        count: 1000,
+        offset: 0
+      }
     })
   });
 
-  const data = await response.json() as { data: { pathwayDataPoints: { dataPoints: DataPoint[] } }, errors?: any };
+  const data = await response.json() as DataPointsResponse;
   const dataPoints = data.data.pathwayDataPoints.dataPoints;
   console.log(`Retrieved ${dataPoints.length} data points`);
-  return dataPoints;
+
+  // Deduplicate data points based on definition ID and date, keeping only the latest
+  const deduplicatedDataPoints = deduplicateDataPoints(dataPoints);
+  return deduplicatedDataPoints;
 }
 
-function createDataPointExtensions(dataPoints: DataPoint[], dataPointDefinitions: DataPointDefinition[]): Array<{
-  url: string;
-  valueString?: string;
-  extension?: Array<{
-    url: string;
-    valueString: string;
-  }>;
-}> {
+export function deduplicateDataPoints(dataPoints: DataPoint[]): DataPoint[] {
+  const dataPointMap = new Map<string, DataPoint>();
+  
+  for (const dataPoint of dataPoints) {
+    const definitionId = dataPoint.data_point_definition_id;
+    const existingDataPoint = dataPointMap.get(definitionId);
+    
+    if (!existingDataPoint || new Date(dataPoint.date) > new Date(existingDataPoint.date)) {
+      dataPointMap.set(definitionId, dataPoint);
+    }
+  }
+  
+  const deduplicatedDataPoints = Array.from(dataPointMap.values());
+  console.log(`Deduplicated ${dataPoints.length} data points to ${deduplicatedDataPoints.length} unique data points`);
+  return deduplicatedDataPoints;
+}
+
+function isJsonDataPoint(dataPoint: DataPoint): boolean {
+  try {
+    JSON.parse(dataPoint.serialized_value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function separateDataPointsByType(dataPoints: DataPoint[]): SeparatedDataPoints {
+  const jsonDataPoints: DataPoint[] = [];
+  const nonJsonDataPoints: DataPoint[] = [];
+
+  for (const dataPoint of dataPoints) {
+    if (isJsonDataPoint(dataPoint)) {
+      jsonDataPoints.push(dataPoint);
+    } else {
+      nonJsonDataPoints.push(dataPoint);
+    }
+  }
+
+  console.log(`Separated data points: ${jsonDataPoints.length} JSON, ${nonJsonDataPoints.length} non-JSON`);
+  return { jsonDataPoints, nonJsonDataPoints };
+}
+
+function createDataPointExtensions(dataPoints: DataPoint[], dataPointDefinitions: DataPointDefinition[], suffix?: string): Extension[] {
+
   const extensions = dataPoints.map(dataPoint => {
     const definition = dataPointDefinitions.find(definition => definition.id === dataPoint.data_point_definition_id);
 
@@ -110,7 +188,6 @@ function createDataPointExtensions(dataPoints: DataPoint[], dataPointDefinitions
     const value = dataPoint.serialized_value;
 
     if (definition.title === 'CompletionDate' || definition.title === 'ActivationDate') {
-      console.log(`WARNING: Skipping data point ${definition.title} due to CompletionDate`);
       return null;
     }
         
@@ -123,10 +200,126 @@ function createDataPointExtensions(dataPoints: DataPoint[], dataPointDefinitions
   console.log(`Created ${extensions.length} valid data point extensions`);
   return [
     {
-      url: 'https://awellhealth.com/fhir/StructureDefinition/awell-data-points',
+      url: `https://awellhealth.com/fhir/StructureDefinition/awell-data-points${suffix ? `-${suffix}` : ''}`,
       extension: extensions
     }
   ];
+}
+
+function replaceExtensions(
+  existingExtensions: Extension[],
+  newExtensions: Extension[]
+): Extension[] {
+  // Remove existing extensions that match the URLs of new extensions
+  const filteredExtensions = existingExtensions.filter(existingExt => 
+    !newExtensions.some(newExt => newExt.url === existingExt.url)
+  );
+  
+  // Add the new extensions
+  return [...filteredExtensions, ...newExtensions];
+}
+
+async function updateTaskWithExtensions(
+  medplum: MedplumClient, 
+  task: Task, 
+  nonJsonExtensions: Extension[],
+  jsonExtensions: Extension[]
+): Promise<void> {
+  if (!task.extension) {
+    task.extension = [];
+  }
+
+  try {
+    console.log(`Adding ${nonJsonExtensions.length} non-JSON data point extensions to task`);
+    task.extension.push(...nonJsonExtensions);
+    await medplum.updateResource(task);
+    console.log('Successfully updated task with non-JSON data point extensions');
+  } catch (error) {
+    console.log('ERROR: Error updating task with data point extensions:', JSON.stringify({
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      taskId: task.id,
+      nonJsonExtensionsCount: nonJsonExtensions.length,
+      jsonExtensionsCount: jsonExtensions.length
+    }));
+  }
+
+  try{
+    console.log(`Adding ${jsonExtensions.length} JSON data point extensions to task`);
+    task.extension.push(...jsonExtensions);
+    await medplum.updateResource(task);
+    console.log('Successfully updated task with JSON data point extensions');
+  } catch (error) {
+    console.log('ERROR: Error updating task with data point extensions:', JSON.stringify({
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      taskId: task.id,
+      nonJsonExtensionsCount: nonJsonExtensions.length,
+      jsonExtensionsCount: jsonExtensions.length
+    }));
+  }
+}
+
+async function updatePatientWithExtensions(
+  medplum: MedplumClient, 
+  task: Task, 
+  nonJsonExtensions: Extension[],
+  jsonExtensions: Extension[]
+): Promise<void> {
+  try {
+    // Add extensions to patient if task.for reference exists
+    if (task.for?.reference) {
+      const patientId = task.for.reference.split('/')[1];
+      if (patientId) {
+        console.log(`Adding data point extensions to patient: ${patientId}`);
+        const patient = await medplum.readResource('Patient', patientId);
+        
+        if (!patient.extension) {
+          patient.extension = [];
+        }
+
+        try{
+          // Replace the extensions without JSON
+          console.log('Replacing awell non-JSON data point extensions on patient');
+          patient.extension = replaceExtensions(patient.extension, nonJsonExtensions);
+          await medplum.updateResource(patient);
+          console.log('Successfully updated patient with non-JSON data point extensions');
+        } catch (error) {
+          console.log('ERROR: Error updating patient with non-JSON data point extensions:', JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            patientId: patientId,
+            nonJsonExtensionsCount: nonJsonExtensions.length
+          }));
+        }
+
+        try{
+          // Replace the extensions with JSON
+          console.log('Replacing awell JSON data point extensions on patient');
+          patient.extension = replaceExtensions(patient.extension, jsonExtensions);
+          await medplum.updateResource(patient);
+          console.log('Successfully updated patient with JSON data point extensions');
+        } catch (error) {
+          console.log('ERROR: Error updating patient with JSON data point extensions:', JSON.stringify({
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            patientId: patientId,
+            jsonExtensionsCount: jsonExtensions.length
+          }));
+        }
+      }
+    }
+  } catch (error) {
+    console.log('ERROR: Error enriching patient with Awell data points:', JSON.stringify({
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      taskId: task.id,
+      patientId: task.for?.reference?.split('/')[1],
+      nonJsonExtensionsCount: nonJsonExtensions.length,
+      jsonExtensionsCount: jsonExtensions.length
+    }));
+    throw error;
+  }
 }
 
 function extractReleaseId(task: Task): string | null {
@@ -149,152 +342,17 @@ function extractPathwayId(task: Task): string | null {
   return null;
 }
 
-function mapDataPointToPatientField(dataPoint: DataPoint, definition: DataPointDefinition, patient: Patient): void {
-  console.log(`Mapping data point ${definition.title} to patient field`);
-  
-  const value = dataPoint.serialized_value;
-  if (!value) {
-    console.log(`WARNING: Skipping data point ${definition.title} due to empty value`);
-    return;
-  }
-  
-  switch (definition.title) {
-    case 'sex':
-      const sexValue = value.toLowerCase();
-      // Map sex values to FHIR gender values
-      switch (sexValue) {
-        case 'male':
-        case 'female':
-          patient.gender = sexValue;
-          break;
-        case 'other':
-          patient.gender = 'other';
-          break;
-        default:
-          patient.gender = 'unknown';
-      }
-      break;
-      
-    case 'preferred_language':
-      patient.communication = [{
-        language: {
-          coding: [{
-            system: 'urn:ietf:bcp:47',
-            code: value
-          }]
-        }
-      }];
-      break;
-      
-    case 'phone':
-    case 'mobile_phone':
-      if (!patient.telecom) {
-        patient.telecom = [];
-      }
-      patient.telecom.push({
-        system: 'phone',
-        value: value,
-        use: definition.title === 'mobile_phone' ? 'mobile' : 'home'
-      });
-      break;
-      
-    case 'patient_timezone':
-      // Store timezone in an extension since it's not a standard FHIR field
-      if (!patient.extension) {
-        patient.extension = [];
-      }
-      patient.extension.push({
-        url: 'https://awellhealth.com/fhir/StructureDefinition/patient-timezone',
-        valueString: value
-      });
-      break;
-      
-    case 'patient_id':
-    case 'patient_code':
-    case 'national_registry_number':
-      if (!patient.identifier) {
-        patient.identifier = [];
-      }
-      patient.identifier.push({
-        system: `https://awellhealth.com/fhir/identifier/${definition.title}`,
-        value: value
-      });
-      break;
-      
-    case 'last_name':
-    case 'first_name':
-      if (!patient.name) {
-        patient.name = [{} as HumanName];
-      }
-      if (!patient.name[0]) {
-        patient.name[0] = {} as HumanName;
-      }
-      if (definition.title === 'last_name') {
-        patient.name[0].family = value;
-      } else {
-        patient.name[0].given = [value];
-      }
-      break;
-      
-    case 'email':
-      if (!patient.telecom) {
-        patient.telecom = [];
-      }
-      patient.telecom.push({
-        system: 'email',
-        value: value
-      });
-      break;
-      
-    case 'birth_date':
-      patient.birthDate = value;
-      break;
-      
-    case 'address.zip':
-    case 'address.street':
-    case 'address.state':
-    case 'address.country':
-    case 'address.city':
-      if (!patient.address) {
-        patient.address = [{} as Address];
-      }
-      if (!patient.address[0]) {
-        patient.address[0] = {} as Address;
-      }
-      
-      const addressField = definition.title.split('.')[1];
-      switch (addressField) {
-        case 'zip':
-          patient.address[0].postalCode = value;
-          break;
-        case 'street':
-          patient.address[0].line = [value];
-          break;
-        case 'state':
-          patient.address[0].state = value;
-          break;
-        case 'country':
-          patient.address[0].country = value;
-          break;
-        case 'city':
-          patient.address[0].city = value;
-          break;
-      }
-      break;
-  }
-}
-
 export async function handler(medplum: MedplumClient, event: BotEvent<Task>): Promise<void> {
   try {
     console.log('Starting data point enrichment for task:', event.input.id);
 
-    if (!event.secrets['AWELL_API_URL'] || !event.secrets['AWELL_API_KEY']) {
+    if (!event.secrets.AWELL_API_URL || !event.secrets.AWELL_API_KEY) {
       console.log('AWELL_API_URL or AWELL_API_KEY is not set');
       return;
     }
   
-    GRAPHQL_ENDPOINT = event.secrets['AWELL_API_URL'].valueString || '';
-    API_KEY = event.secrets['AWELL_API_KEY'].valueString || '';
+    GRAPHQL_ENDPOINT = event.secrets.AWELL_API_URL.valueString || '';
+    API_KEY = event.secrets.AWELL_API_KEY.valueString || '';
 
     const task = event.input;
     
@@ -311,70 +369,39 @@ export async function handler(medplum: MedplumClient, event: BotEvent<Task>): Pr
       return;
     }
 
+    if (task.extension?.some(ext => ext.url === 'https://awellhealth.com/fhir/StructureDefinition/awell-data-points-json')) {
+      console.log('Awell data points already exist on task, skipping awell data point enrichment');
+      return;
+    }
+
+    // Update the task with the new extensions
+    if (!task.id) {
+      throw new Error('Task is missing required id property');
+    }
+
     try {
       const dataPointDefinitions = await fetchDataPointDefinitions(releaseId);
       const dataPoints = await fetchDataPoints(pathwayId);
-      const dataPointExtensions = createDataPointExtensions(dataPoints, dataPointDefinitions);
       
-      // Add extensions to task
-      if (!task.extension) {
-        task.extension = [];
-      }
-      task.extension.push(...dataPointExtensions);
-      console.log(`Added ${dataPointExtensions.length} data point extensions to task`);
+      // Separate data points into JSON and non-JSON categories
+      const { jsonDataPoints, nonJsonDataPoints } = separateDataPointsByType(dataPoints);
+      
+      // Create separate extensions for JSON and non-JSON data points
+      const nonJsonExtensions = createDataPointExtensions(nonJsonDataPoints, dataPointDefinitions);
+      const jsonExtensions = createDataPointExtensions(jsonDataPoints, dataPointDefinitions, 'json');
+      
+      await updateTaskWithExtensions(medplum, task, nonJsonExtensions, jsonExtensions);
+      await updatePatientWithExtensions(medplum, task, nonJsonExtensions, jsonExtensions);
 
-      try {
-          // Add extensions to patient if task.for reference exists
-          if (task.for?.reference) {
-            const patientId = task.for.reference.split('/')[1];
-            if (patientId) {
-              console.log(`Adding data point extensions to patient: ${patientId}`);
-              const patient = await medplum.readResource('Patient', patientId);
-              
-              // Map data points to FHIR Patient fields
-              for (const dataPoint of dataPoints) {
-                const definition = dataPointDefinitions.find(def => def.id === dataPoint.data_point_definition_id);
-                if (definition) {
-                  mapDataPointToPatientField(dataPoint, definition, patient);
-                }
-              }
-              
-              // Add extensions for any remaining data points that don't map to FHIR fields
-              if (!patient.extension) {
-                patient.extension = [];
-              }
-              patient.extension.push(...dataPointExtensions);
-              
-              await medplum.updateResource(patient);
-              console.log('Successfully updated patient with data point extensions and FHIR fields');
-            }
-          }
-      } catch (error) {
-        // Log the error details
-        console.log('ERROR: Error enriching patient with Awell data points:', {
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          taskId: task.id,
-          releaseId,
-          pathwayId
-        });
-      }
-
-      // Update the task with the new extensions
-      if (!task.id) {
-        throw new Error('Task is missing required id property');
-      }
-      await medplum.updateResource(task);
-      console.log('Successfully updated task with data point extensions');
     } catch (error) {
       // Log the error details
-      console.log('ERROR: Error enriching task with Awell data points:', {
+      console.log('ERROR: Error enriching task with Awell data points:', JSON.stringify({
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         taskId: task.id,
         releaseId,
         pathwayId
-      });
+      }));
       throw error;
     }
   } catch (error) {

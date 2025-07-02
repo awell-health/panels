@@ -11,7 +11,6 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     fileParallelism: false,
-    setupFiles: 'dotenv/config',
     include: ['**/*.test.ts', '**/*.spec.ts'],
     typecheck: {
       tsconfig: './tsconfig.json',
