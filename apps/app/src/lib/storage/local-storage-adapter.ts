@@ -108,7 +108,7 @@ export class LocalStorageAdapter implements StorageAdapter {
   async updatePanel(
     id: string,
     updates: Partial<PanelDefinition>,
-  ): Promise<void> {
+  ): Promise<{ idMapping?: Map<string, string> }> {
     const panels = await this.loadPanelsFromStorage()
     const index = panels.findIndex((panel) => panel.id === id)
 
@@ -118,6 +118,8 @@ export class LocalStorageAdapter implements StorageAdapter {
 
     panels[index] = { ...panels[index], ...updates }
     await this.savePanelsToStorage(panels)
+
+    return {}
   }
 
   async deletePanel(id: string): Promise<void> {

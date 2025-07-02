@@ -13,6 +13,7 @@ import { ReactiveStore } from '@/lib/reactive/reactive-store'
 import { getStorageAdapter } from '@/lib/storage/storage-factory'
 import type { StorageAdapter, StorageMode } from '@/lib/storage/types'
 import { useAuthentication } from './use-authentication'
+import { logger } from '../lib/logger'
 
 export class ReactivePanelStore {
   private storage: StorageAdapter | null = null
@@ -156,18 +157,101 @@ export class ReactivePanelStore {
     this.setSaveState(operationId, 'saving')
 
     try {
-      await this.storage.updatePanel(id, updates)
+      // Update panel via storage adapter and capture ID mappings
+      const result = await this.storage.updatePanel(id, updates)
 
-      // Update reactive store
+      // Update reactive store with the original updates first
       this.reactiveStore?.updatePanel(id, updates)
+
+      // If we got ID mappings, apply them to correct temporary IDs
+      if (result.idMapping && result.idMapping.size > 0) {
+
+        // Get the updated panel from reactive store
+        const currentPanel = this.reactiveStore?.getPanel(id)
+        if (currentPanel) {
+          // Apply ID corrections to panel columns
+          const correctedPanel = this.applyCorrectedIdsToPanel(currentPanel, result.idMapping)
+
+          // Update the reactive store with corrected IDs
+          this.reactiveStore?.setPanel(correctedPanel)
+
+          // Also update any views that reference the corrected column IDs
+          await this.applyCorrectedIdsToViews(id, result.idMapping)
+        }
+      }
 
       this.setSaveState(operationId, 'saved')
     } catch (error) {
       this.setSaveState(operationId, 'error')
-      console.error('Failed to update panel:', error)
+      logger.error({ error, id, updates }, 'Failed to update panel')
       throw new Error(
         `Failed to update panel: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
+    }
+  }
+
+  /**
+   * Apply corrected database IDs to panel columns
+   */
+  private applyCorrectedIdsToPanel(
+    panel: PanelDefinition,
+    idMapping: Map<string, string>
+  ): PanelDefinition {
+    const correctColumn = (column: ColumnDefinition) => {
+      const databaseId = idMapping.get(column.id)
+      if (databaseId) {
+        return { ...column, id: databaseId }
+      }
+      return column
+    }
+
+    return {
+      ...panel,
+      patientViewColumns: panel.patientViewColumns?.map(correctColumn) || [],
+      taskViewColumns: panel.taskViewColumns?.map(correctColumn) || [],
+    }
+  }
+
+  /**
+   * Apply corrected database IDs to views that reference the columns
+   */
+  private async applyCorrectedIdsToViews(
+    panelId: string,
+    idMapping: Map<string, string>
+  ): Promise<void> {
+    if (!this.storage) return
+
+    try {
+      // Get all views for this panel
+      const currentPanel = this.reactiveStore?.getPanel(panelId)
+      if (!currentPanel?.views) return
+
+      // Update each view that references corrected column IDs
+      for (const view of currentPanel.views) {
+        if (!view.columns || view.columns.length === 0) continue
+
+        let hasChanges = false
+        const correctedColumns = view.columns.map((column) => {
+          const databaseId = idMapping.get(column.id)
+          if (databaseId) {
+            hasChanges = true
+            return { ...column, id: databaseId }
+          }
+          return column
+        })
+
+        // If this view references corrected columns, update it
+        if (hasChanges) {
+          // Update via storage layer to sync with backend
+          await this.storage.updateView(panelId, view.id, {
+            columns: correctedColumns
+          })
+
+        }
+      }
+    } catch (error) {
+      logger.error({ error, panelId, idMapping }, 'Failed to apply corrected IDs to views')
+      // Don't throw - this is a best-effort correction
     }
   }
 

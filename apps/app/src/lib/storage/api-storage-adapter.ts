@@ -16,6 +16,7 @@ import {
 } from './type-adapters'
 import type { StorageAdapter } from './types'
 import { useAuthentication } from '@/hooks/use-authentication'
+import { logger } from '../logger'
 
 interface CacheConfig {
   enabled: boolean
@@ -391,7 +392,7 @@ export class APIStorageAdapter implements StorageAdapter {
   async updatePanel(
     id: string,
     updates: Partial<PanelDefinition>,
-  ): Promise<void> {
+  ): Promise<{ idMapping?: Map<string, string> }> {
     try {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
@@ -499,18 +500,24 @@ export class APIStorageAdapter implements StorageAdapter {
       // Delete removed columns
       const deletePromises = [
         ...patientColumnsToDelete.map((col) =>
-          panelsAPI.columns.delete({
-            id: col.id.toString(),
-            tenantId: this.config.tenantId,
-            userId: this.config.userId,
-          }),
+          panelsAPI.columns.delete(
+            {
+              id: col.id.toString(),
+              tenantId: this.config.tenantId,
+              userId: this.config.userId,
+            },
+            { id },
+          ),
         ),
         ...taskColumnsToDelete.map((col) =>
-          panelsAPI.columns.delete({
-            id: col.id.toString(),
-            tenantId: this.config.tenantId,
-            userId: this.config.userId,
-          }),
+          panelsAPI.columns.delete(
+            {
+              id: col.id.toString(),
+              tenantId: this.config.tenantId,
+              userId: this.config.userId,
+            },
+            { id },
+          ),
         ),
       ]
 
@@ -649,17 +656,56 @@ export class APIStorageAdapter implements StorageAdapter {
         }),
       ]
 
-      // Execute all column operations in parallel
-      await Promise.all([
-        ...deletePromises,
-        ...createPromises,
-        ...updatePromises,
-      ])
+      // Execute delete and update operations first
+      await Promise.all([...deletePromises, ...updatePromises])
+
+      // Execute create operations separately to capture database IDs
+      const idMapping = new Map<string, string>()
+
+      if (createPromises.length > 0) {
+        const createResults = await Promise.allSettled(createPromises)
+
+        // Build ID mapping from temporary IDs to database IDs
+        let resultIndex = 0
+
+        // Process patient columns first
+        for (const originalColumn of patientColumnsToCreate) {
+          const result = createResults[resultIndex]
+          if (result.status === 'fulfilled') {
+            const databaseId = result.value.id.toString()
+            idMapping.set(originalColumn.id, databaseId)
+          } else {
+            logger.error(
+              { error: result.reason, originalColumn },
+              `Failed to create patient column ${originalColumn.id}`,
+            )
+          }
+          resultIndex++
+        }
+
+        // Process task columns next
+        for (const originalColumn of taskColumnsToCreate) {
+          const result = createResults[resultIndex]
+          if (result.status === 'fulfilled') {
+            const databaseId = result.value.id.toString()
+            idMapping.set(originalColumn.id, databaseId)
+          } else {
+            logger.error(
+              { error: result.reason, originalColumn },
+              `Failed to create task column ${originalColumn.id}`,
+            )
+          }
+          resultIndex++
+        }
+      }
 
       // Invalidate panels cache since we updated one
       this.invalidateCache('panels')
+
+      // Return ID mapping for the reactive store to apply
+      return { idMapping: idMapping.size > 0 ? idMapping : undefined }
     } catch (error) {
-      console.error(`Failed to update panel ${id} via API:`, error)
+      logger.error({ error, id }, `Failed to update panel ${id} via API`)
       throw new Error(
         `Failed to update panel: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
@@ -679,7 +725,7 @@ export class APIStorageAdapter implements StorageAdapter {
       this.invalidateCache('panels')
       this.invalidateCache('views')
     } catch (error) {
-      console.error(`Failed to delete panel ${id} via API:`, error)
+      logger.error({ error, id }, `Failed to delete panel ${id} via API`)
       throw new Error(
         `Failed to delete panel: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
@@ -755,7 +801,7 @@ export class APIStorageAdapter implements StorageAdapter {
 
       return frontendView
     } catch (error) {
-      console.error(`Failed to add view to panel ${panelId}:`, error)
+      logger.error({ error, panelId }, `Failed to add view to panel ${panelId}`)
       throw new Error(
         `Failed to add view: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
@@ -811,9 +857,9 @@ export class APIStorageAdapter implements StorageAdapter {
       // Invalidate views cache for this panel
       this.invalidateCache('views', panelId)
     } catch (error) {
-      console.error(
-        `Failed to update view ${viewId} in panel ${panelId}:`,
-        error,
+      logger.error(
+        { error, viewId, panelId },
+        `Failed to update view ${viewId} in panel ${panelId}`,
       )
       throw new Error(
         `Failed to update view: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -833,9 +879,9 @@ export class APIStorageAdapter implements StorageAdapter {
       // Invalidate views cache for this panel
       this.invalidateCache('views', panelId)
     } catch (error) {
-      console.error(
-        `Failed to delete view ${viewId} in panel ${panelId}:`,
-        error,
+      logger.error(
+        { error, viewId, panelId },
+        `Failed to delete view ${viewId} in panel ${panelId}`,
       )
       throw new Error(
         `Failed to delete view: ${error instanceof Error ? error.message : 'Unknown error'}`,
