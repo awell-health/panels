@@ -323,20 +323,19 @@ export const panelsAPI = {
 
     delete: async (
       column: IdParam & { tenantId: string; userId: string },
+      panelId: IdParam,
       options = undefined,
     ): Promise<void> => {
       const { apiConfig } = await import('./config/apiConfig')
-      await fetch(await apiConfig.buildUrl(`/columns/${column.id}`), {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
+      await fetch(
+        await apiConfig.buildUrl(
+          `/panels/${panelId.id}/columns/${column.id}?tenantId=${column.tenantId}&userId=${column.userId}`,
+        ),
+        {
+          method: 'DELETE',
+          ...(options || {}),
         },
-        body: JSON.stringify({
-          tenantId: column.tenantId,
-          userId: column.userId,
-        }),
-        ...(options || {}),
-      })
+      )
     },
   },
 }

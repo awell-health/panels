@@ -108,17 +108,20 @@ export class ReactiveStorageAdapter implements StorageAdapter {
   async updatePanel(
     id: string,
     updates: Partial<PanelDefinition>,
-  ): Promise<void> {
+  ): Promise<{ idMapping?: Map<string, string> }> {
     if (!this.underlyingAdapter) {
       throw new Error('Storage adapter not initialized')
     }
 
     try {
-      // Update in underlying adapter
-      await this.underlyingAdapter.updatePanel(id, updates)
+      // Update in underlying adapter and get ID mapping
+      const result = await this.underlyingAdapter.updatePanel(id, updates)
 
       // Update in reactive store
       this.reactiveStore.updatePanel(id, updates)
+
+      // Return ID mapping for further processing
+      return result
     } catch (error) {
       console.error('Failed to update panel:', error)
       throw error
