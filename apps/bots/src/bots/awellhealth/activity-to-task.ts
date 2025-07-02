@@ -1,10 +1,27 @@
 // Constants
 
 import type { BotEvent, MedplumClient } from '@medplum/core';
-import type { Task, Patient, HumanName, ContactPoint, Address, Identifier, BundleEntry } from '@medplum/fhirtypes';
+import type { Task, Patient, HumanName, ContactPoint, Address, Identifier, BundleEntry, Communication } from '@medplum/fhirtypes';
 
 let GRAPHQL_ENDPOINT = '';
 let API_KEY = '';
+
+interface GraphQLError {
+  message: string;
+  locations?: Array<{ line: number; column: number }>;
+  path?: string[];
+}
+
+interface PatientResponse {
+  data: { 
+    patient: { 
+      patient: { 
+        profile: PatientProfile 
+      } 
+    } 
+  };
+  errors?: GraphQLError[];
+}
 
 // Types
 interface PatientProfile {
@@ -156,7 +173,7 @@ async function fetchPatientData(patientId: string): Promise<PatientProfile | nul
       throw new Error(`GraphQL request failed with status ${response.status}`);
     }
 
-    const data = await response.json() as { data: { patient: { patient: { profile: PatientProfile } } }, errors?: any };
+    const data = await response.json() as PatientResponse;
     if (data.errors) {
       throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
     }
@@ -176,7 +193,7 @@ function formatBirthDate(dateStr: string): string | undefined {
   
   try {
     const date = new Date(dateStr.trim());
-    if (isNaN(date.getTime())) return undefined;
+    if (Number.isNaN(date.getTime())) return undefined;
     
     // Format as YYYY-MM-DD
     return date.toISOString().split('T')[0];
@@ -237,14 +254,14 @@ function createPatientIdentifiers(awellPatientId: string, profile: PatientProfil
   }];
 
   if (profile.identifier?.length) {
-    profile.identifier.forEach(id => {
+    for (const id of profile.identifier) {
       if (id.system?.trim() && id.value?.trim()) {
         identifiers.push({
           system: id.system.trim(),
           value: id.value.trim()
         });
       }
-    });
+    }
   }
 
   return identifiers;
@@ -425,7 +442,7 @@ async function createOrUpdateTask(
   activity: ActivityData['activity'],
   patientId: string,
   pathway: ActivityData['pathway']
-): Promise<void> {
+): Promise<string> {
 
   const taskIdentifier = {
     system: 'https://awellhealth.com/activities',
@@ -465,7 +482,7 @@ async function createOrUpdateTask(
     if (existingTasks.length > 0) {
       console.log(`Updating ${existingTasks.length} existing tasks`);
       // Update all existing tasks
-      await Promise.all(existingTasks.map(async (existingTask) => {
+      const updatedTasks = await Promise.all(existingTasks.map(async (existingTask) => {
         const resultTask = await medplum.updateResource({ ...existingTask, ...task, meta: existingTask.meta });
         console.log('Task successfully updated:', JSON.stringify({
           taskId: resultTask.id,
@@ -473,17 +490,20 @@ async function createOrUpdateTask(
           lastUpdated: resultTask.meta?.lastUpdated,
           activityStatus: activity.status
         }, null, 2));
+        return resultTask;
       }));
-    } else {
-      console.log('Creating new task for activity:', activity.id);
-      const resultTask = await medplum.createResource(task);
-      console.log('Task successfully created:', JSON.stringify({
-        taskId: resultTask.id,
-        status: resultTask.status,
-        lastUpdated: resultTask.meta?.lastUpdated,
-        activityStatus: activity.status
-      }, null, 2));
+      return updatedTasks[0]?.id || '';
     }
+    
+    console.log('Creating new task for activity:', activity.id);
+    const resultTask = await medplum.createResource(task);
+    console.log('Task created successfully:', JSON.stringify({
+      taskId: resultTask.id,
+      activityId: activity.id,
+      patientId: patientId,
+      pathwayId: pathway.id
+    }, null, 2));
+    return resultTask.id || '';
   } catch (error) {
     console.log('Error processing task:', JSON.stringify({
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -494,17 +514,90 @@ async function createOrUpdateTask(
   }
 }
 
+/**
+ * Creates a FHIR Communication resource to notify other bots that enrichment can begin.
+ * This communication serves as a signal that a task has been created/updated and 
+ * enrichment bots can now start their processing.
+ */
+async function createEnrichmentCommunication(
+  medplum: MedplumClient,
+  activity: ActivityData['activity'],
+  patientId: string,
+  pathway: ActivityData['pathway'],
+  taskId: string
+): Promise<void> {
+  try {
+    const communication: Communication = {
+      resourceType: 'Communication',
+      status: 'completed',
+      category: [{
+        coding: [{
+          system: 'http://awellhealth.com/fhir/CodeSystem/communication-category',
+          code: 'enrichment',
+          display: 'Enrichment'
+        }]
+      }],
+      subject: {
+        reference: `Patient/${patientId}`
+      },
+      sent: new Date().toISOString(),
+      reasonCode: [{
+        coding: [{
+          system: 'https://awellhealth.com/fhir/CodeSystem/communication-reason',
+          code: 'ready-for-enrichment',
+          display: 'Ready for Enrichment'
+        }]
+      }],
+      note: [{
+        text: `Task created/updated for activity ${activity.id}. Enrichment bots can now process this patient.`
+      }],
+      payload: [{
+        contentString: JSON.stringify({
+          taskId: taskId,
+          activityId: activity.id,
+          pathwayId: pathway.id,
+          pathwayDefinitionId: pathway.pathway_definition_id,
+          stakeholderId: activity.indirect_object?.id || 'Unknown',
+          stakeholderName: activity.indirect_object?.name || 'Unknown',
+          stepTitle: activity.action_component.title,
+          patientId: patientId,
+          activityStatus: activity.status,
+          pathwayTitle: pathway.pathway_title,
+          releaseId: activity.action_component.release_id,
+          activityType: activity.object?.type || 'Unknown'
+        })
+      }]
+    };
+
+    const resultCommunication = await medplum.createResource(communication);
+    console.log('Enrichment communication created:', JSON.stringify({
+      communicationId: resultCommunication.id,
+      activityId: activity.id,
+      patientId: patientId,
+      pathwayId: pathway.id,
+      lastUpdated: resultCommunication.meta?.lastUpdated
+    }, null, 2));
+  } catch (error) {
+    console.log('Error creating enrichment communication:', JSON.stringify({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      activityId: activity.id,
+      patientId: patientId
+    }, null, 2));
+    // Don't throw error here as this is not critical for the main flow
+  }
+}
+
 // Main handler
 export async function handler(medplum: MedplumClient, event: BotEvent<ActivityData>): Promise<void> {
   const { activity, patient_id: awellPatientId, pathway } = event.input;
 
-  if (!event.secrets['AWELL_API_URL'] || !event.secrets['AWELL_API_KEY']) {
+  if (!event.secrets.AWELL_API_URL || !event.secrets.AWELL_API_KEY) {
     console.log('AWELL_API_URL or AWELL_API_KEY is not set');
     return;
   }
 
-  GRAPHQL_ENDPOINT = event.secrets['AWELL_API_URL'].valueString || '';
-  API_KEY = event.secrets['AWELL_API_KEY'].valueString || '';
+  GRAPHQL_ENDPOINT = event.secrets.AWELL_API_URL.valueString || '';
+  API_KEY = event.secrets.AWELL_API_KEY.valueString || '';
 
   if (activity.indirect_object?.type !== 'stakeholder') {
     console.log('Not a stakeholder activity, skipping bot execution');
@@ -520,7 +613,8 @@ export async function handler(medplum: MedplumClient, event: BotEvent<ActivityDa
   try {
 
     const patientId = await findOrCreatePatient(medplum, awellPatientId);
-    await createOrUpdateTask(medplum, activity, patientId, pathway);
+    const taskId = await createOrUpdateTask(medplum, activity, patientId, pathway);
+    await createEnrichmentCommunication(medplum, activity, patientId, pathway, taskId);
 
     console.log('Bot finished processing activity:', JSON.stringify({
       activityId: activity.id,

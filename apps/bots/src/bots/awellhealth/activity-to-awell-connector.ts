@@ -1,20 +1,23 @@
 import type { BotEvent, MedplumClient } from '@medplum/core';
-import type { Task } from '@medplum/fhirtypes';
+import type { Task, TaskInput } from '@medplum/fhirtypes';
 
 let GRAPHQL_ENDPOINT = '';
 let API_KEY = '';
 let ENVIRONMENT = '';
 
-interface TaskInput {
-  type?: {
-    coding?: Array<{
-      system?: string;
-      code?: string;
-      display?: string;
-    }>;
+interface GraphQLError {
+  message: string;
+  locations?: Array<{ line: number; column: number }>;
+  path?: string[];
+}
+
+interface GetHostedPagesLinkResponse {
+  data: { 
+    hostedPagesLink: { 
+      hosted_pages_link: { url: string } 
+    } 
   };
-  valueString?: string;
-  valueUrl?: string;
+  errors?: GraphQLError[];
 }
 
 const GET_HOSTED_PAGES_LINK = `
@@ -49,7 +52,7 @@ async function fetchHostedPagesLink(pathwayId: string, stakeholderId: string): P
       throw new Error(`GraphQL request failed with status ${response.status}`);
     }
 
-    const data = await response.json() as { data: { hostedPagesLink: { hosted_pages_link: { url: string } } }, errors?: any };
+    const data = await response.json() as GetHostedPagesLinkResponse;
     if (data.errors) {
       throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
     }
@@ -106,17 +109,17 @@ function hasConnectorInput(inputs: TaskInput[] | undefined, connectorCode: strin
 }
 
 export async function handler(medplum: MedplumClient, event: BotEvent<Task>): Promise<void> {
-  const task = event.input as any;
+  const task = event.input as Task;
   const inputs = task?.input as TaskInput[] | undefined;
 
-  if (!event.secrets['AWELL_API_URL'] || !event.secrets['AWELL_API_KEY'] || !event.secrets['AWELL_ENVIRONMENT']) {
+  if (!event.secrets.AWELL_API_URL || !event.secrets.AWELL_API_KEY || !event.secrets.AWELL_ENVIRONMENT) {
     console.log('AWELL_API_URL or AWELL_API_KEY or AWELL_ENVIRONMENT is not set');
     return;
   }
 
-  GRAPHQL_ENDPOINT = event.secrets['AWELL_API_URL'].valueString || '';
-  API_KEY = event.secrets['AWELL_API_KEY'].valueString || '';
-  ENVIRONMENT = event.secrets['AWELL_ENVIRONMENT'].valueString || '';
+  GRAPHQL_ENDPOINT = event.secrets.AWELL_API_URL.valueString || '';
+  API_KEY = event.secrets.AWELL_API_KEY.valueString || '';
+  ENVIRONMENT = event.secrets.AWELL_ENVIRONMENT.valueString || '';
 
   const activityId = extractActivityId(task);
   const pathwayId = extractPathwayId(task);
@@ -171,7 +174,7 @@ export async function handler(medplum: MedplumClient, event: BotEvent<Task>): Pr
             display: 'Awell Hosted Pages'
           }]
         },
-        valueUrl: hostedPagesLink || undefined
+        valueUrl: hostedPagesLink
       };
 
       task.input = [...(inputs || []), newInput];

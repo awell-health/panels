@@ -10,11 +10,11 @@ describe('formatBirthDate', () => {
     if (!dateStr?.trim()) return undefined;
     
     try {
-      const date = new Date(dateStr.trim());
-      if (isNaN(date.getTime())) return undefined;
-      
-      // Format as YYYY-MM-DD
-      return date.toISOString().split('T')[0];
+        const date = new Date(dateStr.trim());
+        if (Number.isNaN(date.getTime())) return undefined;
+        
+        // Format as YYYY-MM-DD
+        return date.toISOString().split('T')[0];
     } catch (error) {
       return undefined;
     }
@@ -37,10 +37,10 @@ describe('formatBirthDate', () => {
         { input: '2000-02-29', expected: '2000-02-29' }, // Leap year
       ];
 
-      testCases.forEach(({ input, expected }) => {
+      for (const { input, expected } of testCases) {
         const result = testFormatBirthDate(input);
         expect(result).toBe(expected);
-      });
+      }
     });
 
     it('should handle edge cases around midnight that could cause date shifts', () => {
@@ -52,10 +52,10 @@ describe('formatBirthDate', () => {
         { input: '1990-07-01', expected: '1990-07-01' },
       ];
 
-      edgeCases.forEach(({ input, expected }) => {
+      for (const { input, expected } of edgeCases) {
         const result = testFormatBirthDate(input);
         expect(result).toBe(expected);
-      });
+      }
     });
 
     it('should handle dates in different timezone contexts', () => {
@@ -67,15 +67,15 @@ describe('formatBirthDate', () => {
         const testDate = '1990-05-15';
         
         // Test with UTC
-        (process.env as any).TZ = 'UTC';
+        (process.env as { TZ?: string }).TZ = 'UTC';
         const resultUTC = testFormatBirthDate(testDate);
         
         // Test with EST
-        (process.env as any).TZ = 'America/New_York';
+        (process.env as { TZ?: string }).TZ = 'America/New_York';
         const resultEST = testFormatBirthDate(testDate);
         
         // Test with PST
-        (process.env as any).TZ = 'America/Los_Angeles';
+        (process.env as { TZ?: string }).TZ = 'America/Los_Angeles';
         const resultPST = testFormatBirthDate(testDate);
         
         // All results should be the same
@@ -90,9 +90,9 @@ describe('formatBirthDate', () => {
       } finally {
         // Restore original timezone
         if (originalTimezone !== undefined) {
-          (process.env as any).TZ = originalTimezone;
+          (process.env as { TZ?: string }).TZ = originalTimezone;
         } else {
-          delete (process.env as any).TZ;
+          (process.env as { TZ?: string }).TZ = undefined;
         }
       }
     });
@@ -106,8 +106,8 @@ describe('formatBirthDate', () => {
     });
 
     it('should return undefined for null or undefined input', () => {
-      expect(testFormatBirthDate(null as any)).toBeUndefined();
-      expect(testFormatBirthDate(undefined as any)).toBeUndefined();
+      expect(testFormatBirthDate(null as unknown as string)).toBeUndefined();
+      expect(testFormatBirthDate(undefined as unknown as string)).toBeUndefined();
     });
 
     it('should return undefined for invalid date strings', () => {
@@ -165,10 +165,10 @@ describe('formatBirthDate', () => {
         '1990-02-14',
       ];
 
-      typicalBirthDates.forEach(dateStr => {
+      for (const dateStr of typicalBirthDates) {
         const result = testFormatBirthDate(dateStr);
         expect(result).toBe(dateStr);
-      });
+      }
     });
 
     it('should handle dates that might come from different date input formats', () => {
@@ -182,10 +182,10 @@ describe('formatBirthDate', () => {
       ];
 
       // Only the first one should succeed
-      expect(testFormatBirthDate(dateVariations[0]!)).toBe('1990-05-15');
-      expect(testFormatBirthDate(dateVariations[1]!)).toBeUndefined();
-      expect(testFormatBirthDate(dateVariations[2]!)).toBeUndefined();
-      expect(testFormatBirthDate(dateVariations[3]!)).toBeUndefined();
+      expect(testFormatBirthDate(dateVariations[0] ?? '')).toBe('1990-05-15');
+      expect(testFormatBirthDate(dateVariations[1] ?? '')).toBeUndefined();
+      expect(testFormatBirthDate(dateVariations[2] ?? '')).toBeUndefined();
+      expect(testFormatBirthDate(dateVariations[3] ?? '')).toBeUndefined();
     });
   });
 }); 
