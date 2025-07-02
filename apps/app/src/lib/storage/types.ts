@@ -1,8 +1,4 @@
-import type {
-  PanelDefinition,
-  ViewDefinition,
-  ColumnDefinition,
-} from '@/types/worklist'
+import type { Panel, View, Column } from '@/types/panel'
 
 /**
  * Storage abstraction interface that provides a unified API
@@ -10,34 +6,30 @@ import type {
  */
 export interface StorageAdapter {
   // Panel operations
-  getPanels(): Promise<PanelDefinition[]>
-  getPanel(id: string): Promise<PanelDefinition | null>
-  createPanel(panel: Omit<PanelDefinition, 'id'>): Promise<PanelDefinition>
-  updatePanel(
-    id: string,
-    updates: Partial<PanelDefinition>,
-  ): Promise<{ idMapping?: Map<string, string> }>
+  getPanels(): Promise<Panel[]>
+  getPanel(id: string): Promise<Panel | null>
+  createPanel(panel: Omit<Panel, 'id'>): Promise<Panel>
+  updatePanel(id: string, updates: Partial<Panel>): Promise<Panel>
   deletePanel(id: string): Promise<void>
 
   // View operations
-  addView(
-    panelId: string,
-    view: Omit<ViewDefinition, 'id'>,
-  ): Promise<ViewDefinition>
+  addView(panelId: string, view: Omit<View, 'id'>): Promise<View>
   updateView(
     panelId: string,
     viewId: string,
-    updates: Partial<ViewDefinition>,
-  ): Promise<void>
+    updates: Partial<View>,
+  ): Promise<View>
   deleteView(panelId: string, viewId: string): Promise<void>
-  getView(panelId: string, viewId: string): Promise<ViewDefinition | null>
+  getView(panelId: string, viewId: string): Promise<View | null>
 
   // Column operations
+  addColumn(panelId: string, column: Omit<Column, 'id'>): Promise<Column>
   updateColumn(
     panelId: string,
     columnId: string,
-    updates: Partial<ColumnDefinition>,
-  ): Promise<void>
+    updates: Partial<Column>,
+  ): Promise<Column>
+  deleteColumn(panelId: string, columnId: string): Promise<void>
 
   // Loading state
   isLoading(): boolean

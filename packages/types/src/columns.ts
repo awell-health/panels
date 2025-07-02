@@ -216,6 +216,11 @@ export const ColumnInfoResponseSchema = z.object({
   ]),
   properties: ColumnPropertiesSchema,
   metadata: z.record(z.any()).optional(),
+  // For calculated columns
+  formula: z.string().optional(),
+  dependencies: z.array(z.string()).optional(),
+  // For base columns
+  sourceField: z.string().optional(),
   tags: z.array(z.string()).optional(),
 })
 
