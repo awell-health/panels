@@ -151,6 +151,20 @@ export class ReactiveStore {
     this.notifyListeners()
   }
 
+  setViews(views: View[]) {
+    const serializedViews: Record<
+      string,
+      Record<string, string | number | boolean>
+    > = {}
+
+    for (const view of views) {
+      serializedViews[view.id] = this.serializeView(view)
+    }
+
+    this.store.setTable('views', serializedViews)
+    this.notifyListeners()
+  }
+
   updateView(viewId: string, updates: Partial<View>) {
     const currentView = this.store.getRow('views', viewId)
     if (!currentView) return

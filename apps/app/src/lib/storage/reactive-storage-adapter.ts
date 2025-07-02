@@ -135,6 +135,46 @@ export class ReactiveStorageAdapter implements StorageAdapter {
     }
   }
 
+  // Get all views across all panels
+  async getViews(): Promise<View[]> {
+    if (!this.underlyingAdapter) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    try {
+      // Delegate to underlying adapter
+      const views = await this.underlyingAdapter.getViews()
+
+      // Update reactive store with the views
+      this.reactiveStore.setViews(views)
+
+      return views
+    } catch (error) {
+      console.error('Failed to get all views:', error)
+      throw error
+    }
+  }
+
+  // Get all columns across all panels
+  async getColumns(): Promise<Column[]> {
+    if (!this.underlyingAdapter) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    try {
+      // Delegate to underlying adapter
+      const columns = await this.underlyingAdapter.getColumns()
+
+      // Update reactive store with the columns
+      this.reactiveStore.setColumns(columns)
+
+      return columns
+    } catch (error) {
+      console.error('Failed to get all columns:', error)
+      throw error
+    }
+  }
+
   // Column operations - now separate from panels
   async getColumnsForPanel(panelId: string): Promise<Column[]> {
     if (!this.isInitialized) {

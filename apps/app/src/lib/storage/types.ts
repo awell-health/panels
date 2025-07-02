@@ -13,6 +13,7 @@ export interface StorageAdapter {
   deletePanel(id: string): Promise<void>
 
   // View operations
+  getViews(): Promise<View[]>
   addView(panelId: string, view: Omit<View, 'id'>): Promise<View>
   updateView(
     panelId: string,
@@ -24,6 +25,7 @@ export interface StorageAdapter {
   getViewsForPanel(panelId: string): Promise<View[]>
 
   // Column operations
+  getColumns(): Promise<Column[]>
   addColumn(panelId: string, column: Omit<Column, 'id'>): Promise<Column>
   updateColumn(
     panelId: string,

@@ -73,9 +73,14 @@ export class ReactivePanelStore {
     try {
       this.reactiveStore.setLoading(true)
 
-      const panels = await this.storage.getPanels()
-
+      const [panels, views, columns] = await Promise.all([
+        this.storage.getPanels(),
+        this.storage.getViews(),
+        this.storage.getColumns(),
+      ])
       this.reactiveStore.setPanels(panels)
+      this.reactiveStore.setViews(views)
+      this.reactiveStore.setColumns(columns)
       this.reactiveStore.setLoading(false)
       this.reactiveStore.setLastSync(Date.now())
     } catch (error) {

@@ -129,6 +129,80 @@ export class APIStorageAdapter implements StorageAdapter {
     }
   }
 
+  // Get all views across all panels
+  async getViews(): Promise<View[]> {
+    try {
+      const { viewsAPI } = await import('@/api/viewsAPI')
+
+      const viewsResponse = await viewsAPI.all(
+        this.config.tenantId,
+        this.config.userId,
+      )
+
+      return viewsResponse.views.map((view: ViewsResponse['views'][number]) =>
+        mapBackendViewToFrontend(view, view.panelId.toString()),
+      )
+    } catch (error) {
+      logger.error({ error }, 'Failed to fetch all views from API')
+      throw new Error(
+        `Failed to load views: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  // Get all columns across all panels
+  async getColumns(): Promise<Column[]> {
+    try {
+      const { panelsAPI } = await import('@/api/panelsAPI')
+
+      // Get all panels to fetch their columns
+      const panels = await this.getPanels()
+      const allColumns: Column[] = []
+
+      // Fetch columns for each panel in parallel
+      const columnPromises = panels.map(async (panel) => {
+        try {
+          const columnsResponse = await panelsAPI.columns.list(
+            { id: panel.id },
+            this.config.tenantId,
+            this.config.userId,
+          )
+
+          const panelColumns = [
+            ...columnsResponse.baseColumns,
+            ...columnsResponse.calculatedColumns,
+          ]
+
+          return panelColumns.map(
+            (
+              column:
+                | ColumnsResponse['baseColumns'][number]
+                | ColumnsResponse['calculatedColumns'][number],
+            ) => mapBackendColumnToFrontend(column, panel.id),
+          )
+        } catch (error) {
+          logger.error(
+            { error, panelId: panel.id },
+            `Failed to fetch columns for panel ${panel.id}`,
+          )
+          return []
+        }
+      })
+
+      const columnArrays = await Promise.all(columnPromises)
+      for (const columns of columnArrays) {
+        allColumns.push(...columns)
+      }
+
+      return allColumns
+    } catch (error) {
+      logger.error({ error }, 'Failed to fetch all columns from API')
+      throw new Error(
+        `Failed to load columns: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
   // Direct column operations
   async addColumn(
     panelId: string,
