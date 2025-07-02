@@ -1,5 +1,7 @@
 import type { Column, Panel, View, ViewType } from '@/types/panel'
 import type { StorageAdapter } from './types'
+import type { ColumnsResponse } from '@panels/types/columns'
+import type { ViewsResponse } from '@panels/types/views'
 import {
   mapBackendPanelToFrontend,
   mapFrontendPanelToBackend,
@@ -236,6 +238,41 @@ export class APIStorageAdapter implements StorageAdapter {
     }
   }
 
+  async getColumnsForPanel(panelId: string): Promise<Column[]> {
+    try {
+      const { panelsAPI } = await import('@/api/panelsAPI')
+
+      // Fetch columns for the specified panel
+      const columnsResponse = await panelsAPI.columns.list(
+        { id: panelId },
+        this.config.tenantId,
+        this.config.userId,
+      )
+
+      // Combine base and calculated columns and map to frontend format
+      const allColumns = [
+        ...columnsResponse.baseColumns,
+        ...columnsResponse.calculatedColumns,
+      ]
+
+      return allColumns.map(
+        (
+          column:
+            | ColumnsResponse['baseColumns'][number]
+            | ColumnsResponse['calculatedColumns'][number],
+        ) => mapBackendColumnToFrontend(column),
+      )
+    } catch (error) {
+      logger.error(
+        { error, panelId },
+        `Failed to fetch columns for panel ${panelId}`,
+      )
+      throw new Error(
+        `Failed to fetch columns: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
   // Simplified view operations
   async addView(panelId: string, view: Omit<View, 'id'>): Promise<View> {
     try {
@@ -332,6 +369,36 @@ export class APIStorageAdapter implements StorageAdapter {
       )
       throw new Error(
         `Failed to fetch view: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async getViewsForPanel(panelId: string): Promise<View[]> {
+    try {
+      const { viewsAPI } = await import('@/api/viewsAPI')
+
+      // Get all views and filter by panelId since there's no direct list method by panel
+      const viewsResponse = await viewsAPI.all(
+        this.config.tenantId,
+        this.config.userId,
+      )
+
+      // Filter views for the specified panel and map to frontend format
+      const panelViews = viewsResponse.views.filter(
+        (view: ViewsResponse['views'][number]) =>
+          view.panelId === Number.parseInt(panelId, 10),
+      )
+
+      return panelViews.map((view: ViewsResponse['views'][number]) =>
+        mapBackendViewToFrontend(view, panelId),
+      )
+    } catch (error) {
+      logger.error(
+        { error, panelId },
+        `Failed to fetch views for panel ${panelId}`,
+      )
+      throw new Error(
+        `Failed to fetch views: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
     }
   }

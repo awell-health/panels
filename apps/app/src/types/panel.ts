@@ -11,6 +11,7 @@ export type Sort = {
 
 export type Column = {
   id: string
+  panelId: string
   name: string
   type:
     | 'text'
@@ -60,8 +61,6 @@ export type Panel = {
   name: string
   description?: string
   createdAt: Date
-  columns: Column[] // SINGLE list, tags determine patient/task
-  views: View[]
   metadata: {
     filters: Filter[]
     [key: string]: unknown

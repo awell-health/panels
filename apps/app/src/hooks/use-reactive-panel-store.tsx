@@ -1,24 +1,23 @@
 'use client'
 
 import type {
-  ColumnDefinition,
-  PanelDefinition,
-  ViewDefinition,
-} from '@/types/worklist'
+  Column,
+  Panel,
+  View,
+} from '@/types/panel'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 
 import { getRuntimeConfig } from '@/lib/config'
 import { ReactiveStore } from '@/lib/reactive/reactive-store'
-import { getStorageAdapter } from '@/lib/storage/storage-factory'
-import type { StorageAdapter, StorageMode } from '@/lib/storage/types'
+import { getStorageAdapter, type StorageMode } from '@/lib/storage/storage-factory'
+import type { StorageAdapter } from '@/lib/storage/types'
 import { useAuthentication } from './use-authentication'
 import { logger } from '../lib/logger'
 
 export class ReactivePanelStore {
   private storage: StorageAdapter | null = null
   private reactiveStore: ReactiveStore | null = null
-  private saveStates: Map<string, 'saving' | 'saved' | 'error'> = new Map()
   private initializationPromise: Promise<void> | null = null
 
   constructor(userId?: string, organizationSlug?: string, mode?: StorageMode) {
@@ -107,7 +106,11 @@ export class ReactivePanelStore {
 
   // Get current save state for an operation
   getSaveState(operationId: string): 'saving' | 'saved' | 'error' | undefined {
-    return this.saveStates.get(operationId)
+    const store = this.reactiveStore?.getStore()
+    if (!store) return undefined
+
+    const value = store.getValue(`saveState_${operationId}`)
+    return value as 'saving' | 'saved' | 'error' | undefined
   }
 
   // Set save state for an operation
@@ -115,12 +118,16 @@ export class ReactivePanelStore {
     operationId: string,
     state: 'saving' | 'saved' | 'error',
   ) {
-    this.saveStates.set(operationId, state)
+    const store = this.reactiveStore?.getStore()
+    if (store) {
+      store.setValue(`saveState_${operationId}`, state)
+    }
   }
 
+  // Panel operations - simplified since panels are now independent
   async createPanel(
-    panel: Omit<PanelDefinition, 'id'>,
-  ): Promise<PanelDefinition> {
+    panel: Omit<Panel, 'id'>,
+  ): Promise<Panel> {
     if (!this.storage) {
       throw new Error('Storage adapter not initialized')
     }
@@ -147,7 +154,7 @@ export class ReactivePanelStore {
 
   async updatePanel(
     id: string,
-    updates: Partial<PanelDefinition>,
+    updates: Partial<Panel>,
   ): Promise<void> {
     if (!this.storage) {
       throw new Error('Storage adapter not initialized')
@@ -157,28 +164,11 @@ export class ReactivePanelStore {
     this.setSaveState(operationId, 'saving')
 
     try {
-      // Update panel via storage adapter and capture ID mappings
-      const result = await this.storage.updatePanel(id, updates)
+      // Update panel via storage adapter
+      const updatedPanel = await this.storage.updatePanel(id, updates)
 
-      // Update reactive store with the original updates first
-      this.reactiveStore?.updatePanel(id, updates)
-
-      // If we got ID mappings, apply them to correct temporary IDs
-      if (result.idMapping && result.idMapping.size > 0) {
-
-        // Get the updated panel from reactive store
-        const currentPanel = this.reactiveStore?.getPanel(id)
-        if (currentPanel) {
-          // Apply ID corrections to panel columns
-          const correctedPanel = this.applyCorrectedIdsToPanel(currentPanel, result.idMapping)
-
-          // Update the reactive store with corrected IDs
-          this.reactiveStore?.setPanel(correctedPanel)
-
-          // Also update any views that reference the corrected column IDs
-          await this.applyCorrectedIdsToViews(id, result.idMapping)
-        }
-      }
+      // Update reactive store with the updated panel
+      this.reactiveStore?.setPanel(updatedPanel)
 
       this.setSaveState(operationId, 'saved')
     } catch (error) {
@@ -187,71 +177,6 @@ export class ReactivePanelStore {
       throw new Error(
         `Failed to update panel: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
-    }
-  }
-
-  /**
-   * Apply corrected database IDs to panel columns
-   */
-  private applyCorrectedIdsToPanel(
-    panel: PanelDefinition,
-    idMapping: Map<string, string>
-  ): PanelDefinition {
-    const correctColumn = (column: ColumnDefinition) => {
-      const databaseId = idMapping.get(column.id)
-      if (databaseId) {
-        return { ...column, id: databaseId }
-      }
-      return column
-    }
-
-    return {
-      ...panel,
-      patientViewColumns: panel.patientViewColumns?.map(correctColumn) || [],
-      taskViewColumns: panel.taskViewColumns?.map(correctColumn) || [],
-    }
-  }
-
-  /**
-   * Apply corrected database IDs to views that reference the columns
-   */
-  private async applyCorrectedIdsToViews(
-    panelId: string,
-    idMapping: Map<string, string>
-  ): Promise<void> {
-    if (!this.storage) return
-
-    try {
-      // Get all views for this panel
-      const currentPanel = this.reactiveStore?.getPanel(panelId)
-      if (!currentPanel?.views) return
-
-      // Update each view that references corrected column IDs
-      for (const view of currentPanel.views) {
-        if (!view.columns || view.columns.length === 0) continue
-
-        let hasChanges = false
-        const correctedColumns = view.columns.map((column) => {
-          const databaseId = idMapping.get(column.id)
-          if (databaseId) {
-            hasChanges = true
-            return { ...column, id: databaseId }
-          }
-          return column
-        })
-
-        // If this view references corrected columns, update it
-        if (hasChanges) {
-          // Update via storage layer to sync with backend
-          await this.storage.updateView(panelId, view.id, {
-            columns: correctedColumns
-          })
-
-        }
-      }
-    } catch (error) {
-      logger.error({ error, panelId, idMapping }, 'Failed to apply corrected IDs to views')
-      // Don't throw - this is a best-effort correction
     }
   }
 
@@ -267,7 +192,7 @@ export class ReactivePanelStore {
       // Delete from backend first
       await this.storage.deletePanel(id)
 
-      // Update reactive store
+      // Update reactive store (this will also remove associated views and columns)
       this.reactiveStore?.deletePanel(id)
 
       this.setSaveState(operationId, 'saved')
@@ -280,33 +205,23 @@ export class ReactivePanelStore {
     }
   }
 
-  // View operations
+  // View operations - now independent of panels
   async addView(
     panelId: string,
-    view: Omit<ViewDefinition, 'id'>,
-  ): Promise<ViewDefinition> {
+    view: Omit<View, 'id'>,
+  ): Promise<View> {
     if (!this.storage) {
       throw new Error('Storage adapter not initialized')
     }
 
-    const operationId = `view-${panelId}-${view.title}`
+    const operationId = `view-${panelId}-${view.name}`
     this.setSaveState(operationId, 'saving')
 
     try {
       const newView = await this.storage.addView(panelId, view)
 
       // Update reactive store
-      this.reactiveStore?.setView(panelId, newView)
-
-      // Also update the panel data to include the new view
-      const currentPanel = this.reactiveStore?.getPanel(panelId)
-      if (currentPanel) {
-        const updatedPanel = {
-          ...currentPanel,
-          views: [...(currentPanel.views || []), newView],
-        }
-        this.reactiveStore?.setPanel(updatedPanel)
-      }
+      this.reactiveStore?.setView(newView)
 
       this.setSaveState(operationId, 'saved')
       return newView
@@ -322,7 +237,7 @@ export class ReactivePanelStore {
   async updateView(
     panelId: string,
     viewId: string,
-    updates: Partial<ViewDefinition>,
+    updates: Partial<View>,
   ): Promise<void> {
     if (!this.storage) {
       throw new Error('Storage adapter not initialized')
@@ -332,23 +247,10 @@ export class ReactivePanelStore {
     this.setSaveState(operationId, 'saving')
 
     try {
-      await this.storage.updateView(panelId, viewId, updates)
+      const updatedView = await this.storage.updateView(panelId, viewId, updates)
 
       // Update reactive store
-      this.reactiveStore?.updateView(panelId, viewId, updates)
-
-      // Also update the panel data to reflect view changes
-      const currentPanel = this.reactiveStore?.getPanel(panelId)
-      if (currentPanel) {
-        const updatedViews = (currentPanel.views || []).map((view) =>
-          view.id === viewId ? { ...view, ...updates } : view,
-        )
-        const updatedPanel = {
-          ...currentPanel,
-          views: updatedViews,
-        }
-        this.reactiveStore?.setPanel(updatedPanel)
-      }
+      this.reactiveStore?.setView(updatedView)
 
       this.setSaveState(operationId, 'saved')
     } catch (error) {
@@ -373,19 +275,7 @@ export class ReactivePanelStore {
       await this.storage.deleteView(panelId, viewId)
 
       // Update reactive store
-      this.reactiveStore?.deleteView(panelId, viewId)
-
-      // Also update the panel data to remove the deleted view
-      const currentPanel = this.reactiveStore?.getPanel(panelId)
-      if (currentPanel) {
-        const updatedPanel = {
-          ...currentPanel,
-          views: (currentPanel.views || []).filter(
-            (view) => view.id !== viewId,
-          ),
-        }
-        this.reactiveStore?.setPanel(updatedPanel)
-      }
+      this.reactiveStore?.deleteView(viewId)
 
       this.setSaveState(operationId, 'saved')
     } catch (error) {
@@ -397,11 +287,11 @@ export class ReactivePanelStore {
     }
   }
 
-  // Column operations
+  // Column operations - now independent of panels
   async updateColumn(
     panelId: string,
     columnId: string,
-    updates: Partial<ColumnDefinition>,
+    updates: Partial<Column>,
   ): Promise<void> {
     if (!this.storage) {
       throw new Error('Storage adapter not initialized')
@@ -411,11 +301,14 @@ export class ReactivePanelStore {
     this.setSaveState(operationId, 'saving')
 
     // Store original state for rollback
-    const originalPanel = this.reactiveStore?.getPanel(panelId)
+    const originalColumn = this.reactiveStore?.getColumn(columnId)
 
     try {
       // ✅ OPTIMISTIC UPDATE: Update reactive store first for immediate UI feedback
-      this.reactiveStore?.updateColumn(panelId, columnId, updates)
+      if (originalColumn) {
+        const optimisticColumn = { ...originalColumn, ...updates }
+        this.reactiveStore?.setColumn(optimisticColumn)
+      }
 
       // Then sync with backend API
       await this.storage.updateColumn(panelId, columnId, updates)
@@ -423,8 +316,8 @@ export class ReactivePanelStore {
       this.setSaveState(operationId, 'saved')
     } catch (error) {
       // Rollback optimistic update on API failure
-      if (originalPanel) {
-        this.reactiveStore?.setPanel(originalPanel)
+      if (originalColumn) {
+        this.reactiveStore?.setColumn(originalColumn)
       }
 
       this.setSaveState(operationId, 'error')
@@ -433,6 +326,37 @@ export class ReactivePanelStore {
         `Failed to update column: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
     }
+  }
+
+  // Helper methods for fetching columns and views
+  async getColumnsForPanel(panelId: string): Promise<Column[]> {
+    if (!this.storage) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    // Check if this method exists on the storage adapter
+    if ('getColumnsForPanel' in this.storage) {
+      const adapter = this.storage as StorageAdapter & { getColumnsForPanel: (panelId: string) => Promise<Column[]> }
+      return await adapter.getColumnsForPanel(panelId)
+    }
+
+    // Fallback: get from reactive store
+    return this.reactiveStore?.getColumnsForPanel(panelId) || []
+  }
+
+  async getViewsForPanel(panelId: string): Promise<View[]> {
+    if (!this.storage) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    // Check if this method exists on the storage adapter
+    if ('getViewsForPanel' in this.storage) {
+      const adapter = this.storage as StorageAdapter & { getViewsForPanel: (panelId: string) => Promise<View[]> }
+      return await adapter.getViewsForPanel(panelId)
+    }
+
+    // Fallback: get from reactive store
+    return this.reactiveStore?.getViewsForPanel(panelId) || []
   }
 }
 
@@ -502,6 +426,7 @@ export function useReactivePanelStore() {
 
   // Return a proxy object that provides access to the store's public methods
   return {
+    store: store.getReactiveStore()?.getStore(),
     getSaveState: store.getSaveState.bind(store),
     createPanel: store.createPanel.bind(store),
     updatePanel: store.updatePanel.bind(store),
@@ -512,5 +437,7 @@ export function useReactivePanelStore() {
     getStorage: store.getStorage.bind(store),
     getReactiveStore: store.getReactiveStore.bind(store),
     updateColumn: store.updateColumn.bind(store),
+    getColumnsForPanel: store.getColumnsForPanel.bind(store),
+    getViewsForPanel: store.getViewsForPanel.bind(store),
   }
 }

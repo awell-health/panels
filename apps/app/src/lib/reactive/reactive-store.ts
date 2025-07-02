@@ -1,12 +1,8 @@
 import { createStore, type Store } from 'tinybase'
-import type {
-  PanelDefinition,
-  ViewDefinition,
-  ColumnDefinition,
-} from '@/types/worklist'
+import type { Panel, View, Column, ViewType, Filter } from '@/types/panel'
 
 /**
- * Reactive Store using TinyBase for managing panels and views
+ * Reactive Store using TinyBase for managing panels, views, and columns as separate entities
  * Provides real-time synchronization and reactive updates
  */
 export class ReactiveStore {
@@ -19,7 +15,7 @@ export class ReactiveStore {
   }
 
   private initializeStore() {
-    // Initialize tables for panels, views, and columns
+    // Initialize tables for panels, views, and columns as separate entities
     this.store.setTable('panels', {})
     this.store.setTable('views', {})
     this.store.setTable('columns', {})
@@ -47,8 +43,8 @@ export class ReactiveStore {
     }
   }
 
-  // Panel operations
-  getPanels(): PanelDefinition[] {
+  // Panel operations - simplified since panels no longer contain columns/views
+  getPanels(): Panel[] {
     const panels = this.store.getTable('panels')
     return Object.values(panels).map((panel) => {
       const panelData = panel as Record<string, string | number | boolean>
@@ -56,7 +52,7 @@ export class ReactiveStore {
     })
   }
 
-  getPanel(id: string): PanelDefinition | undefined {
+  getPanel(id: string): Panel | undefined {
     const panel = this.store.getRow('panels', id)
     if (!panel) return undefined
 
@@ -64,33 +60,13 @@ export class ReactiveStore {
     return this.deserializePanel(panelData)
   }
 
-  setPanel(panel: PanelDefinition) {
+  setPanel(panel: Panel) {
     const serialized = this.serializePanel(panel)
     this.store.setRow('panels', panel.id, serialized)
-
-    // Also store individual columns
-    if (panel.patientViewColumns) {
-      for (const column of panel.patientViewColumns) {
-        this.setColumn(panel.id, column)
-      }
-    }
-    if (panel.taskViewColumns) {
-      for (const column of panel.taskViewColumns) {
-        this.setColumn(panel.id, column)
-      }
-    }
-
-    // Also store individual views
-    if (panel.views) {
-      for (const view of panel.views) {
-        this.setView(panel.id, view)
-      }
-    }
-
     this.notifyListeners()
   }
 
-  setPanels(panels: PanelDefinition[]) {
+  setPanels(panels: Panel[]) {
     const serializedPanels: Record<
       string,
       Record<string, string | number | boolean>
@@ -98,56 +74,18 @@ export class ReactiveStore {
 
     for (const panel of panels) {
       serializedPanels[panel.id] = this.serializePanel(panel)
-
-      // Also store individual columns for each panel
-      if (panel.patientViewColumns) {
-        for (const column of panel.patientViewColumns) {
-          this.setColumn(panel.id, column)
-        }
-      }
-      if (panel.taskViewColumns) {
-        for (const column of panel.taskViewColumns) {
-          this.setColumn(panel.id, column)
-        }
-      }
-
-      // Also store individual views for each panel
-      if (panel.views) {
-        for (const view of panel.views) {
-          this.setView(panel.id, view)
-        }
-      }
     }
 
     this.store.setTable('panels', serializedPanels)
     this.notifyListeners()
   }
 
-  updatePanel(id: string, updates: Partial<PanelDefinition>) {
+  updatePanel(id: string, updates: Partial<Panel>) {
     const currentPanel = this.getPanel(id)
     if (!currentPanel) return
 
     const updatedPanel = { ...currentPanel, ...updates }
     this.setPanel(updatedPanel)
-
-    // Also update individual columns if panel columns have changed
-    if (updates.patientViewColumns) {
-      for (const column of updates.patientViewColumns) {
-        this.setColumn(id, column)
-      }
-    }
-    if (updates.taskViewColumns) {
-      for (const column of updates.taskViewColumns) {
-        this.setColumn(id, column)
-      }
-    }
-
-    // Also update individual views if panel views have changed
-    if (updates.views) {
-      for (const view of updates.views) {
-        this.setView(id, view)
-      }
-    }
   }
 
   deletePanel(id: string) {
@@ -157,161 +95,131 @@ export class ReactiveStore {
     // Delete all views for this panel
     const views = this.store.getTable('views')
     const viewsToDelete = Object.entries(views)
-      .filter(([key]) => key.startsWith(`${id}:`))
-      .map(([key]) => key)
+      .filter(([, view]) => {
+        const viewData = view as Record<string, string | number | boolean>
+        return viewData.panelId === id
+      })
+      .map(([viewId]) => viewId)
 
-    for (const viewKey of viewsToDelete) {
-      this.store.delRow('views', viewKey)
+    for (const viewId of viewsToDelete) {
+      this.store.delRow('views', viewId)
     }
 
     // Delete all columns for this panel
     const columns = this.store.getTable('columns')
     const columnsToDelete = Object.entries(columns)
-      .filter(([key]) => key.startsWith(`${id}:`))
-      .map(([key]) => key)
+      .filter(([, column]) => {
+        const columnData = column as Record<string, string | number | boolean>
+        return columnData.panelId === id
+      })
+      .map(([columnId]) => columnId)
 
-    for (const columnKey of columnsToDelete) {
-      this.store.delRow('columns', columnKey)
+    for (const columnId of columnsToDelete) {
+      this.store.delRow('columns', columnId)
     }
 
     this.notifyListeners()
   }
 
-  // View operations
-  getView(panelId: string, viewId: string): ViewDefinition | undefined {
-    const view = this.store.getRow('views', `${panelId}:${viewId}`)
+  // View operations - independent of panels
+  getView(panelId: string, viewId: string): View | undefined {
+    const view = this.store.getRow('views', viewId)
     if (!view) return undefined
 
     const viewData = view as Record<string, string | number | boolean>
-    return this.deserializeView(viewData)
+    const deserializedView = this.deserializeView(viewData)
+
+    // Verify this view belongs to the specified panel
+    if (deserializedView.panelId !== panelId) return undefined
+
+    return deserializedView
   }
 
-  getViewsForPanel(panelId: string): ViewDefinition[] {
+  getViewsForPanel(panelId: string): View[] {
     const views = this.store.getTable('views')
     return Object.entries(views)
-      .filter(([key]) => key.startsWith(`${panelId}:`))
       .map(([, view]) => {
         const viewData = view as Record<string, string | number | boolean>
         return this.deserializeView(viewData)
       })
+      .filter((view) => view.panelId === panelId)
   }
 
-  setView(panelId: string, view: ViewDefinition) {
+  setView(view: View) {
     const serialized = this.serializeView(view)
-    this.store.setRow('views', `${panelId}:${view.id}`, serialized)
+    this.store.setRow('views', view.id, serialized)
     this.notifyListeners()
   }
 
-  updateView(
-    panelId: string,
-    viewId: string,
-    updates: Partial<ViewDefinition>,
-  ) {
-    const currentView = this.getView(panelId, viewId)
+  updateView(viewId: string, updates: Partial<View>) {
+    const currentView = this.store.getRow('views', viewId)
     if (!currentView) return
 
-    const updatedView = { ...currentView, ...updates }
-    this.setView(panelId, updatedView)
+    const currentViewData = this.deserializeView(
+      currentView as Record<string, string | number | boolean>,
+    )
+    const updatedView = { ...currentViewData, ...updates }
+    this.setView(updatedView)
   }
 
-  deleteView(panelId: string, viewId: string) {
-    this.store.delRow('views', `${panelId}:${viewId}`)
+  deleteView(viewId: string) {
+    this.store.delRow('views', viewId)
     this.notifyListeners()
   }
 
-  // Column operations
-  getColumnsForPanel(panelId: string): ColumnDefinition[] {
+  // Column operations - independent of panels
+  getColumnsForPanel(panelId: string): Column[] {
     const columns = this.store.getTable('columns')
     return Object.entries(columns)
-      .filter(([key]) => key.startsWith(`${panelId}:`))
       .map(([, column]) => {
         const columnData = column as Record<string, string | number | boolean>
         return this.deserializeColumn(columnData)
       })
+      .filter((column) => column.panelId === panelId)
   }
 
-  setColumn(panelId: string, column: ColumnDefinition) {
+  getColumn(columnId: string): Column | undefined {
+    const column = this.store.getRow('columns', columnId)
+    if (!column) return undefined
+
+    const columnData = column as Record<string, string | number | boolean>
+    return this.deserializeColumn(columnData)
+  }
+
+  setColumn(column: Column) {
     const serialized = this.serializeColumn(column)
-    this.store.setRow('columns', `${panelId}:${column.id}`, serialized)
+    this.store.setRow('columns', column.id, serialized)
     this.notifyListeners()
   }
 
-  updateColumn(
-    panelId: string,
-    columnId: string,
-    updates: Partial<ColumnDefinition>,
-  ) {
-    const columns = this.store.getTable('columns')
-    const columnKey = `${panelId}:${columnId}`
-    const currentColumn = columns[columnKey]
-
-    if (!currentColumn) {
-      return
-    }
-
-    const columnData = currentColumn as Record<
+  setColumns(columns: Column[]) {
+    const serializedColumns: Record<
       string,
-      string | number | boolean
-    >
-    const updatedColumn = { ...this.deserializeColumn(columnData), ...updates }
-    this.setColumn(panelId, updatedColumn)
+      Record<string, string | number | boolean>
+    > = {}
 
-    // Also update the panel data to keep column arrays in sync
-    const currentPanel = this.getPanel(panelId)
-    if (currentPanel) {
-      // Update patient view columns
-      const updatedPatientColumns = currentPanel.patientViewColumns.map(
-        (col) => (col.id === columnId ? { ...col, ...updates } : col),
-      )
-
-      // Update task view columns
-      const updatedTaskColumns = currentPanel.taskViewColumns.map((col) =>
-        col.id === columnId ? { ...col, ...updates } : col,
-      )
-
-      // Update the panel without triggering view serialization
-      const updatedPanel = {
-        ...currentPanel,
-        patientViewColumns: updatedPatientColumns,
-        taskViewColumns: updatedTaskColumns,
-      }
-
-      // Update panel data directly without calling setPanel to avoid view serialization issues
-      const serialized = this.serializePanel(updatedPanel)
-      this.store.setRow('panels', panelId, serialized)
-
-      // Also update any views that reference this column
-      if (currentPanel.views) {
-        let updatedViewsCount = 0
-
-        for (const view of currentPanel.views) {
-          const viewColumns = view.columns || []
-          const columnIndex = viewColumns.findIndex(
-            (col) => col.id === columnId,
-          )
-
-          if (columnIndex !== -1) {
-            // Update the column in the view
-            const updatedViewColumns = [...viewColumns]
-            updatedViewColumns[columnIndex] = {
-              ...updatedViewColumns[columnIndex],
-              ...updates,
-            }
-
-            const updatedView = {
-              ...view,
-              columns: updatedViewColumns,
-            }
-
-            // Update the view in the reactive store
-            this.setView(panelId, updatedView)
-            updatedViewsCount++
-          }
-        }
-      }
-
-      this.notifyListeners()
+    for (const column of columns) {
+      serializedColumns[column.id] = this.serializeColumn(column)
     }
+
+    this.store.setTable('columns', serializedColumns)
+    this.notifyListeners()
+  }
+
+  updateColumn(columnId: string, updates: Partial<Column>) {
+    const currentColumn = this.store.getRow('columns', columnId)
+    if (!currentColumn) return
+
+    const currentColumnData = this.deserializeColumn(
+      currentColumn as Record<string, string | number | boolean>,
+    )
+    const updatedColumn = { ...currentColumnData, ...updates }
+    this.setColumn(updatedColumn)
+  }
+
+  deleteColumn(columnId: string) {
+    this.store.delRow('columns', columnId)
+    this.notifyListeners()
   }
 
   // Metadata operations
@@ -345,17 +253,15 @@ export class ReactiveStore {
     return typeof lastSync === 'number' ? lastSync : null
   }
 
-  // Serialization helpers - use JSON for complex objects
+  // Simplified serialization helpers
   private serializePanel(
-    panel: PanelDefinition,
+    panel: Panel,
   ): Record<string, string | number | boolean> {
     return {
       id: panel.id,
-      title: panel.title,
-      filters: JSON.stringify(panel.filters),
-      patientViewColumns: JSON.stringify(panel.patientViewColumns),
-      taskViewColumns: JSON.stringify(panel.taskViewColumns),
-      views: JSON.stringify(panel.views || []),
+      name: panel.name,
+      description: panel.description || '',
+      metadata: JSON.stringify(panel.metadata || {}),
       createdAt:
         panel.createdAt instanceof Date
           ? panel.createdAt.toISOString()
@@ -367,34 +273,29 @@ export class ReactiveStore {
 
   private deserializePanel(
     data: Record<string, string | number | boolean>,
-  ): PanelDefinition {
+  ): Panel {
     return {
       id: data.id as string,
-      title: data.title as string,
-      filters: data.filters ? JSON.parse(data.filters as string) : [],
-      patientViewColumns: data.patientViewColumns
-        ? JSON.parse(data.patientViewColumns as string)
-        : [],
-      taskViewColumns: data.taskViewColumns
-        ? JSON.parse(data.taskViewColumns as string)
-        : [],
-      views: data.views ? JSON.parse(data.views as string) : [],
+      name: data.name as string,
+      description: (data.description as string) || undefined,
+      metadata: data.metadata
+        ? JSON.parse(data.metadata as string)
+        : { filters: [] },
       createdAt: data.createdAt
         ? new Date(data.createdAt as string)
         : new Date(),
     }
   }
 
-  private serializeView(
-    view: ViewDefinition,
-  ): Record<string, string | number | boolean> {
+  private serializeView(view: View): Record<string, string | number | boolean> {
     return {
       id: view.id,
-      title: view.title,
-      filters: JSON.stringify(view.filters),
-      columns: JSON.stringify(view.columns),
-      viewType: view.viewType,
-      sortConfig: JSON.stringify(view.sortConfig || []),
+      name: view.name,
+      panelId: view.panelId,
+      visibleColumns: JSON.stringify(view.visibleColumns),
+      sorts: JSON.stringify(view.sorts || []),
+      isPublished: view.isPublished,
+      metadata: JSON.stringify(view.metadata || {}),
       createdAt:
         view.createdAt instanceof Date
           ? view.createdAt.toISOString()
@@ -406,14 +307,19 @@ export class ReactiveStore {
 
   private deserializeView(
     data: Record<string, string | number | boolean>,
-  ): ViewDefinition {
+  ): View {
     return {
       id: data.id as string,
-      title: data.title as string,
-      filters: data.filters ? JSON.parse(data.filters as string) : [],
-      columns: data.columns ? JSON.parse(data.columns as string) : [],
-      viewType: data.viewType as 'patient' | 'task',
-      sortConfig: data.sortConfig ? JSON.parse(data.sortConfig as string) : [],
+      name: data.name as string,
+      panelId: data.panelId as string,
+      visibleColumns: data.visibleColumns
+        ? JSON.parse(data.visibleColumns as string)
+        : [],
+      sorts: data.sorts ? JSON.parse(data.sorts as string) : [],
+      isPublished: Boolean(data.isPublished),
+      metadata: data.metadata
+        ? JSON.parse(data.metadata as string)
+        : { filters: [], viewType: 'patient' },
       createdAt: data.createdAt
         ? new Date(data.createdAt as string)
         : new Date(),
@@ -421,28 +327,34 @@ export class ReactiveStore {
   }
 
   private serializeColumn(
-    column: ColumnDefinition,
+    column: Column,
   ): Record<string, string | number | boolean> {
     return {
       id: column.id,
-      key: column.key,
+      panelId: column.panelId,
       name: column.name,
       type: column.type,
-      description: column.description || '',
+      sourceField: column.sourceField || '',
+      tags: JSON.stringify(column.tags || []),
       properties: JSON.stringify(column.properties || {}),
+      metadata: JSON.stringify(column.metadata || {}),
     }
   }
 
   private deserializeColumn(
     data: Record<string, string | number | boolean>,
-  ): ColumnDefinition {
+  ): Column {
     return {
       id: data.id as string,
-      key: data.key as string,
+      panelId: data.panelId as string,
       name: data.name as string,
-      type: data.type as ColumnDefinition['type'],
-      description: (data.description as string) || '',
-      properties: data.properties ? JSON.parse(data.properties as string) : {},
+      type: data.type as Column['type'],
+      sourceField: (data.sourceField as string) || undefined,
+      tags: data.tags ? JSON.parse(data.tags as string) : [],
+      properties: data.properties
+        ? JSON.parse(data.properties as string)
+        : { display: {} },
+      metadata: data.metadata ? JSON.parse(data.metadata as string) : {},
     }
   }
 

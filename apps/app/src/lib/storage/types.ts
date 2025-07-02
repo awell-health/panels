@@ -21,6 +21,7 @@ export interface StorageAdapter {
   ): Promise<View>
   deleteView(panelId: string, viewId: string): Promise<void>
   getView(panelId: string, viewId: string): Promise<View | null>
+  getViewsForPanel(panelId: string): Promise<View[]>
 
   // Column operations
   addColumn(panelId: string, column: Omit<Column, 'id'>): Promise<Column>
@@ -30,6 +31,7 @@ export interface StorageAdapter {
     updates: Partial<Column>,
   ): Promise<Column>
   deleteColumn(panelId: string, columnId: string): Promise<void>
+  getColumnsForPanel(panelId: string): Promise<Column[]>
 
   // Loading state
   isLoading(): boolean

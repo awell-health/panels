@@ -1,371 +1,195 @@
 'use client'
 
-import { useEffect, useState, useCallback, useContext } from 'react'
-import { useStore, useTable, useValue } from 'tinybase/ui-react'
 import type {
-  PanelDefinition,
-  ViewDefinition,
-  ColumnDefinition,
-} from '@/types/worklist'
-import { getStorageAdapter } from '@/lib/storage/storage-factory'
-import type { StorageAdapter } from '@/lib/storage/types'
-import type { ReactiveStore } from '@/lib/reactive/reactive-store'
-import { ReactivePanelStoreContext } from './use-reactive-panel-store'
+  Column,
+  Panel,
+  View,
+} from '@/types/panel'
+import { useMemo } from 'react'
+import { useRow, useTable, useValue } from 'tinybase/ui-react'
+import { useReactivePanelStore } from './use-reactive-panel-store'
 
-// Type for reactive storage adapter
-interface ReactiveStorageAdapter extends StorageAdapter {
-  getReactiveStore(): ReactiveStore
+/**
+ * Deserialize panel data from TinyBase format
+ */
+function deserializePanel(data: Record<string, string | number | boolean>): Panel {
+  return {
+    id: data.id as string,
+    name: data.name as string,
+    description: (data.description as string) || undefined,
+    metadata: data.metadata ? JSON.parse(data.metadata as string) : { filters: [] },
+    createdAt: data.createdAt ? new Date(data.createdAt as string) : new Date(),
+  }
+}
+
+/**
+ * Deserialize view data from TinyBase format
+ */
+function deserializeView(data: Record<string, string | number | boolean>): View {
+  return {
+    id: data.id as string,
+    name: data.name as string,
+    panelId: data.panelId as string,
+    visibleColumns: data.visibleColumns ? JSON.parse(data.visibleColumns as string) : [],
+    sorts: data.sorts ? JSON.parse(data.sorts as string) : [],
+    isPublished: Boolean(data.isPublished),
+    metadata: data.metadata ? JSON.parse(data.metadata as string) : { filters: [], viewType: 'patient' },
+    createdAt: data.createdAt ? new Date(data.createdAt as string) : new Date(),
+  }
+}
+
+/**
+ * Deserialize column data from TinyBase format
+ */
+function deserializeColumn(data: Record<string, string | number | boolean>): Column {
+  return {
+    id: data.id as string,
+    panelId: data.panelId as string,
+    name: data.name as string,
+    type: data.type as Column['type'],
+    sourceField: (data.sourceField as string) || undefined,
+    tags: data.tags ? JSON.parse(data.tags as string) : [],
+    properties: data.properties ? JSON.parse(data.properties as string) : { display: {} },
+    metadata: data.metadata ? JSON.parse(data.metadata as string) : {},
+  }
 }
 
 /**
  * Hook to get reactive panels data
- * Automatically updates when panels change in the store
+ * Now uses TinyBase ui-react for automatic reactivity
  */
 export function useReactivePanels() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [panels, setPanels] = useState<PanelDefinition[]>([])
+  const { store } = useReactivePanelStore()
 
-  // Get the reactive store from the ReactivePanelStore context
-  const reactivePanelStore = useContext(ReactivePanelStoreContext)
+  // These hooks automatically re-render when data changes - no manual subscriptions!
+  const panelsTable = useTable('panels', store)
+  const isLoading = useValue('isLoading', store) as boolean
+  const error = useValue('error', store) as string | null
 
-  // Initialize and subscribe to reactive store
-  useEffect(() => {
-    let isMounted = true
-
-    const initializeReactiveStore = () => {
-      try {
-        if (!reactivePanelStore) {
-          return
-        }
-
-        // Get the reactive store from the panel store
-        const reactiveStore = reactivePanelStore.getReactiveStore()
-
-        if (!reactiveStore) {
-          return
-        }
-
-        if (!isMounted) return
-
-        // Get initial data
-        const initialPanels = reactiveStore.getPanels()
-
-        if (!isMounted) return
-
-        setPanels(initialPanels)
-        setIsLoading(reactiveStore.getLoading())
-        setError(reactiveStore.getError() || null)
-
-        // Subscribe to changes
-        const unsubscribe = reactiveStore.subscribe(() => {
-          if (!isMounted) return
-
-          const updatedPanels = reactiveStore.getPanels()
-          const loading = reactiveStore.getLoading()
-          const error = reactiveStore.getError()
-
-          setPanels(updatedPanels)
-          setIsLoading(loading)
-          setError(error || null)
-        })
-
-        return unsubscribe
-      } catch (err) {
-        if (!isMounted) return
-        console.error(
-          'useReactivePanels: failed to initialize reactive store:',
-          err,
-        )
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Failed to initialize reactive store',
-        )
-        setIsLoading(false)
-      }
-    }
-
-    const unsubscribe = initializeReactiveStore()
-
-    return () => {
-      isMounted = false
-      if (unsubscribe) {
-        unsubscribe()
-      }
-    }
-  }, [reactivePanelStore]) // Add reactivePanelStore as dependency
-
-  const refetch = useCallback(() => {
-    if (reactivePanelStore) {
-      const reactiveStore = reactivePanelStore.getReactiveStore()
-      if (reactiveStore) {
-        const updatedPanels = reactiveStore.getPanels()
-        setPanels(updatedPanels)
-        setIsLoading(reactiveStore.getLoading())
-        setError(reactiveStore.getError() || null)
-      }
-    }
-  }, [reactivePanelStore])
+  const panels = useMemo(() => {
+    if (!panelsTable) return []
+    return Object.values(panelsTable).map(deserializePanel)
+  }, [panelsTable])
 
   return {
     panels,
-    isLoading,
-    error,
-    refetch,
+    isLoading: Boolean(isLoading),
+    error: error || null,
   }
 }
 
 /**
  * Hook to get reactive panel data
- * Automatically updates when panel changes in the store
+ * Now uses TinyBase ui-react for automatic reactivity
  */
 export function useReactivePanel(panelId: string) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [panel, setPanel] = useState<PanelDefinition | null>(null)
+  const { store } = useReactivePanelStore()
 
-  // Get the reactive store from the ReactivePanelStore context
-  const reactivePanelStore = useContext(ReactivePanelStoreContext)
+  // Automatically reactive - no manual subscriptions needed!
+  const panelRow = useRow('panels', panelId, store)
+  const isLoading = useValue('isLoading', store) as boolean
+  const error = useValue('error', store) as string | null
 
-  // Initialize and subscribe to reactive store
-  useEffect(() => {
-    let isMounted = true
-
-    const initializeReactiveStore = () => {
-      try {
-        if (!reactivePanelStore) {
-          return
-        }
-
-        // Get the reactive store from the panel store
-        const reactiveStore = reactivePanelStore.getReactiveStore()
-
-        if (!reactiveStore) {
-          return
-        }
-
-        if (!isMounted) return
-
-        // Get initial data
-        const initialPanel = reactiveStore.getPanel(panelId)
-
-        if (!isMounted) return
-
-        setPanel(initialPanel || null)
-        setIsLoading(reactiveStore.getLoading())
-        setError(reactiveStore.getError() || null)
-
-        // Subscribe to changes
-        const unsubscribe = reactiveStore.subscribe(() => {
-          if (!isMounted) return
-
-          const updatedPanel = reactiveStore.getPanel(panelId)
-          const loading = reactiveStore.getLoading()
-          const error = reactiveStore.getError()
-
-          setPanel(updatedPanel || null)
-          setIsLoading(loading)
-          setError(error || null)
-        })
-
-        return unsubscribe
-      } catch (err) {
-        if (!isMounted) return
-        console.error(
-          'useReactivePanel: failed to initialize reactive store:',
-          err,
-        )
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Failed to initialize reactive store',
-        )
-        setIsLoading(false)
-      }
-    }
-
-    const unsubscribe = initializeReactiveStore()
-
-    return () => {
-      isMounted = false
-      if (unsubscribe) {
-        unsubscribe()
-      }
-    }
-  }, [reactivePanelStore, panelId])
+  const panel = useMemo(() => {
+    if (!panelRow) return null
+    return deserializePanel(panelRow)
+  }, [panelRow])
 
   return {
     panel,
-    isLoading,
-    error,
+    isLoading: Boolean(isLoading),
+    error: error || null,
   }
 }
 
 /**
  * Hook to get reactive view data
- * Automatically updates when view changes in the store
+ * Now uses TinyBase ui-react for automatic reactivity
  */
 export function useReactiveView(panelId: string, viewId: string) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [view, setView] = useState<ViewDefinition | null>(null)
+  const { store } = useReactivePanelStore()
 
-  // Get the reactive store from the ReactivePanelStore context
-  const reactivePanelStore = useContext(ReactivePanelStoreContext)
+  // Automatically reactive!
+  const viewRow = useRow('views', viewId, store)
+  const isLoading = useValue('isLoading', store) as boolean
+  const error = useValue('error', store) as string | null
 
-  // Initialize and subscribe to reactive store
-  useEffect(() => {
-    let isMounted = true
+  const view = useMemo(() => {
+    if (!viewRow) return null
+    const deserializedView = deserializeView(viewRow)
 
-    const initializeReactiveStore = () => {
-      try {
-        if (!reactivePanelStore) {
-          return
-        }
+    // Verify this view belongs to the specified panel
+    if (deserializedView.panelId !== panelId) return null
 
-        // Get the reactive store from the panel store
-        const reactiveStore = reactivePanelStore.getReactiveStore()
-
-        if (!reactiveStore) {
-          return
-        }
-
-        if (!isMounted) return
-
-        // Get initial data
-        const initialView = reactiveStore.getView(panelId, viewId)
-
-        if (!isMounted) return
-
-        setView(initialView || null)
-        setIsLoading(reactiveStore.getLoading())
-        setError(reactiveStore.getError() || null)
-
-        // Subscribe to changes
-        const unsubscribe = reactiveStore.subscribe(() => {
-          if (!isMounted) return
-
-          const updatedView = reactiveStore.getView(panelId, viewId)
-          const loading = reactiveStore.getLoading()
-          const error = reactiveStore.getError()
-
-          setView(updatedView || null)
-          setIsLoading(loading)
-          setError(error || null)
-        })
-
-        return unsubscribe
-      } catch (err) {
-        if (!isMounted) return
-        console.error(
-          'useReactiveView: failed to initialize reactive store:',
-          err,
-        )
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Failed to initialize reactive store',
-        )
-        setIsLoading(false)
-      }
-    }
-
-    const unsubscribe = initializeReactiveStore()
-
-    return () => {
-      isMounted = false
-      if (unsubscribe) {
-        unsubscribe()
-      }
-    }
-  }, [reactivePanelStore, panelId, viewId])
+    return deserializedView
+  }, [viewRow, panelId])
 
   return {
     view,
-    isLoading,
-    error,
+    isLoading: Boolean(isLoading),
+    error: error || null,
   }
 }
 
 /**
  * Hook to get reactive columns for a panel
+ * Now uses TinyBase ui-react with automatic filtering
  */
 export function useReactiveColumns(panelId: string) {
-  const [columns, setColumns] = useState<ColumnDefinition[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { store } = useReactivePanelStore()
 
-  // Get the storage adapter from the ReactivePanelStore context
-  const reactiveStore = useContext(ReactivePanelStoreContext)
+  // Get all columns automatically - reactive!
+  const columnsTable = useTable('columns', store)
+  const isLoading = useValue('isLoading', store) as boolean
+  const error = useValue('error', store) as string | null
 
-  // Load columns when storage and panelId are available
-  useEffect(() => {
-    const storage = reactiveStore?.getStorage()
-    if (!storage || !panelId) return
-
-    let isMounted = true
-
-    const loadColumns = async () => {
-      try {
-        setIsLoading(true)
-        // Load panel to get columns
-        const panel = await storage.getPanel(panelId)
-
-        if (!isMounted) return
-
-        if (panel) {
-          const allColumns = [
-            ...(panel.patientViewColumns || []),
-            ...(panel.taskViewColumns || []),
-          ]
-          setColumns(allColumns)
-        }
-        setError(null)
-      } catch (err) {
-        if (!isMounted) return
-        console.error('useReactiveColumns: failed to load columns', err)
-        setError(err instanceof Error ? err.message : 'Failed to load columns')
-      } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    loadColumns()
-
-    return () => {
-      isMounted = false
-    }
-  }, [reactiveStore, panelId])
-
-  const refetch = useCallback(() => {
-    const storage = reactiveStore?.getStorage()
-    if (storage && panelId) {
-      storage
-        .getPanel(panelId)
-        .then((panel) => {
-          if (panel) {
-            const allColumns = [
-              ...(panel.patientViewColumns || []),
-              ...(panel.taskViewColumns || []),
-            ]
-            setColumns(allColumns)
-          }
-        })
-        .catch((err: Error) =>
-          setError(
-            err instanceof Error ? err.message : 'Failed to refetch columns',
-          ),
-        )
-    }
-  }, [reactiveStore, panelId])
+  // Filter columns for this panel
+  const columns = useMemo(() => {
+    if (!columnsTable) return []
+    return Object.values(columnsTable)
+      .map(deserializeColumn)
+      .filter(column => column.panelId === panelId)
+  }, [columnsTable, panelId])
 
   return {
     columns,
-    isLoading,
-    error,
-    refetch,
+    isLoading: Boolean(isLoading),
+    error: error || null,
   }
+}
+
+/**
+ * Hook to get reactive views for a panel
+ * Now uses TinyBase ui-react with automatic filtering
+ */
+export function useReactiveViews(panelId: string) {
+  const { store } = useReactivePanelStore()
+
+  // Get all views automatically - reactive!
+  const viewsTable = useTable('views', store)
+  const isLoading = useValue('isLoading', store) as boolean
+  const error = useValue('error', store) as string | null
+
+  // Filter views for this panel
+  const views = useMemo(() => {
+    if (!viewsTable) return []
+    return Object.values(viewsTable)
+      .map(deserializeView)
+      .filter(view => view.panelId === panelId)
+  }, [viewsTable, panelId])
+
+  return {
+    views,
+    isLoading: Boolean(isLoading),
+    error: error || null,
+  }
+}
+
+/**
+ * Hook to get reactive save state for operations
+ * Uses TinyBase for reactive save state tracking
+ */
+export function useSaveState(operationId: string) {
+  const { store } = useReactivePanelStore()
+  return useValue(`saveState_${operationId}`, store) as 'saving' | 'saved' | 'error' | undefined
 }
