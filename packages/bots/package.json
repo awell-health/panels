@@ -18,15 +18,10 @@
     "build:outputs": "tsc -p ./tsconfig.json && tsc-alias",
     "clean": "rm -rf .turbo node_modules",
     "clean:outputs": "rimraf ./dist",
-    "dev": "run-p dev:start typecheck",
-    "dev:start": "tsx watch --inspect --env-file=.env src/index.ts",
     "lint": "biome lint ./src",
     "format": "biome format ./src",
     "start": "node --env-file=.env --enable-source-maps dist/index.js",
-    "typecheck": "tsc -p ./tsconfig.json --noEmit",
-    "test": "NODE_OPTIONS='--import tsx' vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "NODE_OPTIONS='--import tsx' vitest watch"
+    "typecheck": "tsc -p ./tsconfig.json --noEmit"
   },
   "keywords": ["awell", "bots", "medplum", "healthcare"],
   "author": "",
@@ -50,4 +45,4 @@
     "@medplum/core": "^3.0.0",
     "@medplum/fhirtypes": "^3.0.0"
   }
-} 
+}
