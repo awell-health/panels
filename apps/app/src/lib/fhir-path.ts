@@ -53,7 +53,7 @@ export const getNestedValue = (
 
   const subtractDates = {
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    fn: (_: any[], date1: any, date2: any) => {
+    fn: (_: any[], date1: any, date2: any, unit?: string) => {
       const strDate1 = String(date1)
       const strDate2 = String(date2)
 
@@ -63,12 +63,87 @@ export const getNestedValue = (
       ) {
         const d1 = new Date(strDate1)
         const d2 = new Date(strDate2)
-        return [d1.getTime() - d2.getTime()]
+        const diffInMs = d1.getTime() - d2.getTime()
+
+        // Convert to the requested unit and return as integer
+        switch (unit?.toLowerCase()) {
+          case 'years':
+            // Use 365.25 days per year to account for leap years
+            return [Math.round(diffInMs / (1000 * 60 * 60 * 24 * 365.25))]
+          case 'months':
+            // Use 30.44 days per month (365.25/12) as average month length
+            return [Math.round(diffInMs / (1000 * 60 * 60 * 24 * 30.44))]
+          case 'days':
+            return [Math.round(diffInMs / (1000 * 60 * 60 * 24))]
+          case 'hours':
+            return [Math.round(diffInMs / (1000 * 60 * 60))]
+          case 'minutes':
+            return [Math.round(diffInMs / (1000 * 60))]
+          case 'seconds':
+            return [Math.round(diffInMs / 1000)]
+          default:
+            // Default to milliseconds for backward compatibility
+            return [Math.round(diffInMs)]
+        }
       }
       return [0] // fallback
     },
     arity: {
       2: ['Any' as const, 'Any' as const],
+      3: ['Any' as const, 'Any' as const, 'String' as const],
+    },
+  }
+
+  const addToDate = {
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+    fn: (_: any[], date: any, quantity: number, unit: string) => {
+      const strDate = String(date)
+
+      if (
+        typeof quantity === 'number' &&
+        /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(strDate)
+      ) {
+        const d = new Date(strDate)
+        const currentTime = d.getTime()
+
+        // Convert quantity to milliseconds based on the unit
+        let millisecondsToAdd = 0
+        switch (unit?.toLowerCase()) {
+          case 'years':
+            // Use 365.25 days per year to account for leap years
+            millisecondsToAdd = quantity * 365.25 * 24 * 60 * 60 * 1000
+            break
+          case 'months':
+            // Use 30.44 days per month (365.25/12) as average month length
+            millisecondsToAdd = quantity * 30.44 * 24 * 60 * 60 * 1000
+            break
+          case 'days':
+            millisecondsToAdd = quantity * 24 * 60 * 60 * 1000
+            break
+          case 'hours':
+            millisecondsToAdd = quantity * 60 * 60 * 1000
+            break
+          case 'minutes':
+            millisecondsToAdd = quantity * 60 * 1000
+            break
+          case 'seconds':
+            millisecondsToAdd = quantity * 1000
+            break
+          default:
+            // Default to days if unit is not recognized
+            millisecondsToAdd = quantity * 24 * 60 * 60 * 1000
+            break
+        }
+
+        // Add milliseconds using setTime for predictable behavior
+        d.setTime(currentTime + millisecondsToAdd)
+
+        return [d]
+      }
+      return [date] // fallback
+    },
+    arity: {
+      3: ['Any' as const, 'Number' as const, 'String' as const],
     },
   }
 
@@ -86,6 +161,7 @@ export const getNestedValue = (
     addSeconds,
     toMilliseconds,
     subtractDates,
+    addToDate,
     toDateLiteral,
   }
 

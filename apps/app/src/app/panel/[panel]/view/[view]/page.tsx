@@ -9,6 +9,7 @@ import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useReactivePanel, useReactiveView } from '@/hooks/use-reactive-data'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
+import { applyColumnChangesToView, applyColumnChangesToPanel } from '@/lib/column-utils'
 import type {
   ColumnDefinition,
   Filter,
@@ -16,6 +17,7 @@ import type {
   SortConfig,
   ViewDefinition,
   WorklistDefinition,
+  ColumnChangesResponse,
 } from '@/types/worklist'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useParams, useRouter } from 'next/navigation'
@@ -182,31 +184,29 @@ export default function WorklistViewPage() {
     }
   }
 
-  const onColumnChange = async (
-    column: ViewDefinition | WorklistDefinition,
-  ) => {
-    if (!view) {
-      return
-    }
-
-    const newView = {
-      ...view,
-      ...column,
-    }
+  const handleColumnChanges = async (columnChanges: ColumnChangesResponse) => {
+    if (!view || !panel) return
 
     try {
-      await updateView?.(panelId, viewId, newView)
+      // 1. First apply column changes to the panel (so columns exist at panel level)
+      const updatedPanel = applyColumnChangesToPanel(panel, columnChanges.changes)
+      await updatePanel(panelId, updatedPanel)
+
+      // 2. Then apply column changes to the view (referencing the now-existing panel columns)
+      const updatedView = applyColumnChangesToView(view, updatedPanel, columnChanges.changes)
+      await updateView?.(panelId, viewId, updatedView)
     } catch (error) {
-      console.error('Failed to update view:', error)
+      console.error('Failed to apply column changes to view:', error)
     }
   }
 
   const { onAddColumn } = useColumnCreator({
-    currentView: view?.viewType ?? 'patient',
+    currentViewType: view?.viewType ?? 'patient',
     patients,
     tasks,
-    worklistDefinition: view || undefined,
-    onDefinitionChange: onColumnChange,
+    panelDefinition: panel || undefined,
+    currentViewId: viewId,
+    onColumnChanges: handleColumnChanges,
   })
 
   const onNewView = async () => {
@@ -336,14 +336,14 @@ export default function WorklistViewPage() {
               <VirtualizedWorklistTable
                 isLoading={isMedplumLoading}
                 selectedRows={[]}
-                toggleSelectAll={() => {}}
+                toggleSelectAll={() => { }}
                 worklistColumns={columns}
                 onSortConfigUpdate={onSortConfigUpdate}
                 tableData={filteredData}
-                handlePDFClick={() => {}}
-                handleTaskClick={() => {}}
-                handleRowHover={() => {}}
-                toggleSelectRow={() => {}}
+                handlePDFClick={() => { }}
+                handleTaskClick={() => { }}
+                handleRowHover={() => { }}
+                toggleSelectRow={() => { }}
                 handleAssigneeClick={(taskId: string) =>
                   toggleTaskOwner(taskId)
                 }

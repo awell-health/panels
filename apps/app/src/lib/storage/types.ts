@@ -13,7 +13,10 @@ export interface StorageAdapter {
   getPanels(): Promise<PanelDefinition[]>
   getPanel(id: string): Promise<PanelDefinition | null>
   createPanel(panel: Omit<PanelDefinition, 'id'>): Promise<PanelDefinition>
-  updatePanel(id: string, updates: Partial<PanelDefinition>): Promise<void>
+  updatePanel(
+    id: string,
+    updates: Partial<PanelDefinition>,
+  ): Promise<{ idMapping?: Map<string, string> }>
   deletePanel(id: string): Promise<void>
 
   // View operations
