@@ -144,12 +144,7 @@ export function deduplicateDataPoints(dataPoints: DataPoint[]): DataPoint[] {
 }
 
 function isJsonDataPoint(dataPoint: DataPoint): boolean {
-  try {
-    JSON.parse(dataPoint.serialized_value);
-    return true;
-  } catch {
-    return false;
-  }
+  return dataPoint.valueType === 'JSON';
 }
 
 function separateDataPointsByType(dataPoints: DataPoint[]): SeparatedDataPoints {
