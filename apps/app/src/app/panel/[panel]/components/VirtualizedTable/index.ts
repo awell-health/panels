@@ -1,4 +1,4 @@
-export { VirtualizedWorklistTable } from './VirtualizedWorklistTable'
+export { VirtualizedTable } from './VirtualizedTable'
 export { StickyGridProvider, useStickyGridContext } from './StickyContext'
 export { VirtualizedCell } from './VirtualizedCell'
 export { StickyHeader } from './StickyHeader'

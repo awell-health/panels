@@ -66,3 +66,17 @@ export type Panel = {
     [key: string]: unknown
   }
 }
+
+export type ColumnChangeOperation = 'create' | 'update' | 'delete'
+
+export type ColumnChange = {
+  id: string
+  operation: ColumnChangeOperation
+  column?: Partial<Pick<Column, 'name' | 'type' | 'sourceField'>>
+  viewType: ViewType
+}
+
+export type ColumnChangesResponse = {
+  changes: ColumnChange[]
+  explanation: string
+}

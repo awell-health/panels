@@ -4,110 +4,50 @@ import type {
   ViewDefinition,
   ColumnChange,
 } from '@/types/worklist'
+import type { Panel, Column, View } from '@/types/panel'
 
 export const applyColumnChangesToPanel = (
-  panel: WorklistDefinition,
-  changes: ColumnChange[],
-): WorklistDefinition => {
-  const updatedPanel = { ...panel }
+  panel: Panel,
+  changes: any[],
+): Panel => {
+  console.warn(
+    'applyColumnChangesToPanel: This function needs to be updated to work with the new reactive storage system',
+  )
+  console.log('Panel:', panel, 'Changes:', changes)
 
-  for (const change of changes) {
-    const targetColumns =
-      change.viewType === 'patient'
-        ? [...(updatedPanel.patientViewColumns || [])]
-        : [...(updatedPanel.taskViewColumns || [])]
-
-    switch (change.operation) {
-      case 'create': {
-        if (change.column) {
-          targetColumns.push(change.column as ColumnDefinition)
-        }
-        break
-      }
-
-      case 'update': {
-        const updateIndex = targetColumns.findIndex(
-          (col) => col.id === change.id,
-        )
-        if (updateIndex !== -1 && change.column) {
-          targetColumns[updateIndex] = {
-            ...targetColumns[updateIndex],
-            ...change.column,
-          }
-        }
-        break
-      }
-
-      case 'delete': {
-        const deleteIndex = targetColumns.findIndex(
-          (col) => col.id === change.id,
-        )
-        if (deleteIndex !== -1) {
-          targetColumns.splice(deleteIndex, 1)
-        }
-        break
-      }
-    }
-
-    if (change.viewType === 'patient') {
-      updatedPanel.patientViewColumns = targetColumns
-    } else {
-      updatedPanel.taskViewColumns = targetColumns
-    }
-  }
-
-  return updatedPanel
+  // Return unchanged panel for now
+  return panel
 }
 
 export const applyColumnChangesToView = (
-  view: ViewDefinition,
-  panel: WorklistDefinition,
-  changes: ColumnChange[],
-): ViewDefinition => {
-  // Get current columns (from view.columns or fallback to panel)
-  const currentColumns =
-    view.columns && view.columns.length > 0
-      ? [...view.columns]
-      : view.viewType === 'patient'
-        ? [...(panel.patientViewColumns || [])]
-        : [...(panel.taskViewColumns || [])]
+  view: View,
+  panel: Panel,
+  changes: any[],
+): View => {
+  console.warn(
+    'applyColumnChangesToView: This function needs to be updated to work with the new reactive storage system',
+  )
+  console.log('View:', view, 'Panel:', panel, 'Changes:', changes)
 
-  let updatedColumns = [...currentColumns]
+  // Return unchanged view for now
+  return view
+}
 
-  for (const change of changes) {
-    // Only apply changes that match the view's type
-    if (change.viewType !== view.viewType) continue
+// Helper function to filter columns by tags
+export const getPatientColumns = (columns: Column[]): Column[] => {
+  return columns.filter((col) => col.tags?.includes('panels:patients'))
+}
 
-    switch (change.operation) {
-      case 'create': {
-        if (change.column) {
-          updatedColumns.push(change.column as ColumnDefinition)
-        }
-        break
-      }
+export const getTaskColumns = (columns: Column[]): Column[] => {
+  return columns.filter((col) => col.tags?.includes('panels:tasks'))
+}
 
-      case 'update': {
-        const updateIndex = updatedColumns.findIndex(
-          (col) => col.id === change.id,
-        )
-        if (updateIndex !== -1 && change.column) {
-          updatedColumns[updateIndex] = {
-            ...updatedColumns[updateIndex],
-            ...change.column,
-          }
-        }
-        break
-      }
-
-      case 'delete': {
-        updatedColumns = updatedColumns.filter((col) => col.id !== change.id)
-        break
-      }
-    }
-  }
-
-  return {
-    ...view,
-    columns: updatedColumns,
-  }
+// Helper function to get columns for a specific view type
+export const getColumnsForViewType = (
+  columns: Column[],
+  viewType: 'patient' | 'task',
+): Column[] => {
+  return viewType === 'patient'
+    ? getPatientColumns(columns)
+    : getTaskColumns(columns)
 }

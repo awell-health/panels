@@ -1,16 +1,16 @@
 'use client'
 
-import type { ColumnDefinition } from '@/types/worklist'
+import type { Column } from '@/types/panel'
 import { Settings } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 type ColumnsDropdownProps = {
-  columns: ColumnDefinition[]
+  columns: Column[]
   onColumnVisibilityChange: (columnId: string, visible: boolean) => void
 }
 
-type ColumnWithVisibility = ColumnDefinition & { visible: boolean }
+type ColumnWithVisibility = Column & { visible: boolean }
 
 export function ColumnsDropdown({
   columns,

@@ -4,6 +4,7 @@ import type {
   Column,
   Panel,
   View,
+  ColumnChangesResponse,
 } from '@/types/panel'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
@@ -288,6 +289,34 @@ export class ReactivePanelStore {
   }
 
   // Column operations - now independent of panels
+  async addColumn(
+    panelId: string,
+    column: Omit<Column, 'id'>,
+  ): Promise<Column> {
+    if (!this.storage) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    const operationId = `column-${panelId}-${uuidv4()}`
+    this.setSaveState(operationId, 'saving')
+
+    try {
+      const createdColumn = await this.storage.addColumn(panelId, column)
+
+      // Update reactive store
+      this.reactiveStore?.setColumn(createdColumn)
+
+      this.setSaveState(operationId, 'saved')
+      return createdColumn
+    } catch (error) {
+      this.setSaveState(operationId, 'error')
+      console.error('Failed to add column:', error)
+      throw new Error(
+        `Failed to add column: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
   async updateColumn(
     panelId: string,
     columnId: string,
@@ -324,6 +353,151 @@ export class ReactivePanelStore {
       console.error('Failed to update column:', error)
       throw new Error(
         `Failed to update column: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async deleteColumn(panelId: string, columnId: string): Promise<void> {
+    if (!this.storage) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    const operationId = `column-${panelId}-${columnId}`
+    this.setSaveState(operationId, 'saving')
+
+    // Store original state for rollback
+    const originalColumn = this.reactiveStore?.getColumn(columnId)
+
+    try {
+      // Optimistically remove from reactive store first
+      this.reactiveStore?.deleteColumn(columnId)
+
+      // Then sync with backend API
+      await this.storage.deleteColumn(panelId, columnId)
+
+      this.setSaveState(operationId, 'saved')
+    } catch (error) {
+      // Rollback optimistic update on API failure
+      if (originalColumn) {
+        this.reactiveStore?.setColumn(originalColumn)
+      }
+
+      this.setSaveState(operationId, 'error')
+      console.error('Failed to delete column:', error)
+      throw new Error(
+        `Failed to delete column: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async applyColumnChanges(
+    panelId: string,
+    columnChanges: ColumnChangesResponse,
+  ): Promise<void> {
+    if (!columnChanges.changes || columnChanges.changes.length === 0) {
+      return
+    }
+
+    // Process all changes in parallel for better UI responsiveness
+    const changePromises = columnChanges.changes.map(async (change) => {
+      try {
+        switch (change.operation) {
+          case 'create':
+            if (change.column) {
+              const newColumn: Omit<Column, 'id'> = {
+                panelId,
+                name: change.column.name || 'New Column',
+                type: change.column.type || 'text',
+                sourceField: change.column.sourceField || change.column.name || 'New Column',
+                tags: change.viewType === 'patient' ? ['panels:patients'] : ['panels:tasks'],
+                properties: {
+                  display: {
+                    visible: true,
+                    order: 0,
+                  },
+                },
+                metadata: {},
+              }
+              await this.addColumn(panelId, newColumn)
+              return { operation: `create-${change.id}`, success: true }
+            }
+            return {
+              operation: `create-${change.id}`,
+              success: false,
+              error: 'Missing column data for create operation',
+            }
+
+          case 'update':
+            if (change.column) {
+              const updates: Partial<Column> = {
+                id: change.id,
+                ...change.column,
+              }
+              await this.updateColumn(panelId, change.id, updates)
+              return { operation: `update-${change.id}`, success: true }
+            }
+            return {
+              operation: `update-${change.id}`,
+              success: false,
+              error: 'Missing column data for update operation',
+            }
+
+          case 'delete':
+            await this.deleteColumn(panelId, change.id)
+            return { operation: `delete-${change.id}`, success: true }
+
+          default:
+            logger.warn({ operation: change.operation }, 'Unknown column change operation')
+            return {
+              operation: `unknown-${change.id}`,
+              success: false,
+              error: 'Unknown operation',
+            }
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        logger.error(
+          { error, change },
+          `Failed to apply column change: ${change.operation} for column ${change.id}`,
+        )
+        return {
+          operation: `${change.operation}-${change.id}`,
+          success: false,
+          error: errorMessage,
+        }
+      }
+    })
+
+    // Wait for all operations to complete in parallel
+    const results = await Promise.allSettled(changePromises)
+
+    // Process results and extract actual values
+    const processedResults = results.map((result, index) => {
+      if (result.status === 'fulfilled' && result.value) {
+        return result.value
+      }
+
+      const change = columnChanges.changes[index]
+      return {
+        operation: `${change.operation}-${change.id}`,
+        success: false,
+        error: result.status === 'rejected' ? result.reason?.message || 'Unknown error' : 'No result returned',
+      }
+    })
+
+    // Log summary of results
+    const successful = processedResults.filter(r => r.success).length
+    const failed = processedResults.filter(r => !r.success).length
+
+    logger.info(
+      { successful, failed, total: processedResults.length, panelId },
+      `Column changes applied in parallel: ${successful} successful, ${failed} failed`,
+    )
+
+    if (failed > 0) {
+      const failedOperations = processedResults.filter(r => !r.success)
+      throw new Error(
+        `Failed to apply ${failed} of ${processedResults.length} column changes: ${failedOperations.map(r => r.error).join(', ')}`,
       )
     }
   }
@@ -436,7 +610,10 @@ export function useReactivePanelStore() {
     deleteView: store.deleteView.bind(store),
     getStorage: store.getStorage.bind(store),
     getReactiveStore: store.getReactiveStore.bind(store),
+    addColumn: store.addColumn.bind(store),
     updateColumn: store.updateColumn.bind(store),
+    deleteColumn: store.deleteColumn.bind(store),
+    applyColumnChanges: store.applyColumnChanges.bind(store),
     getColumnsForPanel: store.getColumnsForPanel.bind(store),
     getViewsForPanel: store.getViewsForPanel.bind(store),
   }

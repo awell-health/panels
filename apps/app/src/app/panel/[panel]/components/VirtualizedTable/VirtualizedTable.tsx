@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { VariableSizeGrid } from 'react-window'
 import AutoSizer from 'react-virtualized-auto-sizer'
-import type { ColumnDefinition } from '@/types/worklist'
+import type { Column } from '@/types/panel'
 import { getNestedValue, isMatchingFhirPathCondition } from '@/lib/fhir-path'
 import {
   DndContext,
@@ -41,11 +41,11 @@ interface TableFilter {
   value: string
 }
 
-interface VirtualizedWorklistTableProps {
+interface VirtualizedTableProps {
   isLoading: boolean
   selectedRows: string[]
   toggleSelectAll: () => void
-  worklistColumns: ColumnDefinition[]
+  columns: Column[]
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   tableData: Record<string, any>[]
   handlePDFClick: (pdfUrl: string, patientName: string) => void
@@ -61,7 +61,7 @@ interface VirtualizedWorklistTableProps {
   ) => void
   toggleSelectRow: (rowId: string) => void
   handleAssigneeClick: (taskId: string) => void
-  onColumnUpdate: (updates: Partial<ColumnDefinition>) => void
+  onColumnUpdate: (updates: Partial<Column>) => void
   onSortConfigUpdate: (
     sortConfig: { key: string; direction: 'asc' | 'desc' } | undefined,
   ) => void
@@ -75,11 +75,11 @@ interface VirtualizedWorklistTableProps {
   handleDragEnd?: (event: DragEndEvent) => void
 }
 
-export function VirtualizedWorklistTable({
+export function VirtualizedTable({
   isLoading,
   selectedRows,
   toggleSelectAll,
-  worklistColumns,
+  columns,
   tableData,
   handlePDFClick,
   handleTaskClick,
@@ -95,9 +95,9 @@ export function VirtualizedWorklistTable({
   currentUserName,
   onRowClick,
   handleDragEnd,
-}: VirtualizedWorklistTableProps) {
+}: VirtualizedTableProps) {
   // Drag and drop state
-  const [activeColumn, setActiveColumn] = useState<ColumnDefinition | null>(
+  const [activeColumn, setActiveColumn] = useState<Column | null>(
     null,
   )
 
@@ -109,18 +109,18 @@ export function VirtualizedWorklistTable({
 
   // Filter visible columns and sort by order
   const visibleColumns = useMemo(() => {
-    return worklistColumns
-      .filter((col) => col.properties?.display?.visible !== false)
-      .sort((a, b) => {
+    return columns
+      .filter((col: Column) => col.properties?.display?.visible !== false)
+      .sort((a: Column, b: Column) => {
         const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
         const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
         return orderA - orderB
       })
-  }, [worklistColumns])
+  }, [columns])
 
   // Create a stable key for grid re-rendering
   const gridKey = useMemo(() => {
-    const columnIds = visibleColumns.map((col) => col.id).join('-')
+    const columnIds = visibleColumns.map((col: Column) => col.id).join('-')
     return `${currentView}-${columnIds}`
   }, [currentView, visibleColumns])
 
@@ -278,7 +278,7 @@ export function VirtualizedWorklistTable({
   )
 
   // Get type icon for drag overlay
-  const getTypeIcon = useCallback((column: ColumnDefinition) => {
+  const getTypeIcon = useCallback((column: Column) => {
     switch (column.type) {
       case 'date':
         return (
@@ -436,7 +436,7 @@ export function VirtualizedWorklistTable({
         <div className="flex flex-col items-center">
           <div className="h-8 w-8 text-blue-500 animate-spin mb-2" />
           <p className="text-sm text-gray-500 font-normal">
-            Building your worklist...
+            Building your panel...
           </p>
         </div>
       </div>
