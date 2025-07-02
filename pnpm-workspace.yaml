@@ -1,11 +1,15 @@
 packages:
   - apps/*
   - packages/*
+
 engineStrict: true
+
 onlyBuiltDependencies:
   - '@biomejs/biome'
   - '@tailwindcss/oxide'
   - esbuild
   - fhirpath
+  - protobufjs
   - sharp
+
 useNodeVersion: 22.16.0
