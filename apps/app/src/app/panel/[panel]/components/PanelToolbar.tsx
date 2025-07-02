@@ -2,7 +2,7 @@
 import type { Column } from '@/types/panel'
 import { Code, Plus, Search } from 'lucide-react'
 import { ColumnsDropdown } from './ColumnsDropdown'
-import WorklistViewDropDown from './WorklistViewDropDown'
+import WorklistViewDropDown from './ViewTypeDropdown'
 
 interface PanelToolbarProps {
   searchTerm: string

@@ -136,7 +136,7 @@ export function VirtualizedCell({
       }}
     >
       <CellFactory
-        value={getNestedValue(row, column.key)}
+        value={getNestedValue(row, column.sourceField)}
         column={column}
         row={row}
         rowIndex={dataRowIndex}

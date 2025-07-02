@@ -39,7 +39,7 @@ export const createStorageAdapter = async (
     }
 
     case STORAGE_MODES.API: {
-      return new APIStorageAdapter(userId, organizationSlug, cacheConfig)
+      return new APIStorageAdapter(userId, organizationSlug)
     }
 
     default: {

@@ -66,12 +66,12 @@ export function StickyHeader({
                 height: HEADER_HEIGHT,
               }}
               sortConfig={sortConfig}
-              onSort={() => onSort?.(column.key)}
+              onSort={() => onSort?.(column.id)}
               filterValue={
-                filters?.find((f) => f.key === column.key)?.value ?? ''
+                filters?.find((f) => f.key === column.id)?.value ?? ''
               }
-              onFilter={(value: string) => onFilter?.(column.key, value)}
-              onColumnUpdate={onColumnUpdate || (() => {})}
+              onFilter={(value: string) => onFilter?.(column.id, value)}
+              onColumnUpdate={onColumnUpdate || (() => { })}
             />
           </div>
         ))}

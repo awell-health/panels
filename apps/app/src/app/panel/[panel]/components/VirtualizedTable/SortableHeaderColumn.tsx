@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { ColumnDefinition } from '@/types/worklist'
+import type { Column } from '@/types/panel'
 import { cn } from '@/lib/utils'
 import {
   Calendar,
@@ -13,17 +13,17 @@ import {
   ToggleLeft,
 } from 'lucide-react'
 import { useRef, useState, useCallback } from 'react'
-import { ColumnMenu } from '../WorklistColumnMenu'
+import { ColumnMenu } from '../ColumnMenu'
 
 interface SortableHeaderColumnProps {
-  column: ColumnDefinition
+  column: Column
   index: number
   style: React.CSSProperties
   sortConfig?: { key: string; direction: 'asc' | 'desc' } | null
   onSort: () => void
   filterValue: string
   onFilter: (value: string) => void
-  onColumnUpdate: (updates: Partial<ColumnDefinition>) => void
+  onColumnUpdate: (updates: Partial<Column>) => void
 }
 
 export function SortableHeaderColumn({
@@ -76,7 +76,7 @@ export function SortableHeaderColumn({
 
   // Get sort indicator
   const getSortIndicator = () => {
-    if (!sortConfig || sortConfig.key !== column.key) return null
+    if (!sortConfig || sortConfig.key !== column.id) return null
     return sortConfig.direction === 'asc' ? '↑' : '↓'
   }
 
@@ -112,9 +112,9 @@ export function SortableHeaderColumn({
     options:
       column.type === 'boolean'
         ? [
-            { value: 'True', color: '#10B981' },
-            { value: 'False', color: '#EF4444' },
-          ]
+          { value: 'True', color: '#10B981' },
+          { value: 'False', color: '#EF4444' },
+        ]
         : undefined,
   }
 

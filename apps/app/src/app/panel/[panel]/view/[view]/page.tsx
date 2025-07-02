@@ -1,22 +1,20 @@
 'use client'
-import WorklistFooter from '@/app/panel/[panel]/components/WorklistFooter'
-import WorklistNavigation from '@/app/panel/[panel]/components/WorklistNavigation'
+import { PatientContext } from '@/app/panel/[panel]/components/PatientContext'
+import { TaskDetails } from '@/app/panel/[panel]/components/TaskDetails'
 import { VirtualizedTable } from '@/app/panel/[panel]/components/VirtualizedTable'
-import WorklistToolbar from '@/app/panel/[panel]/components/WorklistToolbar'
+import PanelFooter from '@/app/panel/[panel]/components/PanelFooter'
+import { useDrawer } from '@/contexts/DrawerContext'
 import { useColumnCreator } from '@/hooks/use-column-creator'
+import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
+import { useReactiveColumns, useReactivePanel, useReactiveView } from '@/hooks/use-reactive-data'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
-import { useReactivePanel, useReactiveView, useReactiveColumns } from '@/hooks/use-reactive-data'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
-import type { Column, ColumnChangesResponse, Panel, View } from '@/types/panel'
+import type { Column, ColumnChangesResponse } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
-import { useDrawer } from '@/contexts/DrawerContext'
-import { TaskDetails } from '@/app/panel/[panel]/components/TaskDetails'
-import { PatientContext } from '@/app/panel/[panel]/components/PatientContext'
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
+import { useCallback, useEffect, useState } from 'react'
 import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
 
@@ -354,7 +352,7 @@ export default function WorklistViewPage() {
             </div>
           </div>
           <div className="footer-area">
-            <WorklistFooter
+            <PanelFooter
               columnsCounter={columns.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}

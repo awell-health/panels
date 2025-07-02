@@ -13,26 +13,12 @@ import type { ColumnBaseCreateResponse } from '@panels/types/columns'
  */
 export const mapBackendPanelToFrontend = (
   backendPanel: PanelResponse | CreatePanelResponse,
-  columns?: ColumnsResponse,
-  views?: ViewResponse[],
 ): Panel => {
-  // Simple column mapping without complex splitting
-  const panelColumns: Column[] =
-    columns?.baseColumns.map((col) => mapBackendColumnToFrontend(col)) || []
-
-  // Simple view mapping
-  const panelViews: View[] =
-    views?.map((view) =>
-      mapBackendViewToFrontend(view, backendPanel.id.toString()),
-    ) || []
-
   return {
     id: backendPanel.id.toString(),
     name: backendPanel.name,
     description: backendPanel.description ?? undefined,
     createdAt: new Date(backendPanel.createdAt),
-    columns: panelColumns,
-    views: panelViews,
     metadata: {
       filters: [],
     },
@@ -83,9 +69,11 @@ export const mapBackendColumnToFrontend = (
     | ColumnBaseCreateResponse
     | ColumnsResponse['baseColumns'][number]
     | ColumnInfoResponse,
+  panelId: string,
 ): Column => {
   return {
     id: backendColumn.id.toString(),
+    panelId,
     name: backendColumn.name,
     type: backendColumn.type,
     sourceField: backendColumn.sourceField,

@@ -13,9 +13,11 @@ import fhirpath from 'fhirpath'
 export const getNestedValue = (
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   obj: Record<string, any>,
-  path: string,
+  path: string | undefined,
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 ): any | any[] => {
+  if (!path) return undefined
+
   const addSeconds = {
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     fn: (_: any[], input: any, seconds: number) => {

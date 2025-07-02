@@ -1,6 +1,6 @@
 'use client'
 
-import WorklistFooter from '@/app/panel/[panel]/components/WorklistFooter'
+import PanelFooter from '@/app/panel/[panel]/components/PanelFooter'
 import PanelNavigation from '@/app/panel/[panel]/components/PanelNavigation'
 import PanelToolbar from '@/app/panel/[panel]/components/PanelToolbar'
 import { VirtualizedTable } from '@/app/panel/[panel]/components/VirtualizedTable'
@@ -310,7 +310,7 @@ export default function WorklistPage() {
             </div>
           </div>
           <div className="footer-area">
-            <WorklistFooter
+            <PanelFooter
               columnsCounter={columns.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}

@@ -3,19 +3,19 @@
 import { StorageStatusIndicator } from '@/components/StorageStatusIndicator'
 import { History, Home, MessageSquare, RotateCcw } from 'lucide-react'
 
-interface WorklistFooterProps {
+interface PanelFooterProps {
   columnsCounter: number
   rowsCounter: number
   isAISidebarOpen: boolean
   navigateToHome: () => void
 }
 
-export default function WorklistFooter({
+export default function PanelFooter({
   columnsCounter,
   rowsCounter,
   isAISidebarOpen,
   navigateToHome,
-}: WorklistFooterProps) {
+}: PanelFooterProps) {
   return (
     <div className="border-t border-gray-200 p-2 flex items-center justify-between bg-white">
       <div className="flex items-center space-x-3">

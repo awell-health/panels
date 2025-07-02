@@ -54,14 +54,7 @@ export class APIStorageAdapter implements StorageAdapter {
         this.config.userId,
       )
 
-      // Load columns if needed
-      const columns = await panelsAPI.columns.list(
-        { id },
-        this.config.tenantId,
-        this.config.userId,
-      )
-
-      return mapBackendPanelToFrontend(backendPanel, columns)
+      return mapBackendPanelToFrontend(backendPanel)
     } catch (error) {
       if (error instanceof Error && error.message.includes('404')) {
         return null
@@ -168,7 +161,7 @@ export class APIStorageAdapter implements StorageAdapter {
         },
       )
 
-      return mapBackendColumnToFrontend(createdColumn)
+      return mapBackendColumnToFrontend(createdColumn, panelId)
     } catch (error) {
       logger.error(
         { error, panelId },
@@ -202,7 +195,7 @@ export class APIStorageAdapter implements StorageAdapter {
         { id: panelId },
       )
 
-      return mapBackendColumnToFrontend(updatedColumn)
+      return mapBackendColumnToFrontend(updatedColumn, panelId)
     } catch (error) {
       logger.error(
         { error, columnId, panelId },
@@ -260,7 +253,7 @@ export class APIStorageAdapter implements StorageAdapter {
           column:
             | ColumnsResponse['baseColumns'][number]
             | ColumnsResponse['calculatedColumns'][number],
-        ) => mapBackendColumnToFrontend(column),
+        ) => mapBackendColumnToFrontend(column, panelId),
       )
     } catch (error) {
       logger.error(

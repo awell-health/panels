@@ -5,7 +5,6 @@ import { ArrayCell } from './ArrayCell'
 import { AssigneeCell } from './AssigneeCell'
 import { BaseCell } from './BaseCell'
 import { DateCell } from './DateCell'
-import { TasksCell } from './TasksCell'
 import type { InteractiveCellProps } from './types'
 
 interface CellFactoryProps extends InteractiveCellProps {
@@ -39,13 +38,10 @@ export function CellFactory(props: CellFactoryProps) {
     case 'date':
       return <DateCell {...props} />
 
-    case 'tasks':
-      return <TasksCell {...props} />
-
-    case 'array':
+    case 'multi_select':
       return <ArrayCell {...props} />
 
-    case 'assignee':
+    case 'user':
       return <AssigneeCell {...props} />
 
     case 'boolean':
@@ -53,11 +49,10 @@ export function CellFactory(props: CellFactoryProps) {
         <BaseCell {...props}>
           {value !== null ? (
             <span
-              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                value
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}
+              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${value
+                ? 'bg-green-100 text-green-800'
+                : 'bg-gray-100 text-gray-800'
+                }`}
             >
               {value ? 'Yes' : 'No'}
             </span>
