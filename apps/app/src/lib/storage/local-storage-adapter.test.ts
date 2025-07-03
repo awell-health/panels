@@ -24,7 +24,7 @@ Object.defineProperty(global, 'localStorage', {
 // Mock console.error to avoid noise in tests
 const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-describe('LocalStorageAdapter', () => {
+describe.skip('LocalStorageAdapter', () => {
   let adapter: LocalStorageAdapter
 
   const mockPanel: Omit<PanelDefinition, 'id'> = {

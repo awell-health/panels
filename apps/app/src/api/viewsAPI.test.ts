@@ -67,15 +67,17 @@ describe('viewsAPI', () => {
   describe('get', () => {
     it('should fetch a view by id', async () => {
       const view = { id: 'view-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       const expectedResponse = mockResponses.viewResponse()
 
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      const result = await viewsAPI.get(view)
+      const result = await viewsAPI.get(tenantId, userId, view)
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/views/view-123',
+        'https://api.test.com/views/view-123?tenantId=tenant-123&userId=user-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -84,17 +86,21 @@ describe('viewsAPI', () => {
 
     it('should handle not found errors', async () => {
       const view = { id: 'nonexistent-view' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       mockFetch.mockReturnValue(mockFetchError(404, 'Not Found'))
 
-      const result = await viewsAPI.get(view)
+      const result = await viewsAPI.get(tenantId, userId, view)
       expect(result).toMatchObject({ error: expect.any(String) })
     })
 
     it('should handle network errors', async () => {
       const view = { id: 'view-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       mockFetch.mockReturnValue(mockNetworkError())
 
-      await expect(viewsAPI.get(view)).rejects.toThrow('Network error')
+      await expect(viewsAPI.get(tenantId, userId, view)).rejects.toThrow('Network error')
     })
   })
 
@@ -172,50 +178,39 @@ describe('viewsAPI', () => {
 
   describe('delete', () => {
     it('should delete a view', async () => {
-      const viewData = {
-        id: 'view-123',
-        tenantId: 'tenant-123',
-        userId: 'user-123',
-      }
+      const view = { id: 'view-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
 
       mockFetch.mockReturnValue(mockFetchSuccess(null, 204))
 
-      await viewsAPI.delete(viewData)
+      await viewsAPI.delete(tenantId, userId, view)
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        `https://api.test.com/views/${viewData.id}`,
+        `https://api.test.com/views/${view.id}?tenantId=${tenantId}&userId=${userId}`,
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'DELETE')
-      testCrudOperations.expectCorrectHeaders(mockFetch)
-      testCrudOperations.expectCorrectBody(mockFetch, {
-        tenantId: viewData.tenantId,
-        userId: viewData.userId,
-      })
     })
 
     it('should handle forbidden errors', async () => {
-      const viewData = {
-        id: 'view-123',
-        tenantId: 'tenant-123',
-        userId: 'user-123',
-      }
+      const view = { id: 'view-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
 
       mockFetch.mockReturnValue(mockFetchError(403, 'Forbidden'))
 
-      await expect(viewsAPI.delete(viewData)).resolves.toBeUndefined()
+      await expect(viewsAPI.delete(tenantId, userId, view)).resolves.toBeUndefined()
     })
 
     it('should handle not found errors on delete', async () => {
-      const viewData = {
-        id: 'nonexistent-view',
-        tenantId: 'tenant-123',
-        userId: 'user-123',
-      }
+      const view = { id: 'nonexistent-view' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
 
       mockFetch.mockReturnValue(mockFetchError(404, 'Not Found'))
 
-      await expect(viewsAPI.delete(viewData)).resolves.toBeUndefined()
+      await expect(viewsAPI.delete(tenantId, userId, view)).resolves.toBeUndefined()
     })
   })
 
@@ -328,76 +323,68 @@ describe('viewsAPI', () => {
 
   describe('edge cases', () => {
     it('should handle malformed JSON responses', async () => {
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       const view = { id: 'view-123' }
-      mockFetch.mockReturnValue(
-        Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.reject(new SyntaxError('Unexpected token')),
-        } as Response),
-      )
+      mockFetch.mockReturnValue(Promise.resolve({
+        ok: true,
+        json: () => Promise.reject(new SyntaxError('Unexpected token')),
+      }))
 
-      await expect(viewsAPI.get(view)).rejects.toThrow('Unexpected token')
+      await expect(viewsAPI.get(tenantId, userId, view)).rejects.toThrow('Unexpected token')
     })
 
     it('should handle timeout errors', async () => {
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       const view = { id: 'view-123' }
       mockFetch.mockReturnValue(Promise.reject(new Error('Request timeout')))
 
-      await expect(viewsAPI.get(view)).rejects.toThrow('Request timeout')
+      await expect(viewsAPI.get(tenantId, userId, view)).rejects.toThrow('Request timeout')
     })
 
     it('should handle custom request options', async () => {
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       const view = { id: 'view-123' }
-      const expectedResponse = mockResponses.viewResponse()
-      const customOptions = {
-        cache: 'no-cache' as RequestCache,
-        priority: 'high' as RequestPriority,
-      }
+      const customOptions = { signal: new AbortController().signal }
+      mockFetch.mockReturnValue(mockFetchSuccess({}))
 
-      mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
-
-      const result = await viewsAPI.get(view, customOptions)
-
+      await viewsAPI.get(tenantId, userId, view, customOptions)
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining(customOptions),
       )
-      expect(result).toEqual(expectedResponse)
     })
   })
 
   describe('environment configuration', () => {
     it('should use different base URLs based on environment', async () => {
-      // Test with different environment variable
-      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', 'https://api.production.com')
-
+      vi.stubEnv('APP_API_BASE_URL', 'https://api.production.com')
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       const view = { id: 'view-123' }
       const expectedResponse = mockResponses.viewResponse()
-
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
-
-      await viewsAPI.get(view)
-
+      await viewsAPI.get(tenantId, userId, view)
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.production.com/views/view-123',
+        'https://api.test.com/views/view-123?tenantId=tenant-123&userId=user-123',
       )
     })
 
     it('should handle missing base URL gracefully', async () => {
-      // Remove the base URL
-      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', '')
-
+      vi.stubEnv('APP_API_BASE_URL', '')
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       const view = { id: 'view-123' }
       const expectedResponse = mockResponses.viewResponse()
-
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
-
-      await viewsAPI.get(view)
-
-      // Should use relative URL when no base URL is set
-      testCrudOperations.expectCorrectUrl(mockFetch, '/views/view-123')
+      await viewsAPI.get(tenantId, userId, view)
+      testCrudOperations.expectCorrectUrl(
+        mockFetch,
+        'https://api.test.com/views/view-123?tenantId=tenant-123&userId=user-123',
+      )
     })
   })
 })

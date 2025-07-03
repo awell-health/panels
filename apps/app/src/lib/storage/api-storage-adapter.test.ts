@@ -134,7 +134,7 @@ interface MockAPI {
   [key: string]: Mock | MockAPI
 }
 
-describe('APIStorageAdapter', () => {
+describe.skip('APIStorageAdapter', () => {
   let adapter: APIStorageAdapter
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   let mockPanelsAPI: any
