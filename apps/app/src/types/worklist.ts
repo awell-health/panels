@@ -23,6 +23,7 @@ export type ColumnDefinition = {
     | 'string'
     | 'number'
     | 'date'
+    | 'datetime'
     | 'boolean'
     | 'tasks'
     | 'select'
