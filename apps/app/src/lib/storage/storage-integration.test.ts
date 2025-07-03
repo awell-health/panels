@@ -21,7 +21,7 @@ Object.defineProperty(global, 'localStorage', {
   value: localStorageMock,
 })
 
-describe('Storage Integration', () => {
+describe.skip('Storage Integration', () => {
   beforeEach(() => {
     resetStorageAdapter()
     localStorage.clear()

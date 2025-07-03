@@ -84,10 +84,12 @@ export const columnList = async (app: FastifyInstance) => {
       return {
         baseColumns: sortedBaseColumns.map((col) => ({
           ...col,
+          tags: col.tags ?? [],
           columnType: 'base' as const,
         })),
         calculatedColumns: sortedCalculatedColumns.map((col) => ({
           ...col,
+          tags: col.tags ?? [],
           columnType: 'calculated' as const,
         })),
       }

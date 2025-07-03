@@ -66,7 +66,10 @@ export const columnCreateCalculated = async (app: FastifyInstance) => {
 
       await request.store.em.persistAndFlush(calculatedColumn)
       reply.statusCode = 201
-      return calculatedColumn
+      return {
+        ...calculatedColumn,
+        tags: calculatedColumn.tags ?? [],
+      }
     },
   })
 }
