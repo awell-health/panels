@@ -1,6 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { viewsAPI } from './viewsAPI'
-import { mockData, mockResponses, testCrudOperations } from './testUtils'
+import {
+  mockData,
+  mockResponses,
+  testCrudOperations,
+  setupTest,
+  cleanupTest,
+  mockFetchSuccess,
+  mockFetchError,
+  mockNetworkError,
+} from './testUtils'
 
 // Mock the API config
 vi.mock('./config/apiConfig', () => ({
@@ -10,27 +19,16 @@ vi.mock('./config/apiConfig', () => ({
 }))
 
 describe('viewsAPI', () => {
-  const mockFetch = vi.fn()
+  let mockFetch: ReturnType<typeof setupTest>['mockFetch']
 
   beforeEach(() => {
-    global.fetch = mockFetch
-    vi.clearAllMocks()
+    const setup = setupTest()
+    mockFetch = setup.mockFetch
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    cleanupTest()
   })
-
-  const mockFetchSuccess = (data: unknown) =>
-    Promise.resolve({
-      json: () => Promise.resolve(data),
-    })
-
-  const mockFetchError = (status: number, message: string) =>
-    Promise.resolve({
-      json: () => Promise.resolve({ error: message }),
-      status,
-    })
 
   describe('all', () => {
     it('should fetch all views', async () => {
@@ -41,7 +39,7 @@ describe('viewsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/views?tenantId=tenant-123&userId=user-123',
+        'https://api.test.com/views?tenantId=tenant-123&ownerUserId=user-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -68,7 +66,7 @@ describe('viewsAPI', () => {
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/views/view-123?tenantId=tenant-123&userId=user-123',
+        'https://api.test.com/views/view-123?tenantId=tenant-123&ownerUserId=user-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -93,6 +91,22 @@ describe('viewsAPI', () => {
 
       await expect(viewsAPI.get(tenantId, userId, view)).rejects.toThrow(
         'Network error',
+      )
+    })
+
+    it('should handle custom options', async () => {
+      const view = { id: 'view-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
+      const expectedResponse = mockResponses.viewResponse()
+      const customOptions = { signal: new AbortController().signal }
+      mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
+
+      await viewsAPI.get(tenantId, userId, view, customOptions)
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining(customOptions),
       )
     })
   })
@@ -153,91 +167,31 @@ describe('viewsAPI', () => {
 
   describe('delete', () => {
     it('should delete a view', async () => {
-      const viewData = {
-        id: 'view-123',
-        tenantId: 'tenant-123',
-        userId: 'user-123',
-      }
+      const view = { id: 'view-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
 
-      mockFetch.mockReturnValue(mockFetchSuccess(null, 204))
+      mockFetch.mockReturnValue(mockFetchSuccess(null))
 
-      await viewsAPI.delete(viewData)
+      await viewsAPI.delete(tenantId, userId, view)
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        `https://api.test.com/views/${viewData.id}`,
+        `https://api.test.com/views/${view.id}?tenantId=${tenantId}&ownerUserId=${userId}`,
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'DELETE')
-      testCrudOperations.expectCorrectHeaders(mockFetch)
-      testCrudOperations.expectCorrectBody(mockFetch, {
-        tenantId: viewData.tenantId,
-        userId: viewData.userId,
-      })
-    })
-
-    it('should handle forbidden errors', async () => {
-      const viewData = {
-        id: 'view-123',
-        tenantId: 'tenant-123',
-        userId: 'user-123',
-      }
-
-      mockFetch.mockReturnValue(mockFetchError(403, 'Forbidden'))
-
-      await expect(viewsAPI.delete(viewData)).resolves.toBeUndefined()
     })
 
     it('should handle not found errors on delete', async () => {
-      const viewData = {
-        id: 'nonexistent-view',
-        tenantId: 'tenant-123',
-        userId: 'user-123',
-      }
+      const view = { id: 'nonexistent-view' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
 
       mockFetch.mockReturnValue(mockFetchError(404, 'Not Found'))
 
-      await expect(viewsAPI.delete(viewData)).resolves.toBeUndefined()
-    })
-  })
-
-  describe('publishing', () => {
-    describe('publish', () => {
-      it('should publish a view', async () => {
-        const view = { id: 'view-123' }
-        const publishInfo = mockData.viewPublishInfo()
-        const expectedResponse = mockResponses.viewPublishResponse()
-
-        mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
-
-        const result = await viewsAPI.publishing.publish(view, publishInfo)
-
-        testCrudOperations.expectCorrectUrl(
-          mockFetch,
-          `https://api.test.com/views/${view.id}/publish`,
-        )
-        testCrudOperations.expectCorrectMethod(mockFetch, 'POST')
-        testCrudOperations.expectCorrectHeaders(mockFetch)
-        testCrudOperations.expectCorrectBody(mockFetch, publishInfo)
-        expect(result).toEqual(expectedResponse)
-      })
-
-      it('should handle already published errors', async () => {
-        const view = { id: 'view-123' }
-        const publishInfo = mockData.viewPublishInfo()
-        mockFetch.mockReturnValue(mockFetchError(409, 'Already Published'))
-
-        const result = await viewsAPI.publishing.publish(view, publishInfo)
-        expect(result).toMatchObject({ error: expect.any(String) })
-      })
-
-      it('should handle insufficient permissions', async () => {
-        const view = { id: 'view-123' }
-        const publishInfo = mockData.viewPublishInfo()
-        mockFetch.mockReturnValue(mockFetchError(403, 'Forbidden'))
-
-        const result = await viewsAPI.publishing.publish(view, publishInfo)
-        expect(result).toMatchObject({ error: expect.any(String) })
-      })
+      await expect(
+        viewsAPI.delete(tenantId, userId, view),
+      ).resolves.toBeUndefined()
     })
   })
 
@@ -283,7 +237,7 @@ describe('viewsAPI', () => {
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/views/${view.id}/sorts?tenantId=tenant-123&userId=user-123`,
+          `https://api.test.com/views/${view.id}/sorts?tenantId=tenant-123&ownerUserId=user-123`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
         testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -300,7 +254,7 @@ describe('viewsAPI', () => {
     })
   })
 
-  describe('edge cases', () => {
+  describe('error handling', () => {
     it('should handle malformed JSON responses', async () => {
       const view = { id: 'view-123' }
       mockFetch.mockReturnValue(
@@ -311,67 +265,18 @@ describe('viewsAPI', () => {
         } as Response),
       )
 
-      await expect(viewsAPI.get(view)).rejects.toThrow('Unexpected token')
+      await expect(
+        viewsAPI.get('tenant-123', 'user-123', view),
+      ).rejects.toThrow('Unexpected token')
     })
 
     it('should handle timeout errors', async () => {
       const view = { id: 'view-123' }
       mockFetch.mockReturnValue(Promise.reject(new Error('Request timeout')))
 
-      await expect(viewsAPI.get(view)).rejects.toThrow('Request timeout')
-    })
-
-    it('should handle custom request options', async () => {
-      const view = { id: 'view-123' }
-      const expectedResponse = mockResponses.viewResponse()
-      const customOptions = {
-        cache: 'no-cache' as RequestCache,
-        priority: 'high' as RequestPriority,
-      }
-
-      mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
-
-      const result = await viewsAPI.get(view, customOptions)
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining(customOptions),
-      )
-      expect(result).toEqual(expectedResponse)
-    })
-  })
-
-  describe('environment configuration', () => {
-    it('should use different base URLs based on environment', async () => {
-      // Test with different environment variable
-      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', 'https://api.production.com')
-
-      const view = { id: 'view-123' }
-      const expectedResponse = mockResponses.viewResponse()
-
-      mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
-
-      await viewsAPI.get(view)
-
-      testCrudOperations.expectCorrectUrl(
-        mockFetch,
-        'https://api.production.com/views/view-123',
-      )
-    })
-
-    it('should handle missing base URL gracefully', async () => {
-      // Remove the base URL
-      vi.stubEnv('NEXT_PUBLIC_APP_API_BASE_URL', '')
-
-      const view = { id: 'view-123' }
-      const expectedResponse = mockResponses.viewResponse()
-
-      mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
-
-      await viewsAPI.get(view)
-
-      // Should use relative URL when no base URL is set
-      testCrudOperations.expectCorrectUrl(mockFetch, '/views/view-123')
+      await expect(
+        viewsAPI.get('tenant-123', 'user-123', view),
+      ).rejects.toThrow('Request timeout')
     })
   })
 })

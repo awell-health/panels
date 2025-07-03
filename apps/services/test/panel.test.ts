@@ -52,12 +52,14 @@ describe('Panel API', () => {
         url: '/panels',
         payload: {
           description: 'Test Description',
+          // Missing tenantId and userId which are required
         },
       })
 
       expect(response.statusCode).toBe(400)
       const body = JSON.parse(response.body)
-      expect(body.message).toContain('name')
+      expect(body.message).toContain('tenantId')
+      expect(body.message).toContain('userId')
     })
   })
 

@@ -21,6 +21,7 @@ export const mockData = {
     description: 'Test Description',
     tenantId: 'tenant-123',
     userId: 'user-123',
+    metadata: {},
   }),
 
   panelWithId: (): PanelInfo & IdParam => ({
@@ -29,6 +30,7 @@ export const mockData = {
     description: 'Test Description',
     tenantId: 'tenant-123',
     userId: 'user-123',
+    metadata: {},
   }),
 
   view: (): ViewCreate => ({
@@ -184,18 +186,35 @@ export const mockResponses = {
   }),
 }
 
-// Mock fetch helper
+// Mock fetch helpers
 export const mockFetch = vi.fn()
+
 export const mockFetchSuccess = (data: unknown) =>
   Promise.resolve({
+    ok: true,
+    status: 200,
     json: () => Promise.resolve(data),
   })
 
-export const mockFetchError = (status: number, message: string) =>
+export const mockFetchError = (status: number, message = 'Error') =>
   Promise.resolve({
-    json: () => Promise.resolve({ error: message }),
+    ok: false,
     status,
+    json: () => Promise.resolve({ error: message }),
   })
+
+export const mockNetworkError = () => Promise.reject(new Error('Network error'))
+
+// Setup and cleanup functions
+export const setupTest = () => {
+  global.fetch = mockFetch
+  vi.clearAllMocks()
+  return { mockFetch }
+}
+
+export const cleanupTest = () => {
+  vi.restoreAllMocks()
+}
 
 // Test utilities
 export const testCrudOperations = {
