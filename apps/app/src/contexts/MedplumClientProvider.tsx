@@ -10,15 +10,10 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 type MedplumContextType = {
   patients: Patient[]
   tasks: Task[]
-  ingestionBots: Bot[]
-  enrichmentBots: Bot[]
-  connectorBots: Bot[]
   isLoading: boolean
   error: Error | null
-  accessToken: string | null
   addNotesToTask: (taskId: string, notes: string) => Promise<Task>
   toggleTaskOwner: (taskId: string) => Promise<Task>
-  clearAuthTokens: () => void
 }
 
 const MedplumContext = createContext<MedplumContextType | null>(null)
@@ -26,10 +21,6 @@ const MedplumContext = createContext<MedplumContextType | null>(null)
 export function MedplumClientProvider({ children }: { children: React.ReactNode }) {
   const [patients, setPatients] = useState<Patient[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
-  const [ingestionBots, setIngestionBots] = useState<Bot[]>([])
-  const [enrichmentBots, setEnrichmentBots] = useState<Bot[]>([])
-  const [connectorBots, setConnectorBots] = useState<Bot[]>([])
-  const [accessToken, setAccessToken] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const {
@@ -46,8 +37,8 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
   const unsubscribeRef = useRef<{ patients?: () => void; tasks?: () => void }>({})
   const isInitializedRef = useRef(false)
   const isInitializingRef = useRef(false)
-  const clientRef = useRef<MedplumClient | null>(null)
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null)
+  const clientRef = useRef<MedplumClient | null>(null)
 
   const updateResource = useCallback(<T extends { id?: string }>(
     currentResources: T[],
@@ -64,32 +55,6 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
     return newResources
   }, [])
 
-  // Function to initialize with existing token
-  const initializeWithExistingToken = useCallback(async (token: string) => {
-    try {
-      const { medplumBaseUrl, medplumWsBaseUrl } = await getRuntimeConfig()
-      
-      if (!medplumBaseUrl || !medplumWsBaseUrl) {
-        console.error('Medplum URLs not configured')
-        return
-      }
-
-      const client = new MedplumClient({
-        baseUrl: medplumBaseUrl,
-        cacheTime: 10000,
-      })
-      
-      // Set the existing token instead of calling startClientLogin
-      client.setAccessToken(token)
-      
-      const store = new MedplumStore(client, medplumWsBaseUrl)
-      setMedplumStore(store)
-      clientRef.current = client
-    } catch (error) {
-      console.error('Failed to initialize with existing token:', error)
-    }
-  }, [])
-
   // Multi-tab coordination
   useEffect(() => {
     // Create broadcast channel for multi-tab communication
@@ -103,39 +68,22 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
           const { token, clientId, clientSecret } = event.data.payload
           if (clientId === medplumClientId && clientSecret === medplumSecret) {
             // Reuse the authentication from the other tab
-            initializeWithExistingToken(token)
+            clientRef.current?.setAccessToken(token)
           }
         } else if (event.data.type === 'AUTH_EXPIRED') {
           console.log('MedplumProvider: Auth expired in another tab, clearing token')
-          // Another tab reported auth expired, clear our token too
-          localStorage.removeItem(`medplum-token-${medplumClientId}`)
           setMedplumStore(null)
-          clientRef.current = null
         }
       }
     }
 
-    // Handle tab visibility changes to detect when tab becomes active
-    const handleVisibilityChange = () => {
-      if (!document.hidden && medplumClientId && medplumSecret) {
-        // Tab became visible, check if we need to re-authenticate
-        const existingToken = localStorage.getItem(`medplum-token-${medplumClientId}`)
-        if (existingToken && !clientRef.current) {
-          console.log('MedplumProvider: Tab became visible, reusing existing token')
-          initializeWithExistingToken(existingToken)
-        }
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       if (broadcastChannelRef.current) {
         broadcastChannelRef.current.close()
       }
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [medplumClientId, medplumSecret, initializeWithExistingToken])
+  }, [medplumClientId, medplumSecret])
 
   // Initialize Medplum store
   useEffect(() => {
@@ -158,7 +106,6 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
       try {
         const { medplumBaseUrl, medplumWsBaseUrl } = await getRuntimeConfig()
        
-
         if (!medplumBaseUrl || !medplumWsBaseUrl) {
           console.error(
             'Medplum base URL or Medplum WebSocket base URL is not set',
@@ -168,35 +115,18 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
           return
         }
         
-        // Check if another tab has already authenticated
-        const existingToken = localStorage.getItem(`medplum-token-${medplumClientId}`)
-        if (existingToken) {
-          console.log('MedplumProvider: Found existing token, reusing')
-          await initializeWithExistingToken(existingToken)
-          return
-        }
-        
         // Only create new client if we don't have one
         if (!clientRef.current) {
           clientRef.current = new MedplumClient({
             baseUrl: medplumBaseUrl,
             cacheTime: 10000,
           })
-          await clientRef.current.startClientLogin(medplumClientId, medplumSecret)
-          
-          // Store the token for other tabs
-          const token = clientRef.current.getAccessToken()
-          if (token) {
-            localStorage.setItem(`medplum-token-${medplumClientId}`, token)
-            
-            // Notify other tabs that authentication is complete
-            if (broadcastChannelRef.current) {
-              broadcastChannelRef.current.postMessage({
-                type: 'AUTH_COMPLETED',
-                payload: { token, clientId: medplumClientId, clientSecret: medplumSecret }
-              })
-            }
-          }
+          if (!clientRef.current.isAuthenticated()) {
+            console.log('MedplumProvider: Client not authenticated, starting login')
+            await clientRef.current.startClientLogin(medplumClientId, medplumSecret)
+          } else {
+            console.log('MedplumProvider: Client already authenticated, skipping login')
+          }    
         }
 
         const store = new MedplumStore(clientRef.current, medplumWsBaseUrl)
@@ -213,7 +143,7 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
     if (medplumClientId && medplumSecret) {
       initializeMedplumStore()
     }
-  }, [medplumClientId, medplumSecret, initializeWithExistingToken, medplumStore])
+  }, [medplumClientId, medplumSecret, medplumStore])
 
   // Load data and setup subscriptions
   useEffect(() => {
@@ -327,32 +257,14 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
     return task
   }, [medplumStore, practitioner?.id, updateResource])
 
-  // Function to clear authentication tokens
-  const clearAuthTokens = useCallback(() => {
-    if (medplumClientId) {
-      localStorage.removeItem(`medplum-token-${medplumClientId}`)
-    }
-    // Notify other tabs that auth is expired
-    if (broadcastChannelRef.current) {
-      broadcastChannelRef.current.postMessage({
-        type: 'AUTH_EXPIRED',
-        payload: { clientId: medplumClientId }
-      })
-    }
-  }, [medplumClientId])
 
   const value = {
     patients,
     tasks,
-    ingestionBots,
-    enrichmentBots,
-    connectorBots,
     isLoading,
-    accessToken,
     error,
     addNotesToTask,
     toggleTaskOwner,
-    clearAuthTokens,
   }
 
   return (
