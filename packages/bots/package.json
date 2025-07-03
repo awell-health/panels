@@ -21,7 +21,8 @@
     "lint": "biome lint ./src",
     "format": "biome format ./src",
     "start": "node --env-file=.env --enable-source-maps dist/index.js",
-    "typecheck": "tsc -p ./tsconfig.json --noEmit"
+    "typecheck": "tsc -p ./tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "keywords": ["awell", "bots", "medplum", "healthcare"],
   "author": "",

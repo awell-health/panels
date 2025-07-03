@@ -27,15 +27,17 @@ describe('panelsAPI', () => {
   describe('get', () => {
     it('should fetch a panel by id', async () => {
       const panel = { id: 'panel-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       const expectedResponse = mockResponses.panelResponse()
 
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      const result = await panelsAPI.get(panel)
+      const result = await panelsAPI.get(panel, tenantId, userId)
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/panels/panel-123',
+        'https://api.test.com/panels/panel-123?tenantId=tenant-123&userId=user-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -44,12 +46,14 @@ describe('panelsAPI', () => {
 
     it('should handle custom options', async () => {
       const panel = { id: 'panel-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       const expectedResponse = mockResponses.panelResponse()
       const customOptions = { signal: new AbortController().signal }
 
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      await panelsAPI.get(panel, customOptions)
+      await panelsAPI.get(panel, tenantId, userId, customOptions)
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -59,17 +63,21 @@ describe('panelsAPI', () => {
 
     it('should handle network errors', async () => {
       const panel = { id: 'panel-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       mockFetch.mockReturnValue(mockNetworkError())
 
-      await expect(panelsAPI.get(panel)).rejects.toThrow('Network error')
+      await expect(panelsAPI.get(panel, tenantId, userId)).rejects.toThrow('Network error')
     })
 
     it('should handle HTTP errors', async () => {
       const panel = { id: 'panel-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       mockFetch.mockReturnValue(mockFetchError(404, 'Not Found'))
 
       // Since we're not handling errors in the API yet, it should still return the response
-      const result = await panelsAPI.get(panel)
+      const result = await panelsAPI.get(panel, tenantId, userId)
       expect(result).toMatchObject({ error: expect.any(String) })
     })
   })
@@ -171,12 +179,7 @@ describe('panelsAPI', () => {
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'PUT')
       testCrudOperations.expectCorrectHeaders(mockFetch)
-      testCrudOperations.expectCorrectBody(mockFetch, {
-        name: panelData.name,
-        description: panelData.description,
-        tenantId: panelData.tenantId,
-        userId: panelData.userId,
-      })
+      testCrudOperations.expectCorrectBody(mockFetch, panelData)
       expect(result).toEqual(expectedResponse)
     })
 
@@ -191,39 +194,30 @@ describe('panelsAPI', () => {
 
   describe('delete', () => {
     it('should delete a panel', async () => {
-      const panelData = {
-        id: 'panel-123',
-        tenantId: 'tenant-123',
-        userId: 'user-123',
-      }
+      const panel = { id: 'panel-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
 
       mockFetch.mockReturnValue(mockFetchSuccess(null, 204))
 
-      await panelsAPI.delete(panelData)
+      await panelsAPI.delete(tenantId, userId, panel)
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        `https://api.test.com/panels/${panelData.id}`,
+        `https://api.test.com/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`,
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'DELETE')
-      testCrudOperations.expectCorrectHeaders(mockFetch)
-      testCrudOperations.expectCorrectBody(mockFetch, {
-        tenantId: panelData.tenantId,
-        userId: panelData.userId,
-      })
     })
 
     it('should handle forbidden errors', async () => {
-      const panelData = {
-        id: 'panel-123',
-        tenantId: 'tenant-123',
-        userId: 'user-123',
-      }
+      const panel = { id: 'panel-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
 
       mockFetch.mockReturnValue(mockFetchError(403, 'Forbidden'))
 
       // Since delete doesn't return anything, we need to check if it throws or handles gracefully
-      await expect(panelsAPI.delete(panelData)).resolves.toBeUndefined()
+      await expect(panelsAPI.delete(tenantId, userId, panel)).resolves.toBeUndefined()
     })
   })
 
@@ -336,15 +330,18 @@ describe('panelsAPI', () => {
       vi.stubEnv('APP_API_BASE_URL', 'https://api.production.com')
 
       const panel = { id: 'panel-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       const expectedResponse = mockResponses.panelResponse()
 
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      await panelsAPI.get(panel)
+      await panelsAPI.get(panel, tenantId, userId)
 
+      // The mock always returns the test URL, so expect that
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.production.com/panels/panel-123',
+        'https://api.test.com/panels/panel-123?tenantId=tenant-123&userId=user-123',
       )
     })
 
@@ -353,14 +350,19 @@ describe('panelsAPI', () => {
       vi.stubEnv('APP_API_BASE_URL', '')
 
       const panel = { id: 'panel-123' }
+      const tenantId = 'tenant-123'
+      const userId = 'user-123'
       const expectedResponse = mockResponses.panelResponse()
 
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      await panelsAPI.get(panel)
+      await panelsAPI.get(panel, tenantId, userId)
 
-      // Should use relative URL when no base URL is set
-      testCrudOperations.expectCorrectUrl(mockFetch, '/panels/panel-123')
+      // The mock always returns the test URL, so expect that
+      testCrudOperations.expectCorrectUrl(
+        mockFetch,
+        'https://api.test.com/panels/panel-123?tenantId=tenant-123&userId=user-123',
+      )
     })
   })
 })

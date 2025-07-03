@@ -5,6 +5,7 @@ export const COLUMN_MIN_WIDTH_MAPPING: Record<Column['type'], number> = {
   text: 120,
   number: 100,
   date: 120,
+  datetime: 120,
   boolean: 80,
   select: 120,
   multi_select: 150,

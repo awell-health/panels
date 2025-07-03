@@ -61,7 +61,7 @@ interface UseDateTimeFormatReturn {
 
   // Formatter function
   formatDateTime: (date: string | Date | null | undefined) => string
-
+  formatDateIgnoringTimeZone: (date: string | Date | null | undefined) => string
   // Update functions
   updateDateFormat: (formatKey: DateFormatKey) => Promise<void>
   updateDateTimeFormat: (formatKey: DateTimeFormatKey) => Promise<void>
@@ -231,6 +231,46 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
     [selectedDateFormat, selectedDateTimeFormat],
   )
 
+  const formatDateIgnoringTimeZone = useCallback(
+    (date: string | Date | null | undefined): string => {
+      if (!date) return ''
+      try {
+        let dateObj: Date
+
+        if (typeof date === 'string') {
+          // For ISO strings, parse without timezone conversion
+          if (date.includes('T')) {
+            // Remove timezone info and parse as local time
+            const dateWithoutTz = date.replace(/[Z+\-]\d{2}:?\d{2}$/, '')
+            dateObj = parseISO(dateWithoutTz)
+          } else {
+            dateObj = parseISO(`${date}T00:00:00`)
+          }
+        } else {
+          dateObj = date
+        }
+
+        if (!isValid(dateObj)) {
+          return String(date)
+        }
+
+        // Determine if this date has time information
+        const hasTime = hasTimeInfo(date)
+
+        // Use appropriate format based on time presence
+        const formatConfig = hasTime
+          ? DATE_TIME_FORMATS[selectedDateTimeFormat]
+          : DATE_FORMATS[selectedDateFormat]
+
+        return formatDateFns(dateObj, formatConfig.pattern)
+      } catch (error) {
+        console.error('Error formatting date:', error)
+        return String(date)
+      }
+    },
+    [selectedDateFormat, selectedDateTimeFormat],
+  )
+
   const updateDateFormat = useCallback(async (formatKey: DateFormatKey) => {
     try {
       localStorage.setItem(STORAGE_KEY_DATE, formatKey)
@@ -280,6 +320,7 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
     availableDateFormats: DATE_FORMATS,
     availableDateTimeFormats: DATE_TIME_FORMATS,
     formatDateTime,
+    formatDateIgnoringTimeZone,
     updateDateFormat,
     updateDateTimeFormat,
   }

@@ -127,7 +127,10 @@ export const columnUpdate = async (app: FastifyInstance) => {
       }
 
       await request.store.em.persistAndFlush(column)
-      return column
+      return {
+        ...column,
+        tags: column.tags ?? [],
+      }
     },
   })
 }

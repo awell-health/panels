@@ -6,6 +6,7 @@ export const ColumnType = {
   TEXT: 'text',
   NUMBER: 'number',
   DATE: 'date',
+  DATETIME: 'datetime',
   BOOLEAN: 'boolean',
   SELECT: 'select',
   MULTI_SELECT: 'multi_select',
