@@ -74,7 +74,10 @@ export const columnCreateBase = async (app: FastifyInstance) => {
 
       await request.store.em.persistAndFlush(baseColumn)
       reply.statusCode = 201
-      return baseColumn
+      return {
+        ...baseColumn,
+        tags: baseColumn.tags ?? [],
+      }
     },
   })
 }

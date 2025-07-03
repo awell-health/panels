@@ -1,15 +1,18 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { ColumnType } from '../src/modules/worklist/entities/worklist-column.entity.js'
+import { ColumnType } from '../src/modules/column/entities/base-column.entity.js'
 import {
   closeTestApp,
   createTestApp,
   createTestColumn,
-  createTestWorklist,
+  createTestDataSource,
+  createTestPanel,
+  testTenantId,
+  testUserId,
 } from './setup.js'
 
-describe('Worklist Column API', () => {
+describe('Panel Column API', () => {
   let app: Awaited<ReturnType<typeof createTestApp>>
-  let worklistId: number
+  let panelId: number
 
   beforeAll(async () => {
     app = await createTestApp()
@@ -21,40 +24,43 @@ describe('Worklist Column API', () => {
 
   beforeEach(async () => {
     // await cleanupTestDatabase()
-    const worklist = await createTestWorklist(app)
-    worklistId = worklist.id
+    const panel = await createTestPanel(app)
+    panelId = panel.id
   })
 
-  describe('POST /api/worklists/:id/columns', () => {
-    it('should create a column', async () => {
+  describe('POST /panels/:id/columns/base', () => {
+    it('should create a base column', async () => {
+      // Create a data source first
+      const dataSource = await createTestDataSource(app, panelId)
+
       const response = await app.inject({
         method: 'POST',
-        url: `/api/worklists/${worklistId}/columns`,
+        url: `/panels/${panelId}/columns/base`,
         payload: {
           name: 'Test Column',
-          key: 'test_column',
-          type: ColumnType.STRING,
-          order: 1,
+          type: ColumnType.TEXT,
+          sourceField: 'test_field',
+          dataSourceId: dataSource.id,
           properties: {
             required: true,
-            description: 'Test column description',
           },
+          tenantId: testTenantId,
+          userId: testUserId,
         },
       })
       const body = JSON.parse(response.body)
 
       expect(response.statusCode).toBe(201)
       expect(body.name).toBe('Test Column')
-      expect(body.key).toBe('test_column')
-      expect(body.type).toBe(ColumnType.STRING)
-      expect(body.order).toBe(1)
+      expect(body.type).toBe(ColumnType.TEXT)
+      expect(body.sourceField).toBe('test_field')
       expect(body.properties.required).toBe(true)
     })
 
     it('should validate required fields', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/api/worklists/${worklistId}/columns`,
+        url: `/panels/${panelId}/columns/base`,
         payload: {
           name: 'Test Column',
         },
@@ -62,25 +68,28 @@ describe('Worklist Column API', () => {
 
       expect(response.statusCode).toBe(400)
       const body = JSON.parse(response.body)
-      expect(body.message).toContain('key')
       expect(body.message).toContain('type')
-      expect(body.message).toContain('order')
+      expect(body.message).toContain('sourceField')
       expect(body.message).toContain('properties')
+      expect(body.message).toContain('dataSourceId')
+      expect(body.message).toContain('tenantId')
+      expect(body.message).toContain('userId')
     })
 
-    it('should return 404 for non-existent worklist', async () => {
+    it('should return 404 for non-existent panel', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: '/api/worklists/999/columns',
+        url: '/panels/999/columns/base',
         payload: {
-          key: 'test_column',
-          type: ColumnType.STRING,
-          order: 1,
+          type: ColumnType.TEXT,
+          sourceField: 'test_field',
+          dataSourceId: 1,
           name: 'Test Column',
           properties: {
             required: true,
-            description: 'Test column description',
           },
+          tenantId: testTenantId,
+          userId: testUserId,
         },
       })
 
@@ -88,53 +97,54 @@ describe('Worklist Column API', () => {
     })
   })
 
-  describe('GET /api/worklists/:id/columns', () => {
+  describe('GET /panels/:id/columns', () => {
     it('should list columns', async () => {
-      await createTestColumn(app, worklistId, {
+      await createTestColumn(app, panelId, {
         name: 'Column 1',
-        key: 'column_1',
+        sourceField: 'column_1',
       })
-      await createTestColumn(app, worklistId, {
+      await createTestColumn(app, panelId, {
         name: 'Column 2',
-        key: 'column_2',
+        sourceField: 'column_2',
       })
 
       const response = await app.inject({
         method: 'GET',
-        url: `/api/worklists/${worklistId}/columns`,
+        url: `/panels/${panelId}/columns?tenantId=${testTenantId}&userId=${testUserId}`,
       })
 
       expect(response.statusCode).toBe(200)
       const body = JSON.parse(response.body)
-      expect(Array.isArray(body)).toBe(true)
-      expect(body).toHaveLength(2)
-      expect(body[0].name).toBe('Column 1')
-      expect(body[1].name).toBe('Column 2')
+      expect(Array.isArray(body.baseColumns)).toBe(true)
+      expect(body.baseColumns).toHaveLength(2)
+      expect(body.baseColumns[0].name).toBe('Column 1')
+      expect(body.baseColumns[1].name).toBe('Column 2')
     })
 
-    it('should return 404 for non-existent worklist', async () => {
+    it('should return 404 for non-existent panel', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/api/worklists/999/columns',
+        url: `/panels/999/columns?tenantId=${testTenantId}&userId=${testUserId}`,
       })
 
       expect(response.statusCode).toBe(404)
     })
   })
 
-  describe('PUT /api/worklists/:id/columns/:columnId', () => {
+  describe('PUT /panels/:id/columns/:columnId', () => {
     it('should update a column', async () => {
-      const column = await createTestColumn(app, worklistId)
+      const column = await createTestColumn(app, panelId)
 
       const response = await app.inject({
         method: 'PUT',
-        url: `/api/worklists/${worklistId}/columns/${column.id}`,
+        url: `/panels/${panelId}/columns/${column.id}`,
         payload: {
           name: 'Updated Column',
           properties: {
             required: false,
-            description: 'Updated description',
           },
+          tenantId: testTenantId,
+          userId: testUserId,
         },
       })
 
@@ -142,15 +152,16 @@ describe('Worklist Column API', () => {
       const body = JSON.parse(response.body)
       expect(body.name).toBe('Updated Column')
       expect(body.properties.required).toBe(false)
-      expect(body.properties.description).toBe('Updated description')
     })
 
     it('should return 404 for non-existent column', async () => {
       const response = await app.inject({
         method: 'PUT',
-        url: `/api/worklists/${worklistId}/columns/999`,
+        url: `/panels/${panelId}/columns/999`,
         payload: {
           name: 'Updated Column',
+          tenantId: testTenantId,
+          userId: testUserId,
         },
       })
 
@@ -158,31 +169,30 @@ describe('Worklist Column API', () => {
     })
   })
 
-  describe('DELETE /api/worklists/:id/columns/:columnId', () => {
+  describe('DELETE /panels/:id/columns/:columnId', () => {
     it('should delete a column', async () => {
-      const column = await createTestColumn(app, worklistId)
+      const column = await createTestColumn(app, panelId)
 
       const response = await app.inject({
         method: 'DELETE',
-        url: `/api/worklists/${worklistId}/columns/${column.id}`,
+        url: `/panels/${panelId}/columns/${column.id}?tenantId=${testTenantId}&userId=${testUserId}`,
       })
 
-      console.log(`delete output: ${response.body}`)
       expect(response.statusCode).toBe(204)
 
       // Verify column is deleted
       const getResponse = await app.inject({
         method: 'GET',
-        url: `/api/worklists/${worklistId}/columns`,
+        url: `/panels/${panelId}/columns?tenantId=${testTenantId}&userId=${testUserId}`,
       })
       const body = JSON.parse(getResponse.body)
-      expect(body).toHaveLength(0)
+      expect(body.baseColumns).toHaveLength(0)
     })
 
     it('should return 404 for non-existent column', async () => {
       const response = await app.inject({
         method: 'DELETE',
-        url: `/api/worklists/${worklistId}/columns/999`,
+        url: `/panels/${panelId}/columns/999?tenantId=${testTenantId}&userId=${testUserId}`,
       })
 
       expect(response.statusCode).toBe(404)
