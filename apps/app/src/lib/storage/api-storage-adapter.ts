@@ -310,6 +310,7 @@ export class APIStorageAdapter implements StorageAdapter {
         number: 'number' as const,
         boolean: 'boolean' as const,
         date: 'date' as const,
+        datetime: 'datetime' as const,
         tasks: 'custom' as const,
         select: 'select' as const,
         array: 'multi_select' as const,

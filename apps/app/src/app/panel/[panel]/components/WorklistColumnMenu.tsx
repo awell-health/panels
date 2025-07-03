@@ -337,6 +337,7 @@ export function ColumnMenu({
                 <option value="number">Number</option>
                 <option value="boolean">Boolean</option>
                 <option value="date">Date</option>
+                <option value="datetime">Datetime</option>
                 <option value="tasks">Tasks</option>
                 <option value="select">Select</option>
                 <option value="array">Array</option>

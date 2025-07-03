@@ -49,7 +49,7 @@ export default function WorklistTableRow({
   currentUserName,
 }: WorklistTableRowWithHoverProps) {
   const rowRef = useRef<HTMLTableRowElement>(null)
-  const { formatDateTime } = useDateTimeFormat()
+  const { formatDateTime, formatDateIgnoringTimeZone } = useDateTimeFormat()
 
   const handleRowClick = () => {
     onRowClick(row)
@@ -104,9 +104,12 @@ export default function WorklistTableRow({
             <File className="h-3 w-3 mr-1" />
             {columnValue}
           </button>
-        ) : column.type === 'date' && columnValue ? (
+        ) : column.type === 'datetime' && columnValue ? (
           formatDateTime(columnValue)
-        ) : column.name === 'Task Status' && columnValue ? (
+        ): column.type === 'date' && columnValue ? (
+          formatDateIgnoringTimeZone(columnValue)
+        )
+         : column.name === 'Task Status' && columnValue ? (
           renderTaskStatus(
             columnValue,
             row.Task,

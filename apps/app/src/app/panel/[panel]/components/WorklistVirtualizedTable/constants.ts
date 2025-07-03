@@ -8,6 +8,7 @@ export const COLUMN_MIN_WIDTH_MAPPING: Record<
   string: 120,
   number: 100,
   date: 120,
+  datetime: 120,
   boolean: 80,
   tasks: 200,
   select: 120,

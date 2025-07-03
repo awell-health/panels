@@ -7,6 +7,7 @@ import { BaseCell } from './BaseCell'
 import { DateCell } from './DateCell'
 import { TasksCell } from './TasksCell'
 import type { InteractiveCellProps } from './types'
+import { DateTimeCell } from './DateTimeCell'
 
 interface CellFactoryProps extends InteractiveCellProps {
   // Additional factory-specific props can be added here
@@ -38,6 +39,9 @@ export function CellFactory(props: CellFactoryProps) {
   switch (column.type) {
     case 'date':
       return <DateCell {...props} />
+
+    case 'datetime':
+      return <DateTimeCell {...props} />
 
     case 'tasks':
       return <TasksCell {...props} />

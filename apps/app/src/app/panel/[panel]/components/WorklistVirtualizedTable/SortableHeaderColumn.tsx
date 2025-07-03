@@ -64,6 +64,7 @@ export function SortableHeaderColumn({
   const getTypeIcon = () => {
     switch (column.type) {
       case 'date':
+      case 'datetime':
         return <Calendar className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
       case 'number':
         return <Hash className="h-3.5 w-3.5 mr-1.5 text-gray-500" />

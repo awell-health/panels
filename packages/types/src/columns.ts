@@ -1,5 +1,18 @@
 import { z } from 'zod'
 
+export const SupportedColumnTypes = [
+    'text',
+    'number',
+    'date',
+    'datetime',
+    'boolean',
+    'select',
+    'multi_select',
+    'user',
+    'file',
+    'custom'
+] as const
+
 export const ColumnPropertiesSchema = z.object({
   required: z.boolean().optional(),
   unique: z.boolean().optional(),
@@ -24,17 +37,7 @@ export const ColumnPropertiesSchema = z.object({
 
 export const ColumnBaseCreateSchema = z.object({
   name: z.string(),
-  type: z.enum([
-    'text',
-    'number',
-    'date',
-    'boolean',
-    'select',
-    'multi_select',
-    'user',
-    'file',
-    'custom',
-  ]),
+  type: z.enum(SupportedColumnTypes),
   sourceField: z.string(),
   dataSourceId: z.number(),
   properties: ColumnPropertiesSchema,
@@ -47,17 +50,7 @@ export const ColumnBaseCreateSchema = z.object({
 export const ColumnBaseCreateResponseSchema = z.object({
   id: z.number(),
   name: z.string(),
-  type: z.enum([
-    'text',
-    'number',
-    'date',
-    'boolean',
-    'select',
-    'multi_select',
-    'user',
-    'file',
-    'custom',
-  ]),
+  type: z.enum(SupportedColumnTypes),
   sourceField: z.string(),
   tags: z.array(z.string()).optional(),
   properties: ColumnPropertiesSchema,
@@ -74,17 +67,7 @@ export type ColumnBaseCreateResponse = z.infer<
 
 export const ColumnCalculatedCreateSchema = z.object({
   name: z.string(),
-  type: z.enum([
-    'text',
-    'number',
-    'date',
-    'boolean',
-    'select',
-    'multi_select',
-    'user',
-    'file',
-    'custom',
-  ]),
+  type: z.enum(SupportedColumnTypes),
   formula: z.string(),
   dependencies: z.array(z.string()),
   properties: ColumnPropertiesSchema,
@@ -97,17 +80,7 @@ export const ColumnCalculatedCreateSchema = z.object({
 export const ColumnCalculatedCreateResponseSchema = z.object({
   id: z.number(),
   name: z.string(),
-  type: z.enum([
-    'text',
-    'number',
-    'date',
-    'boolean',
-    'select',
-    'multi_select',
-    'user',
-    'file',
-    'custom',
-  ]),
+  type: z.enum(SupportedColumnTypes),
   formula: z.string(),
   dependencies: z.array(z.string()),
   properties: ColumnPropertiesSchema,
@@ -126,17 +99,7 @@ export type ColumnCalculatedCreateResponse = z.infer<
 export const ColumnBaseSchema = z.object({
   id: z.number(),
   name: z.string(),
-  type: z.enum([
-    'text',
-    'number',
-    'date',
-    'boolean',
-    'select',
-    'multi_select',
-    'user',
-    'file',
-    'custom',
-  ]),
+  type: z.enum(SupportedColumnTypes),
   sourceField: z.string(),
   properties: ColumnPropertiesSchema,
   metadata: z.record(z.any()).optional(),
@@ -147,17 +110,7 @@ export const ColumnBaseSchema = z.object({
 export const ColumnCalculatedSchema = z.object({
   id: z.number(),
   name: z.string(),
-  type: z.enum([
-    'text',
-    'number',
-    'date',
-    'boolean',
-    'select',
-    'multi_select',
-    'user',
-    'file',
-    'custom',
-  ]),
+  type: z.enum(SupportedColumnTypes),
   formula: z.string(),
   dependencies: z.array(z.string()),
   properties: ColumnPropertiesSchema,
@@ -176,17 +129,7 @@ export type ColumnsResponse = z.infer<typeof ColumnsResponseSchema>
 export const ColumnInfoSchema = z.object({
   name: z.string().optional(),
   type: z
-    .enum([
-      'text',
-      'number',
-      'date',
-      'boolean',
-      'select',
-      'multi_select',
-      'user',
-      'file',
-      'custom',
-    ])
+    .enum(SupportedColumnTypes)
     .optional(),
   properties: ColumnPropertiesSchema.optional(),
   metadata: z.record(z.any()).optional(),
@@ -203,17 +146,7 @@ export const ColumnInfoSchema = z.object({
 export const ColumnInfoResponseSchema = z.object({
   id: z.number(),
   name: z.string(),
-  type: z.enum([
-    'text',
-    'number',
-    'date',
-    'boolean',
-    'select',
-    'multi_select',
-    'user',
-    'file',
-    'custom',
-  ]),
+  type: z.enum(SupportedColumnTypes),
   properties: ColumnPropertiesSchema,
   metadata: z.record(z.any()).optional(),
   tags: z.array(z.string()).optional(),
