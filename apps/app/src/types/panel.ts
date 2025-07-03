@@ -19,6 +19,7 @@ export type Column = {
     | 'text'
     | 'number'
     | 'date'
+    | 'datetime'
     | 'boolean'
     | 'select'
     | 'multi_select'
