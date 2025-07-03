@@ -104,12 +104,8 @@ export function useMedplumStore() {
   const {
     patients,
     tasks,
-    ingestionBots,
-    enrichmentBots,
-    connectorBots,
     isLoading,
     error,
-    accessToken,
     addNotesToTask,
     toggleTaskOwner,
   } = useMedplum()
@@ -128,11 +124,7 @@ export function useMedplumStore() {
   return {
     patients: mappedPatients,
     tasks: mappedTasks,
-    ingestionBots,
-    enrichmentBots,
-    connectorBots,
     isLoading,
-    accessToken,
     error,
     addNotesToTask,
     toggleTaskOwner,
