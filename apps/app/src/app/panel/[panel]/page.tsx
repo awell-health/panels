@@ -77,6 +77,7 @@ export default function WorklistPage() {
   useEffect(() => {
     if (panel) {
       setTableFilters(panel.metadata.filters)
+      setCurrentView(panel.metadata.viewType as ViewType)
     }
   }, [panel])
 
@@ -86,6 +87,22 @@ export default function WorklistPage() {
       router.push('/')
     }
   }, [isPanelLoading, panel, panelError, router])
+
+  const updatePanelViewType = async (viewType: ViewType) => {
+    try {
+      if (!panel) return
+
+      setCurrentView(viewType)
+      await updatePanel?.(panelId, {
+        metadata: {
+          ...panel.metadata,
+          viewType,
+        },
+      })
+    } catch (error) {
+      console.error('Failed to update panel view type:', error)
+    }
+  }
 
   const handleColumnChanges = async (columnChanges: ColumnChangesResponse) => {
     if (!panel) return
@@ -238,7 +255,7 @@ export default function WorklistPage() {
               searchMode={searchMode}
               onSearchModeChange={setSearchMode}
               currentView={currentView}
-              setCurrentView={setCurrentView}
+              setCurrentView={updatePanelViewType}
               columns={columns.map(col => ({
                 ...col,
                 visible: col.properties?.display?.visible !== false

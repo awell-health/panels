@@ -2,6 +2,7 @@
 import { Code, Plus, Search } from 'lucide-react'
 import { type ColumnWithVisibility, ColumnsDropdown } from './ColumnsDropdown'
 import WorklistViewDropDown from './ViewTypeDropdown'
+import type { ViewType } from '@/types/panel'
 
 interface PanelToolbarProps {
   searchTerm: string
@@ -10,8 +11,8 @@ interface PanelToolbarProps {
   onSearchModeChange: (mode: 'text' | 'fhirpath') => void
   onNewWorklist?: () => void
   onEnrichData?: () => void
-  currentView: 'patient' | 'task' | undefined
-  setCurrentView?: (view: 'patient' | 'task') => void
+  currentView: ViewType
+  setCurrentView?: (view: ViewType) => void
   columns: ColumnWithVisibility[]
   onAddColumn: () => void
   onColumnVisibilityChange: (columnId: string, visible: boolean) => void
@@ -34,7 +35,7 @@ export default function PanelToolbar({
   return (
     <div className="border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between p-2">
-        {currentView && !isViewPage && (
+        {!isViewPage && (
           <div className="flex items-center space-x-3">
             {/* View dropdown - only show on panel page */}
             <WorklistViewDropDown
