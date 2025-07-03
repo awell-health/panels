@@ -1,5 +1,9 @@
 export type Filter = {
-  fhirPathFilter: string[]
+  columnId: string
+  value: string
+  fhirExpressionTemplate: string
+  // Here for backwards compatibility only
+  fhirPathFilter?: [columnKey: string, value: string]
 }
 
 export type Sort = {

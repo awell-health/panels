@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { VariableSizeGrid } from 'react-window'
 import AutoSizer from 'react-virtualized-auto-sizer'
-import type { Column } from '@/types/panel'
+import type { Column, Filter } from '@/types/panel'
 import { getNestedValue, isMatchingFhirPathCondition } from '@/lib/fhir-path'
 import {
   DndContext,
@@ -35,11 +35,7 @@ import {
   MIN_COLUMN_WIDTH,
   MAX_COLUMN_WIDTH,
 } from './constants'
-
-interface TableFilter {
-  key: string
-  value: string
-}
+import { template } from 'lodash'
 
 interface VirtualizedTableProps {
   isLoading: boolean
@@ -66,8 +62,8 @@ interface VirtualizedTableProps {
     sortConfig: { key: string; direction: 'asc' | 'desc' } | undefined,
   ) => void
   currentView: string
-  filters: TableFilter[]
-  onFiltersChange: (filters: TableFilter[]) => void
+  filters: Filter[]
+  onFiltersChange: (filters: Filter[]) => void
   initialSortConfig: { key: string; direction: 'asc' | 'desc' } | null
   currentUserName?: string
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
@@ -142,9 +138,21 @@ export function VirtualizedTable({
     if (filters && filters.length > 0) {
       filteredData = tableData.filter((row) => {
         return filters.every((filter) => {
-          // Use partial matching with contains() for more user-friendly filtering
-          const fhirPath = `${filter.key}.lower().contains('${filter.value.toLowerCase()}')`
-          return isMatchingFhirPathCondition(row, fhirPath)
+          const column = columns.find((c) => c.id === filter.columnId)
+          if (column) {
+            if (filter.fhirExpressionTemplate) {
+              const fhirPath = template(filter.fhirExpressionTemplate, { interpolate: /{{([\s\S]+?)}}/g })({ sourceField: column.sourceField, value: filter.value })
+              return isMatchingFhirPathCondition(row, fhirPath)
+            }
+            return true
+          }
+          // Legacy behaviour
+          const legacyColumn = columns.find((c) => c.sourceField === filter.fhirPathFilter?.[0])
+          if (legacyColumn && filter.fhirPathFilter) {
+            const fhirPath = `${legacyColumn.sourceField}.lower().contains('${filter.fhirPathFilter[1].toLowerCase()}')`
+            return isMatchingFhirPathCondition(row, fhirPath)
+          }
+          return true
         })
       })
     }
@@ -181,7 +189,7 @@ export function VirtualizedTable({
         ? String(aValue).localeCompare(String(bValue))
         : String(bValue).localeCompare(String(aValue))
     })
-  }, [tableData, initialSortConfig, filters])
+  }, [tableData, initialSortConfig, filters, columns])
 
   // Calculate base column width based on title length and custom width
   const getBaseColumnWidth = useCallback(
@@ -239,10 +247,14 @@ export function VirtualizedTable({
 
   // Handle filtering
   const handleFilter = useCallback(
-    (columnKey: string, value: string) => {
-      const newFilters = filters.filter((f) => f.key !== columnKey)
+    (columnId: string, value: string) => {
+      const newFilters = filters.filter((f) => f.columnId !== columnId)
       if (value) {
-        newFilters.push({ key: columnKey, value })
+        newFilters.push({
+          columnId: columnId,
+          value,
+          fhirExpressionTemplate: `{{sourceField}}.lower().contains('{{value}}')`
+        })
       }
       onFiltersChange(newFilters)
     },

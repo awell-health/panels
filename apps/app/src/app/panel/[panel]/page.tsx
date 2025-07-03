@@ -13,7 +13,7 @@ import { useReactiveColumns, useReactivePanel, useReactiveViews } from '@/hooks/
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
-import type { Column, ColumnChangesResponse, ViewType } from '@/types/panel'
+import type { Column, ColumnChangesResponse, ViewType, Filter } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Loader2 } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
@@ -21,11 +21,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { AddIngestionModal } from './components/AddIngestionModal'
 import { PatientContext } from './components/PatientContext'
 import { TaskDetails } from './components/TaskDetails'
-
-interface TableFilter {
-  key: string
-  value: string
-}
 
 interface SortConfig {
   key: string
@@ -37,12 +32,12 @@ export default function WorklistPage() {
   const panelId = params.panel as string
   const [currentView, setCurrentView] = useState<ViewType>('patient')
   const [isAddingIngestionSource, setIsAddingIngestionSource] = useState(false)
-  const [tableFilters, setTableFilters] = useState<TableFilter[]>([])
+  const [tableFilters, setTableFilters] = useState<Filter[]>([])
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(
     undefined,
   )
   const [selectedRows] = useState<string[]>([])
-
+  const { user } = useAuthentication()
   const {
     patients,
     tasks,
@@ -83,12 +78,7 @@ export default function WorklistPage() {
   // Set filters from panel
   useEffect(() => {
     if (panel) {
-      setTableFilters(
-        panel.metadata.filters.map((filter) => ({
-          key: filter.fhirPathFilter[0],
-          value: filter.fhirPathFilter[1],
-        })),
-      )
+      setTableFilters(panel.metadata.filters)
     }
   }, [panel])
 
@@ -172,7 +162,7 @@ export default function WorklistPage() {
     setSortConfig(sortConfig)
   }
 
-  const onFiltersChange = (filters: TableFilter[]) => {
+  const onFiltersChange = (filters: Filter[]) => {
     setTableFilters(filters)
   }
 
@@ -292,6 +282,7 @@ export default function WorklistPage() {
                   toggleTaskOwner(taskId)
                 }
                 currentView={currentView}
+                currentUserName={user?.name}
                 onColumnUpdate={onColumnUpdate}
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}

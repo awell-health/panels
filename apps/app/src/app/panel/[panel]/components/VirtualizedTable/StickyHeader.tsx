@@ -7,6 +7,7 @@ import {
   SortableContext,
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable'
+import type { Column } from '@/types/panel'
 
 interface StickyHeaderProps {
   selectedRows: string[]
@@ -23,6 +24,18 @@ export function StickyHeader({
 }: StickyHeaderProps) {
   const { columns, onSort, sortConfig, onFilter, filters, onColumnUpdate } =
     useStickyGridContext()
+
+  const getFilterValue = (column: Column) => {
+    const filter = filters?.find((f) => f.columnId === column.id)
+    if (filter) {
+      return filter.value
+    }
+    const legacyFilter = filters?.find((f) => f.fhirPathFilter?.[0] === column.sourceField)
+    if (legacyFilter?.fhirPathFilter) {
+      return legacyFilter.fhirPathFilter[1]
+    }
+    return ''
+  }
 
   return (
     <div
@@ -67,9 +80,7 @@ export function StickyHeader({
               }}
               sortConfig={sortConfig}
               onSort={() => onSort?.(column.id)}
-              filterValue={
-                filters?.find((f) => f.key === column.id)?.value ?? ''
-              }
+              filterValue={getFilterValue(column)}
               onFilter={(value: string) => onFilter?.(column.id, value)}
               onColumnUpdate={onColumnUpdate || (() => { })}
             />

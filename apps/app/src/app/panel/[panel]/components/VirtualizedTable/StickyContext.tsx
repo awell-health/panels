@@ -2,7 +2,7 @@
 
 import type React from 'react'
 import { createContext, useContext } from 'react'
-import type { Column } from '@/types/panel'
+import type { Column, Filter } from '@/types/panel'
 
 interface StickyGridContextValue {
   stickyIndices: number[]
@@ -11,7 +11,7 @@ interface StickyGridContextValue {
   onSort?: (columnKey: string) => void
   sortConfig?: { key: string; direction: 'asc' | 'desc' } | null
   onFilter?: (columnKey: string, value: string) => void
-  filters?: Array<{ key: string; value: string }>
+  filters?: Filter[]
   onColumnUpdate?: (updates: Partial<Column>) => void
 }
 

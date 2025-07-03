@@ -1,12 +1,15 @@
-import type { Column, Panel, View, Filter, ViewType } from '@/types/panel'
-import type { ColumnInfoResponse, ColumnsResponse } from '@panels/types/columns'
+import type { Column, Panel, View, ViewType } from '@/types/panel'
+import type {
+  ColumnBaseCreateResponse,
+  ColumnInfoResponse,
+  ColumnsResponse,
+} from '@panels/types/columns'
 import type {
   CreatePanelResponse,
   PanelInfo,
   PanelResponse,
 } from '@panels/types/panels'
 import type { ViewResponse } from '@panels/types/views'
-import type { ColumnBaseCreateResponse } from '@panels/types/columns'
 
 /**
  * Simple direct mapping from backend to frontend panel
@@ -20,7 +23,7 @@ export const mapBackendPanelToFrontend = (
     description: backendPanel.description ?? undefined,
     createdAt: new Date(backendPanel.createdAt),
     metadata: {
-      filters: [],
+      filters: backendPanel.metadata?.filters || [],
     },
   }
 }

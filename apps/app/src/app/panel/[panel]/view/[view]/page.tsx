@@ -11,17 +11,13 @@ import { useReactiveColumns, useReactivePanel, useReactiveView } from '@/hooks/u
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
-import type { Column, ColumnChangesResponse } from '@/types/panel'
+import type { Column, ColumnChangesResponse, Filter } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
-
-interface TableFilter {
-  key: string
-  value: string
-}
+import { useAuthentication } from '@/hooks/use-authentication'
 
 interface SortConfig {
   key: string
@@ -42,7 +38,7 @@ export default function WorklistViewPage() {
   const panelId = params.panel as string
   const viewId = params.view as string
   const router = useRouter()
-
+  const { user } = useAuthentication()
   const {
     panel,
     isLoading: isPanelLoading,
@@ -57,7 +53,7 @@ export default function WorklistViewPage() {
     columns: allColumns,
     isLoading: isColumnsLoading,
   } = useReactiveColumns(panelId)
-  const [tableFilters, setTableFilters] = useState<TableFilter[]>([])
+  const [tableFilters, setTableFilters] = useState<Filter[]>([])
 
   const searchData = view?.metadata.viewType === 'patient' ? patients : tasks
   const { searchTerm, setSearchTerm, searchMode, setSearchMode, filteredData } =
@@ -78,12 +74,7 @@ export default function WorklistViewPage() {
   // Set filters from view
   useEffect(() => {
     if (view) {
-      setTableFilters(
-        view.metadata.filters.map((filter) => ({
-          key: filter.fhirPathFilter[0],
-          value: filter.fhirPathFilter[1],
-        })),
-      )
+      setTableFilters(view.metadata.filters)
     }
   }, [view])
 
@@ -121,21 +112,16 @@ export default function WorklistViewPage() {
     }
   }
 
-  const onFiltersChange = async (newTableFilters: TableFilter[]) => {
+  const onFiltersChange = async (newTableFilters: Filter[]) => {
     if (!view) {
       return
     }
-
-    // Convert table filters to view filters
-    const newFilters = newTableFilters.map((filter) => ({
-      fhirPathFilter: [filter.key, filter.value],
-    }))
 
     try {
       await updateView?.(panelId, viewId, {
         metadata: {
           ...view.metadata,
-          filters: newFilters,
+          filters: newTableFilters,
         },
       })
       setTableFilters(newTableFilters)
@@ -339,6 +325,7 @@ export default function WorklistViewPage() {
                   toggleTaskOwner(taskId)
                 }
                 currentView={view?.metadata.viewType ?? 'patient'}
+                currentUserName={user?.name}
                 onColumnUpdate={onColumnUpdate}
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}
