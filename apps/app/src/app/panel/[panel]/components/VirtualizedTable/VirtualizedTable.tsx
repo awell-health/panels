@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { VariableSizeGrid } from 'react-window'
 import AutoSizer from 'react-virtualized-auto-sizer'
-import type { Column, Filter } from '@/types/panel'
+import type { Column, Filter, Sort } from '@/types/panel'
 import { getNestedValue, isMatchingFhirPathCondition } from '@/lib/fhir-path'
 import {
   DndContext,
@@ -59,13 +59,11 @@ interface VirtualizedTableProps {
   toggleSelectRow: (rowId: string) => void
   handleAssigneeClick: (taskId: string) => void
   onColumnUpdate: (updates: Partial<Column>) => void
-  onSortConfigUpdate: (
-    sortConfig: { key: string; direction: 'asc' | 'desc' } | undefined,
-  ) => void
+  onSortUpdate: (sort: Sort | undefined) => void
   currentView: string
   filters: Filter[]
   onFiltersChange: (filters: Filter[]) => void
-  initialSortConfig: { key: string; direction: 'asc' | 'desc' } | null
+  initialSort: Sort | null
   currentUserName?: string
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   onRowClick: (row: Record<string, any>) => void
@@ -85,11 +83,11 @@ export function VirtualizedTable({
   toggleSelectRow,
   handleAssigneeClick,
   onColumnUpdate,
-  onSortConfigUpdate,
+  onSortUpdate,
   currentView,
   filters,
   onFiltersChange,
-  initialSortConfig,
+  initialSort,
   currentUserName,
   onRowClick,
   handleDragEnd,
@@ -163,38 +161,41 @@ export function VirtualizedTable({
     }
 
     // Then apply sorting
-    if (!initialSortConfig) return filteredData
+    if (!initialSort) return filteredData
+
+    const sortFhirPath = columns.find((c) => c.id === initialSort.columnId)?.sourceField
+    if (!sortFhirPath) return filteredData
 
     return [...filteredData].sort((a, b) => {
-      const aValue = getNestedValue(a, initialSortConfig.key)
-      const bValue = getNestedValue(b, initialSortConfig.key)
+      const aValue = getNestedValue(a, sortFhirPath)
+      const bValue = getNestedValue(b, sortFhirPath)
 
       if (aValue === null || aValue === undefined) return 1
       if (bValue === null || bValue === undefined) return -1
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return initialSortConfig.direction === 'asc'
+        return initialSort.direction === 'asc'
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue)
       }
 
       if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return initialSortConfig.direction === 'asc'
+        return initialSort.direction === 'asc'
           ? aValue - bValue
           : bValue - aValue
       }
 
       if (aValue instanceof Date && bValue instanceof Date) {
-        return initialSortConfig.direction === 'asc'
+        return initialSort.direction === 'asc'
           ? aValue.getTime() - bValue.getTime()
           : bValue.getTime() - aValue.getTime()
       }
 
-      return initialSortConfig.direction === 'asc'
+      return initialSort.direction === 'asc'
         ? String(aValue).localeCompare(String(bValue))
         : String(bValue).localeCompare(String(aValue))
     })
-  }, [tableData, initialSortConfig, filters, columns])
+  }, [tableData, initialSort, filters, columns])
 
   // Calculate base column width based on title length and custom width
   const getBaseColumnWidth = useCallback(
@@ -232,22 +233,22 @@ export function VirtualizedTable({
 
   // Handle sorting
   const handleSort = useCallback(
-    (columnKey: string) => {
-      const current = initialSortConfig
-      let newSortConfig: { key: string; direction: 'asc' | 'desc' } | undefined
+    (columnId: string) => {
+      const current = initialSort
+      let newSort: Sort | undefined
 
-      if (current?.key === columnKey) {
-        newSortConfig = {
-          key: columnKey,
+      if (current?.columnId === columnId) {
+        newSort = {
+          columnId,
           direction: current.direction === 'asc' ? 'desc' : 'asc',
         }
       } else {
-        newSortConfig = { key: columnKey, direction: 'desc' }
+        newSort = { columnId, direction: 'desc' }
       }
 
-      onSortConfigUpdate(newSortConfig)
+      onSortUpdate(newSort)
     },
-    [initialSortConfig, onSortConfigUpdate],
+    [initialSort, onSortUpdate],
   )
 
   // Handle filtering
@@ -431,7 +432,7 @@ export function VirtualizedTable({
       columns: visibleColumns,
       getColumnWidth,
       onSort: handleSort,
-      sortConfig: initialSortConfig,
+      sortConfig: initialSort,
       onFilter: handleFilter,
       filters,
       onColumnUpdate,
@@ -440,7 +441,7 @@ export function VirtualizedTable({
       visibleColumns,
       getColumnWidth,
       handleSort,
-      initialSortConfig,
+      initialSort,
       handleFilter,
       filters,
       onColumnUpdate,

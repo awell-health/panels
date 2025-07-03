@@ -7,10 +7,8 @@ export type Filter = {
 }
 
 export type Sort = {
-  columnName: string
+  columnId: string
   direction: 'asc' | 'desc'
-  order: number
-  id: number
 }
 
 export type Column = {
@@ -50,12 +48,12 @@ export type View = {
   name: string
   panelId: string
   visibleColumns: string[] // Column IDs visible in this view
-  sort: Sort[]
   createdAt: Date
   isPublished: boolean
   metadata: {
     filters: Filter[]
     viewType: ViewType
+    sort?: Sort
     [key: string]: unknown
   }
 }
@@ -67,6 +65,7 @@ export type Panel = {
   createdAt: Date
   metadata: {
     filters: Filter[]
+    sort?: Sort
     [key: string]: unknown
   }
 }

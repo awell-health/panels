@@ -13,7 +13,7 @@ import { useReactiveColumns, useReactivePanel, useReactiveViews } from '@/hooks/
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
-import type { Column, ColumnChangesResponse, ViewType, Filter } from '@/types/panel'
+import type { Column, ColumnChangesResponse, ViewType, Filter, Sort } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Loader2 } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
@@ -33,9 +33,7 @@ export default function WorklistPage() {
   const [currentView, setCurrentView] = useState<ViewType>('patient')
   const [isAddingIngestionSource, setIsAddingIngestionSource] = useState(false)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
-  const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(
-    undefined,
-  )
+
   const [selectedRows] = useState<string[]>([])
   const { user } = useAuthentication()
   const {
@@ -44,7 +42,7 @@ export default function WorklistPage() {
     toggleTaskOwner,
     isLoading: isMedplumLoading,
   } = useMedplumStore()
-  const { updatePanel, addView, updateColumn, applyColumnChanges } = useReactivePanelStore()
+  const { updatePanel, updateColumn, applyColumnChanges } = useReactivePanelStore()
   const {
     panel,
     isLoading: isPanelLoading,
@@ -132,8 +130,21 @@ export default function WorklistPage() {
     }
   }
 
-  const onSortConfigUpdate = async (sortConfig: SortConfig | undefined) => {
-    setSortConfig(sortConfig)
+  const onSortUpdate = async (sort: Sort | undefined) => {
+    if (!panel) {
+      return
+    }
+
+    try {
+      await updatePanel?.(panel.id, {
+        metadata: {
+          ...panel.metadata,
+          sort,
+        },
+      })
+    } catch (error) {
+      console.error('Failed to update sort config:', error)
+    }
   }
 
   const onFiltersChange = (filters: Filter[]) => {
@@ -248,7 +259,7 @@ export default function WorklistPage() {
                 selectedRows={selectedRows}
                 toggleSelectAll={() => { }}
                 columns={columns}
-                onSortConfigUpdate={onSortConfigUpdate}
+                onSortUpdate={onSortUpdate}
                 tableData={filteredData}
                 handlePDFClick={() => { }}
                 handleTaskClick={() => { }}
@@ -262,7 +273,7 @@ export default function WorklistPage() {
                 onColumnUpdate={onColumnUpdate}
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}
-                initialSortConfig={sortConfig ?? null}
+                initialSort={panel.metadata.sort || null}
                 onRowClick={handleRowClick}
                 handleDragEnd={handleDragEnd}
               />

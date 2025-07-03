@@ -11,18 +11,13 @@ import { useReactiveColumns, useReactivePanel, useReactiveView } from '@/hooks/u
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
-import type { Column, ColumnChangesResponse, Filter } from '@/types/panel'
+import type { Column, ColumnChangesResponse, Filter, Sort } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
 import { useAuthentication } from '@/hooks/use-authentication'
-
-interface SortConfig {
-  key: string
-  direction: 'asc' | 'desc'
-}
 
 export default function WorklistViewPage() {
   const {
@@ -176,20 +171,18 @@ export default function WorklistViewPage() {
     onColumnChanges: handleColumnChanges,
   })
 
-  const onSortConfigUpdate = async (sortConfig: SortConfig | undefined) => {
+  const onSortUpdate = async (sort: Sort | undefined) => {
     if (!view) {
       return
     }
 
-    const sort = sortConfig ? [{
-      columnName: sortConfig.key,
-      direction: sortConfig.direction,
-      order: 0,
-      id: Date.now(), // temporary ID
-    }] : []
-
     try {
-      await updateView?.(panelId, viewId, { sort })
+      await updateView?.(panelId, viewId, {
+        metadata: {
+          ...view.metadata,
+          sort,
+        },
+      })
     } catch (error) {
       console.error('Failed to update sort config:', error)
     }
@@ -310,7 +303,7 @@ export default function WorklistViewPage() {
                 toggleSelectAll={() => { }}
                 columns={visibleColumns}
                 orderColumnMode="manual"
-                onSortConfigUpdate={onSortConfigUpdate}
+                onSortUpdate={onSortUpdate}
                 tableData={filteredData}
                 handlePDFClick={() => { }}
                 handleTaskClick={() => { }}
@@ -324,10 +317,7 @@ export default function WorklistViewPage() {
                 onColumnUpdate={onColumnUpdate}
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}
-                initialSortConfig={view?.sort?.[0] ? {
-                  key: view.sort[0].columnName,
-                  direction: view.sort[0].direction,
-                } : null}
+                initialSort={view?.metadata.sort || null}
                 onRowClick={handleRowClick}
                 handleDragEnd={handleDragEnd}
               />

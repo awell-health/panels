@@ -279,7 +279,6 @@ export class ReactiveStore {
       name: view.name,
       panelId: view.panelId,
       visibleColumns: JSON.stringify(view.visibleColumns),
-      sort: JSON.stringify(view.sort || []),
       isPublished: view.isPublished,
       metadata: JSON.stringify(view.metadata || {}),
       createdAt:
@@ -301,7 +300,6 @@ export class ReactiveStore {
       visibleColumns: data.visibleColumns
         ? JSON.parse(data.visibleColumns as string)
         : [],
-      sort: data.sort ? JSON.parse(data.sort as string) : [],
       isPublished: Boolean(data.isPublished),
       metadata: data.metadata
         ? JSON.parse(data.metadata as string)

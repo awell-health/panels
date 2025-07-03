@@ -155,7 +155,6 @@ export default function PanelNavigation({
             name: 'New Patient View',
             panelId: panel.id,
             visibleColumns: patientColumns.map(col => col.id),
-            sort: [],
             createdAt: new Date(),
             isPublished: false,
             metadata: {
@@ -174,7 +173,6 @@ export default function PanelNavigation({
             name: 'New Task View',
             panelId: panel.id,
             visibleColumns: taskColumns.map(col => col.id),
-            sort: [],
             createdAt: new Date(),
             isPublished: false,
             metadata: {
@@ -196,11 +194,11 @@ export default function PanelNavigation({
             name: `${panel.name} View`,
             panelId: panel.id,
             visibleColumns: relevantColumns.map(col => col.id),
-            sort: [],
             createdAt: new Date(),
             isPublished: false,
             metadata: {
               filters: panel.metadata.filters || [],
+              sort: panel.metadata.sort || undefined,
               viewType: viewType,
             },
           })
@@ -213,7 +211,6 @@ export default function PanelNavigation({
             name: `${currentView.name} (copy)`,
             panelId: panel.id,
             visibleColumns: [...currentView.visibleColumns],
-            sort: [...currentView.sort],
             createdAt: new Date(),
             isPublished: false,
             metadata: {

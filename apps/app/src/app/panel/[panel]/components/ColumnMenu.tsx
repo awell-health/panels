@@ -1,6 +1,6 @@
 'use client'
 
-import type { Column } from '@/types/panel'
+import type { Column, Sort } from '@/types/panel'
 import {
   ArrowUpDown,
   Calendar,
@@ -18,7 +18,7 @@ type ColumnMenuProps = {
   onClose: () => void
   position: { top: number; left: number }
   onSort: () => void
-  sortConfig: { key: string; direction: 'asc' | 'desc' } | null
+  sortConfig: Sort | null
   filterValue: string
   onFilter: (value: string) => void
   onColumnUpdate?: (updates: Partial<Column>) => void
@@ -82,7 +82,7 @@ export function ColumnMenu({
 
   // Get sort label based on column type and current sort state
   const getSortLabel = () => {
-    const isSorted = sortConfig?.key === column.id
+    const isSorted = sortConfig?.columnId === column.id
     const isAscending = sortConfig?.direction === 'asc'
 
     switch (column.type) {

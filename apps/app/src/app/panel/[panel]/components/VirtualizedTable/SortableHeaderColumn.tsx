@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Column } from '@/types/panel'
+import type { Column, Sort } from '@/types/panel'
 import { cn } from '@/lib/utils'
 import {
   Calendar,
@@ -19,7 +19,7 @@ interface SortableHeaderColumnProps {
   column: Column
   index: number
   style: React.CSSProperties
-  sortConfig?: { key: string; direction: 'asc' | 'desc' } | null
+  sortConfig?: Sort | null
   onSort: () => void
   filterValue: string
   onFilter: (value: string) => void
@@ -76,7 +76,7 @@ export function SortableHeaderColumn({
 
   // Get sort indicator
   const getSortIndicator = () => {
-    if (!sortConfig || sortConfig.key !== column.id) return null
+    if (!sortConfig || sortConfig.columnId !== column.id) return null
     return sortConfig.direction === 'asc' ? '↑' : '↓'
   }
 

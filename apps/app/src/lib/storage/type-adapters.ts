@@ -24,6 +24,7 @@ export const mapBackendPanelToFrontend = (
     createdAt: new Date(backendPanel.createdAt),
     metadata: {
       filters: backendPanel.metadata?.filters || [],
+      sort: backendPanel.metadata?.sort || undefined,
     },
   }
 }
@@ -40,7 +41,6 @@ export const mapBackendViewToFrontend = (
     createdAt: new Date(),
     isPublished: backendView.isPublished,
     metadata: backendView.metadata as View['metadata'],
-    sort: backendView.sort,
   }
 }
 

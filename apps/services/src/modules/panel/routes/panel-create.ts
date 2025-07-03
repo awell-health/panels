@@ -28,7 +28,7 @@ export const panelCreate = async (app: FastifyInstance) => {
       const { name, description, tenantId, userId, metadata } = request.body
 
       const panel = request.store.panel.create({
-        name,
+        name: name ?? 'New Panel',
         description,
         tenantId,
         userId,
