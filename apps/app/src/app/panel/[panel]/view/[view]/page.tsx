@@ -124,7 +124,8 @@ export default function WorklistViewPage() {
     }
   }
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id || !view) {
       return
@@ -149,7 +150,7 @@ export default function WorklistViewPage() {
     } catch (error) {
       console.error('Failed to reorder columns:', error)
     }
-  }
+  }, [view])
 
   const handleColumnChanges = async (columnChanges: ColumnChangesResponse) => {
     if (!view || !panel) return

@@ -187,7 +187,8 @@ export default function WorklistPage() {
     [currentView, openDrawer],
   )
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) {
       return
@@ -223,7 +224,7 @@ export default function WorklistPage() {
         console.error('Failed to update column order:', error)
       }
     }))
-  }
+  }, [columns])
 
   const isLoading = isPanelLoading || isColumnsLoading || isViewsLoading || !panel
 
