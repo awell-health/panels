@@ -1,4 +1,4 @@
-import type { Column, Panel, View, ViewType } from '@/types/panel'
+import type { Column, Panel, View } from '@/types/panel'
 import type {
   ColumnBaseCreateResponse,
   ColumnInfoResponse,
@@ -9,7 +9,7 @@ import type {
   PanelInfo,
   PanelResponse,
 } from '@panels/types/panels'
-import type { ViewResponse } from '@panels/types/views'
+import type { View as ViewBackend } from '@panels/types/views'
 
 /**
  * Simple direct mapping from backend to frontend panel
@@ -29,22 +29,18 @@ export const mapBackendPanelToFrontend = (
 }
 
 export const mapBackendViewToFrontend = (
-  backendView: ViewResponse,
+  backendView: ViewBackend,
   panelId: string,
 ): View => {
   return {
     id: backendView.id.toString(),
     name: backendView.name,
     panelId,
-    visibleColumns: backendView.config.columns || [],
-    sorts: [],
+    visibleColumns: backendView.visibleColumns || [],
     createdAt: new Date(),
     isPublished: backendView.isPublished,
-    metadata: {
-      filters: backendView.metadata?.filters || [],
-      viewType: (backendView.metadata?.viewType as ViewType) || 'patient',
-      ...backendView.metadata,
-    },
+    metadata: backendView.metadata as View['metadata'],
+    sort: backendView.sort,
   }
 }
 

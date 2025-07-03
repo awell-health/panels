@@ -253,8 +253,13 @@ export class ReactivePanelStore {
     this.setSaveState(operationId, 'saving')
 
     try {
+      // Optimistically update the view in the reactive store
+      const currentView = this.reactiveStore?.getView(panelId, viewId)
+      if (currentView) {
+        const optimisticView = { ...currentView, ...updates }
+        this.reactiveStore?.setView(optimisticView)
+      }
       const updatedView = await this.storage.updateView(panelId, viewId, updates)
-
       // Update reactive store
       this.reactiveStore?.setView(updatedView)
 
@@ -418,7 +423,7 @@ export class ReactivePanelStore {
                 properties: {
                   display: {
                     visible: true,
-                    order: 0,
+                    order: change.order,
                   },
                 },
                 metadata: {},

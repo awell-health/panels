@@ -1,7 +1,6 @@
 'use client'
-import type { Column } from '@/types/panel'
 import { Code, Plus, Search } from 'lucide-react'
-import { ColumnsDropdown } from './ColumnsDropdown'
+import { type ColumnWithVisibility, ColumnsDropdown } from './ColumnsDropdown'
 import WorklistViewDropDown from './ViewTypeDropdown'
 
 interface PanelToolbarProps {
@@ -13,9 +12,10 @@ interface PanelToolbarProps {
   onEnrichData?: () => void
   currentView: 'patient' | 'task' | undefined
   setCurrentView?: (view: 'patient' | 'task') => void
-  columns: Column[]
+  columns: ColumnWithVisibility[]
   onAddColumn: () => void
   onColumnVisibilityChange: (columnId: string, visible: boolean) => void
+  isViewPage?: boolean
 }
 
 export default function PanelToolbar({
@@ -29,13 +29,14 @@ export default function PanelToolbar({
   columns,
   onAddColumn,
   onColumnVisibilityChange,
+  isViewPage = false,
 }: PanelToolbarProps) {
   return (
     <div className="border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between p-2">
-        {currentView && (
+        {currentView && !isViewPage && (
           <div className="flex items-center space-x-3">
-            {/* View dropdown */}
+            {/* View dropdown - only show on panel page */}
             <WorklistViewDropDown
               currentView={currentView}
               onViewChange={setCurrentView || (() => { })}

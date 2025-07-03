@@ -108,32 +108,6 @@ export default function WorklistPage() {
     onColumnChanges: handleColumnChanges,
   })
 
-  const onNewView = async () => {
-    if (!panel) {
-      return
-    }
-
-    try {
-      const newView = await addView?.(panel.id, {
-        name: 'New View',
-        panelId: panel.id,
-        visibleColumns: columns.map(col => col.id),
-        sorts: [],
-        createdAt: new Date(),
-        isPublished: false,
-        metadata: {
-          filters: panel.metadata.filters,
-          viewType: currentView,
-        },
-      })
-      if (newView) {
-        router.push(`/panel/${panel.id}/view/${newView.id}`)
-      }
-    } catch (error) {
-      console.error('Failed to create new view:', error)
-    }
-  }
-
   const onPanelTitleChange = async (newTitle: string) => {
     if (!panel) {
       return
@@ -214,14 +188,13 @@ export default function WorklistPage() {
       },
     }))
 
-    // Update each column individually
-    for (const column of columnsWithOrder) {
+    await Promise.all(columnsWithOrder.map(async (column) => {
       try {
         await onColumnUpdate(column)
       } catch (error) {
         console.error('Failed to update column order:', error)
       }
-    }
+    }))
   }
 
   const isLoading = isPanelLoading || isColumnsLoading || isViewsLoading || !panel
@@ -242,7 +215,7 @@ export default function WorklistPage() {
               <PanelNavigation
                 panel={panel}
                 selectedViewId={undefined}
-                onNewView={onNewView}
+                currentViewType={currentView}
                 onPanelTitleChange={onPanelTitleChange}
               />
             )}
@@ -255,7 +228,10 @@ export default function WorklistPage() {
               onSearchModeChange={setSearchMode}
               currentView={currentView}
               setCurrentView={setCurrentView}
-              columns={columns}
+              columns={columns.map(col => ({
+                ...col,
+                visible: col.properties?.display?.visible !== false
+              }))}
               onAddColumn={onAddColumn}
               onColumnVisibilityChange={(columnId, visible) =>
                 onColumnUpdate({

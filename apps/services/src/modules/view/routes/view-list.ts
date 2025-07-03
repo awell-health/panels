@@ -9,7 +9,7 @@ import type { View } from '../entities/view.entity.js'
 // Zod Schemas
 const querystringSchema = z.object({
   tenantId: z.string(),
-  userId: z.string(),
+  ownerUserId: z.string(),
   panelId: z.string().optional(),
   published: z.boolean().optional(),
 })
@@ -52,32 +52,23 @@ export const viewList = async (app: FastifyInstance) => {
 
       const views = await request.store.view.find(where, {
         orderBy: { updatedAt: 'DESC' },
+        populate: ['sort'],
       })
 
       return {
         views: views.map((view) => ({
           id: view.id,
-          name: view.name,
-          description: '',
           panelId: view.panel.id,
-          userId: view.ownerUserId,
+          name: view.name,
+          ownerUserId: view.ownerUserId,
           tenantId: view.tenantId,
           isPublished: view.isPublished,
-          publishedBy: view.isPublished ? view.ownerUserId : undefined,
-          publishedAt:
-            view.publishedAt && view.publishedAt !== null
-              ? new Date(view.publishedAt)
-              : undefined,
-          config: {
-            columns: view.visibleColumns,
-            groupBy: [],
-            layout: 'table',
-          },
-          metadata: view.metadata || {},
-          panel: {
-            id: view.panel.id,
-            name: '',
-          },
+          publishedAt: view.publishedAt,
+          visibleColumns: view.visibleColumns,
+          sort: view.sort.getItems(),
+          metadata: view.metadata,
+          createdAt: view.createdAt,
+          updatedAt: view.updatedAt,
         })),
         total: views.length,
       }

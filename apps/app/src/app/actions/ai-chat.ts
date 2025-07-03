@@ -274,6 +274,7 @@ When making column changes, respond with this exact JSON structure:
         "name": "User-friendly column name",
         "type": "text|number|date|boolean|select|multi_select|user|file|custom",
         "sourceField": "fhirpath.expression.here",
+        "order": 0
       }
     }
   ],
@@ -282,7 +283,7 @@ When making column changes, respond with this exact JSON structure:
 \`\`\`
 
 **Operation Types:**
-- **"create"**: Add a new column (requires full column definition)
+- **"create"**: Add a new column (requires full column definition). The order is the position of the column in the view. Always add the column at the end of the view.
 - **"update"**: Modify existing column (requires column.id + changed properties)
 - **"delete"**: Remove column (only requires id and viewType)
 

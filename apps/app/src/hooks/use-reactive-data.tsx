@@ -31,7 +31,7 @@ function deserializeView(data: Record<string, string | number | boolean>): View 
     name: data.name as string,
     panelId: data.panelId as string,
     visibleColumns: data.visibleColumns ? JSON.parse(data.visibleColumns as string) : [],
-    sorts: data.sorts ? JSON.parse(data.sorts as string) : [],
+    sort: data.sort ? JSON.parse(data.sort as string) : [],
     isPublished: Boolean(data.isPublished),
     metadata: data.metadata ? JSON.parse(data.metadata as string) : { filters: [], viewType: 'patient' },
     createdAt: data.createdAt ? new Date(data.createdAt as string) : new Date(),

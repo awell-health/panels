@@ -50,7 +50,7 @@ export type View = {
   name: string
   panelId: string
   visibleColumns: string[] // Column IDs visible in this view
-  sorts: Sort[]
+  sort: Sort[]
   createdAt: Date
   isPublished: boolean
   metadata: {
@@ -76,6 +76,7 @@ export type ColumnChangeOperation = 'create' | 'update' | 'delete'
 export type ColumnChange = {
   id: string
   operation: ColumnChangeOperation
+  order?: number
   column?: Partial<Pick<Column, 'name' | 'type' | 'sourceField'>>
   viewType: ViewType
 }

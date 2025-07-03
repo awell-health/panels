@@ -42,6 +42,7 @@ interface VirtualizedTableProps {
   selectedRows: string[]
   toggleSelectAll: () => void
   columns: Column[]
+  orderColumnMode?: 'auto' | 'manual'
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   tableData: Record<string, any>[]
   handlePDFClick: (pdfUrl: string, patientName: string) => void
@@ -76,6 +77,7 @@ export function VirtualizedTable({
   selectedRows,
   toggleSelectAll,
   columns,
+  orderColumnMode = 'auto',
   tableData,
   handlePDFClick,
   handleTaskClick,
@@ -105,14 +107,17 @@ export function VirtualizedTable({
 
   // Filter visible columns and sort by order
   const visibleColumns = useMemo(() => {
-    return columns
-      .filter((col: Column) => col.properties?.display?.visible !== false)
-      .sort((a: Column, b: Column) => {
-        const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
-        const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
-        return orderA - orderB
-      })
-  }, [columns])
+    const filteredColumns = columns.filter((col: Column) => col.properties?.display?.visible !== false)
+    if (orderColumnMode === 'auto') {
+      return filteredColumns
+        .sort((a: Column, b: Column) => {
+          const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+          const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+          return orderA - orderB
+        })
+    }
+    return filteredColumns
+  }, [columns, orderColumnMode])
 
   // Create a stable key for grid re-rendering
   const gridKey = useMemo(() => {

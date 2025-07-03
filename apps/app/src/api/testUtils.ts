@@ -6,11 +6,9 @@ import type {
   PanelsResponse,
 } from '@panels/types/panels'
 import type {
-  ViewInfo,
-  ViewPublishInfo,
-  ViewPublishResponse,
-  ViewResponse,
-  ViewSortsInfo,
+  ViewCreate,
+  View,
+  ViewSortsUpdate,
   ViewSortsResponse,
   ViewsResponse,
 } from '@panels/types/views'
@@ -33,37 +31,24 @@ export const mockData = {
     userId: 'user-123',
   }),
 
-  view: (): ViewInfo => ({
+  view: (): ViewCreate => ({
     name: 'Test View',
-    description: 'Test View Description',
     panelId: 123,
-    config: {
-      columns: ['name', 'status'],
-      layout: 'table',
-    },
+    visibleColumns: ['name', 'status'],
     tenantId: 'tenant-123',
-    userId: 'user-123',
+    ownerUserId: 'user-123',
   }),
 
-  viewWithId: (): ViewInfo & IdParam => ({
+  viewWithId: (): ViewCreate & IdParam => ({
     id: 'view-123',
     name: 'Test View',
-    description: 'Test View Description',
     panelId: 123,
-    config: {
-      columns: ['name', 'status'],
-      layout: 'table',
-    },
+    visibleColumns: ['name', 'status'],
     tenantId: 'tenant-123',
-    userId: 'user-123',
+    ownerUserId: 'user-123',
   }),
 
-  viewPublishInfo: (): ViewPublishInfo => ({
-    tenantId: 'tenant-123',
-    userId: 'user-123',
-  }),
-
-  viewSortsInfo: (): ViewSortsInfo => ({
+  viewSortsUpdate: (): ViewSortsUpdate => ({
     sorts: [
       {
         columnName: 'name',
@@ -72,32 +57,12 @@ export const mockData = {
       },
     ],
     tenantId: 'tenant-123',
-    userId: 'user-123',
+    ownerUserId: 'user-123',
   }),
 }
 
-// Mock response generators
+// Mock responses
 export const mockResponses = {
-  panelResponse: (): PanelResponse => ({
-    id: 123,
-    name: 'Test Panel',
-    description: 'Test Description',
-    tenantId: 'tenant-123',
-    userId: 'user-123',
-    cohortRule: {
-      conditions: [
-        {
-          field: 'status',
-          operator: 'eq',
-          value: 'active',
-        },
-      ],
-      logic: 'AND',
-    },
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }),
-
   panelsResponse: (): PanelsResponse => [
     {
       id: 123,
@@ -115,10 +80,32 @@ export const mockResponses = {
         ],
         logic: 'AND',
       },
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      metadata: {},
+      createdAt: new Date('2023-01-01T00:00:00Z'),
+      updatedAt: new Date('2023-01-01T00:00:00Z'),
     },
   ],
+
+  panelResponse: (): PanelResponse => ({
+    id: 123,
+    name: 'Test Panel',
+    description: 'Test Description',
+    tenantId: 'tenant-123',
+    userId: 'user-123',
+    cohortRule: {
+      conditions: [
+        {
+          field: 'status',
+          operator: 'eq',
+          value: 'active',
+        },
+      ],
+      logic: 'AND',
+    },
+    metadata: {},
+    createdAt: new Date('2023-01-01T00:00:00Z'),
+    updatedAt: new Date('2023-01-01T00:00:00Z'),
+  }),
 
   createPanelResponse: (): CreatePanelResponse => ({
     id: 123,
@@ -136,22 +123,23 @@ export const mockResponses = {
       ],
       logic: 'AND',
     },
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    metadata: {},
+    createdAt: new Date('2023-01-01T00:00:00Z'),
+    updatedAt: new Date('2023-01-01T00:00:00Z'),
   }),
 
-  viewResponse: (): ViewResponse => ({
+  viewResponse: (): View => ({
     id: 123,
-    name: 'Test View',
-    description: 'Test View Description',
     panelId: 123,
-    userId: 'user-123',
+    name: 'Test View',
+    ownerUserId: 'user-123',
     tenantId: 'tenant-123',
     isPublished: false,
-    config: {
-      columns: ['name', 'status'],
-      layout: 'table',
-    },
+    visibleColumns: ['name', 'status'],
+    sort: [],
+    metadata: {},
+    createdAt: new Date('2023-01-01T00:00:00Z'),
+    updatedAt: new Date('2023-01-01T00:00:00Z'),
   }),
 
   viewsResponse: (): ViewsResponse => ({
@@ -159,30 +147,18 @@ export const mockResponses = {
     views: [
       {
         id: 123,
-        name: 'Test View',
-        description: 'Test View Description',
         panelId: 123,
-        userId: 'user-123',
+        name: 'Test View',
+        ownerUserId: 'user-123',
         tenantId: 'tenant-123',
         isPublished: false,
-        config: {
-          columns: ['name', 'status'],
-          layout: 'table',
-        },
-        panel: {
-          id: 123,
-          name: 'Test Panel',
-        },
+        visibleColumns: ['name', 'status'],
+        sort: [],
+        metadata: {},
+        createdAt: new Date('2023-01-01T00:00:00Z'),
+        updatedAt: new Date('2023-01-01T00:00:00Z'),
       },
     ],
-  }),
-
-  viewPublishResponse: (): ViewPublishResponse => ({
-    id: 123,
-    name: 'Test View',
-    isPublished: true,
-    publishedBy: 'user-123',
-    publishedAt: new Date(),
   }),
 
   viewSortsResponse: (): ViewSortsResponse => ({
@@ -208,105 +184,52 @@ export const mockResponses = {
   }),
 }
 
-// Fetch mock utilities
-export const createMockFetch = () => {
-  const mockFetch = vi.fn()
-  global.fetch = mockFetch
-  return mockFetch
-}
-
-export const mockFetchSuccess = (data: unknown, status = 200) => {
-  return Promise.resolve({
-    ok: status >= 200 && status < 300,
-    status,
+// Mock fetch helper
+export const mockFetch = vi.fn()
+export const mockFetchSuccess = (data: unknown) =>
+  Promise.resolve({
     json: () => Promise.resolve(data),
-  } as Response)
-}
+  })
 
-export const mockFetchError = (
-  status = 500,
-  statusText = 'Internal Server Error',
-) => {
-  return Promise.resolve({
-    ok: false,
+export const mockFetchError = (status: number, message: string) =>
+  Promise.resolve({
+    json: () => Promise.resolve({ error: message }),
     status,
-    statusText,
-    json: () =>
-      Promise.resolve(
-        mockResponses.errorResponse(`HTTP ${status}: ${statusText}`),
-      ),
-  } as Response)
-}
+  })
 
-export const mockNetworkError = () => {
-  return Promise.reject(new Error('Network error'))
-}
-
-// Test helper functions
-export const setupTest = () => {
-  const mockFetch = createMockFetch()
-
-  // Set test environment variables using Vitest's stubEnv
-  vi.stubEnv('APP_API_BASE_URL', 'https://api.test.com')
-
-  return { mockFetch }
-}
-
-export const cleanupTest = () => {
-  vi.restoreAllMocks()
-  vi.unstubAllEnvs()
-}
-
-// Helper function to set up specific environment for individual tests
-export const setTestBaseUrl = (baseUrl: string) => {
-  vi.stubEnv('APP_API_BASE_URL', baseUrl)
-}
-
-export const clearTestBaseUrl = () => {
-  vi.stubEnv('APP_API_BASE_URL', '')
-}
-
-// Common test patterns
+// Test utilities
 export const testCrudOperations = {
   expectCorrectUrl: (
     mockFetch: ReturnType<typeof vi.fn>,
     expectedUrl: string,
   ) => {
-    expect(mockFetch).toHaveBeenCalledWith(expectedUrl, expect.any(Object))
+    const calls = mockFetch.mock.calls
+    expect(calls[calls.length - 1][0]).toBe(expectedUrl)
   },
 
   expectCorrectMethod: (
     mockFetch: ReturnType<typeof vi.fn>,
     expectedMethod: string,
   ) => {
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        method: expectedMethod,
-      }),
-    )
+    const calls = mockFetch.mock.calls
+    const options = calls[calls.length - 1][1]
+    expect(options.method).toBe(expectedMethod)
   },
 
   expectCorrectHeaders: (mockFetch: ReturnType<typeof vi.fn>) => {
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json',
-        }),
-      }),
-    )
+    const calls = mockFetch.mock.calls
+    const options = calls[calls.length - 1][1]
+    expect(options.headers).toMatchObject({
+      'Content-Type': 'application/json',
+    })
   },
 
   expectCorrectBody: (
     mockFetch: ReturnType<typeof vi.fn>,
     expectedBody: unknown,
   ) => {
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        body: JSON.stringify(expectedBody),
-      }),
-    )
+    const calls = mockFetch.mock.calls
+    const options = calls[calls.length - 1][1]
+    expect(JSON.parse(options.body)).toEqual(expectedBody)
   },
 }

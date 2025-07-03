@@ -2,15 +2,15 @@
 
 import type { Column } from '@/types/panel'
 import { Settings } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+export type ColumnWithVisibility = Pick<Column, 'id' | 'name'> & { visible: boolean }
+
 type ColumnsDropdownProps = {
-  columns: Column[]
+  columns: ColumnWithVisibility[]
   onColumnVisibilityChange: (columnId: string, visible: boolean) => void
 }
-
-type ColumnWithVisibility = Column & { visible: boolean }
 
 export function ColumnsDropdown({
   columns,
@@ -21,26 +21,10 @@ export function ColumnsDropdown({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const [columnsWithVisibility, setColumnsWithVisibility] = useState<
-    ColumnWithVisibility[]
-  >([])
 
-  // Calculate visible vs total columns
-  const { visibleCount, totalCount } = useMemo(() => {
-    const columnsWithVisibility = columns.map((column) => {
-      const visible = column.properties?.display?.visible !== false // Default to true if not explicitly set to false
-      return {
-        ...column,
-        visible,
-      }
-    })
-    const visibleCount = columnsWithVisibility.filter(
-      (col) => col.visible,
-    ).length
-    const totalCount = columns.length
-    setColumnsWithVisibility(columnsWithVisibility)
-    return { visibleCount, totalCount }
-  }, [columns])
+  // Calculate visible vs total columns from pre-computed visibility
+  const visibleCount = columns.filter(col => col.visible).length
+  const totalCount = columns.length
 
   useEffect(() => {
     setMounted(true)
@@ -137,7 +121,7 @@ export function ColumnsDropdown({
           Column Visibility
         </div>
         <div className="space-y-2">
-          {columnsWithVisibility.map((column) => {
+          {columns.map((column) => {
             return (
               <label
                 key={column.id}

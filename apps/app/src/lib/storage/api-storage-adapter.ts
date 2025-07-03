@@ -348,13 +348,10 @@ export class APIStorageAdapter implements StorageAdapter {
       const createdView = await viewsAPI.create({
         name: view.name,
         panelId: Number.parseInt(panelId, 10),
-        config: {
-          columns: view.visibleColumns,
-          layout: 'table',
-        },
+        visibleColumns: view.visibleColumns,
         metadata: view.metadata,
         tenantId: this.config.tenantId,
-        userId: this.config.userId,
+        ownerUserId: this.config.userId,
       })
 
       return mapBackendViewToFrontend(createdView, panelId)
@@ -376,15 +373,11 @@ export class APIStorageAdapter implements StorageAdapter {
 
       const updatedView = await viewsAPI.update({
         id: viewId,
-        panelId: Number.parseInt(panelId, 10),
-        name: updates.name || '',
-        config: {
-          columns: updates.visibleColumns || [],
-          layout: 'table',
-        },
-        metadata: updates.metadata || {},
+        name: updates.name,
+        visibleColumns: updates.visibleColumns,
+        metadata: updates.metadata,
         tenantId: this.config.tenantId,
-        userId: this.config.userId,
+        ownerUserId: this.config.userId,
       })
 
       return mapBackendViewToFrontend(updatedView, panelId)

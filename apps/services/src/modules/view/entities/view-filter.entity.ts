@@ -1,5 +1,5 @@
-import { Entity, Enum, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
-import { FilterOperator } from '@panels/types/views'
+import { Entity, ManyToOne, PrimaryKey, Property } from '@mikro-orm/core'
+// import { FilterOperator } from '@panels/types/views'
 import { View } from './view.entity.js'
 
 @Entity()
@@ -10,8 +10,8 @@ export class ViewFilter {
   @Property()
   columnId!: string
 
-  @Enum({ items: () => FilterOperator })
-  operator!: FilterOperator
+  // @Enum({ items: () => FilterOperator })
+  // operator!: FilterOperator
 
   @Property({ type: 'jsonb' })
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>

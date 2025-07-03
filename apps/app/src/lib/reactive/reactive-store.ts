@@ -28,21 +28,6 @@ export class ReactiveStore {
     })
   }
 
-  // Subscribe to store updates
-  subscribe(listener: () => void) {
-    this.listeners.push(listener)
-    return () => {
-      this.listeners = this.listeners.filter((l) => l !== listener)
-    }
-  }
-
-  // Notify all listeners of changes
-  private notifyListeners() {
-    for (const listener of this.listeners) {
-      listener()
-    }
-  }
-
   // Panel operations - simplified since panels no longer contain columns/views
   getPanels(): Panel[] {
     const panels = this.store.getTable('panels')
@@ -63,7 +48,6 @@ export class ReactiveStore {
   setPanel(panel: Panel) {
     const serialized = this.serializePanel(panel)
     this.store.setRow('panels', panel.id, serialized)
-    this.notifyListeners()
   }
 
   setPanels(panels: Panel[]) {
@@ -77,7 +61,6 @@ export class ReactiveStore {
     }
 
     this.store.setTable('panels', serializedPanels)
-    this.notifyListeners()
   }
 
   updatePanel(id: string, updates: Partial<Panel>) {
@@ -117,8 +100,6 @@ export class ReactiveStore {
     for (const columnId of columnsToDelete) {
       this.store.delRow('columns', columnId)
     }
-
-    this.notifyListeners()
   }
 
   // View operations - independent of panels
@@ -148,7 +129,6 @@ export class ReactiveStore {
   setView(view: View) {
     const serialized = this.serializeView(view)
     this.store.setRow('views', view.id, serialized)
-    this.notifyListeners()
   }
 
   setViews(views: View[]) {
@@ -162,7 +142,6 @@ export class ReactiveStore {
     }
 
     this.store.setTable('views', serializedViews)
-    this.notifyListeners()
   }
 
   updateView(viewId: string, updates: Partial<View>) {
@@ -178,7 +157,6 @@ export class ReactiveStore {
 
   deleteView(viewId: string) {
     this.store.delRow('views', viewId)
-    this.notifyListeners()
   }
 
   // Column operations - independent of panels
@@ -203,7 +181,6 @@ export class ReactiveStore {
   setColumn(column: Column) {
     const serialized = this.serializeColumn(column)
     this.store.setRow('columns', column.id, serialized)
-    this.notifyListeners()
   }
 
   setColumns(columns: Column[]) {
@@ -217,7 +194,6 @@ export class ReactiveStore {
     }
 
     this.store.setTable('columns', serializedColumns)
-    this.notifyListeners()
   }
 
   updateColumn(columnId: string, updates: Partial<Column>) {
@@ -233,23 +209,19 @@ export class ReactiveStore {
 
   deleteColumn(columnId: string) {
     this.store.delRow('columns', columnId)
-    this.notifyListeners()
   }
 
   // Metadata operations
   setLoading(isLoading: boolean) {
     this.store.setValue('isLoading', isLoading)
-    this.notifyListeners()
   }
 
   setError(error: string | null) {
     this.store.setValue('error', error || '')
-    this.notifyListeners()
   }
 
   setLastSync(timestamp: number) {
     this.store.setValue('lastSync', timestamp)
-    this.notifyListeners()
   }
 
   getLoading(): boolean {
@@ -307,7 +279,7 @@ export class ReactiveStore {
       name: view.name,
       panelId: view.panelId,
       visibleColumns: JSON.stringify(view.visibleColumns),
-      sorts: JSON.stringify(view.sorts || []),
+      sort: JSON.stringify(view.sort || []),
       isPublished: view.isPublished,
       metadata: JSON.stringify(view.metadata || {}),
       createdAt:
@@ -329,7 +301,7 @@ export class ReactiveStore {
       visibleColumns: data.visibleColumns
         ? JSON.parse(data.visibleColumns as string)
         : [],
-      sorts: data.sorts ? JSON.parse(data.sorts as string) : [],
+      sort: data.sort ? JSON.parse(data.sort as string) : [],
       isPublished: Boolean(data.isPublished),
       metadata: data.metadata
         ? JSON.parse(data.metadata as string)

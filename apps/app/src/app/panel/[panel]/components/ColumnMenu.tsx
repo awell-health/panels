@@ -4,11 +4,10 @@ import type { Column } from '@/types/panel'
 import {
   ArrowUpDown,
   Calendar,
-  Database,
   Hash,
   Text,
   ToggleLeft,
-  X,
+  X
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'

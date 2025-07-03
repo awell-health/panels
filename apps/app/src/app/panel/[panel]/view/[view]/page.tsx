@@ -61,13 +61,12 @@ export default function WorklistViewPage() {
     useSearch(searchData)
 
   // Get columns using new filtering approach
-  const columns = view?.visibleColumns?.length
-    ? allColumns.filter(col => view.visibleColumns.includes(col.id))
-    : allColumns.filter(col =>
-      view?.metadata.viewType === 'patient'
-        ? col.tags?.includes('panels:patients')
-        : col.tags?.includes('panels:tasks')
-    )
+  const columns = allColumns.filter(col =>
+    view?.metadata.viewType === 'patient'
+      ? col.tags?.includes('panels:patients')
+      : col.tags?.includes('panels:tasks')
+  )
+  const visibleColumns = (view?.visibleColumns.map(col => columns.find(c => c.id === col)) ?? []) as Column[]
 
   const tableData = filteredData ?? []
 
@@ -137,20 +136,20 @@ export default function WorklistViewPage() {
     }
 
     // Find the active column's index and the over column's index
-    const oldIndex = columns.findIndex((col) => col.id === active.id)
-    const newIndex = columns.findIndex((col) => col.id === over.id)
+    const oldIndex = view.visibleColumns.findIndex((col) => col === active.id)
+    const newIndex = view.visibleColumns.findIndex((col) => col === over.id)
 
     if (oldIndex === -1 || newIndex === -1) {
       return
     }
 
     // Reorder the columns
-    const reorderedColumns = arrayMove(columns, oldIndex, newIndex)
+    const reorderedColumns = arrayMove(view.visibleColumns, oldIndex, newIndex)
 
     // Update the view's visible columns order
     try {
       await updateView?.(panelId, viewId, {
-        visibleColumns: reorderedColumns.map(col => col.id),
+        visibleColumns: reorderedColumns,
       })
     } catch (error) {
       console.error('Failed to reorder columns:', error)
@@ -177,38 +176,12 @@ export default function WorklistViewPage() {
     onColumnChanges: handleColumnChanges,
   })
 
-  const onNewView = async () => {
-    if (!panel) {
-      return
-    }
-
-    try {
-      const newView = await addView?.(panelId, {
-        name: 'New View',
-        panelId: panelId,
-        visibleColumns: columns.map(col => col.id),
-        sorts: [],
-        createdAt: new Date(),
-        isPublished: false,
-        metadata: {
-          filters: view?.metadata.filters ?? panel.metadata.filters,
-          viewType: view?.metadata.viewType ?? 'task',
-        },
-      })
-      if (newView) {
-        router.push(`/panel/${panelId}/view/${newView.id}`)
-      }
-    } catch (error) {
-      console.error('Failed to create new view:', error)
-    }
-  }
-
   const onSortConfigUpdate = async (sortConfig: SortConfig | undefined) => {
     if (!view) {
       return
     }
 
-    const sorts = sortConfig ? [{
+    const sort = sortConfig ? [{
       columnName: sortConfig.key,
       direction: sortConfig.direction,
       order: 0,
@@ -216,7 +189,7 @@ export default function WorklistViewPage() {
     }] : []
 
     try {
-      await updateView?.(panelId, viewId, { sorts })
+      await updateView?.(panelId, viewId, { sort })
     } catch (error) {
       console.error('Failed to update sort config:', error)
     }
@@ -270,6 +243,28 @@ export default function WorklistViewPage() {
     }
   }
 
+  const onColumnVisibilityChange = async (columnId: string, visible: boolean) => {
+    if (!view) return
+
+    try {
+      if (visible) {
+        // Add column to visibleColumns if not already there
+        if (!view.visibleColumns.includes(columnId)) {
+          await updateView?.(panelId, viewId, {
+            visibleColumns: [...view.visibleColumns, columnId]
+          })
+        }
+      } else {
+        // Remove column from visibleColumns
+        await updateView?.(panelId, viewId, {
+          visibleColumns: view.visibleColumns.filter(id => id !== columnId)
+        })
+      }
+    } catch (error) {
+      console.error('Failed to update view column visibility:', error)
+    }
+  }
+
   const isLoading = isPanelLoading || isViewLoading || isColumnsLoading || !panel || !view
 
   return (
@@ -285,7 +280,7 @@ export default function WorklistViewPage() {
               <PanelNavigation
                 panel={panel}
                 selectedViewId={viewId}
-                onNewView={onNewView}
+                currentViewType={view?.metadata.viewType}
                 onViewTitleChange={onViewTitleChange}
               />
             )}
@@ -298,14 +293,13 @@ export default function WorklistViewPage() {
               onSearchModeChange={setSearchMode}
               currentView={view?.metadata.viewType}
               setCurrentView={onViewTypeChange}
-              columns={columns}
+              columns={columns.map(col => ({
+                ...col,
+                visible: view.visibleColumns.includes(col.id)
+              }))}
               onAddColumn={onAddColumn}
-              onColumnVisibilityChange={(columnId, visible) =>
-                onColumnUpdate({
-                  id: columnId,
-                  properties: { display: { visible } },
-                })
-              }
+              onColumnVisibilityChange={onColumnVisibilityChange}
+              isViewPage={true}
             />
           </div>
           <div className="content-area">
@@ -314,7 +308,8 @@ export default function WorklistViewPage() {
                 isLoading={isMedplumLoading}
                 selectedRows={[]}
                 toggleSelectAll={() => { }}
-                columns={columns}
+                columns={visibleColumns}
+                orderColumnMode="manual"
                 onSortConfigUpdate={onSortConfigUpdate}
                 tableData={filteredData}
                 handlePDFClick={() => { }}
@@ -329,9 +324,9 @@ export default function WorklistViewPage() {
                 onColumnUpdate={onColumnUpdate}
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}
-                initialSortConfig={view?.sorts?.[0] ? {
-                  key: view.sorts[0].columnName,
-                  direction: view.sorts[0].direction,
+                initialSortConfig={view?.sort?.[0] ? {
+                  key: view.sort[0].columnName,
+                  direction: view.sort[0].direction,
                 } : null}
                 onRowClick={handleRowClick}
                 handleDragEnd={handleDragEnd}

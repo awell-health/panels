@@ -1,12 +1,11 @@
 import type { IdParam } from '@panels/types'
 import type {
-  ViewInfo,
-  ViewPublishInfo,
-  ViewPublishResponse,
-  ViewResponse,
-  ViewSortsInfo,
+  ViewCreate,
+  View,
+  ViewSortsUpdate,
   ViewSortsResponse,
   ViewsResponse,
+  ViewUpdate,
 } from '@panels/types/views'
 import { getApiConfig } from './config/apiConfig'
 
@@ -18,7 +17,9 @@ export const viewsAPI = {
   ): Promise<ViewsResponse> => {
     const apiConfig = await getApiConfig()
     const response = await fetch(
-      await apiConfig.buildUrl(`/views?tenantId=${tenantId}&userId=${userId}`),
+      await apiConfig.buildUrl(
+        `/views?tenantId=${tenantId}&ownerUserId=${userId}`,
+      ),
       {
         method: 'GET',
         headers: {
@@ -35,11 +36,11 @@ export const viewsAPI = {
     userId: string,
     view: IdParam,
     options?: Record<string, unknown>,
-  ): Promise<ViewResponse> => {
+  ): Promise<View> => {
     const apiConfig = await getApiConfig()
     const response = await fetch(
       await apiConfig.buildUrl(
-        `/views/${view.id}?tenantId=${tenantId}&userId=${userId}`,
+        `/views/${view.id}?tenantId=${tenantId}&ownerUserId=${userId}`,
       ),
       {
         method: 'GET',
@@ -49,13 +50,10 @@ export const viewsAPI = {
         ...(options || {}),
       },
     )
-    return response.json() as Promise<ViewResponse>
+    return response.json() as Promise<View>
   },
 
-  create: async (
-    view: ViewInfo,
-    options = undefined,
-  ): Promise<ViewResponse> => {
+  create: async (view: ViewCreate, options = undefined): Promise<View> => {
     const apiConfig = await getApiConfig()
     const response = await fetch(await apiConfig.buildUrl('/views'), {
       method: 'POST',
@@ -65,13 +63,13 @@ export const viewsAPI = {
       body: JSON.stringify(view),
       ...(options || {}),
     })
-    return response.json() as Promise<ViewResponse>
+    return response.json() as Promise<View>
   },
 
   update: async (
-    view: ViewInfo & IdParam,
+    view: ViewUpdate & IdParam,
     options = undefined,
-  ): Promise<ViewResponse> => {
+  ): Promise<View> => {
     const apiConfig = await getApiConfig()
     const response = await fetch(
       await apiConfig.buildUrl(`/views/${view.id}`),
@@ -84,7 +82,7 @@ export const viewsAPI = {
         ...(options || {}),
       },
     )
-    return response.json() as Promise<ViewResponse>
+    return response.json() as Promise<View>
   },
 
   delete: async (
@@ -96,7 +94,7 @@ export const viewsAPI = {
     const apiConfig = await getApiConfig()
     await fetch(
       await apiConfig.buildUrl(
-        `/views/${view.id}?tenantId=${tenantId}&userId=${userId}`,
+        `/views/${view.id}?tenantId=${tenantId}&ownerUserId=${userId}`,
       ),
       {
         method: 'DELETE',
@@ -105,32 +103,10 @@ export const viewsAPI = {
     )
   },
 
-  publishing: {
-    publish: async (
-      view: IdParam,
-      context: ViewPublishInfo,
-      options = undefined,
-    ): Promise<ViewPublishResponse> => {
-      const apiConfig = await getApiConfig()
-      const response = await fetch(
-        await apiConfig.buildUrl(`/views/${view.id}/publish`),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(context),
-          ...(options || {}),
-        },
-      )
-      return response.json() as Promise<ViewPublishResponse>
-    },
-  },
-
   sorts: {
     update: async (
       view: IdParam,
-      sorts: ViewSortsInfo,
+      sorts: ViewSortsUpdate,
       options = undefined,
     ): Promise<ViewSortsResponse> => {
       const apiConfig = await getApiConfig()
@@ -157,7 +133,7 @@ export const viewsAPI = {
       const apiConfig = await getApiConfig()
       const response = await fetch(
         await apiConfig.buildUrl(
-          `/views/${view.id}/sorts?tenantId=${tenantId}&userId=${userId}`,
+          `/views/${view.id}/sorts?tenantId=${tenantId}&ownerUserId=${userId}`,
         ),
         {
           method: 'GET',

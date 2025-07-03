@@ -8,7 +8,7 @@ import { z } from 'zod'
 
 const querystringSchema = z.object({
   tenantId: z.string(),
-  userId: z.string(),
+  ownerUserId: z.string(),
 })
 
 // Types

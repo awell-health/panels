@@ -1,32 +1,44 @@
 'use client'
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
-import { useReactiveViews } from '@/hooks/use-reactive-data'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { useReactiveViews, useReactiveColumns, useReactiveView } from '@/hooks/use-reactive-data'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import type { Panel, View } from '@/types/panel'
 import {
   LayoutGrid,
   Plus,
-  X
+  X,
+  Users,
+  CheckSquare,
+  Copy,
+  FileText
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 interface PanelNavigationProps {
   panel: Panel
-  onNewView: () => void
   selectedViewId?: string
+  currentViewType?: 'patient' | 'task'
   onPanelTitleChange?: (newTitle: string) => void
   onViewTitleChange?: (newTitle: string) => void
 }
 
+type ViewCreationType = 'patient' | 'task' | 'from-panel' | 'copy-view'
+
 export default function PanelNavigation({
   panel,
-  onNewView,
   selectedViewId,
+  currentViewType,
   onPanelTitleChange,
   onViewTitleChange,
 }: PanelNavigationProps) {
-  const { deletePanel, deleteView, updatePanel, updateView } =
+  const { deletePanel, deleteView, updatePanel, updateView, addView } =
     useReactivePanelStore()
   const router = useRouter()
   const [editingPanel, setEditingPanel] = useState(false)
@@ -35,12 +47,16 @@ export default function PanelNavigation({
   const [viewTitles, setViewTitles] = useState<Record<string, string>>({})
   const [hoveredViewId, setHoveredViewId] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showCreateViewModal, setShowCreateViewModal] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<{
     id: string
     title: string
   } | null>(null)
   const [deletingViewId, setDeletingViewId] = useState<string | null>(null)
+  const [creatingView, setCreatingView] = useState(false)
   const { views } = useReactiveViews(panel.id)
+  const { columns } = useReactiveColumns(panel.id)
+  const { view: currentView } = useReactiveView(panel.id, selectedViewId || '')
 
   useEffect(() => {
     setPanelTitle(panel.name)
@@ -73,12 +89,12 @@ export default function PanelNavigation({
 
   const handleViewTitleSubmit = (viewId: string) => {
     const newTitle = viewTitles[viewId]?.trim() || ''
-    const currentView = views.find((v) => v.id === viewId)
+    const currentViewToUpdate = views.find((v) => v.id === viewId)
 
-    if (newTitle && newTitle !== (currentView?.name || '')) {
+    if (newTitle && newTitle !== (currentViewToUpdate?.name || '')) {
       onViewTitleChange?.(newTitle)
     } else {
-      setViewTitles((prev) => ({ ...prev, [viewId]: currentView?.name || '' }))
+      setViewTitles((prev) => ({ ...prev, [viewId]: currentViewToUpdate?.name || '' }))
     }
     setEditingViewId(null)
   }
@@ -122,9 +138,144 @@ export default function PanelNavigation({
     setDeletingViewId(null)
   }
 
+  const handleCreateView = async (type: ViewCreationType) => {
+    if (!addView) return
+
+    setCreatingView(true)
+    try {
+      let newView: View
+
+      switch (type) {
+        case 'patient': {
+          // Create new patient view with all patient columns
+          const patientColumns = columns.filter(col =>
+            col.tags?.includes('panels:patients')
+          )
+          newView = await addView(panel.id, {
+            name: 'New Patient View',
+            panelId: panel.id,
+            visibleColumns: patientColumns.map(col => col.id),
+            sort: [],
+            createdAt: new Date(),
+            isPublished: false,
+            metadata: {
+              filters: [],
+              viewType: 'patient',
+            },
+          })
+          break
+        }
+        case 'task': {
+          // Create new task view with all task columns
+          const taskColumns = columns.filter(col =>
+            col.tags?.includes('panels:tasks')
+          )
+          newView = await addView(panel.id, {
+            name: 'New Task View',
+            panelId: panel.id,
+            visibleColumns: taskColumns.map(col => col.id),
+            sort: [],
+            createdAt: new Date(),
+            isPublished: false,
+            metadata: {
+              filters: [],
+              viewType: 'task',
+            },
+          })
+          break
+        }
+        case 'from-panel': {
+          // Create view from current panel - use panel filters and current view type
+          const viewType = currentViewType || 'patient'
+          const relevantColumns = columns.filter(col =>
+            viewType === 'patient'
+              ? col.tags?.includes('panels:patients')
+              : col.tags?.includes('panels:tasks')
+          )
+          newView = await addView(panel.id, {
+            name: `${panel.name} View`,
+            panelId: panel.id,
+            visibleColumns: relevantColumns.map(col => col.id),
+            sort: [],
+            createdAt: new Date(),
+            isPublished: false,
+            metadata: {
+              filters: panel.metadata.filters || [],
+              viewType: viewType,
+            },
+          })
+          break
+        }
+        case 'copy-view': {
+          // Copy current view
+          if (!currentView) return
+          newView = await addView(panel.id, {
+            name: `${currentView.name} (copy)`,
+            panelId: panel.id,
+            visibleColumns: [...currentView.visibleColumns],
+            sort: [...currentView.sort],
+            createdAt: new Date(),
+            isPublished: false,
+            metadata: {
+              ...currentView.metadata,
+            },
+          })
+          break
+        }
+        default:
+          return
+      }
+
+      // Navigate to the new view
+      if (newView) {
+        router.push(`/panel/${panel.id}/view/${newView.id}`)
+      }
+    } catch (error) {
+      console.error('Failed to create view:', error)
+    } finally {
+      setCreatingView(false)
+      setShowCreateViewModal(false)
+    }
+  }
+
   const getSaveStatusIcon = (entityId: string) => {
     // For now, we'll always show saved status since reactive updates are immediate
     return null
+  }
+
+  const getViewCreationOptions = () => {
+    const options = [
+      {
+        type: 'patient' as ViewCreationType,
+        title: 'New Patient View',
+        description: 'Start fresh with a patient-focused view showing all patient data',
+        icon: Users,
+        available: true,
+      },
+      {
+        type: 'task' as ViewCreationType,
+        title: 'New Task View',
+        description: 'Start fresh with a task-focused view showing all task data',
+        icon: CheckSquare,
+        available: true,
+      },
+      {
+        type: 'from-panel' as ViewCreationType,
+        title: 'View from Current Panel',
+        description: 'Create a view that inherits your current filters and view settings',
+        icon: FileText,
+        available: !selectedViewId, // Only available on panel page
+      },
+      {
+        type: 'copy-view' as ViewCreationType,
+        title: 'Copy Current View',
+        description: 'Duplicate this view with all its columns, filters, and settings',
+        icon: Copy,
+        available: selectedViewId && currentView, // Only available on view page
+      },
+    ]
+
+    return options.filter(option => option.available)
   }
 
   return (
@@ -352,7 +503,7 @@ export default function PanelNavigation({
             <button
               type="button"
               className="ml-2 mb-[-1px] h-9 px-3 flex items-center text-sm text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-t-md border-l border-t border-r border-gray-200 whitespace-nowrap"
-              onClick={onNewView}
+              onClick={() => setShowCreateViewModal(true)}
             >
               <Plus className="h-3 w-3 mr-1 flex-shrink-0" />
               <span className="text-xs">Add View</span>
@@ -360,6 +511,74 @@ export default function PanelNavigation({
           </div>
         </div>
       </div>
+
+      {/* Create View Modal */}
+      <Dialog
+        open={showCreateViewModal}
+        onOpenChange={(open) => !open && !creatingView && setShowCreateViewModal(false)}
+      >
+        <DialogContent className="p-0 m-0 overflow-hidden max-w-2xl">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center">
+                  <Plus className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-xl font-semibold text-gray-900 leading-6">
+                  Create New View
+                </DialogTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  Choose how you'd like to create your new view
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="px-6 pb-6">
+            <div className="space-y-3">
+              {getViewCreationOptions().map((option) => {
+                const Icon = option.icon
+                return (
+                  <button
+                    key={option.type}
+                    type="button"
+                    className="w-full text-left p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => handleCreateView(option.type)}
+                    disabled={creatingView}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 mt-1">
+                        <Icon className="h-5 w-5 text-gray-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900">
+                          {option.title}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {option.description}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowCreateViewModal(false)}
+              disabled={creatingView}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Modal */}
       <ConfirmDeleteModal
