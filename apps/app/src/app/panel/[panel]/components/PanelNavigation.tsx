@@ -1,85 +1,100 @@
 'use client'
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
-import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
-import type { PanelDefinition, ViewDefinition } from '@/types/worklist'
 import {
-  AlertCircle,
-  CheckCircle,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { useReactiveViews, useReactiveColumns, useReactiveView } from '@/hooks/use-reactive-data'
+import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
+import type { Panel, View } from '@/types/panel'
+import {
   LayoutGrid,
-  Loader2,
   Plus,
   X,
+  Users,
+  CheckSquare,
+  Copy,
+  FileText
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-interface WorklistNavigationProps {
-  panelDefinition: PanelDefinition
-  onNewView: () => void
+interface PanelNavigationProps {
+  panel: Panel
   selectedViewId?: string
+  currentViewType?: 'patient' | 'task'
   onPanelTitleChange?: (newTitle: string) => void
   onViewTitleChange?: (newTitle: string) => void
 }
 
-export default function WorklistNavigation({
-  panelDefinition,
-  onNewView,
+type ViewCreationType = 'patient' | 'task' | 'from-panel' | 'copy-view'
+
+export default function PanelNavigation({
+  panel,
   selectedViewId,
+  currentViewType,
   onPanelTitleChange,
   onViewTitleChange,
-}: WorklistNavigationProps) {
-  const { deletePanel, deleteView, updatePanel, updateView } =
+}: PanelNavigationProps) {
+  const { deletePanel, deleteView, updatePanel, updateView, addView } =
     useReactivePanelStore()
   const router = useRouter()
   const [editingPanel, setEditingPanel] = useState(false)
   const [editingViewId, setEditingViewId] = useState<string | null>(null)
-  const [panelTitle, setPanelTitle] = useState(panelDefinition.title)
+  const [panelTitle, setPanelTitle] = useState(panel.name)
   const [viewTitles, setViewTitles] = useState<Record<string, string>>({})
   const [hoveredViewId, setHoveredViewId] = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showCreateViewModal, setShowCreateViewModal] = useState(false)
   const [viewToDelete, setViewToDelete] = useState<{
     id: string
     title: string
   } | null>(null)
   const [deletingViewId, setDeletingViewId] = useState<string | null>(null)
+  const [creatingView, setCreatingView] = useState(false)
+  const { views } = useReactiveViews(panel.id)
+  const { columns } = useReactiveColumns(panel.id)
+  const { view: currentView } = useReactiveView(panel.id, selectedViewId || '')
 
   useEffect(() => {
-    setPanelTitle(panelDefinition.title)
+    setPanelTitle(panel.name)
     const initialViewTitles: Record<string, string> = {}
-    for (const view of panelDefinition.views || []) {
-      initialViewTitles[view.id] = view.title || ''
+    for (const view of views) {
+      initialViewTitles[view.id] = view.name || ''
     }
     setViewTitles(initialViewTitles)
-  }, [panelDefinition])
+  }, [panel, views])
 
-  const handleViewClick = (view: ViewDefinition) => {
+  const handleViewClick = (view: View) => {
     if (view.id === selectedViewId) return
-    router.push(`/panel/${panelDefinition.id}/view/${view.id}`)
+    router.push(`/panel/${panel.id}/view/${view.id}`)
   }
 
   const handlePanelClick = () => {
     if (selectedViewId) {
-      router.push(`/panel/${panelDefinition.id}`)
+      router.push(`/panel/${panel.id}`)
     }
   }
 
   const handlePanelTitleSubmit = () => {
-    if (panelTitle.trim() && panelTitle.trim() !== panelDefinition.title) {
+    if (panelTitle.trim() && panelTitle.trim() !== panel.name) {
       onPanelTitleChange?.(panelTitle.trim())
     } else {
-      setPanelTitle(panelDefinition.title)
+      setPanelTitle(panel.name)
     }
     setEditingPanel(false)
   }
 
   const handleViewTitleSubmit = (viewId: string) => {
     const newTitle = viewTitles[viewId]?.trim() || ''
-    const currentView = panelDefinition.views?.find((v) => v.id === viewId)
+    const currentViewToUpdate = views.find((v) => v.id === viewId)
 
-    if (newTitle && newTitle !== (currentView?.title || '')) {
+    if (newTitle && newTitle !== (currentViewToUpdate?.name || '')) {
       onViewTitleChange?.(newTitle)
     } else {
-      setViewTitles((prev) => ({ ...prev, [viewId]: currentView?.title || '' }))
+      setViewTitles((prev) => ({ ...prev, [viewId]: currentViewToUpdate?.name || '' }))
     }
     setEditingViewId(null)
   }
@@ -97,16 +112,16 @@ export default function WorklistNavigation({
     setDeletingViewId(viewToDelete.id)
 
     try {
-      if (viewToDelete.id === panelDefinition.id) {
+      if (viewToDelete.id === panel.id) {
         // Deleting the panel
         await deletePanel?.(viewToDelete.id)
         router.push('/')
       } else {
         // Deleting a view
-        await deleteView?.(panelDefinition.id, viewToDelete.id)
+        await deleteView?.(panel.id, viewToDelete.id)
         // Navigate to panel if we're deleting the currently selected view
         if (selectedViewId === viewToDelete.id) {
-          router.push(`/panel/${panelDefinition.id}`)
+          router.push(`/panel/${panel.id}`)
         }
       }
     } catch (error) {
@@ -123,9 +138,141 @@ export default function WorklistNavigation({
     setDeletingViewId(null)
   }
 
+  const handleCreateView = async (type: ViewCreationType) => {
+    if (!addView) return
+
+    setCreatingView(true)
+    try {
+      let newView: View
+
+      switch (type) {
+        case 'patient': {
+          // Create new patient view with all patient columns
+          const patientColumns = columns.filter(col =>
+            col.tags?.includes('panels:patients')
+          )
+          newView = await addView(panel.id, {
+            name: 'New Patient View',
+            panelId: panel.id,
+            visibleColumns: patientColumns.map(col => col.id),
+            createdAt: new Date(),
+            isPublished: false,
+            metadata: {
+              filters: [],
+              viewType: 'patient',
+            },
+          })
+          break
+        }
+        case 'task': {
+          // Create new task view with all task columns
+          const taskColumns = columns.filter(col =>
+            col.tags?.includes('panels:tasks')
+          )
+          newView = await addView(panel.id, {
+            name: 'New Task View',
+            panelId: panel.id,
+            visibleColumns: taskColumns.map(col => col.id),
+            createdAt: new Date(),
+            isPublished: false,
+            metadata: {
+              filters: [],
+              viewType: 'task',
+            },
+          })
+          break
+        }
+        case 'from-panel': {
+          // Create view from current panel - use panel filters and current view type
+          const viewType = currentViewType || 'patient'
+          const relevantColumns = columns.filter(col =>
+            viewType === 'patient'
+              ? col.tags?.includes('panels:patients')
+              : col.tags?.includes('panels:tasks')
+          )
+          newView = await addView(panel.id, {
+            name: `${panel.name} View`,
+            panelId: panel.id,
+            visibleColumns: relevantColumns.map(col => col.id),
+            createdAt: new Date(),
+            isPublished: false,
+            metadata: {
+              filters: panel.metadata.filters || [],
+              sort: panel.metadata.sort || undefined,
+              viewType: viewType,
+            },
+          })
+          break
+        }
+        case 'copy-view': {
+          // Copy current view
+          if (!currentView) return
+          newView = await addView(panel.id, {
+            name: `${currentView.name} (copy)`,
+            panelId: panel.id,
+            visibleColumns: [...currentView.visibleColumns],
+            createdAt: new Date(),
+            isPublished: false,
+            metadata: {
+              ...currentView.metadata,
+            },
+          })
+          break
+        }
+        default:
+          return
+      }
+
+      // Navigate to the new view
+      if (newView) {
+        router.push(`/panel/${panel.id}/view/${newView.id}`)
+      }
+    } catch (error) {
+      console.error('Failed to create view:', error)
+    } finally {
+      setCreatingView(false)
+      setShowCreateViewModal(false)
+    }
+  }
+
   const getSaveStatusIcon = (entityId: string) => {
     // For now, we'll always show saved status since reactive updates are immediate
     return null
+  }
+
+  const getViewCreationOptions = () => {
+    const options = [
+      {
+        type: 'patient' as ViewCreationType,
+        title: 'New Patient View',
+        description: 'Start fresh with a patient-focused view showing all patient data',
+        icon: Users,
+        available: true,
+      },
+      {
+        type: 'task' as ViewCreationType,
+        title: 'New Task View',
+        description: 'Start fresh with a task-focused view showing all task data',
+        icon: CheckSquare,
+        available: true,
+      },
+      {
+        type: 'from-panel' as ViewCreationType,
+        title: 'View from Current Panel',
+        description: 'Create a view that inherits your current filters and view settings',
+        icon: FileText,
+        available: !selectedViewId, // Only available on panel page
+      },
+      {
+        type: 'copy-view' as ViewCreationType,
+        title: 'Copy Current View',
+        description: 'Duplicate this view with all its columns, filters, and settings',
+        icon: Copy,
+        available: selectedViewId && currentView, // Only available on view page
+      },
+    ]
+
+    return options.filter(option => option.available)
   }
 
   return (
@@ -163,12 +310,11 @@ export default function WorklistNavigation({
               <div
                 className={`
                   h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
-                  ${
-                    editingPanel
-                      ? 'bg-slate-50 border-blue-200' // Highlight when editing
-                      : !selectedViewId
-                        ? 'bg-white border-gray-200'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                  ${editingPanel
+                    ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                    : !selectedViewId
+                      ? 'bg-white border-gray-200'
+                      : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
                   }
                 `}
               >
@@ -187,13 +333,13 @@ export default function WorklistNavigation({
                         if (e.key === 'Enter') {
                           handlePanelTitleSubmit()
                         } else if (e.key === 'Escape') {
-                          setPanelTitle(panelDefinition.title)
+                          setPanelTitle(panel.name)
                           setEditingPanel(false)
                         }
                       }}
                       className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-xs"
                     />
-                    {panelTitle.trim() !== panelDefinition.title && (
+                    {panelTitle.trim() !== panel.name && (
                       <span
                         className="text-xs text-orange-500 ml-1"
                         title="Unsaved changes"
@@ -201,7 +347,7 @@ export default function WorklistNavigation({
                         •
                       </span>
                     )}
-                    {getSaveStatusIcon(panelDefinition.id)}
+                    {getSaveStatusIcon(panel.id)}
                   </div>
                 ) : (
                   <div className="flex items-center">
@@ -223,17 +369,17 @@ export default function WorklistNavigation({
                         }
                       }}
                     >
-                      {panelDefinition.title}
+                      {panel.name}
                     </span>
-                    {getSaveStatusIcon(panelDefinition.id)}
+                    {getSaveStatusIcon(panel.id)}
                     <button
                       type="button"
                       className="ml-2 text-gray-400 hover:text-gray-600"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleDeleteViewClick(
-                          panelDefinition.id,
-                          panelDefinition.title,
+                          panel.id,
+                          panel.name,
                         )
                       }}
                     >
@@ -245,7 +391,7 @@ export default function WorklistNavigation({
             </div>
 
             {/* Views */}
-            {panelDefinition.views?.map((view) => (
+            {views.map((view) => (
               <div
                 key={view.id}
                 className="relative ml-2 mb-[-1px] cursor-pointer flex-shrink-0"
@@ -266,12 +412,11 @@ export default function WorklistNavigation({
                 <div
                   className={`
                     h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
-                    ${
-                      editingViewId === view.id
-                        ? 'bg-slate-50 border-blue-200' // Highlight when editing
-                        : view.id === selectedViewId
-                          ? 'bg-white border-gray-200'
-                          : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                    ${editingViewId === view.id
+                      ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                      : view.id === selectedViewId
+                        ? 'bg-white border-gray-200'
+                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
                     }
                   `}
                 >
@@ -294,7 +439,7 @@ export default function WorklistNavigation({
                           } else if (e.key === 'Escape') {
                             setViewTitles((prev) => ({
                               ...prev,
-                              [view.id]: view.title || '',
+                              [view.id]: view.name || '',
                             }))
                             setEditingViewId(null)
                           }
@@ -302,14 +447,14 @@ export default function WorklistNavigation({
                         className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-xs"
                       />
                       {(viewTitles[view.id] || '').trim() !==
-                        (view.title || '') && (
-                        <span
-                          className="text-xs text-orange-500 ml-1"
-                          title="Unsaved changes"
-                        >
-                          •
-                        </span>
-                      )}
+                        (view.name || '') && (
+                          <span
+                            className="text-xs text-orange-500 ml-1"
+                            title="Unsaved changes"
+                          >
+                            •
+                          </span>
+                        )}
                       {getSaveStatusIcon(view.id)}
                     </div>
                   ) : (
@@ -332,7 +477,7 @@ export default function WorklistNavigation({
                           }
                         }}
                       >
-                        {view.title}
+                        {view.name}
                       </span>
                       {getSaveStatusIcon(view.id)}
                       <button
@@ -340,7 +485,7 @@ export default function WorklistNavigation({
                         className="ml-2 text-gray-400 hover:text-gray-600"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDeleteViewClick(view.id, view.title || '')
+                          handleDeleteViewClick(view.id, view.name || '')
                         }}
                       >
                         <X className="h-3 w-3" />
@@ -355,7 +500,7 @@ export default function WorklistNavigation({
             <button
               type="button"
               className="ml-2 mb-[-1px] h-9 px-3 flex items-center text-sm text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-t-md border-l border-t border-r border-gray-200 whitespace-nowrap"
-              onClick={onNewView}
+              onClick={() => setShowCreateViewModal(true)}
             >
               <Plus className="h-3 w-3 mr-1 flex-shrink-0" />
               <span className="text-xs">Add View</span>
@@ -364,19 +509,87 @@ export default function WorklistNavigation({
         </div>
       </div>
 
+      {/* Create View Modal */}
+      <Dialog
+        open={showCreateViewModal}
+        onOpenChange={(open) => !open && !creatingView && setShowCreateViewModal(false)}
+      >
+        <DialogContent className="p-0 m-0 overflow-hidden max-w-2xl">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center">
+                  <Plus className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-xl font-semibold text-gray-900 leading-6">
+                  Create New View
+                </DialogTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  Choose how you'd like to create your new view
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="px-6 pb-6">
+            <div className="space-y-3">
+              {getViewCreationOptions().map((option) => {
+                const Icon = option.icon
+                return (
+                  <button
+                    key={option.type}
+                    type="button"
+                    className="w-full text-left p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => handleCreateView(option.type)}
+                    disabled={creatingView}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0 mt-1">
+                        <Icon className="h-5 w-5 text-gray-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900">
+                          {option.title}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {option.description}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowCreateViewModal(false)}
+              disabled={creatingView}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Confirmation Modal */}
       <ConfirmDeleteModal
         isOpen={showDeleteModal}
         onClose={handleDeleteModalClose}
         onConfirm={handleDeleteViewConfirm}
         title={
-          viewToDelete?.id === panelDefinition.id
+          viewToDelete?.id === panel.id
             ? 'Delete Panel'
             : 'Delete View'
         }
-        message={`Are you sure you want to delete the ${viewToDelete?.id === panelDefinition.id ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete the ${viewToDelete?.id === panel.id ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
         isDeleting={!!deletingViewId}
       />
     </>
   )
-}
+} 

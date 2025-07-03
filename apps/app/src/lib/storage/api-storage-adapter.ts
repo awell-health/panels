@@ -1,119 +1,31 @@
-import type {
-  ColumnDefinition,
-  PanelDefinition,
-  ViewDefinition,
-} from '@/types/worklist'
-import type { ColumnsResponse } from '@panels/types/columns'
-import type { ViewResponse, ViewSortsInfo } from '@panels/types/views'
-import {
-  adaptBackendPanelsToFrontend,
-  adaptBackendToFrontend,
-  adaptBackendViewToFrontend,
-  adaptFrontendToBackend,
-  adaptFrontendViewToBackend,
-  adaptBackendColumnToFrontend,
-  validateApiConfig,
-} from './type-adapters'
+import type { Column, Panel, View, ViewType } from '@/types/panel'
 import type { StorageAdapter } from './types'
-import { useAuthentication } from '@/hooks/use-authentication'
+import type { ColumnsResponse } from '@panels/types/columns'
+import type { ViewsResponse } from '@panels/types/views'
+import {
+  mapBackendPanelToFrontend,
+  mapFrontendPanelToBackend,
+  mapBackendColumnToFrontend,
+  validateApiConfig,
+  mapBackendViewToFrontend,
+} from './type-adapters'
 import { logger } from '../logger'
 
-interface CacheConfig {
-  enabled: boolean
-  duration: number // in milliseconds
-}
-
-interface CacheEntry<T> {
-  data: T
-  timestamp: number
-  key: string
-}
-
-interface CacheStore {
-  panels: CacheEntry<PanelDefinition[]> | null
-  views: { [panelId: string]: CacheEntry<ViewDefinition[]> } | null
-}
-
 /**
- * API Storage Adapter - Full integration with backend services
- * Uses sophisticated type adapters and loads complete data relationships
+ * Simplified API Storage Adapter - Direct backend integration without complex logic
  */
 export class APIStorageAdapter implements StorageAdapter {
   private config: { tenantId: string; userId: string }
-  private cache: CacheStore = { panels: null, views: null }
-  private cacheConfig: CacheConfig
 
-  constructor(
-    userId?: string,
-    organizationSlug?: string,
-    cacheConfig?: Partial<CacheConfig>,
-  ) {
+  constructor(userId?: string, organizationSlug?: string) {
     this.config = {
       tenantId: organizationSlug || '',
       userId: userId || '',
     }
     validateApiConfig(this.config)
-    this.cacheConfig = {
-      enabled: cacheConfig?.enabled ?? true,
-      duration: cacheConfig?.duration ?? 5 * 60 * 1000, // 5 minutes default
-    }
   }
 
-  private isCacheValid<T>(entry: CacheEntry<T> | null): boolean {
-    if (!this.cacheConfig.enabled || !entry) return false
-    return Date.now() - entry.timestamp < this.cacheConfig.duration
-  }
-
-  private setCacheEntry<T>(
-    key: keyof CacheStore,
-    data: T,
-    subKey?: string,
-  ): void {
-    if (!this.cacheConfig.enabled) return
-
-    const entry: CacheEntry<T> = {
-      data,
-      timestamp: Date.now(),
-      key: subKey || key,
-    }
-
-    if (key === 'views' && subKey) {
-      if (!this.cache.views) this.cache.views = {}
-      this.cache.views[subKey] = entry as CacheEntry<ViewDefinition[]>
-    } else if (key === 'panels') {
-      this.cache.panels = entry as CacheEntry<PanelDefinition[]>
-    }
-  }
-
-  private getCacheEntry<T>(key: keyof CacheStore, subKey?: string): T | null {
-    if (!this.cacheConfig.enabled) return null
-
-    let entry: CacheEntry<T> | null = null
-
-    if (key === 'views' && subKey && this.cache.views) {
-      entry = (this.cache.views[subKey] as CacheEntry<T> | undefined) || null
-    } else if (key === 'panels') {
-      entry = this.cache.panels as CacheEntry<T> | null
-    }
-
-    return this.isCacheValid(entry) && entry ? entry.data : null
-  }
-
-  private invalidateCache(key: keyof CacheStore, subKey?: string): void {
-    if (key === 'views' && subKey && this.cache.views) {
-      delete this.cache.views[subKey]
-    } else if (key === 'panels') {
-      this.cache.panels = null
-    }
-  }
-
-  async getPanels(): Promise<PanelDefinition[]> {
-    // Check cache first
-    const cachedPanels = this.getCacheEntry<PanelDefinition[]>('panels')
-    if (cachedPanels) {
-      return cachedPanels
-    }
-
+  async getPanels(): Promise<Panel[]> {
     try {
       const { panelsAPI } = await import('@/api/panelsAPI')
       const backendPanels = await panelsAPI.all(
@@ -121,177 +33,49 @@ export class APIStorageAdapter implements StorageAdapter {
         this.config.userId,
       )
 
-      // Use the sophisticated adapter to convert all panels at once
-      const frontendPanels = adaptBackendPanelsToFrontend(backendPanels)
-
-      // Load detailed data for each panel in parallel
-      const enrichedPanels = await Promise.allSettled(
-        frontendPanels.map(async (panel) => {
-          try {
-            return await this.enrichPanelWithDetails(panel)
-          } catch (error) {
-            console.warn(
-              `Failed to enrich panel ${panel.id} with details:`,
-              error,
-            )
-            // Return panel with default columns if enrichment fails
-            return {
-              ...panel,
-              patientViewColumns: panel.patientViewColumns || [
-                {
-                  id: 'name',
-                  key: 'name',
-                  name: 'Patient Name',
-                  type: 'string',
-                  description: "Patient's full name",
-                },
-                {
-                  id: 'birthDate',
-                  key: 'birthDate',
-                  name: 'Date of Birth',
-                  type: 'date',
-                  description: "Patient's date of birth",
-                },
-              ],
-              taskViewColumns: panel.taskViewColumns || [
-                {
-                  id: 'taskId',
-                  key: 'id',
-                  name: 'Task ID',
-                  type: 'string',
-                  description: 'Task ID',
-                },
-                {
-                  id: 'description',
-                  key: 'description',
-                  name: 'Description',
-                  type: 'string',
-                  description: 'Task description',
-                },
-              ],
-              views: panel.views || [],
-            }
-          }
-        }),
-      )
-
-      // Extract successful results and log failures
-      const result = enrichedPanels.map((result, index) => {
-        if (result.status === 'fulfilled') {
-          return result.value
-        }
-        console.error(
-          `Failed to load panel ${frontendPanels[index].id}:`,
-          result.reason,
-        )
-        // Return panel with default columns as fallback
-        return {
-          ...frontendPanels[index],
-          patientViewColumns: frontendPanels[index].patientViewColumns || [
-            {
-              id: 'name',
-              key: 'name',
-              name: 'Patient Name',
-              type: 'string',
-              description: "Patient's full name",
-            },
-            {
-              id: 'birthDate',
-              key: 'birthDate',
-              name: 'Date of Birth',
-              type: 'date',
-              description: "Patient's date of birth",
-            },
-          ],
-          taskViewColumns: frontendPanels[index].taskViewColumns || [
-            {
-              id: 'taskId',
-              key: 'id',
-              name: 'Task ID',
-              type: 'string',
-              description: 'Task ID',
-            },
-            {
-              id: 'description',
-              key: 'description',
-              name: 'Description',
-              type: 'string',
-              description: 'Task description',
-            },
-          ],
-          views: frontendPanels[index].views || [],
-        }
-      })
-
-      // Cache the result
-      this.setCacheEntry('panels', result)
-      return result
+      // Simple mapping without complex enrichment
+      return backendPanels.map((panel) => mapBackendPanelToFrontend(panel))
     } catch (error) {
-      console.error('Failed to fetch panels from API:', error)
+      logger.error({ error }, 'Failed to fetch panels from API')
       throw new Error(
         `Failed to load panels: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
     }
   }
 
-  async getPanel(id: string): Promise<PanelDefinition | null> {
+  async getPanel(id: string): Promise<Panel | null> {
     try {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
-      // Get detailed panel data with all relationships
-      const [backendPanel, columns, backendViews] = await Promise.allSettled([
-        panelsAPI.get({ id }, this.config.tenantId, this.config.userId),
-        this.loadPanelColumns(id),
-        this.loadPanelViews(id),
-      ])
-
-      // Handle the panel data
-      if (backendPanel.status === 'rejected') {
-        if (
-          backendPanel.reason instanceof Error &&
-          backendPanel.reason.message.includes('404')
-        ) {
-          return null
-        }
-        throw backendPanel.reason
-      }
-
-      // Use sophisticated adapter with all available data
-      const columnsData =
-        columns.status === 'fulfilled' ? columns.value : undefined
-      const viewsData =
-        backendViews.status === 'fulfilled' ? backendViews.value : []
-
-      return adaptBackendToFrontend(
-        backendPanel.value,
-        columnsData || undefined,
-        viewsData,
+      // Single API call for panel data
+      const backendPanel = await panelsAPI.get(
+        { id },
+        this.config.tenantId,
+        this.config.userId,
       )
+
+      return mapBackendPanelToFrontend(backendPanel)
     } catch (error) {
       if (error instanceof Error && error.message.includes('404')) {
         return null
       }
-      console.error(`Failed to fetch panel ${id} from API:`, error)
+      logger.error({ error, id }, `Failed to fetch panel ${id} from API`)
       throw new Error(
         `Failed to load panel: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
     }
   }
 
-  async createPanel(
-    panel: Omit<PanelDefinition, 'id'>,
-  ): Promise<PanelDefinition> {
+  async createPanel(panel: Omit<Panel, 'id'>): Promise<Panel> {
     try {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
-      // Convert frontend panel to backend format using sophisticated adapter
-      const backendPanelInfo = adaptFrontendToBackend(panel, this.config)
-
-      // Create panel via API
+      // Simple panel creation - no column creation
+      const backendPanelInfo = mapFrontendPanelToBackend(panel, this.config)
       const createdPanel = await panelsAPI.create(backendPanelInfo)
 
-      // Create a data source for the panel
-      const dataSource = await panelsAPI.dataSources.create(
+      // Create a basic data source
+      await panelsAPI.dataSources.create(
         { id: createdPanel.id.toString() },
         {
           type: 'api',
@@ -304,407 +88,27 @@ export class APIStorageAdapter implements StorageAdapter {
         },
       )
 
-      // Map frontend column types to backend types
-      const typeMapping = {
-        string: 'text' as const,
-        number: 'number' as const,
-        boolean: 'boolean' as const,
-        date: 'date' as const,
-        datetime: 'datetime' as const,
-        tasks: 'custom' as const,
-        select: 'select' as const,
-        array: 'multi_select' as const,
-        assignee: 'user' as const,
-      }
-
-      // Create all columns (both patient and task view) as base columns
-      const allColumnsPromises = [
-        ...panel.patientViewColumns.map((column) =>
-          panelsAPI.columns.createBase(
-            { id: createdPanel.id.toString() },
-            {
-              name: column.name,
-              type: typeMapping[column.type],
-              sourceField: column.key,
-              dataSourceId: dataSource.id,
-              metadata: {
-                description: column.description,
-              },
-              properties: {
-                display: column.properties?.display,
-                validation: {},
-                required: false,
-                unique: false,
-              },
-              tags: ['panels:patients'],
-              tenantId: this.config.tenantId,
-              userId: this.config.userId,
-            },
-          ),
-        ),
-        ...panel.taskViewColumns.map((column) =>
-          panelsAPI.columns.createBase(
-            { id: createdPanel.id.toString() },
-            {
-              name: column.name,
-              type: typeMapping[column.type],
-              sourceField: column.key,
-              dataSourceId: dataSource.id,
-              metadata: {
-                description: column.description,
-              },
-              properties: {
-                display: column.properties?.display,
-                validation: {},
-                required: false,
-                unique: false,
-              },
-              tags: ['panels:tasks'],
-              tenantId: this.config.tenantId,
-              userId: this.config.userId,
-            },
-          ),
-        ),
-      ]
-
-      // Wait for all columns to be created
-      const createdColumns = await Promise.all(allColumnsPromises)
-
-      // Invalidate panels cache since we created a new one
-      this.invalidateCache('panels')
-
-      // Return the created panel using full adapter
-      const createdPanelAdapted = adaptBackendToFrontend(createdPanel, {
-        baseColumns: createdColumns.map((column) => ({
-          ...column,
-          columnType: 'base',
-        })),
-        calculatedColumns: [],
-      })
-      return createdPanelAdapted
+      return mapBackendPanelToFrontend(createdPanel)
     } catch (error) {
-      console.error('Failed to create panel via API:', error)
+      logger.error({ error }, 'Failed to create panel via API')
       throw new Error(
         `Failed to create panel: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
     }
   }
 
-  async updatePanel(
-    id: string,
-    updates: Partial<PanelDefinition>,
-  ): Promise<{ idMapping?: Map<string, string> }> {
+  async updatePanel(id: string, updates: Partial<Panel>): Promise<Panel> {
     try {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
-      // Get the current panel to merge updates
-      const currentPanel = await this.getPanel(id)
-      if (!currentPanel) {
-        throw new Error(`Panel ${id} not found`)
-      }
-
-      // Merge updates with current panel
-      const updatedPanel = { ...currentPanel, ...updates }
-
-      // Convert to backend format using sophisticated adapter
+      // Simple panel update - no column synchronization
       const backendPanelInfo = {
-        ...adaptFrontendToBackend(updatedPanel, this.config),
-        id: id, // Keep as string for API compatibility
+        ...mapFrontendPanelToBackend(updates as Panel, this.config),
+        id: id,
       }
 
-      // Update panel via API
-      await panelsAPI.update(backendPanelInfo)
-
-      // Handle column synchronization
-      const currentColumns = await this.loadPanelColumns(id)
-      const currentPatientColumns =
-        currentColumns?.baseColumns.filter((col) =>
-          col.tags?.includes('panels:patients'),
-        ) || []
-      const currentTaskColumns =
-        currentColumns?.baseColumns.filter((col) =>
-          col.tags?.includes('panels:tasks'),
-        ) || []
-
-      // Create arrays of column keys for comparison
-      const currentPatientKeys = new Set(
-        currentPatientColumns.map((col) => col.sourceField),
-      )
-      const currentTaskKeys = new Set(
-        currentTaskColumns.map((col) => col.sourceField),
-      )
-      const newPatientKeys = new Set(
-        updatedPanel.patientViewColumns?.map((col) => col.key) || [],
-      )
-      const newTaskKeys = new Set(
-        updatedPanel.taskViewColumns?.map((col) => col.key) || [],
-      )
-
-      // Find columns to delete (in current but not in new)
-      const patientColumnsToDelete = currentPatientColumns.filter(
-        (col) => !newPatientKeys.has(col.sourceField),
-      )
-      const taskColumnsToDelete = currentTaskColumns.filter(
-        (col) => !newTaskKeys.has(col.sourceField),
-      )
-
-      // Find columns to create (in new but not in current)
-      const patientColumnsToCreate =
-        updatedPanel.patientViewColumns?.filter(
-          (col) => !currentPatientKeys.has(col.key),
-        ) || []
-      const taskColumnsToCreate = updatedPanel.taskViewColumns?.filter(
-        (col) => !currentTaskKeys.has(col.key),
-      )
-
-      // Find columns to update (in both current and new)
-      const patientColumnsToUpdate = currentPatientColumns.filter(
-        (currentCol) => {
-          const newCol = updatedPanel.patientViewColumns?.find(
-            (col) => col.key === currentCol.sourceField,
-          )
-          if (!newCol) return false
-
-          // Check if any properties have changed
-          return (
-            newCol.name !== currentCol.name ||
-            newCol.properties?.display?.order !==
-              currentCol.properties?.display?.order ||
-            newCol.properties?.display?.width !==
-              currentCol.properties?.display?.width ||
-            newCol.properties?.display?.visible !==
-              currentCol.properties?.display?.visible ||
-            newCol.description !== currentCol.metadata?.description
-          )
-        },
-      )
-
-      const taskColumnsToUpdate = currentTaskColumns.filter((currentCol) => {
-        const newCol = updatedPanel.taskViewColumns?.find(
-          (col) => col.key === currentCol.sourceField,
-        )
-        if (!newCol) return false
-
-        // Check if any properties have changed
-        return (
-          newCol.name !== currentCol.name ||
-          newCol.properties?.display?.order !==
-            currentCol.properties?.display?.order ||
-          newCol.properties?.display?.width !==
-            currentCol.properties?.display?.width ||
-          newCol.properties?.display?.visible !==
-            currentCol.properties?.display?.visible ||
-          newCol.description !== currentCol.metadata?.description
-        )
-      })
-
-      // Delete removed columns
-      const deletePromises = [
-        ...patientColumnsToDelete.map((col) =>
-          panelsAPI.columns.delete(
-            {
-              id: col.id.toString(),
-              tenantId: this.config.tenantId,
-              userId: this.config.userId,
-            },
-            { id },
-          ),
-        ),
-        ...taskColumnsToDelete.map((col) =>
-          panelsAPI.columns.delete(
-            {
-              id: col.id.toString(),
-              tenantId: this.config.tenantId,
-              userId: this.config.userId,
-            },
-            { id },
-          ),
-        ),
-      ]
-
-      const dataSources = await panelsAPI.dataSources.list(
-        { id: id },
-        this.config.tenantId,
-        this.config.userId,
-      )
-      // Get the data source ID from the current panel
-      const dataSourceId = dataSources[0].id || 1 // Fallback to 1 if not available
-
-      // Map frontend column types to backend types
-      const typeMapping: Record<
-        string,
-        | 'text'
-        | 'number'
-        | 'date'
-        | 'boolean'
-        | 'select'
-        | 'multi_select'
-        | 'user'
-        | 'file'
-        | 'custom'
-      > = {
-        string: 'text',
-        number: 'number',
-        date: 'date',
-        boolean: 'boolean',
-        select: 'select',
-        tasks: 'select',
-        array: 'multi_select',
-        assignee: 'user',
-      }
-
-      // Create new columns
-      const createPromises = [
-        ...patientColumnsToCreate.map((column) =>
-          panelsAPI.columns.createBase(
-            { id },
-            {
-              name: column.name,
-              type: typeMapping[column.type] || 'text',
-              sourceField: column.key,
-              dataSourceId,
-              metadata: {
-                description: column.description,
-              },
-              properties: {
-                display: column.properties?.display,
-                validation: {},
-                required: false,
-                unique: false,
-              },
-              tags: ['panels:patients'],
-              tenantId: this.config.tenantId,
-              userId: this.config.userId,
-            },
-          ),
-        ),
-        ...(taskColumnsToCreate || []).map((column) =>
-          panelsAPI.columns.createBase(
-            { id },
-            {
-              name: column.name,
-              type: typeMapping[column.type] || 'text',
-              sourceField: column.key,
-              dataSourceId,
-              metadata: {
-                description: column.description,
-              },
-              properties: {
-                display: column.properties?.display,
-                validation: {},
-                required: false,
-                unique: false,
-              },
-              tags: ['panels:tasks'],
-              tenantId: this.config.tenantId,
-              userId: this.config.userId,
-            },
-          ),
-        ),
-      ]
-
-      // Update existing columns
-      const updatePromises = [
-        ...patientColumnsToUpdate.map((currentCol) => {
-          const newCol = updatedPanel.patientViewColumns?.find(
-            (col) => col.key === currentCol.sourceField,
-          )
-          if (!newCol) return Promise.resolve()
-
-          return panelsAPI.columns.update(
-            {
-              id: currentCol.id.toString(),
-              name: newCol.name,
-              properties: {
-                display: newCol.properties?.display,
-                validation: currentCol.properties.validation || {},
-                required: currentCol.properties.required || false,
-                unique: currentCol.properties.unique || false,
-              },
-              metadata: {
-                description: newCol.description,
-              },
-              tenantId: this.config.tenantId,
-              userId: this.config.userId,
-            },
-            { id },
-          )
-        }),
-        ...taskColumnsToUpdate.map((currentCol) => {
-          const newCol = updatedPanel.taskViewColumns?.find(
-            (col) => col.key === currentCol.sourceField,
-          )
-          if (!newCol) return Promise.resolve()
-
-          return panelsAPI.columns.update(
-            {
-              id: currentCol.id.toString(),
-              name: newCol.name,
-              properties: {
-                display: newCol.properties?.display,
-                validation: currentCol.properties.validation || {},
-                required: currentCol.properties.required || false,
-                unique: currentCol.properties.unique || false,
-              },
-              metadata: {
-                description: newCol.description,
-              },
-              tenantId: this.config.tenantId,
-              userId: this.config.userId,
-            },
-            { id },
-          )
-        }),
-      ]
-
-      // Execute delete and update operations first
-      await Promise.all([...deletePromises, ...updatePromises])
-
-      // Execute create operations separately to capture database IDs
-      const idMapping = new Map<string, string>()
-
-      if (createPromises.length > 0) {
-        const createResults = await Promise.allSettled(createPromises)
-
-        // Build ID mapping from temporary IDs to database IDs
-        let resultIndex = 0
-
-        // Process patient columns first
-        for (const originalColumn of patientColumnsToCreate) {
-          const result = createResults[resultIndex]
-          if (result.status === 'fulfilled') {
-            const databaseId = result.value.id.toString()
-            idMapping.set(originalColumn.id, databaseId)
-          } else {
-            logger.error(
-              { error: result.reason, originalColumn },
-              `Failed to create patient column ${originalColumn.id}`,
-            )
-          }
-          resultIndex++
-        }
-
-        // Process task columns next
-        for (const originalColumn of taskColumnsToCreate) {
-          const result = createResults[resultIndex]
-          if (result.status === 'fulfilled') {
-            const databaseId = result.value.id.toString()
-            idMapping.set(originalColumn.id, databaseId)
-          } else {
-            logger.error(
-              { error: result.reason, originalColumn },
-              `Failed to create task column ${originalColumn.id}`,
-            )
-          }
-          resultIndex++
-        }
-      }
-
-      // Invalidate panels cache since we updated one
-      this.invalidateCache('panels')
-
-      // Return ID mapping for the reactive store to apply
-      return { idMapping: idMapping.size > 0 ? idMapping : undefined }
+      const updatedPanel = await panelsAPI.update(backendPanelInfo)
+      return mapBackendPanelToFrontend(updatedPanel)
     } catch (error) {
       logger.error({ error, id }, `Failed to update panel ${id} via API`)
       throw new Error(
@@ -716,15 +120,7 @@ export class APIStorageAdapter implements StorageAdapter {
   async deletePanel(id: string): Promise<void> {
     try {
       const { panelsAPI } = await import('@/api/panelsAPI')
-
-      // Delete via API
-      await panelsAPI.delete(this.config.tenantId, this.config.userId, {
-        id: id,
-      })
-
-      // Invalidate all caches since panel deletion affects everything
-      this.invalidateCache('panels')
-      this.invalidateCache('views')
+      await panelsAPI.delete(this.config.tenantId, this.config.userId, { id })
     } catch (error) {
       logger.error({ error, id }, `Failed to delete panel ${id} via API`)
       throw new Error(
@@ -733,74 +129,232 @@ export class APIStorageAdapter implements StorageAdapter {
     }
   }
 
-  async addView(
-    panelId: string,
-    view: Omit<ViewDefinition, 'id'>,
-  ): Promise<ViewDefinition> {
+  // Get all views across all panels
+  async getViews(): Promise<View[]> {
     try {
       const { viewsAPI } = await import('@/api/viewsAPI')
+
+      const viewsResponse = await viewsAPI.all(
+        this.config.tenantId,
+        this.config.userId,
+      )
+
+      return viewsResponse.views.map((view: ViewsResponse['views'][number]) =>
+        mapBackendViewToFrontend(view, view.panelId.toString()),
+      )
+    } catch (error) {
+      logger.error({ error }, 'Failed to fetch all views from API')
+      throw new Error(
+        `Failed to load views: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  // Get all columns across all panels
+  async getColumns(): Promise<Column[]> {
+    try {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
-      // Convert frontend view to backend format
-      const backendViewInfo = adaptFrontendViewToBackend(
-        view,
-        panelId,
-        this.config,
-      )
-      // Create view via API
-      const createdView = await viewsAPI.create(backendViewInfo)
+      // Get all panels to fetch their columns
+      const panels = await this.getPanels()
+      const allColumns: Column[] = []
 
-      const newSortConfig: ViewSortsInfo = {
-        tenantId: this.config.tenantId,
-        userId: this.config.userId,
-        sorts:
-          view.sortConfig?.map((sort) => ({
-            columnName: sort.key,
-            direction: sort.direction,
-            order: 0,
-          })) || [],
+      // Fetch columns for each panel in parallel
+      const columnPromises = panels.map(async (panel) => {
+        try {
+          const columnsResponse = await panelsAPI.columns.list(
+            { id: panel.id },
+            this.config.tenantId,
+            this.config.userId,
+          )
+
+          const panelColumns = [
+            ...columnsResponse.baseColumns,
+            ...columnsResponse.calculatedColumns,
+          ]
+
+          return panelColumns.map(
+            (
+              column:
+                | ColumnsResponse['baseColumns'][number]
+                | ColumnsResponse['calculatedColumns'][number],
+            ) => mapBackendColumnToFrontend(column, panel.id),
+          )
+        } catch (error) {
+          logger.error(
+            { error, panelId: panel.id },
+            `Failed to fetch columns for panel ${panel.id}`,
+          )
+          return []
+        }
+      })
+
+      const columnArrays = await Promise.all(columnPromises)
+      for (const columns of columnArrays) {
+        allColumns.push(...columns)
       }
 
-      const sortConfig = await viewsAPI.sorts.update(
-        { id: createdView.id.toString() },
-        newSortConfig,
+      return allColumns
+    } catch (error) {
+      logger.error({ error }, 'Failed to fetch all columns from API')
+      throw new Error(
+        `Failed to load columns: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
+    }
+  }
 
-      const columns = await panelsAPI.columns.list(
+  // Direct column operations
+  async addColumn(
+    panelId: string,
+    column: Omit<Column, 'id'>,
+  ): Promise<Column> {
+    try {
+      const { panelsAPI } = await import('@/api/panelsAPI')
+
+      // Get data source for the panel
+      const dataSources = await panelsAPI.dataSources.list(
         { id: panelId },
         this.config.tenantId,
         this.config.userId,
-        createdView.config.columns,
+      )
+      const dataSourceId = dataSources[0]?.id || 1
+
+      // Direct API call to create column
+      const createdColumn = await panelsAPI.columns.createBase(
+        { id: panelId },
+        {
+          name: column.name,
+          type: column.type,
+          sourceField: column.sourceField || column.name,
+          dataSourceId,
+          metadata: column.metadata || {},
+          properties: column.properties || { display: {} },
+          tags: column.tags || [],
+          tenantId: this.config.tenantId,
+          userId: this.config.userId,
+        },
       )
 
-      const frontendView = adaptBackendViewToFrontend(
-        createdView,
-        columns.baseColumns,
-        columns.calculatedColumns,
-        sortConfig,
+      return mapBackendColumnToFrontend(createdColumn, panelId)
+    } catch (error) {
+      logger.error(
+        { error, panelId },
+        `Failed to add column to panel ${panelId}`,
+      )
+      throw new Error(
+        `Failed to add column: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async updateColumn(
+    panelId: string,
+    columnId: string,
+    updates: Partial<Column>,
+  ): Promise<Column> {
+    try {
+      const { panelsAPI } = await import('@/api/panelsAPI')
+
+      // Direct API call without complex logic
+      const updatedColumn = await panelsAPI.columns.update(
+        {
+          id: columnId,
+          name: updates.name,
+          properties: updates.properties,
+          metadata: updates.metadata,
+          tags: updates.tags,
+          tenantId: this.config.tenantId,
+          userId: this.config.userId,
+        },
+        { id: panelId },
       )
 
-      // const patientColumns = columns.baseColumns.map(
-      //   adaptBackendColumnToFrontend,
-      // )
-      // const taskColumns = columns.calculatedColumns.map(
-      //   adaptBackendColumnToFrontend,
-      // )
+      return mapBackendColumnToFrontend(updatedColumn, panelId)
+    } catch (error) {
+      logger.error(
+        { error, columnId, panelId },
+        `Failed to update column ${columnId} in panel ${panelId}`,
+      )
+      throw new Error(
+        `Failed to update column: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
 
-      // const updatedView: ViewDefinition = {
-      //   ...createdView,
-      //   id: createdView.id.toString(),
-      //   columns: [...patientColumns, ...taskColumns] as ColumnDefinition[], //TODO: fix this type
-      //   title: createdView.name,
-      //   filters: [],
-      //   createdAt: new Date(), //TODO: get the actual createdAt from the backend
-      //   viewType: 'patient',
-      // }
+  async deleteColumn(panelId: string, columnId: string): Promise<void> {
+    try {
+      const { panelsAPI } = await import('@/api/panelsAPI')
 
-      // Invalidate views cache for this panel
-      this.invalidateCache('views', panelId)
+      // Direct API call to delete column
+      await panelsAPI.columns.delete(
+        {
+          id: columnId,
+          tenantId: this.config.tenantId,
+          userId: this.config.userId,
+        },
+        { id: panelId },
+      )
+    } catch (error) {
+      logger.error(
+        { error, columnId, panelId },
+        `Failed to delete column ${columnId} in panel ${panelId}`,
+      )
+      throw new Error(
+        `Failed to delete column: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
 
-      return frontendView
+  async getColumnsForPanel(panelId: string): Promise<Column[]> {
+    try {
+      const { panelsAPI } = await import('@/api/panelsAPI')
+
+      // Fetch columns for the specified panel
+      const columnsResponse = await panelsAPI.columns.list(
+        { id: panelId },
+        this.config.tenantId,
+        this.config.userId,
+      )
+
+      // Combine base and calculated columns and map to frontend format
+      const allColumns = [
+        ...columnsResponse.baseColumns,
+        ...columnsResponse.calculatedColumns,
+      ]
+
+      return allColumns.map(
+        (
+          column:
+            | ColumnsResponse['baseColumns'][number]
+            | ColumnsResponse['calculatedColumns'][number],
+        ) => mapBackendColumnToFrontend(column, panelId),
+      )
+    } catch (error) {
+      logger.error(
+        { error, panelId },
+        `Failed to fetch columns for panel ${panelId}`,
+      )
+      throw new Error(
+        `Failed to fetch columns: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  // Simplified view operations
+  async addView(panelId: string, view: Omit<View, 'id'>): Promise<View> {
+    try {
+      const { viewsAPI } = await import('@/api/viewsAPI')
+
+      const createdView = await viewsAPI.create({
+        name: view.name,
+        panelId: Number.parseInt(panelId, 10),
+        visibleColumns: view.visibleColumns,
+        metadata: view.metadata,
+        tenantId: this.config.tenantId,
+        ownerUserId: this.config.userId,
+      })
+
+      return mapBackendViewToFrontend(createdView, panelId)
     } catch (error) {
       logger.error({ error, panelId }, `Failed to add view to panel ${panelId}`)
       throw new Error(
@@ -812,51 +366,21 @@ export class APIStorageAdapter implements StorageAdapter {
   async updateView(
     panelId: string,
     viewId: string,
-    updates: Partial<ViewDefinition>,
-  ): Promise<void> {
+    updates: Partial<View>,
+  ): Promise<View> {
     try {
       const { viewsAPI } = await import('@/api/viewsAPI')
 
-      // Get current view to merge updates
-      const currentView = await this.getView(panelId, viewId)
-      if (!currentView) {
-        throw new Error(`View ${viewId} not found in panel ${panelId}`)
-      }
-
-      // Merge updates with current view
-      const updatedView = { ...currentView, ...updates }
-
-      // Convert to backend format
-      const backendViewInfo = adaptFrontendViewToBackend(
-        updatedView,
-        panelId,
-        this.config,
-      )
-
-      const newSortConfig: ViewSortsInfo = {
-        tenantId: this.config.tenantId,
-        userId: this.config.userId,
-        sorts:
-          updatedView.sortConfig?.map((sort) => ({
-            columnName: sort.key,
-            direction: sort.direction,
-            order: 0,
-          })) || [],
-      }
-
-      const sortConfig = await viewsAPI.sorts.update(
-        { id: viewId },
-        newSortConfig,
-      )
-
-      // Update via API
-      await viewsAPI.update({
-        ...backendViewInfo,
+      const updatedView = await viewsAPI.update({
         id: viewId,
+        name: updates.name,
+        visibleColumns: updates.visibleColumns,
+        metadata: updates.metadata,
+        tenantId: this.config.tenantId,
+        ownerUserId: this.config.userId,
       })
 
-      // Invalidate views cache for this panel
-      this.invalidateCache('views', panelId)
+      return mapBackendViewToFrontend(updatedView, panelId)
     } catch (error) {
       logger.error(
         { error, viewId, panelId },
@@ -871,14 +395,9 @@ export class APIStorageAdapter implements StorageAdapter {
   async deleteView(panelId: string, viewId: string): Promise<void> {
     try {
       const { viewsAPI } = await import('@/api/viewsAPI')
-
-      // Delete via API
       await viewsAPI.delete(this.config.tenantId, this.config.userId, {
         id: viewId,
       })
-
-      // Invalidate views cache for this panel
-      this.invalidateCache('views', panelId)
     } catch (error) {
       logger.error(
         { error, viewId, panelId },
@@ -890,167 +409,23 @@ export class APIStorageAdapter implements StorageAdapter {
     }
   }
 
-  async updateColumn(
-    panelId: string,
-    columnId: string,
-    updates: Partial<ColumnDefinition>,
-  ): Promise<void> {
-    try {
-      const { panelsAPI } = await import('@/api/panelsAPI')
-      const { viewsAPI } = await import('@/api/viewsAPI')
-
-      // Get current column to preserve original tags
-      const currentColumns = await this.loadPanelColumns(panelId)
-      const currentColumn = currentColumns?.baseColumns.find(
-        (col) => col.id.toString() === columnId,
-      )
-
-      if (!currentColumn) {
-        throw new Error(`Column ${columnId} not found in panel ${panelId}`)
-      }
-
-      // Preserve original tags - don't change them based on column type
-      const originalTags = currentColumn.tags || []
-
-      // Map frontend column types to backend types
-      const typeMapping: Record<
-        string,
-        | 'text'
-        | 'number'
-        | 'date'
-        | 'boolean'
-        | 'select'
-        | 'multi_select'
-        | 'user'
-        | 'file'
-        | 'custom'
-      > = {
-        string: 'text',
-        number: 'number',
-        date: 'date',
-        boolean: 'boolean',
-        select: 'select',
-        array: 'multi_select',
-        assignee: 'user',
-      }
-
-      // Convert frontend column updates to backend format
-      const backendUpdates = {
-        id: columnId,
-        tenantId: this.config.tenantId,
-        userId: this.config.userId,
-        name: updates.name,
-        type: updates.type ? typeMapping[updates.type] || 'text' : undefined, // Map frontend type to backend type
-        properties: updates.properties,
-        metadata: updates.description
-          ? { description: updates.description }
-          : undefined,
-        // Preserve original tags instead of changing them
-        tags: originalTags,
-        ...(updates.key ? { sourceField: updates.key } : {}),
-      }
-
-      // Update via API
-      await panelsAPI.columns.update(backendUpdates, { id: panelId })
-
-      // If column name was changed, update all views that reference this column
-      if (updates.name && updates.name !== currentColumn.name) {
-        // Get all views for this panel
-        const views = await this.loadPanelViews(panelId)
-
-        // Update each view that references this column
-        for (const view of views) {
-          const viewColumns = view.config.columns || []
-          if (viewColumns.includes(columnId)) {
-            // The column ID stays the same, but we need to refresh the view data
-            // This will be handled by cache invalidation below
-          }
-        }
-      }
-
-      // Invalidate both panels and views cache since column changes affect both
-      this.invalidateCache('panels')
-      this.invalidateCache('views', panelId)
-    } catch (error) {
-      console.error(
-        `Failed to update column ${columnId} in panel ${panelId}:`,
-        error,
-      )
-      throw new Error(
-        `Failed to update column: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      )
-    }
-  }
-
-  async getView(
-    panelId: string,
-    viewId: string,
-  ): Promise<ViewDefinition | null> {
+  async getView(panelId: string, viewId: string): Promise<View | null> {
     try {
       const { viewsAPI } = await import('@/api/viewsAPI')
-      const { panelsAPI } = await import('@/api/panelsAPI')
-      // Check cache first
-      const cachedViews = this.getCacheEntry<ViewDefinition[]>('views', panelId)
-      if (cachedViews) {
-        const cachedView = cachedViews.find((view) => view.id === viewId)
-        if (cachedView) return cachedView
-      }
-
-      // Get from API
       const backendView = await viewsAPI.get(
         this.config.tenantId,
         this.config.userId,
         { id: viewId },
       )
 
-      const columns = await panelsAPI.columns.list(
-        { id: panelId },
-        this.config.tenantId,
-        this.config.userId,
-        backendView.config.columns,
-      )
-
-      const sortConfig = await viewsAPI.sorts.get(
-        { id: viewId },
-        this.config.tenantId,
-        this.config.userId,
-      )
-
-      const frontendView = adaptBackendViewToFrontend(
-        backendView,
-        columns.baseColumns,
-        columns.calculatedColumns,
-        sortConfig,
-      )
-
-      // const patientColumns = columns.baseColumns.map(
-      //   adaptBackendColumnToFrontend,
-      // )
-      // const taskColumns = columns.calculatedColumns.map(
-      //   adaptBackendColumnToFrontend,
-      // )
-
-      // const frontendView: ViewDefinition = {
-      //   ...backendView,
-      //   id: backendView.id.toString(),
-      //   columns: [...patientColumns, ...taskColumns] as ColumnDefinition[],
-      //   title: backendView.name,
-      //   filters: [],
-      //   createdAt: new Date(), //TODO: get the actual createdAt from the backend
-      //   viewType: 'patient',
-      // }
-
-      // Cache the result
-      this.setCacheEntry('views', [frontendView], panelId)
-
-      return frontendView
+      return mapBackendViewToFrontend(backendView, panelId)
     } catch (error) {
       if (error instanceof Error && error.message.includes('404')) {
         return null
       }
-      console.error(
-        `Failed to fetch view ${viewId} from panel ${panelId}:`,
-        error,
+      logger.error(
+        { error, viewId, panelId },
+        `Failed to fetch view ${viewId} from panel ${panelId}`,
       )
       throw new Error(
         `Failed to fetch view: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -1058,119 +433,37 @@ export class APIStorageAdapter implements StorageAdapter {
     }
   }
 
-  /**
-   * Enhanced panel enrichment with sophisticated data loading
-   */
-  private async enrichPanelWithDetails(
-    panel: PanelDefinition,
-  ): Promise<PanelDefinition> {
-    try {
-      const { viewsAPI } = await import('@/api/viewsAPI')
-      // Load columns and views in parallel for maximum efficiency
-      const [columns, views] = await Promise.allSettled([
-        this.loadPanelColumns(panel.id),
-        this.loadPanelViews(panel.id).then((views) =>
-          views?.sort((a, b) => Number(a.id) - Number(b.id)),
-        ),
-      ])
-
-      const enrichedViews =
-        views.status === 'fulfilled' &&
-        views.value &&
-        columns.status === 'fulfilled' &&
-        columns.value
-          ? await Promise.all(
-              views.value.map(async (vw) => {
-                const sortConfig = await viewsAPI.sorts.get(
-                  { id: vw.id.toString() },
-                  this.config.tenantId,
-                  this.config.userId,
-                )
-                return adaptBackendViewToFrontend(
-                  vw,
-                  columns.value?.baseColumns || [],
-                  columns.value?.calculatedColumns || [],
-                  sortConfig,
-                )
-              }),
-            )
-          : []
-
-      // Create enriched panel with all available data
-      const enrichedPanel: PanelDefinition = {
-        ...panel,
-        patientViewColumns:
-          columns.status === 'fulfilled' && columns.value?.baseColumns
-            ? columns.value.baseColumns
-                .filter((column) => column.tags?.includes('panels:patients'))
-                .map(adaptBackendColumnToFrontend)
-            : panel.patientViewColumns || [],
-        taskViewColumns:
-          columns.status === 'fulfilled' && columns.value?.baseColumns
-            ? columns.value.baseColumns
-                .filter((column) => column.tags?.includes('panels:tasks'))
-                .map(adaptBackendColumnToFrontend)
-            : panel.taskViewColumns || [],
-        views: enrichedViews || panel.views || [],
-      }
-
-      return enrichedPanel
-    } catch (error) {
-      console.error(`Failed to enrich panel ${panel.id}:`, error)
-      // Return panel with empty arrays for missing data
-      return {
-        ...panel,
-        patientViewColumns: panel.patientViewColumns || [],
-        taskViewColumns: panel.taskViewColumns || [],
-        views: panel.views || [],
-      }
-    }
-  }
-
-  /**
-   * Load columns for a specific panel
-   */
-  private async loadPanelColumns(
-    panelId: string,
-  ): Promise<ColumnsResponse | null> {
-    try {
-      const { panelsAPI } = await import('@/api/panelsAPI')
-      return await panelsAPI.columns.list(
-        { id: panelId },
-        this.config.tenantId,
-        this.config.userId,
-      )
-    } catch (error) {
-      console.warn(`Failed to load columns for panel ${panelId}:`, error)
-      return null
-    }
-  }
-
-  /**
-   * Load views for a specific panel
-   */
-  private async loadPanelViews(panelId: string): Promise<ViewResponse[]> {
+  async getViewsForPanel(panelId: string): Promise<View[]> {
     try {
       const { viewsAPI } = await import('@/api/viewsAPI')
 
-      // Get all views for the user and filter by panel
-      const allViews = await viewsAPI.all(
-        //TODO: fix this is extremely bad
+      // Get all views and filter by panelId since there's no direct list method by panel
+      const viewsResponse = await viewsAPI.all(
         this.config.tenantId,
         this.config.userId,
       )
 
-      // Filter views that belong to this panel
-      return allViews.views.filter(
-        (view) => view.panelId === Number.parseInt(panelId, 10),
+      // Filter views for the specified panel and map to frontend format
+      const panelViews = viewsResponse.views.filter(
+        (view: ViewsResponse['views'][number]) =>
+          view.panelId === Number.parseInt(panelId, 10),
+      )
+
+      return panelViews.map((view: ViewsResponse['views'][number]) =>
+        mapBackendViewToFrontend(view, panelId),
       )
     } catch (error) {
-      console.warn(`Failed to load views for panel ${panelId}:`, error)
-      return []
+      logger.error(
+        { error, panelId },
+        `Failed to fetch views for panel ${panelId}`,
+      )
+      throw new Error(
+        `Failed to fetch views: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
   }
 
   isLoading(): boolean {
-    return false // API operations are inherently async, no persistent loading state
+    return false
   }
 }

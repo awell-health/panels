@@ -1,13 +1,13 @@
 import { NotFoundError } from '@/errors/not-found-error.js'
 import { ErrorSchema, type IdParam, IdParamSchema } from '@panels/types'
-import { type ViewConfig, ViewConfigSchema } from '@panels/types/views'
+import { type View, ViewSchema } from '@panels/types/views'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 
 const querystringSchema = z.object({
   tenantId: z.string(),
-  userId: z.string(),
+  ownerUserId: z.string(),
 })
 
 type QuerystringType = z.infer<typeof querystringSchema>
@@ -16,7 +16,7 @@ export const viewGet = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: IdParam
     Querystring: QuerystringType
-    Reply: ViewConfig
+    Reply: View
   }>({
     method: 'GET',
     schema: {
@@ -25,7 +25,7 @@ export const viewGet = async (app: FastifyInstance) => {
       params: IdParamSchema,
       querystring: querystringSchema,
       response: {
-        200: ViewConfigSchema,
+        200: ViewSchema,
         404: ErrorSchema,
       },
     },
@@ -43,7 +43,7 @@ export const viewGet = async (app: FastifyInstance) => {
           ],
         },
         {
-          populate: ['panel'],
+          populate: ['panel', 'sort'],
         },
       )
 
@@ -54,27 +54,17 @@ export const viewGet = async (app: FastifyInstance) => {
       reply.statusCode = 200
       return {
         id: view.id,
-        name: view.name,
-        description: '',
         panelId: view.panel.id,
-        userId: view.ownerUserId,
+        name: view.name,
+        ownerUserId: view.ownerUserId,
         tenantId: view.tenantId,
         isPublished: view.isPublished,
-        publishedBy: view.isPublished ? view.ownerUserId : undefined,
-        publishedAt:
-          view.publishedAt && view.publishedAt !== null
-            ? new Date(view.publishedAt)
-            : undefined,
-        config: {
-          columns: view.visibleColumns,
-          groupBy: [],
-          layout: 'table',
-        },
+        publishedAt: view.publishedAt,
+        visibleColumns: view.visibleColumns,
+        sort: view.sort.getItems(),
         metadata: view.metadata,
-        panel: {
-          id: view.panel.id,
-          name: '',
-        },
+        createdAt: view.createdAt,
+        updatedAt: view.updatedAt,
       }
     },
   })

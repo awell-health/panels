@@ -3,16 +3,17 @@ import { cn } from '@/lib/utils'
 import { CheckSquare, ChevronDown, Users } from 'lucide-react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import type { ViewType } from '@/types/panel'
 
-interface ViewDropdownProps {
-  currentView: 'task' | 'patient'
-  onViewChange: (view: 'task' | 'patient') => void
+interface ViewTypeDropdownProps {
+  currentView: ViewType
+  onViewChange: (view: ViewType) => void
 }
 
-export default function ViewDropdown({
+export default function ViewTypeDropdown({
   currentView,
   onViewChange,
-}: ViewDropdownProps) {
+}: ViewTypeDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
@@ -23,7 +24,7 @@ export default function ViewDropdown({
     setMounted(true)
   }, [])
 
-  const getViewContent = (view: 'task' | 'patient') => {
+  const getViewContent = (view: ViewType) => {
     return view === 'patient' ? (
       <>
         <Users className="h-3.5 w-3.5 mr-2 text-gray-500" /> Patient View{' '}

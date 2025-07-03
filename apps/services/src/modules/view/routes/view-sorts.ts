@@ -1,12 +1,10 @@
 import { NotFoundError } from '@/errors/not-found-error.js'
 import { ErrorSchema, type IdParam, IdParamSchema } from '@panels/types'
 import {
-  type ViewSortsInfo,
-  type ViewSortsInfoResponse,
-  ViewSortsInfoResponseSchema,
-  ViewSortsInfoSchema,
+  type ViewSortsUpdate,
   type ViewSortsResponse,
   ViewSortsResponseSchema,
+  ViewSortsUpdateSchema,
 } from '@panels/types/views'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
@@ -15,7 +13,7 @@ import { z } from 'zod'
 // Zod Schemas
 const querystringSchema = z.object({
   tenantId: z.string(),
-  userId: z.string(),
+  ownerUserId: z.string(),
 })
 
 // Types
@@ -44,7 +42,6 @@ export const viewSorts = async (app: FastifyInstance) => {
       const { id } = request.params
       const { tenantId } = request.query
 
-      // Verify view exists and user has access
       const view = await request.store.view.findOne({
         id: Number(id),
         $or: [{ tenantId }, { isPublished: true, tenantId }],
@@ -73,17 +70,17 @@ export const viewSorts = async (app: FastifyInstance) => {
   // PUT /views/:id/sorts - Update view sorts
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: IdParam
-    Body: ViewSortsInfo
-    Reply: ViewSortsInfoResponse
+    Body: ViewSortsUpdate
+    Reply: ViewSortsResponse
   }>({
     method: 'PUT',
     schema: {
       description: 'Update sorts for a view (only owner can update)',
       tags: ['view', 'configuration'],
       params: IdParamSchema,
-      body: ViewSortsInfoSchema,
+      body: ViewSortsUpdateSchema,
       response: {
-        200: ViewSortsInfoResponseSchema,
+        200: ViewSortsResponseSchema,
         404: ErrorSchema,
         400: ErrorSchema,
       },
@@ -91,12 +88,11 @@ export const viewSorts = async (app: FastifyInstance) => {
     url: '/views/:id/sorts',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { sorts, tenantId, userId } = request.body
+      const { sorts, tenantId, ownerUserId } = request.body
 
-      // Only owner can update their view
       const view = await request.store.view.findOne({
         id: Number(id),
-        ownerUserId: userId,
+        ownerUserId,
         tenantId,
       })
 

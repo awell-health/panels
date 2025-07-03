@@ -19,7 +19,7 @@ export type CohortOperator =
 
 // Create / Update Panel
 export const PanelInfoSchema = z.object({
-  name: z.string(),
+  name: z.string().optional(),
   description: z.string().optional(),
   metadata: z.record(z.any()).optional(),
   tenantId: z.string(),

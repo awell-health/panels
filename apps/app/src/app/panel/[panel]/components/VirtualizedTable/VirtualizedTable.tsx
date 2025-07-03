@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { VariableSizeGrid } from 'react-window'
 import AutoSizer from 'react-virtualized-auto-sizer'
-import type { ColumnDefinition } from '@/types/worklist'
+import type { Column, Filter, Sort } from '@/types/panel'
 import { getNestedValue, isMatchingFhirPathCondition } from '@/lib/fhir-path'
 import {
   DndContext,
@@ -35,17 +35,14 @@ import {
   MIN_COLUMN_WIDTH,
   MAX_COLUMN_WIDTH,
 } from './constants'
+import { template } from 'lodash'
 
-interface TableFilter {
-  key: string
-  value: string
-}
-
-interface VirtualizedWorklistTableProps {
+interface VirtualizedTableProps {
   isLoading: boolean
   selectedRows: string[]
   toggleSelectAll: () => void
-  worklistColumns: ColumnDefinition[]
+  columns: Column[]
+  orderColumnMode?: 'auto' | 'manual'
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   tableData: Record<string, any>[]
   handlePDFClick: (pdfUrl: string, patientName: string) => void
@@ -61,25 +58,24 @@ interface VirtualizedWorklistTableProps {
   ) => void
   toggleSelectRow: (rowId: string) => void
   handleAssigneeClick: (taskId: string) => void
-  onColumnUpdate: (updates: Partial<ColumnDefinition>) => void
-  onSortConfigUpdate: (
-    sortConfig: { key: string; direction: 'asc' | 'desc' } | undefined,
-  ) => void
+  onColumnUpdate: (updates: Partial<Column>) => void
+  onSortUpdate: (sort: Sort | undefined) => void
   currentView: string
-  filters: TableFilter[]
-  onFiltersChange: (filters: TableFilter[]) => void
-  initialSortConfig: { key: string; direction: 'asc' | 'desc' } | null
+  filters: Filter[]
+  onFiltersChange: (filters: Filter[]) => void
+  initialSort: Sort | null
   currentUserName?: string
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   onRowClick: (row: Record<string, any>) => void
   handleDragEnd?: (event: DragEndEvent) => void
 }
 
-export function VirtualizedWorklistTable({
+export function VirtualizedTable({
   isLoading,
   selectedRows,
   toggleSelectAll,
-  worklistColumns,
+  columns,
+  orderColumnMode = 'auto',
   tableData,
   handlePDFClick,
   handleTaskClick,
@@ -87,17 +83,17 @@ export function VirtualizedWorklistTable({
   toggleSelectRow,
   handleAssigneeClick,
   onColumnUpdate,
-  onSortConfigUpdate,
+  onSortUpdate,
   currentView,
   filters,
   onFiltersChange,
-  initialSortConfig,
+  initialSort,
   currentUserName,
   onRowClick,
   handleDragEnd,
-}: VirtualizedWorklistTableProps) {
+}: VirtualizedTableProps) {
   // Drag and drop state
-  const [activeColumn, setActiveColumn] = useState<ColumnDefinition | null>(
+  const [activeColumn, setActiveColumn] = useState<Column | null>(
     null,
   )
 
@@ -109,18 +105,21 @@ export function VirtualizedWorklistTable({
 
   // Filter visible columns and sort by order
   const visibleColumns = useMemo(() => {
-    return worklistColumns
-      .filter((col) => col.properties?.display?.visible !== false)
-      .sort((a, b) => {
-        const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
-        const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
-        return orderA - orderB
-      })
-  }, [worklistColumns])
+    const filteredColumns = columns.filter((col: Column) => col.properties?.display?.visible !== false)
+    if (orderColumnMode === 'auto') {
+      return filteredColumns
+        .sort((a: Column, b: Column) => {
+          const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+          const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+          return orderA - orderB
+        })
+    }
+    return filteredColumns
+  }, [columns, orderColumnMode])
 
   // Create a stable key for grid re-rendering
   const gridKey = useMemo(() => {
-    const columnIds = visibleColumns.map((col) => col.id).join('-')
+    const columnIds = visibleColumns.map((col: Column) => col.id).join('-')
     return `${currentView}-${columnIds}`
   }, [currentView, visibleColumns])
 
@@ -142,46 +141,61 @@ export function VirtualizedWorklistTable({
     if (filters && filters.length > 0) {
       filteredData = tableData.filter((row) => {
         return filters.every((filter) => {
-          // Use partial matching with contains() for more user-friendly filtering
-          const fhirPath = `${filter.key}.lower().contains('${filter.value.toLowerCase()}')`
-          return isMatchingFhirPathCondition(row, fhirPath)
+          const column = columns.find((c) => c.id === filter.columnId)
+          if (column) {
+            if (filter.fhirExpressionTemplate) {
+              const fhirPath = template(filter.fhirExpressionTemplate, { interpolate: /{{([\s\S]+?)}}/g })({ sourceField: column.sourceField, value: filter.value })
+              return isMatchingFhirPathCondition(row, fhirPath)
+            }
+            return true
+          }
+          // Legacy behaviour
+          const legacyColumn = columns.find((c) => c.sourceField === filter.fhirPathFilter?.[0])
+          if (legacyColumn && filter.fhirPathFilter) {
+            const fhirPath = `${legacyColumn.sourceField}.lower().contains('${filter.fhirPathFilter[1].toLowerCase()}')`
+            return isMatchingFhirPathCondition(row, fhirPath)
+          }
+          return true
         })
       })
     }
 
     // Then apply sorting
-    if (!initialSortConfig) return filteredData
+    if (!initialSort) return filteredData
+
+    const sortFhirPath = columns.find((c) => c.id === initialSort.columnId)?.sourceField
+    if (!sortFhirPath) return filteredData
 
     return [...filteredData].sort((a, b) => {
-      const aValue = getNestedValue(a, initialSortConfig.key)
-      const bValue = getNestedValue(b, initialSortConfig.key)
+      const aValue = getNestedValue(a, sortFhirPath)
+      const bValue = getNestedValue(b, sortFhirPath)
 
       if (aValue === null || aValue === undefined) return 1
       if (bValue === null || bValue === undefined) return -1
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return initialSortConfig.direction === 'asc'
+        return initialSort.direction === 'asc'
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue)
       }
 
       if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return initialSortConfig.direction === 'asc'
+        return initialSort.direction === 'asc'
           ? aValue - bValue
           : bValue - aValue
       }
 
       if (aValue instanceof Date && bValue instanceof Date) {
-        return initialSortConfig.direction === 'asc'
+        return initialSort.direction === 'asc'
           ? aValue.getTime() - bValue.getTime()
           : bValue.getTime() - aValue.getTime()
       }
 
-      return initialSortConfig.direction === 'asc'
+      return initialSort.direction === 'asc'
         ? String(aValue).localeCompare(String(bValue))
         : String(bValue).localeCompare(String(aValue))
     })
-  }, [tableData, initialSortConfig, filters])
+  }, [tableData, initialSort, filters, columns])
 
   // Calculate base column width based on title length and custom width
   const getBaseColumnWidth = useCallback(
@@ -219,30 +233,34 @@ export function VirtualizedWorklistTable({
 
   // Handle sorting
   const handleSort = useCallback(
-    (columnKey: string) => {
-      const current = initialSortConfig
-      let newSortConfig: { key: string; direction: 'asc' | 'desc' } | undefined
+    (columnId: string) => {
+      const current = initialSort
+      let newSort: Sort | undefined
 
-      if (current?.key === columnKey) {
-        newSortConfig = {
-          key: columnKey,
+      if (current?.columnId === columnId) {
+        newSort = {
+          columnId,
           direction: current.direction === 'asc' ? 'desc' : 'asc',
         }
       } else {
-        newSortConfig = { key: columnKey, direction: 'desc' }
+        newSort = { columnId, direction: 'desc' }
       }
 
-      onSortConfigUpdate(newSortConfig)
+      onSortUpdate(newSort)
     },
-    [initialSortConfig, onSortConfigUpdate],
+    [initialSort, onSortUpdate],
   )
 
   // Handle filtering
   const handleFilter = useCallback(
-    (columnKey: string, value: string) => {
-      const newFilters = filters.filter((f) => f.key !== columnKey)
+    (columnId: string, value: string) => {
+      const newFilters = filters.filter((f) => f.columnId !== columnId)
       if (value) {
-        newFilters.push({ key: columnKey, value })
+        newFilters.push({
+          columnId: columnId,
+          value,
+          fhirExpressionTemplate: `{{sourceField}}.lower().contains('{{value}}')`
+        })
       }
       onFiltersChange(newFilters)
     },
@@ -278,7 +296,7 @@ export function VirtualizedWorklistTable({
   )
 
   // Get type icon for drag overlay
-  const getTypeIcon = useCallback((column: ColumnDefinition) => {
+  const getTypeIcon = useCallback((column: Column) => {
     switch (column.type) {
       case 'date':
         return (
@@ -414,7 +432,7 @@ export function VirtualizedWorklistTable({
       columns: visibleColumns,
       getColumnWidth,
       onSort: handleSort,
-      sortConfig: initialSortConfig,
+      sortConfig: initialSort,
       onFilter: handleFilter,
       filters,
       onColumnUpdate,
@@ -423,7 +441,7 @@ export function VirtualizedWorklistTable({
       visibleColumns,
       getColumnWidth,
       handleSort,
-      initialSortConfig,
+      initialSort,
       handleFilter,
       filters,
       onColumnUpdate,
@@ -436,7 +454,7 @@ export function VirtualizedWorklistTable({
         <div className="flex flex-col items-center">
           <div className="h-8 w-8 text-blue-500 animate-spin mb-2" />
           <p className="text-sm text-gray-500 font-normal">
-            Building your worklist...
+            Building your panel...
           </p>
         </div>
       </div>

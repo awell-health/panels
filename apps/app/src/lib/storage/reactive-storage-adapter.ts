@@ -1,8 +1,4 @@
-import type {
-  PanelDefinition,
-  ViewDefinition,
-  ColumnDefinition,
-} from '@/types/worklist'
+import type { Panel, View, Column } from '@/types/panel'
 import type { StorageAdapter } from './types'
 import { ReactiveStore } from '../reactive/reactive-store'
 import { APIStorageAdapter } from './api-storage-adapter'
@@ -10,6 +6,7 @@ import { APIStorageAdapter } from './api-storage-adapter'
 /**
  * Reactive Storage Adapter - Integrates TinyBase with existing storage system
  * Provides reactive updates while maintaining compatibility with existing APIs
+ * Now handles panels, views, and columns as separate entities
  */
 export class ReactiveStorageAdapter implements StorageAdapter {
   private reactiveStore: ReactiveStore
@@ -53,7 +50,6 @@ export class ReactiveStorageAdapter implements StorageAdapter {
       const panels = await this.underlyingAdapter.getPanels()
       this.reactiveStore.setPanels(panels)
 
-      // Views will be loaded when needed via getView calls
       this.reactiveStore.setLastSync(Date.now())
     } catch (error) {
       console.error(
@@ -68,7 +64,7 @@ export class ReactiveStorageAdapter implements StorageAdapter {
     }
   }
 
-  async getPanels(): Promise<PanelDefinition[]> {
+  async getPanels(): Promise<Panel[]> {
     if (!this.isInitialized) {
       await this.waitForInitialization()
     }
@@ -76,7 +72,7 @@ export class ReactiveStorageAdapter implements StorageAdapter {
     return panels
   }
 
-  async getPanel(id: string): Promise<PanelDefinition | null> {
+  async getPanel(id: string): Promise<Panel | null> {
     if (!this.isInitialized) {
       await this.waitForInitialization()
     }
@@ -84,9 +80,7 @@ export class ReactiveStorageAdapter implements StorageAdapter {
     return panel
   }
 
-  async createPanel(
-    panel: Omit<PanelDefinition, 'id'>,
-  ): Promise<PanelDefinition> {
+  async createPanel(panel: Omit<Panel, 'id'>): Promise<Panel> {
     if (!this.underlyingAdapter) {
       throw new Error('Storage adapter not initialized')
     }
@@ -105,23 +99,19 @@ export class ReactiveStorageAdapter implements StorageAdapter {
     }
   }
 
-  async updatePanel(
-    id: string,
-    updates: Partial<PanelDefinition>,
-  ): Promise<{ idMapping?: Map<string, string> }> {
+  async updatePanel(id: string, updates: Partial<Panel>): Promise<Panel> {
     if (!this.underlyingAdapter) {
       throw new Error('Storage adapter not initialized')
     }
 
     try {
-      // Update in underlying adapter and get ID mapping
-      const result = await this.underlyingAdapter.updatePanel(id, updates)
+      // Update in underlying adapter
+      const updatedPanel = await this.underlyingAdapter.updatePanel(id, updates)
 
       // Update in reactive store
-      this.reactiveStore.updatePanel(id, updates)
+      this.reactiveStore.setPanel(updatedPanel)
 
-      // Return ID mapping for further processing
-      return result
+      return updatedPanel
     } catch (error) {
       console.error('Failed to update panel:', error)
       throw error
@@ -137,7 +127,7 @@ export class ReactiveStorageAdapter implements StorageAdapter {
       // Delete from underlying adapter
       await this.underlyingAdapter.deletePanel(id)
 
-      // Delete from reactive store
+      // Delete from reactive store (this will also remove associated views and columns)
       this.reactiveStore.deletePanel(id)
     } catch (error) {
       console.error('Failed to delete panel:', error)
@@ -145,20 +135,167 @@ export class ReactiveStorageAdapter implements StorageAdapter {
     }
   }
 
-  async addView(
-    panelId: string,
-    view: Omit<ViewDefinition, 'id'>,
-  ): Promise<ViewDefinition> {
+  // Get all views across all panels
+  async getViews(): Promise<View[]> {
     if (!this.underlyingAdapter) {
       throw new Error('Storage adapter not initialized')
     }
 
     try {
-      // Add view in underlying adapter
-      const createdView = await this.underlyingAdapter.addView(panelId, view)
+      // Delegate to underlying adapter
+      const views = await this.underlyingAdapter.getViews()
+
+      // Update reactive store with the views
+      this.reactiveStore.setViews(views)
+
+      return views
+    } catch (error) {
+      console.error('Failed to get all views:', error)
+      throw error
+    }
+  }
+
+  // Get all columns across all panels
+  async getColumns(): Promise<Column[]> {
+    if (!this.underlyingAdapter) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    try {
+      // Delegate to underlying adapter
+      const columns = await this.underlyingAdapter.getColumns()
+
+      // Update reactive store with the columns
+      this.reactiveStore.setColumns(columns)
+
+      return columns
+    } catch (error) {
+      console.error('Failed to get all columns:', error)
+      throw error
+    }
+  }
+
+  // Column operations - now separate from panels
+  async getColumnsForPanel(panelId: string): Promise<Column[]> {
+    if (!this.isInitialized) {
+      await this.waitForInitialization()
+    }
+
+    // First check reactive store
+    let columns = this.reactiveStore.getColumnsForPanel(panelId)
+
+    // If no columns in reactive store, fetch from underlying adapter
+    if (columns.length === 0 && this.underlyingAdapter) {
+      try {
+        // Note: We'll need to add this method to the underlying adapter
+        // For now, we'll return empty array and the underlying adapter should populate this
+        const panel = await this.underlyingAdapter.getPanel(panelId)
+        if (panel) {
+          // The underlying adapter should load columns separately if they exist
+          columns = this.reactiveStore.getColumnsForPanel(panelId)
+        }
+      } catch (error) {
+        console.error('Failed to fetch columns for panel:', error)
+      }
+    }
+
+    return columns
+  }
+
+  async addColumn(
+    panelId: string,
+    column: Omit<Column, 'id'>,
+  ): Promise<Column> {
+    if (!this.underlyingAdapter) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    try {
+      // Add column in underlying adapter
+      const createdColumn = await this.underlyingAdapter.addColumn(
+        panelId,
+        column,
+      )
 
       // Add to reactive store
-      this.reactiveStore.setView(panelId, createdView)
+      this.reactiveStore.setColumn(createdColumn)
+
+      return createdColumn
+    } catch (error) {
+      console.error('Failed to add column:', error)
+      throw error
+    }
+  }
+
+  async updateColumn(
+    panelId: string,
+    columnId: string,
+    updates: Partial<Column>,
+  ): Promise<Column> {
+    if (!this.underlyingAdapter) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    try {
+      // Update in underlying adapter
+      const updatedColumn = await this.underlyingAdapter.updateColumn(
+        panelId,
+        columnId,
+        updates,
+      )
+
+      // Update in reactive store
+      this.reactiveStore.setColumn(updatedColumn)
+
+      return updatedColumn
+    } catch (error) {
+      console.error('Failed to update column:', error)
+      throw error
+    }
+  }
+
+  async deleteColumn(panelId: string, columnId: string): Promise<void> {
+    if (!this.underlyingAdapter) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    try {
+      // Delete from underlying adapter
+      await this.underlyingAdapter.deleteColumn(panelId, columnId)
+
+      // Remove from reactive store
+      this.reactiveStore.deleteColumn(columnId)
+    } catch (error) {
+      console.error('Failed to delete column:', error)
+      throw error
+    }
+  }
+
+  // View operations - now separate from panels
+  async getViewsForPanel(panelId: string): Promise<View[]> {
+    if (!this.isInitialized) {
+      await this.waitForInitialization()
+    }
+    return this.reactiveStore.getViewsForPanel(panelId)
+  }
+
+  async addView(panelId: string, view: Omit<View, 'id'>): Promise<View> {
+    if (!this.underlyingAdapter) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    try {
+      // Ensure panelId is set
+      const viewWithPanelId = { ...view, panelId }
+
+      // Add view in underlying adapter
+      const createdView = await this.underlyingAdapter.addView(
+        panelId,
+        viewWithPanelId,
+      )
+
+      // Add to reactive store
+      this.reactiveStore.setView(createdView)
 
       return createdView
     } catch (error) {
@@ -170,18 +307,24 @@ export class ReactiveStorageAdapter implements StorageAdapter {
   async updateView(
     panelId: string,
     viewId: string,
-    updates: Partial<ViewDefinition>,
-  ): Promise<void> {
+    updates: Partial<View>,
+  ): Promise<View> {
     if (!this.underlyingAdapter) {
       throw new Error('Storage adapter not initialized')
     }
 
     try {
       // Update in underlying adapter
-      await this.underlyingAdapter.updateView(panelId, viewId, updates)
+      const updatedView = await this.underlyingAdapter.updateView(
+        panelId,
+        viewId,
+        updates,
+      )
 
       // Update in reactive store
-      this.reactiveStore.updateView(panelId, viewId, updates)
+      this.reactiveStore.setView(updatedView)
+
+      return updatedView
     } catch (error) {
       console.error('Failed to update view:', error)
       throw error
@@ -198,49 +341,18 @@ export class ReactiveStorageAdapter implements StorageAdapter {
       await this.underlyingAdapter.deleteView(panelId, viewId)
 
       // Delete from reactive store
-      this.reactiveStore.deleteView(panelId, viewId)
+      this.reactiveStore.deleteView(viewId)
     } catch (error) {
       console.error('Failed to delete view:', error)
       throw error
     }
   }
 
-  async updateColumn(
-    panelId: string,
-    columnId: string,
-    updates: Partial<ColumnDefinition>,
-  ): Promise<void> {
-    if (!this.underlyingAdapter) {
-      throw new Error('Storage adapter not initialized')
-    }
-
-    try {
-      // Update in underlying adapter
-      await this.underlyingAdapter.updateColumn(panelId, columnId, updates)
-
-      // Update in reactive store
-      this.reactiveStore.updateColumn(panelId, columnId, updates)
-    } catch (error) {
-      console.error('Failed to update column:', error)
-      throw error
-    }
-  }
-
-  async getView(
-    panelId: string,
-    viewId: string,
-  ): Promise<ViewDefinition | null> {
+  async getView(panelId: string, viewId: string): Promise<View | null> {
     if (!this.isInitialized) {
       await this.waitForInitialization()
     }
     return this.reactiveStore.getView(panelId, viewId) || null
-  }
-
-  async getViewsForPanel(panelId: string): Promise<ViewDefinition[]> {
-    if (!this.isInitialized) {
-      await this.waitForInitialization()
-    }
-    return this.reactiveStore.getViewsForPanel(panelId)
   }
 
   isLoading(): boolean {

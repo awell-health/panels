@@ -1,28 +1,27 @@
 'use client'
 
-import type { ColumnDefinition } from '@/types/worklist'
+import type { Column, Sort } from '@/types/panel'
 import {
   ArrowUpDown,
   Calendar,
-  Database,
   Hash,
   Text,
   ToggleLeft,
-  X,
+  X
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 type ColumnMenuProps = {
-  column: ColumnDefinition
+  column: Column
   isOpen: boolean
   onClose: () => void
   position: { top: number; left: number }
   onSort: () => void
-  sortConfig: { key: string; direction: 'asc' | 'desc' } | null
+  sortConfig: Sort | null
   filterValue: string
   onFilter: (value: string) => void
-  onColumnUpdate?: (updates: Partial<ColumnDefinition>) => void
+  onColumnUpdate?: (updates: Partial<Column>) => void
 }
 
 export function ColumnMenu({
@@ -38,26 +37,20 @@ export function ColumnMenu({
 }: ColumnMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [localFilterValue, setLocalFilterValue] = useState(filterValue)
-  const [localColumnKey, setLocalColumnKey] = useState(column.key)
+  const [localColumnKey, setLocalColumnKey] = useState(column.sourceField)
   const [localColumnName, setLocalColumnName] = useState(column.name)
   const [localColumnDescription, setLocalColumnDescription] = useState(
-    column.description,
+    column.metadata?.description,
   )
   const [localColumnType, setLocalColumnType] = useState(column.type)
-  const [localColumnSource, setLocalColumnSource] = useState(
-    column.source === 'Metriport' ? 'Awell' : column.source,
-  )
 
   // Update local values when props change
   useEffect(() => {
     setLocalFilterValue(filterValue)
-    setLocalColumnKey(column.key)
+    setLocalColumnKey(column.sourceField)
     setLocalColumnName(column.name)
-    setLocalColumnDescription(column.description)
+    setLocalColumnDescription(column.metadata?.description)
     setLocalColumnType(column.type)
-    setLocalColumnSource(
-      column.source === 'Metriport' ? 'Awell' : column.source,
-    )
   }, [filterValue, column])
 
   // Close menu when clicking outside
@@ -89,7 +82,7 @@ export function ColumnMenu({
 
   // Get sort label based on column type and current sort state
   const getSortLabel = () => {
-    const isSorted = sortConfig?.key === column.key
+    const isSorted = sortConfig?.columnId === column.id
     const isAscending = sortConfig?.direction === 'asc'
 
     switch (column.type) {
@@ -323,7 +316,7 @@ export function ColumnMenu({
                 id="column-type"
                 value={localColumnType}
                 onChange={(e) =>
-                  setLocalColumnType(e.target.value as ColumnDefinition['type'])
+                  setLocalColumnType(e.target.value as Column['type'])
                 }
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => {
@@ -333,15 +326,14 @@ export function ColumnMenu({
                 }}
                 className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="string">String</option>
+                <option value="text">String</option>
                 <option value="number">Number</option>
                 <option value="boolean">Boolean</option>
                 <option value="date">Date</option>
                 <option value="datetime">Datetime</option>
-                <option value="tasks">Tasks</option>
                 <option value="select">Select</option>
-                <option value="array">Array</option>
-                <option value="assignee">Assignee</option>
+                <option value="multi_select">Array</option>
+                <option value="user">Assignee</option>
               </select>
             </div>
             <div>
@@ -365,37 +357,18 @@ export function ColumnMenu({
                 className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            <div className="flex items-center">
-              <Database className="h-3.5 w-3.5 mr-2 text-gray-500" />
-              <label htmlFor="column-source" className="text-xs text-gray-500">
-                Source:
-              </label>
-            </div>
-            <input
-              id="column-source"
-              type="text"
-              value={localColumnSource || ''}
-              onChange={(e) => setLocalColumnSource(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === ' ') {
-                  e.stopPropagation()
-                }
-              }}
-              className="w-full px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter source..."
-            />
             <button
               type="button"
               className="w-full px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
               onClick={() => {
                 onColumnUpdate?.({
                   id: column.id,
-                  key: localColumnKey,
+                  sourceField: localColumnKey,
                   name: localColumnName,
-                  description: localColumnDescription,
                   type: localColumnType,
-                  source: localColumnSource,
+                  metadata: {
+                    description: localColumnDescription,
+                  },
                 })
                 onClose()
               }}
@@ -404,23 +377,6 @@ export function ColumnMenu({
             </button>
           </div>
         </div>
-
-        {/* Options with colors (if available) */}
-        {column.options && column.options.length > 0 && (
-          <div className="px-3 py-2 text-xs font-normal">
-            <div className="mb-1 text-gray-500">Options:</div>
-            {column.options.map((option, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-              <div key={index} className="flex items-center py-1">
-                <div
-                  className="w-3 h-3 rounded-full mr-2"
-                  style={{ backgroundColor: option.color }}
-                />
-                <span>{option.value}</span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )

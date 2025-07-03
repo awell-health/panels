@@ -1,24 +1,25 @@
 'use client'
-import type { ColumnDefinition } from '@/types/worklist'
 import { Code, Plus, Search } from 'lucide-react'
-import { ColumnsDropdown } from './ColumnsDropdown'
-import WorklistViewDropDown from './WorklistViewDropDown'
+import { type ColumnWithVisibility, ColumnsDropdown } from './ColumnsDropdown'
+import WorklistViewDropDown from './ViewTypeDropdown'
+import type { ViewType } from '@/types/panel'
 
-interface WorklistToolbarProps {
+interface PanelToolbarProps {
   searchTerm: string
   onSearch: (term: string) => void
   searchMode: 'text' | 'fhirpath'
   onSearchModeChange: (mode: 'text' | 'fhirpath') => void
   onNewWorklist?: () => void
   onEnrichData?: () => void
-  currentView: 'patient' | 'task' | undefined
-  setCurrentView?: (view: 'patient' | 'task') => void
-  worklistColumns: ColumnDefinition[]
+  currentView: ViewType
+  setCurrentView?: (view: ViewType) => void
+  columns: ColumnWithVisibility[]
   onAddColumn: () => void
   onColumnVisibilityChange: (columnId: string, visible: boolean) => void
+  isViewPage?: boolean
 }
 
-export default function WorklistToolbar({
+export default function PanelToolbar({
   searchTerm,
   onSearch,
   searchMode,
@@ -26,19 +27,20 @@ export default function WorklistToolbar({
   onEnrichData,
   currentView,
   setCurrentView,
-  worklistColumns,
+  columns,
   onAddColumn,
   onColumnVisibilityChange,
-}: WorklistToolbarProps) {
+  isViewPage = false,
+}: PanelToolbarProps) {
   return (
     <div className="border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between p-2">
-        {currentView && (
+        {!isViewPage && (
           <div className="flex items-center space-x-3">
-            {/* View dropdown */}
+            {/* View dropdown - only show on panel page */}
             <WorklistViewDropDown
               currentView={currentView}
-              onViewChange={setCurrentView || (() => {})}
+              onViewChange={setCurrentView || (() => { })}
             />
           </div>
         )}
@@ -88,7 +90,7 @@ export default function WorklistToolbar({
           </button>
 
           <ColumnsDropdown
-            columns={worklistColumns}
+            columns={columns}
             onColumnVisibilityChange={onColumnVisibilityChange}
           />
         </div>
@@ -114,4 +116,4 @@ export default function WorklistToolbar({
       </div>
     </div>
   )
-}
+} 

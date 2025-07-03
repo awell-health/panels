@@ -2,17 +2,17 @@
 
 import type React from 'react'
 import { createContext, useContext } from 'react'
-import type { ColumnDefinition } from '@/types/worklist'
+import type { Column, Filter, Sort } from '@/types/panel'
 
 interface StickyGridContextValue {
   stickyIndices: number[]
-  columns: ColumnDefinition[]
+  columns: Column[]
   getColumnWidth: (index: number) => number
-  onSort?: (columnKey: string) => void
-  sortConfig?: { key: string; direction: 'asc' | 'desc' } | null
+  onSort?: (columnId: string) => void
+  sortConfig?: Sort | null
   onFilter?: (columnKey: string, value: string) => void
-  filters?: Array<{ key: string; value: string }>
-  onColumnUpdate?: (updates: Partial<ColumnDefinition>) => void
+  filters?: Filter[]
+  onColumnUpdate?: (updates: Partial<Column>) => void
 }
 
 const StickyGridContext = createContext<StickyGridContextValue | null>(null)

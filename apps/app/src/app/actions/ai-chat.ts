@@ -1,11 +1,7 @@
 'use server'
 
 import { logger } from '@/lib/logger'
-import type {
-  ViewDefinition,
-  WorklistDefinition,
-  ColumnChangesResponse,
-} from '@/types/worklist'
+import type { Panel, Column, ColumnChangesResponse } from '@/types/panel'
 import { wrapOpenAI } from 'langsmith/wrappers'
 import { OpenAI } from 'openai'
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
@@ -35,7 +31,8 @@ export const columnAiAssistantMessageHandler = async (
   context?: {
     currentViewId?: string
     currentViewType: 'patient' | 'task'
-    panelDefinition?: WorklistDefinition
+    panel?: Panel
+    columns?: Column[]
   },
 ): Promise<{
   response: string
@@ -85,6 +82,39 @@ export const columnAiAssistantMessageHandler = async (
 - New columns added here become available to all views
 - Use descriptive, unique column names and IDs`
 
+  // Handle panel context - may be undefined
+  const panelJson = context?.panel
+    ? JSON.stringify(
+        {
+          id: context.panel.id,
+          name: context.panel.name,
+          description: context.panel.description,
+          metadata: context.panel.metadata,
+          createdAt: context.panel.createdAt,
+        },
+        null,
+        2,
+      )
+    : null
+
+  const panelContext = panelJson
+    ? `**Panel Definition:**\n${panelJson}`
+    : '**Panel Definition:** Not available (working in standalone mode)'
+
+  // Handle columns context - filter by view type if specified
+  const relevantColumns = context?.columns
+    ? context.columns.filter((col) =>
+        context.currentViewType === 'patient'
+          ? col.tags?.includes('panels:patients')
+          : col.tags?.includes('panels:tasks'),
+      )
+    : []
+
+  const columnsContext =
+    relevantColumns.length > 0
+      ? `**Existing Columns for ${context?.currentViewType} view:**\n${JSON.stringify(relevantColumns, null, 2)}`
+      : `**Existing Columns:** No columns found for ${context?.currentViewType} view type`
+
   const prompt = `You are **DataFlow**, a knowledgeable and efficient healthcare data assistant specializing in designing and optimizing **panel columns** for clinical workflows. Your primary goal is to help users create meaningful, actionable columns that enhance care delivery and operational efficiency.
 
 You work exclusively with **FHIR data** and help users transform complex healthcare data into clear, useful panel views for clinicians, care coordinators, and administrative staff.
@@ -95,8 +125,9 @@ You work exclusively with **FHIR data** and help users transform complex healthc
 
 ${contextInfo}
 
-**Panel Definition:**
-${JSON.stringify(context?.panelDefinition, null, 2)}
+${panelContext}
+
+${columnsContext}
 
 **Available FHIR Data Sample:**
 ${JSON.stringify(reducedData, null, 2)}
@@ -240,11 +271,10 @@ When making column changes, respond with this exact JSON structure:
       "operation": "create|update|delete",
       "viewType": "patient|task",
       "column": {
-        "id": "unique_column_id",
         "name": "User-friendly column name",
-        "type": "string|number|date|boolean|tasks|select|array",
-        "key": "fhirpath.expression.here",
-        "description": "Clinical context and purpose"
+        "type": "text|number|date|boolean|select|multi_select|user|file|custom",
+        "sourceField": "fhirpath.expression.here",
+        "order": 0
       }
     }
   ],
@@ -253,7 +283,7 @@ When making column changes, respond with this exact JSON structure:
 \`\`\`
 
 **Operation Types:**
-- **"create"**: Add a new column (requires full column definition)
+- **"create"**: Add a new column (requires full column definition). The order is the position of the column in the view. Always add the column at the end of the view.
 - **"update"**: Modify existing column (requires column.id + changed properties)
 - **"delete"**: Remove column (only requires id and viewType)
 
@@ -263,6 +293,7 @@ When making column changes, respond with this exact JSON structure:
 - Always specify the correct viewType for each change
 - Use action language like "I'm adding..." or "I've created..." rather than "I suggest..." when providing JSON changes
 - The changes take effect immediately upon your response
+- Use \`sourceField\` for FHIRPath expressions
 
 **Column Management Rules:**
 ${columnManagementRules}
@@ -298,6 +329,7 @@ ${columnManagementRules}
 ---
 
 Be helpful, accurate, and focused on creating meaningful healthcare panels and views that enhance patient care and operational efficiency.`
+
   const response = await chatWithAI(messages, prompt, userName)
 
   const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)

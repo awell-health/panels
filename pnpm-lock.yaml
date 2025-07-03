@@ -102,6 +102,9 @@ importers:
       '@stytch/vanilla-js':
         specifier: ^5.24.5
         version: 5.24.5
+      '@types/lodash':
+        specifier: ^4.17.20
+        version: 4.17.20
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.4)
@@ -120,6 +123,9 @@ importers:
       langsmith:
         specifier: ^0.3.36
         version: 0.3.36(@opentelemetry/api@1.9.0)(openai@4.103.0(encoding@0.1.13)(ws@8.18.2)(zod@3.25.67))
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
       lucide-react:
         specifier: ^0.511.0
         version: 0.511.0(react@19.1.0)
@@ -2272,6 +2278,9 @@ packages:
 
   '@types/linkify-it@5.0.0':
     resolution: {integrity: sha512-sVDA58zAw4eWAffKOaQH5/5j3XeayukzDk+ewSsnv3p4yJEZHCCzMDiZM8e0OUrRvmpGZ85jf4yDHkHsgBNr9Q==}
+
+  '@types/lodash@4.17.20':
+    resolution: {integrity: sha512-H3MHACvFUEiujabxhaI/ImO6gUrd8oOurg7LQtS7mbwIXA/cUqWrvBsaeJ23aZEPk1TAYkurjfMbSELfoCXlGA==}
 
   '@types/long@4.0.2':
     resolution: {integrity: sha512-MqTGEo5bj5t157U6fA/BiDynNkn0YknVdh48CMPkTSpFTVmvao5UQmm7uEF6xBEo7qIMAlY/JSleYaE6VOdpaA==}
@@ -8581,6 +8590,8 @@ snapshots:
       hoist-non-react-statics: 3.3.2
 
   '@types/linkify-it@5.0.0': {}
+
+  '@types/lodash@4.17.20': {}
 
   '@types/long@4.0.2': {}
 

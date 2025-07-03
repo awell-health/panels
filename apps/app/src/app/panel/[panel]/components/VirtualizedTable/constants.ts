@@ -1,19 +1,17 @@
-import type { ColumnDefinition } from '@/types/worklist'
+import type { Column } from '@/types/panel'
 
 // Column width mapping based on column types - now used as minimum widths
-export const COLUMN_MIN_WIDTH_MAPPING: Record<
-  ColumnDefinition['type'],
-  number
-> = {
-  string: 120,
+export const COLUMN_MIN_WIDTH_MAPPING: Record<Column['type'], number> = {
+  text: 120,
   number: 100,
   date: 120,
   datetime: 120,
   boolean: 80,
-  tasks: 200,
   select: 120,
-  array: 150,
-  assignee: 140,
+  multi_select: 150,
+  user: 140,
+  file: 150,
+  custom: 150,
 }
 
 // Text measurement constants
@@ -30,10 +28,10 @@ const BUFFER_WIDTH = 32 // Extra buffer for comfortable reading
  */
 export function calculateColumnWidthByTitle(
   title: string,
-  type: ColumnDefinition['type'],
+  type: Column['type'],
 ): number {
   if (!title) {
-    return COLUMN_MIN_WIDTH_MAPPING[type] || COLUMN_MIN_WIDTH_MAPPING.string
+    return COLUMN_MIN_WIDTH_MAPPING[type] || COLUMN_MIN_WIDTH_MAPPING.text
   }
 
   // Calculate width based on title length
@@ -43,7 +41,7 @@ export function calculateColumnWidthByTitle(
 
   // Get minimum width for this column type
   const minWidth =
-    COLUMN_MIN_WIDTH_MAPPING[type] || COLUMN_MIN_WIDTH_MAPPING.string
+    COLUMN_MIN_WIDTH_MAPPING[type] || COLUMN_MIN_WIDTH_MAPPING.text
 
   // Return the larger of calculated width or minimum width, capped at maximum
   return Math.max(

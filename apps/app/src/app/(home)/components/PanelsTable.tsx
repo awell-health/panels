@@ -5,18 +5,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { PanelDefinition } from '@/types/worklist'
-import { DEFAULT_WORKLIST } from '@/utils/constants'
+import type { Panel } from '@/types/panel'
+import { DEFAULT_PANEL } from '@/utils/constants'
 import { ChevronRight, LayoutGrid, Plus, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 import { useDateTimeFormat } from '@/hooks/use-date-time-format'
+import { useReactiveColumns, useReactiveViews } from '@/hooks/use-reactive-data'
+import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 
 type PanelsTableProps = {
-  panels: PanelDefinition[]
+  panels: Panel[]
   onDeletePanel: (panelId: string) => void
   onDeleteView: (panelId: string, viewId: string) => void
-  createPanel: (panel: PanelDefinition) => Promise<PanelDefinition>
+  createPanel: (panel: Panel) => Promise<Panel>
 }
 
 const PanelsTable: React.FC<PanelsTableProps> = ({
@@ -62,7 +64,7 @@ const PanelsTable: React.FC<PanelsTableProps> = ({
   }
 
   const onCreatePanel = () => {
-    createPanel(DEFAULT_WORKLIST)
+    createPanel(DEFAULT_PANEL)
       .then((newPanel) => {
         router.push(`/panel/${newPanel.id}`)
       })
@@ -141,14 +143,32 @@ const PanelsTable: React.FC<PanelsTableProps> = ({
 }
 
 const PanelRow: React.FC<{
-  panel: PanelDefinition
+  panel: Panel
   onDeletePanel: (panelId: string) => void
   onDeleteView: (panelId: string, viewId: string) => void
 }> = ({ panel, onDeletePanel, onDeleteView }) => {
-  const { id, title, taskViewColumns, patientViewColumns, createdAt, views } =
-    panel
+  const { id, name, createdAt } = panel
   const router = useRouter()
   const { formatDateTime } = useDateTimeFormat()
+
+  const { columns: allColumns } = useReactiveColumns(id)
+  const { views } = useReactiveViews(id)
+
+  const patientColumns = allColumns.filter(col => col.tags?.includes('panels:patients'))
+  const taskColumns = allColumns.filter(col => col.tags?.includes('panels:tasks'))
+  const totalColumns = patientColumns.length + taskColumns.length
+
+  const { deletePanel } = useReactivePanelStore()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const handleDelete = async () => {
+    try {
+      await deletePanel(id)
+      setShowDeleteConfirm(false)
+    } catch (error) {
+      console.error('Failed to delete panel:', error)
+    }
+  }
 
   return (
     <React.Fragment key={id}>
@@ -159,11 +179,11 @@ const PanelRow: React.FC<{
         <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2 font-medium">
           <div className="flex items-center">
             <LayoutGrid className="h-3 w-3 mr-2 text-yellow-800" />
-            {title}
+            {name}
           </div>
         </TableCell>
         <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
-          {taskViewColumns.length + patientViewColumns.length}
+          {totalColumns}
         </TableCell>
         <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
           {formatDateTime(createdAt)}
@@ -174,7 +194,7 @@ const PanelRow: React.FC<{
             className="h-6 w-6 p-0 rounded-full hover:bg-neutral-100"
             onClick={(e) => {
               e.stopPropagation()
-              onDeletePanel(id)
+              setShowDeleteConfirm(true)
             }}
             aria-label="Remove from history"
           >
@@ -192,14 +212,11 @@ const PanelRow: React.FC<{
           <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
             <div className="flex items-center pl-6">
               <ChevronRight className="h-3 w-3 mr-2 text-neutral-400" />
-              {view.title}
+              {view.name}
             </div>
           </TableCell>
           <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
-            {view.columns
-              ? view.columns.length
-              : (view.taskViewColumns?.length || 0) +
-                (view.patientViewColumns?.length || 0)}
+            {view.visibleColumns.length}
           </TableCell>
           <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2">
             {formatDateTime(view.createdAt)}
@@ -219,6 +236,29 @@ const PanelRow: React.FC<{
           </TableCell>
         </TableRow>
       ))}
+
+      {showDeleteConfirm && (
+        <TableRow>
+          <TableCell colSpan={4} className="p-4 text-center">
+            <div className="flex justify-center items-center gap-4">
+              <button
+                type="button"
+                className="btn btn-sm bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 text-xs"
+                onClick={handleDelete}
+              >
+                Confirm
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border border-neutral-200 text-xs"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
     </React.Fragment>
   )
 }

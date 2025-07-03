@@ -1,8 +1,8 @@
-import type { ColumnDefinition } from '@/types/worklist'
+import type { Column } from '@/types/panel'
 
 export interface BaseCellProps {
   value: unknown
-  column: ColumnDefinition
+  column: Column
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   row: Record<string, any>
   rowIndex: number

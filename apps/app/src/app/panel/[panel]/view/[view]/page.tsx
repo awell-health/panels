@@ -1,36 +1,23 @@
 'use client'
-import WorklistFooter from '@/app/panel/[panel]/components/WorklistFooter'
-import WorklistNavigation from '@/app/panel/[panel]/components/WorklistNavigation'
-import { VirtualizedWorklistTable } from '@/app/panel/[panel]/components/WorklistVirtualizedTable'
-import WorklistToolbar from '@/app/panel/[panel]/components/WorklistToolbar'
+import { PatientContext } from '@/app/panel/[panel]/components/PatientContext'
+import { TaskDetails } from '@/app/panel/[panel]/components/TaskDetails'
+import { VirtualizedTable } from '@/app/panel/[panel]/components/VirtualizedTable'
+import PanelFooter from '@/app/panel/[panel]/components/PanelFooter'
+import { useDrawer } from '@/contexts/DrawerContext'
 import { useColumnCreator } from '@/hooks/use-column-creator'
+import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
+import { useReactiveColumns, useReactivePanel, useReactiveView } from '@/hooks/use-reactive-data'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
-import { useReactivePanel, useReactiveView } from '@/hooks/use-reactive-data'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
-import { applyColumnChangesToView, applyColumnChangesToPanel } from '@/lib/column-utils'
-import type {
-  ColumnDefinition,
-  Filter,
-  PanelDefinition,
-  SortConfig,
-  ViewDefinition,
-  WorklistDefinition,
-  ColumnChangesResponse,
-} from '@/types/worklist'
+import type { Column, ColumnChangesResponse, Filter, Sort } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
-import { useDrawer } from '@/contexts/DrawerContext'
-import { TaskDetails } from '@/app/panel/[panel]/components/TaskDetails'
-import { PatientContext } from '@/app/panel/[panel]/components/PatientContext'
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
-
-interface TableFilter {
-  key: string
-  value: string
-}
+import { useCallback, useEffect, useState } from 'react'
+import PanelNavigation from '../../components/PanelNavigation'
+import PanelToolbar from '../../components/PanelToolbar'
+import { useAuthentication } from '@/hooks/use-authentication'
 
 export default function WorklistViewPage() {
   const {
@@ -39,14 +26,14 @@ export default function WorklistViewPage() {
     toggleTaskOwner,
     isLoading: isMedplumLoading,
   } = useMedplumStore()
-  const { updatePanel, updateView, addView, updateColumn } =
+  const { updateView, addView, updateColumn, applyColumnChanges } =
     useReactivePanelStore()
   const { openDrawer } = useDrawer()
   const params = useParams()
   const panelId = params.panel as string
   const viewId = params.view as string
   const router = useRouter()
-
+  const { user } = useAuthentication()
   const {
     panel,
     isLoading: isPanelLoading,
@@ -57,30 +44,31 @@ export default function WorklistViewPage() {
     isLoading: isViewLoading,
     error: viewError,
   } = useReactiveView(panelId, viewId)
-  const [tableFilters, setTableFilters] = useState<TableFilter[]>([])
+  const {
+    columns: allColumns,
+    isLoading: isColumnsLoading,
+  } = useReactiveColumns(panelId)
+  const [tableFilters, setTableFilters] = useState<Filter[]>([])
 
-  const searchData = view?.viewType === 'patient' ? patients : tasks
+  const searchData = view?.metadata.viewType === 'patient' ? patients : tasks
   const { searchTerm, setSearchTerm, searchMode, setSearchMode, filteredData } =
     // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
     useSearch(searchData)
 
-  const columns =
-    view?.columns && view.columns.length > 0
-      ? view.columns
-      : view?.viewType === 'patient'
-        ? (panel?.patientViewColumns ?? [])
-        : (panel?.taskViewColumns ?? [])
+  // Get columns using new filtering approach
+  const columns = allColumns.filter(col =>
+    view?.metadata.viewType === 'patient'
+      ? col.tags?.includes('panels:patients')
+      : col.tags?.includes('panels:tasks')
+  )
+  const visibleColumns = (view?.visibleColumns.map(col => columns.find(c => c.id === col)).filter(col => col !== undefined) ?? []) as Column[]
+
   const tableData = filteredData ?? []
 
   // Set filters from view
   useEffect(() => {
     if (view) {
-      setTableFilters(
-        view.filters.map((filter) => ({
-          key: filter.fhirPathFilter[0],
-          value: filter.fhirPathFilter[1],
-        })),
-      )
+      setTableFilters(view.metadata.filters)
     }
   }, [view])
 
@@ -105,163 +93,119 @@ export default function WorklistViewPage() {
     panelId,
   ])
 
-  const onColumnUpdate = async (updates: Partial<ColumnDefinition>) => {
+  const onColumnUpdate = async (updates: Partial<Column>) => {
     if (!view || !panel || !updates.id) {
       return
     }
 
     try {
-      // Update the column in the panel first
+      // Update the column in the panel
       await updateColumn?.(panelId, updates.id, updates)
-
-      // If the view has its own columns, update them as well
-      if (view.columns && view.columns.length > 0) {
-        const updatedColumns = view.columns.map((col) =>
-          col.id === updates.id ? { ...col, ...updates } : col,
-        )
-
-        const updatedView = {
-          ...view,
-          columns: updatedColumns,
-        }
-
-        await updateView?.(panelId, viewId, updatedView)
-      }
     } catch (error) {
       console.error('Failed to update column:', error)
     }
   }
 
-  const onFiltersChange = async (newTableFilters: TableFilter[]) => {
+  const onFiltersChange = async (newTableFilters: Filter[]) => {
     if (!view) {
       return
     }
 
-    // Convert table filters to view filters
-    const newFilters: Filter[] = newTableFilters.map((filter) => ({
-      fhirPathFilter: [filter.key, filter.value],
-    }))
-    const newView = {
-      ...view,
-      filters: newFilters,
-    }
-
     try {
-      await updateView?.(panelId, viewId, newView)
+      await updateView?.(panelId, viewId, {
+        metadata: {
+          ...view.metadata,
+          filters: newTableFilters,
+        },
+      })
       setTableFilters(newTableFilters)
     } catch (error) {
       console.error('Failed to update filters:', error)
     }
   }
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id || !view) {
       return
     }
 
     // Find the active column's index and the over column's index
-    const oldIndex = columns.findIndex((col) => col.id === active.id)
-    const newIndex = columns.findIndex((col) => col.id === over.id)
+    const oldIndex = view.visibleColumns.findIndex((col) => col === active.id)
+    const newIndex = view.visibleColumns.findIndex((col) => col === over.id)
 
     if (oldIndex === -1 || newIndex === -1) {
       return
     }
 
     // Reorder the columns
-    const reorderedColumns = arrayMove(columns, oldIndex, newIndex)
+    const reorderedColumns = arrayMove(view.visibleColumns, oldIndex, newIndex)
 
-    // Update the view definition
-    const newView = {
-      ...view,
-      columns: reorderedColumns,
-    }
-
+    // Update the view's visible columns order
     try {
-      await updateView?.(panelId, viewId, newView)
+      await updateView?.(panelId, viewId, {
+        visibleColumns: reorderedColumns,
+      })
     } catch (error) {
       console.error('Failed to reorder columns:', error)
     }
-  }
+  }, [view])
 
   const handleColumnChanges = async (columnChanges: ColumnChangesResponse) => {
     if (!view || !panel) return
 
     try {
-      // 1. First apply column changes to the panel (so columns exist at panel level)
-      const updatedPanel = applyColumnChangesToPanel(panel, columnChanges.changes)
-      await updatePanel(panelId, updatedPanel)
-
-      // 2. Then apply column changes to the view (referencing the now-existing panel columns)
-      const updatedView = applyColumnChangesToView(view, updatedPanel, columnChanges.changes)
-      await updateView?.(panelId, viewId, updatedView)
+      await applyColumnChanges(panelId, columnChanges, viewId)
     } catch (error) {
       console.error('Failed to apply column changes to view:', error)
     }
   }
 
   const { onAddColumn } = useColumnCreator({
-    currentViewType: view?.viewType ?? 'patient',
+    currentViewType: view?.metadata.viewType ?? 'patient',
     patients,
     tasks,
-    panelDefinition: panel || undefined,
+    panel,
+    columns,
     currentViewId: viewId,
     onColumnChanges: handleColumnChanges,
   })
 
-  const onNewView = async () => {
-    if (!panel) {
+  const onSortUpdate = async (sort: Sort | undefined) => {
+    if (!view) {
       return
     }
 
     try {
-      const newView = await addView?.(panelId, {
-        title: 'New View',
-        filters: view?.filters ?? panel.filters,
-        columns:
-          view?.viewType === 'patient'
-            ? panel.patientViewColumns
-            : panel.taskViewColumns,
-        createdAt: new Date(),
-        viewType: view?.viewType ?? 'task',
-        sortConfig: view?.sortConfig ?? [],
+      await updateView?.(panelId, viewId, {
+        metadata: {
+          ...view.metadata,
+          sort,
+        },
       })
-      if (newView) {
-        router.push(`/panel/${panelId}/view/${newView.id}`)
-      }
     } catch (error) {
-      console.error('Failed to create new view:', error)
+      console.error('Failed to update sort config:', error)
     }
-  }
-
-  const onSortConfigUpdate = async (sortConfig: SortConfig | undefined) => {
-    if (!view) {
-      return
-    }
-    const newView = {
-      ...view,
-      sortConfig: sortConfig ? [sortConfig] : [],
-    }
-    await updateView?.(panelId, viewId, newView)
   }
 
   // Centralized row click handler - optimized with useCallback
   const handleRowClick = useCallback(
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
-      if (view?.viewType === 'task') {
+      if (view?.metadata.viewType === 'task') {
         openDrawer(
           <TaskDetails taskData={row as WorklistTask} />,
           row.description || 'Task Details',
         )
-      } else if (view?.viewType === 'patient') {
+      } else if (view?.metadata.viewType === 'patient') {
         openDrawer(
           <PatientContext patient={row as WorklistPatient} />,
           `${row.name} - Patient Details`,
         )
       }
     },
-    [view?.viewType, openDrawer],
+    [view?.metadata.viewType, openDrawer],
   )
 
   const onViewTitleChange = async (newTitle: string) => {
@@ -270,30 +214,52 @@ export default function WorklistViewPage() {
     }
 
     try {
-      await updateView?.(panelId, viewId, { title: newTitle })
+      await updateView?.(panelId, viewId, { name: newTitle })
     } catch (error) {
       console.error('Failed to update view title:', error)
     }
   }
 
   const onViewTypeChange = async (newViewType: 'patient' | 'task') => {
-    if (!view || view.viewType === newViewType) {
+    if (!view || view.metadata.viewType === newViewType) {
       return
     }
 
     try {
-      const updatedView = {
-        ...view,
-        viewType: newViewType,
-      }
-
-      await updateView?.(panelId, viewId, updatedView)
+      await updateView?.(panelId, viewId, {
+        metadata: {
+          ...view.metadata,
+          viewType: newViewType,
+        },
+      })
     } catch (error) {
       console.error('Failed to update view type:', error)
     }
   }
 
-  const isLoading = isPanelLoading || isViewLoading || !panel || !view
+  const onColumnVisibilityChange = async (columnId: string, visible: boolean) => {
+    if (!view) return
+
+    try {
+      if (visible) {
+        // Add column to visibleColumns if not already there
+        if (!view.visibleColumns.includes(columnId)) {
+          await updateView?.(panelId, viewId, {
+            visibleColumns: [...view.visibleColumns, columnId]
+          })
+        }
+      } else {
+        // Remove column from visibleColumns
+        await updateView?.(panelId, viewId, {
+          visibleColumns: view.visibleColumns.filter(id => id !== columnId)
+        })
+      }
+    } catch (error) {
+      console.error('Failed to update view column visibility:', error)
+    }
+  }
+
+  const isLoading = isPanelLoading || isViewLoading || isColumnsLoading || !panel || !view
 
   return (
     <>
@@ -305,40 +271,40 @@ export default function WorklistViewPage() {
         <>
           <div className="navigation-area">
             {panel && (
-              <WorklistNavigation
-                panelDefinition={panel}
+              <PanelNavigation
+                panel={panel}
                 selectedViewId={viewId}
-                onNewView={onNewView}
+                currentViewType={view?.metadata.viewType}
                 onViewTitleChange={onViewTitleChange}
               />
             )}
           </div>
           <div className="toolbar-area">
-            <WorklistToolbar
+            <PanelToolbar
               searchTerm={searchTerm}
               onSearch={setSearchTerm}
               searchMode={searchMode}
               onSearchModeChange={setSearchMode}
-              currentView={view?.viewType}
+              currentView={view?.metadata.viewType}
               setCurrentView={onViewTypeChange}
-              worklistColumns={columns}
+              columns={columns.map(col => ({
+                ...col,
+                visible: view.visibleColumns.includes(col.id)
+              }))}
               onAddColumn={onAddColumn}
-              onColumnVisibilityChange={(columnId, visible) =>
-                onColumnUpdate({
-                  id: columnId,
-                  properties: { display: { visible } },
-                })
-              }
+              onColumnVisibilityChange={onColumnVisibilityChange}
+              isViewPage={true}
             />
           </div>
           <div className="content-area">
             <div className="table-scroll-container">
-              <VirtualizedWorklistTable
+              <VirtualizedTable
                 isLoading={isMedplumLoading}
                 selectedRows={[]}
                 toggleSelectAll={() => { }}
-                worklistColumns={columns}
-                onSortConfigUpdate={onSortConfigUpdate}
+                columns={visibleColumns}
+                orderColumnMode="manual"
+                onSortUpdate={onSortUpdate}
                 tableData={filteredData}
                 handlePDFClick={() => { }}
                 handleTaskClick={() => { }}
@@ -347,18 +313,19 @@ export default function WorklistViewPage() {
                 handleAssigneeClick={(taskId: string) =>
                   toggleTaskOwner(taskId)
                 }
-                currentView={view?.viewType ?? 'patient'}
+                currentView={view?.metadata.viewType ?? 'patient'}
+                currentUserName={user?.name}
                 onColumnUpdate={onColumnUpdate}
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}
-                initialSortConfig={view?.sortConfig?.[0] ?? null}
+                initialSort={view?.metadata.sort || null}
                 onRowClick={handleRowClick}
                 handleDragEnd={handleDragEnd}
               />
             </div>
           </div>
           <div className="footer-area">
-            <WorklistFooter
+            <PanelFooter
               columnsCounter={columns.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}

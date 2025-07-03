@@ -1,10 +1,8 @@
 import { APIStorageAdapter } from './api-storage-adapter'
-import { LocalStorageAdapter } from './local-storage-adapter'
 import { ReactiveStorageAdapter } from './reactive-storage-adapter'
 import type { StorageAdapter } from './types'
 
 export const STORAGE_MODES = {
-  LOCAL: 'local',
   API: 'api',
   REACTIVE: 'reactive',
 } as const
@@ -41,11 +39,7 @@ export const createStorageAdapter = async (
     }
 
     case STORAGE_MODES.API: {
-      return new APIStorageAdapter(userId, organizationSlug, cacheConfig)
-    }
-
-    case STORAGE_MODES.LOCAL: {
-      return new LocalStorageAdapter()
+      return new APIStorageAdapter(userId, organizationSlug)
     }
 
     default: {
@@ -89,11 +83,6 @@ export const getStorageAdapter = async (
 
     case STORAGE_MODES.API: {
       adapter = new APIStorageAdapter(userId, organizationSlug)
-      break
-    }
-
-    case STORAGE_MODES.LOCAL: {
-      adapter = new LocalStorageAdapter()
       break
     }
 

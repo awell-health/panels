@@ -7,46 +7,71 @@ import {
 import AIConversationDrawer from '@/components/AIConversationDrawer'
 import { useDrawer } from '@/contexts/DrawerContext'
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
-import type {
-  ViewDefinition,
-  WorklistDefinition,
-  ColumnChangesResponse,
-} from '@/types/worklist'
-import { createElement, useCallback, useEffect } from 'react'
 import { logger } from '@/lib/logger'
+import type { Column, ColumnChangesResponse, Panel } from '@/types/panel'
+import { createElement, useCallback, useEffect, useMemo } from 'react'
 import { useAuthentication } from './use-authentication'
 
 interface UseColumnCreatorProps {
+  currentViewType: 'patient' | 'task'
   patients: WorklistPatient[]
   tasks: WorklistTask[]
-  panelDefinition: WorklistDefinition | undefined
-  currentViewType: 'patient' | 'task'
-  currentViewId?: string // If defined, we're working on a specific view
+  panel: Panel | null
+  columns: Column[]
+  currentViewId?: string
   onColumnChanges: (changes: ColumnChangesResponse) => void
 }
 
-export const useColumnCreator = ({
+export function useColumnCreator({
   currentViewType,
   patients,
   tasks,
-  panelDefinition,
+  panel,
+  columns,
   currentViewId,
   onColumnChanges,
-}: UseColumnCreatorProps) => {
+}: UseColumnCreatorProps) {
   const { openDrawer, closeDrawer } = useDrawer()
   const { user } = useAuthentication()
+  const sourceData = currentViewType === 'patient' ? patients : tasks
+
+  // Calculate column statistics using the provided columns
+  const columnStats = useMemo(() => {
+    const stats = {
+      totalAvailableColumns: 0,
+      usedColumns: 0,
+    }
+
+    if (sourceData.length > 0) {
+      // Get all possible columns from the data
+      const sampleObject = sourceData[0]
+      stats.totalAvailableColumns = Object.keys(sampleObject).length
+    }
+
+    // Count currently used columns for this view type
+    stats.usedColumns = columns.filter((col) =>
+      currentViewType === 'patient'
+        ? col.tags?.includes('panels:patients')
+        : col.tags?.includes('panels:tasks'),
+    ).length
+
+    return stats
+  }, [sourceData, columns, currentViewType])
+
+  const hasColumnsAvailable =
+    columnStats.totalAvailableColumns > columnStats.usedColumns
 
   // Log column creator initialization
   useEffect(() => {
     logger.info(
       {
         currentViewType,
-        hasPanelDefinition: !!panelDefinition,
+        hasPanel: !!panel,
         patientCount: patients.length,
         taskCount: tasks.length,
         existingColumns: {
-          taskViewColumns: panelDefinition?.taskViewColumns?.length || 0,
-          patientViewColumns: panelDefinition?.patientViewColumns?.length || 0,
+          totalColumns: columns.length,
+          usedColumns: columnStats.usedColumns,
         },
         operationType: 'column-creator',
         component: 'useColumnCreator',
@@ -59,7 +84,9 @@ export const useColumnCreator = ({
     currentViewType,
     patients.length,
     tasks.length,
-    panelDefinition,
+    panel,
+    columns.length,
+    columnStats.usedColumns,
     user?.name,
   ])
 
@@ -80,7 +107,7 @@ export const useColumnCreator = ({
     )
 
     return `How can I assist you? I can list the existing columns and explain their meanings, help you add new columns to the panel or view, and assist with filtering or enriching columns. The current view type is: ${currentViewType}.`
-  }, [currentViewType, patients, tasks, panelDefinition])
+  }, [currentViewType, patients, tasks, panel])
 
   const handleSendMessage = async (conversation: ChatMessage[]) => {
     const messageCount = conversation.length
@@ -109,9 +136,8 @@ export const useColumnCreator = ({
         {
           currentViewId,
           currentViewType,
-          panelDefinition: panelDefinition
-            ? { ...panelDefinition, views: [] }
-            : undefined,
+          panel: panel || undefined,
+          columns,
         },
       )
 
@@ -169,10 +195,7 @@ export const useColumnCreator = ({
       {
         currentViewType,
         trigger: 'user-action',
-        hasExistingColumns:
-          (panelDefinition?.taskViewColumns?.length || 0) +
-            (panelDefinition?.patientViewColumns?.length || 0) >
-          0,
+        hasExistingColumns: columns.length > 0,
         operationType: 'column-creator',
         component: 'useColumnCreator',
         action: 'open-assistant',
@@ -204,5 +227,9 @@ export const useColumnCreator = ({
     openDrawer(drawerContent, 'Column Creator Assistant')
   }
 
-  return { onAddColumn }
+  return {
+    onAddColumn,
+    hasColumnsAvailable,
+    columnStats,
+  }
 }
