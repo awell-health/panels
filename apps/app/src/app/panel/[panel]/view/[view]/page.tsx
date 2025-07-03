@@ -61,7 +61,7 @@ export default function WorklistViewPage() {
       ? col.tags?.includes('panels:patients')
       : col.tags?.includes('panels:tasks')
   )
-  const visibleColumns = (view?.visibleColumns.map(col => columns.find(c => c.id === col)) ?? []) as Column[]
+  const visibleColumns = (view?.visibleColumns.map(col => columns.find(c => c.id === col)).filter(col => col !== undefined) ?? []) as Column[]
 
   const tableData = filteredData ?? []
 
@@ -155,7 +155,7 @@ export default function WorklistViewPage() {
     if (!view || !panel) return
 
     try {
-      await applyColumnChanges(panelId, columnChanges)
+      await applyColumnChanges(panelId, columnChanges, viewId)
     } catch (error) {
       console.error('Failed to apply column changes to view:', error)
     }

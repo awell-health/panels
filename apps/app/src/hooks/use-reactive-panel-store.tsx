@@ -403,6 +403,7 @@ export class ReactivePanelStore {
   async applyColumnChanges(
     panelId: string,
     columnChanges: ColumnChangesResponse,
+    viewId?: string,
   ): Promise<void> {
     if (!columnChanges.changes || columnChanges.changes.length === 0) {
       return
@@ -428,7 +429,12 @@ export class ReactivePanelStore {
                 },
                 metadata: {},
               }
-              await this.addColumn(panelId, newColumn)
+              const createdColumn = await this.addColumn(panelId, newColumn)
+              if (viewId) {
+                await this.updateView(panelId, viewId, {
+                  visibleColumns: [...(this.reactiveStore?.getView(panelId, viewId)?.visibleColumns || []), createdColumn.id],
+                })
+              }
               return { operation: `create-${change.id}`, success: true }
             }
             return {
