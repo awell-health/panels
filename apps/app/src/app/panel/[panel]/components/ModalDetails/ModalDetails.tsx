@@ -3,7 +3,6 @@ import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
 import { User, X } from 'lucide-react'
 import TaskStatusBadge from './TaskDetails/TaskStatusBadge'
-import type { FC } from 'react'
 
 interface ModalDetailsProps {
   row: WorklistPatient | WorklistTask
@@ -12,6 +11,8 @@ interface ModalDetailsProps {
 
 const ModalDetails = ({ row, onClose }: ModalDetailsProps) => {
   const { patient, status } = row
+  const patientName = patient?.name || row.name || ''
+  const dateOfBirth = patient?.birthDate || row.birthDate || ''
 
   return (
     <dialog className="modal modal-open">
@@ -19,22 +20,11 @@ const ModalDetails = ({ row, onClose }: ModalDetailsProps) => {
         <div className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2 text-sm text-gray-700 pl-4">
             <User className="h-5 w-5" />
-            <span className="font-medium">{patient?.name}</span>
-            {patient?.birthDate && (
+            <span className="font-medium">{patientName}</span>
+            {dateOfBirth && (
               <>
                 <span>·</span>
-                <span>DOB {patient.birthDate}</span>
-              </>
-            )}
-            {patient?.identifier.length > 0 && (
-              <>
-                <span>·</span>
-                <span>
-                  ID{' '}
-                  {patient.identifier
-                    .map((id: { value: string }) => id.value)
-                    .join(', ')}
-                </span>
+                <span>DOB {dateOfBirth}</span>
               </>
             )}
             {status && (

@@ -78,6 +78,10 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
     }
 
     if (Array.isArray(value)) {
+      if (value.length === 0) {
+        return '-'
+      }
+
       return rederArrayValue(value)
     }
 
