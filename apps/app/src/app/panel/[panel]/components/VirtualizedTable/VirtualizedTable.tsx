@@ -432,6 +432,29 @@ export function VirtualizedTable({
     return rowIndex === 0 ? HEADER_HEIGHT : ROW_HEIGHT
   }, [])
 
+  // Custom inner element that renders sticky header
+  const CustomInnerElement = useMemo(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+    return forwardRef<HTMLDivElement, any>(({ children, ...rest }, ref) => (
+      <div ref={ref} {...rest}>
+        <StickyHeader
+          key={gridKey} // Force header re-render when view changes
+          selectedRows={selectedRows}
+          toggleSelectAll={toggleSelectAll}
+          tableDataLength={filteredAndSortedData.length}
+          getColumnWidth={getColumnWidth}
+        />
+        <div style={{ paddingTop: HEADER_HEIGHT }}>{children}</div>
+      </div>
+    ))
+  }, [
+    gridKey,
+    selectedRows,
+    toggleSelectAll,
+    filteredAndSortedData.length,
+    getColumnWidth,
+  ])
+
   // Context value for sticky grid
   const contextValue = useMemo(
     () => ({
@@ -486,24 +509,6 @@ export function VirtualizedTable({
               const getColumnWidthWithContainer = (columnIndex: number) => {
                 return getColumnWidth(columnIndex)
               }
-
-              // Custom inner element that renders sticky header
-              // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
-              const CustomInnerElement = forwardRef<HTMLDivElement, any>(
-                ({ children, ...rest }, ref) => (
-                  <div ref={ref} {...rest}>
-                    <StickyHeader
-                      key={gridKey} // Force header re-render when view changes
-                      selectedRows={selectedRows}
-                      toggleSelectAll={toggleSelectAll}
-                      tableDataLength={filteredAndSortedData.length}
-                      getColumnWidth={getColumnWidth}
-                    />
-                    <div style={{ paddingTop: HEADER_HEIGHT }}>{children}</div>
-                  </div>
-                ),
-              )
-              CustomInnerElement.displayName = 'CustomInnerElement'
 
               return (
                 <VariableSizeGrid
