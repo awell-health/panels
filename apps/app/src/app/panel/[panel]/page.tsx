@@ -9,18 +9,27 @@ import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
-import { useReactiveColumns, useReactivePanel, useReactiveViews } from '@/hooks/use-reactive-data'
+import {
+  useReactiveColumns,
+  useReactivePanel,
+  useReactiveViews,
+} from '@/hooks/use-reactive-data'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
-import type { Column, ColumnChangesResponse, ViewType, Filter, Sort } from '@/types/panel'
+import type {
+  Column,
+  ColumnChangesResponse,
+  ViewType,
+  Filter,
+  Sort,
+} from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Loader2 } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { AddIngestionModal } from './components/AddIngestionModal'
-import { PatientContext } from './components/PatientContext'
-import { TaskDetails } from './components/TaskDetails'
+import { ModalDetails } from './components/ModalDetails'
 
 interface SortConfig {
   key: string
@@ -34,6 +43,10 @@ export default function WorklistPage() {
   const [isAddingIngestionSource, setIsAddingIngestionSource] = useState(false)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
 
+  const [selectedItem, setSelectedItem] = useState<
+    WorklistPatient | WorklistTask | null
+  >(null)
+
   const [selectedRows] = useState<string[]>([])
   const { user } = useAuthentication()
   const {
@@ -42,29 +55,25 @@ export default function WorklistPage() {
     toggleTaskOwner,
     isLoading: isMedplumLoading,
   } = useMedplumStore()
-  const { updatePanel, updateColumn, applyColumnChanges } = useReactivePanelStore()
+  const { updatePanel, updateColumn, applyColumnChanges } =
+    useReactivePanelStore()
   const {
     panel,
     isLoading: isPanelLoading,
     error: panelError,
   } = useReactivePanel(panelId)
-  const {
-    columns: allColumns,
-    isLoading: isColumnsLoading,
-  } = useReactiveColumns(panelId)
-  const {
-    views,
-    isLoading: isViewsLoading,
-  } = useReactiveViews(panelId)
+  const { columns: allColumns, isLoading: isColumnsLoading } =
+    useReactiveColumns(panelId)
+  const { views, isLoading: isViewsLoading } = useReactiveViews(panelId)
   const { openDrawer } = useDrawer()
 
   const router = useRouter()
 
   // Get columns for current view type using tag-based filtering
-  const columns = allColumns.filter(col =>
+  const columns = allColumns.filter((col) =>
     currentView === 'patient'
       ? col.tags?.includes('panels:patients')
-      : col.tags?.includes('panels:tasks')
+      : col.tags?.includes('panels:tasks'),
   )
 
   // Set table data based on current view
@@ -77,7 +86,11 @@ export default function WorklistPage() {
   useEffect(() => {
     if (panel) {
       setTableFilters(panel.metadata.filters)
-      setCurrentView(panel.metadata.viewType as ViewType)
+      setCurrentView(
+        panel.metadata.viewType
+          ? (panel.metadata.viewType as ViewType)
+          : 'patient',
+      )
     }
   }, [panel])
 
@@ -173,60 +186,64 @@ export default function WorklistPage() {
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
       if (currentView === 'task') {
-        openDrawer(
-          <TaskDetails taskData={row as WorklistTask} />,
-          row.description || 'Task Details',
-        )
+        setSelectedItem(row as WorklistPatient | WorklistTask)
       } else if (currentView === 'patient') {
-        openDrawer(
-          <PatientContext patient={row as WorklistPatient} />,
-          `${row.name} - Patient Details`,
-        )
+        setSelectedItem(row as WorklistPatient | WorklistTask)
+        // openDrawer(
+        //   <PatientContext patient={row as WorklistPatient} />,
+        //   `${row.name} - Patient Details`,
+        // )
       }
     },
-    [currentView, openDrawer],
+    [currentView],
   )
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here
-  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) {
-      return
-    }
-
-    // Find the active column's index and the over column's index
-    const oldIndex = columns.findIndex((col) => col.id === active.id)
-    const newIndex = columns.findIndex((col) => col.id === over.id)
-
-    if (oldIndex === -1 || newIndex === -1) {
-      return
-    }
-
-    // Reorder the columns
-    const reorderedColumns = arrayMove(columns, oldIndex, newIndex)
-
-    // Update column order in each column's display properties
-    const columnsWithOrder = reorderedColumns.map((col, index) => ({
-      ...col,
-      properties: {
-        ...col.properties,
-        display: {
-          ...col.properties?.display,
-          order: index,
-        },
-      },
-    }))
-
-    await Promise.all(columnsWithOrder.map(async (column) => {
-      try {
-        await onColumnUpdate(column)
-      } catch (error) {
-        console.error('Failed to update column order:', error)
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) {
+        return
       }
-    }))
-  }, [columns])
 
-  const isLoading = isPanelLoading || isColumnsLoading || isViewsLoading || !panel
+      // Find the active column's index and the over column's index
+      const oldIndex = columns.findIndex((col) => col.id === active.id)
+      const newIndex = columns.findIndex((col) => col.id === over.id)
+
+      if (oldIndex === -1 || newIndex === -1) {
+        return
+      }
+
+      // Reorder the columns
+      const reorderedColumns = arrayMove(columns, oldIndex, newIndex)
+
+      // Update column order in each column's display properties
+      const columnsWithOrder = reorderedColumns.map((col, index) => ({
+        ...col,
+        properties: {
+          ...col.properties,
+          display: {
+            ...col.properties?.display,
+            order: index,
+          },
+        },
+      }))
+
+      await Promise.all(
+        columnsWithOrder.map(async (column) => {
+          try {
+            await onColumnUpdate(column)
+          } catch (error) {
+            console.error('Failed to update column order:', error)
+          }
+        }),
+      )
+    },
+    [columns],
+  )
+
+  const isLoading =
+    isPanelLoading || isColumnsLoading || isViewsLoading || !panel
 
   return (
     <>
@@ -257,9 +274,9 @@ export default function WorklistPage() {
               onSearchModeChange={setSearchMode}
               currentView={currentView}
               setCurrentView={updatePanelViewType}
-              columns={columns.map(col => ({
+              columns={columns.map((col) => ({
                 ...col,
-                visible: col.properties?.display?.visible !== false
+                visible: col.properties?.display?.visible !== false,
               }))}
               onAddColumn={onAddColumn}
               onColumnVisibilityChange={(columnId, visible) =>
@@ -275,14 +292,14 @@ export default function WorklistPage() {
               <VirtualizedTable
                 isLoading={isMedplumLoading}
                 selectedRows={selectedRows}
-                toggleSelectAll={() => { }}
+                toggleSelectAll={() => {}}
                 columns={columns}
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
-                handlePDFClick={() => { }}
-                handleTaskClick={() => { }}
-                handleRowHover={() => { }}
-                toggleSelectRow={() => { }}
+                handlePDFClick={() => {}}
+                handleTaskClick={() => {}}
+                handleRowHover={() => {}}
+                toggleSelectRow={() => {}}
                 handleAssigneeClick={(taskId: string) =>
                   toggleTaskOwner(taskId)
                 }
@@ -299,12 +316,18 @@ export default function WorklistPage() {
                 <AddIngestionModal
                   isOpen={isAddingIngestionSource}
                   onClose={() => setIsAddingIngestionSource(false)}
-                  onSelectSource={() => { }}
+                  onSelectSource={() => {}}
                   ingestionBots={[]}
                 />
               )}
             </div>
           </div>
+          {selectedItem && (
+            <ModalDetails
+              row={selectedItem}
+              onClose={() => setSelectedItem(null)}
+            />
+          )}
           <div className="footer-area">
             <PanelFooter
               columnsCounter={columns.length}
