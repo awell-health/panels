@@ -19,7 +19,7 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
           <CardRowItem label="Gender" value={patient?.gender} />
         </div>
       </ExpandableCard>
-      {patient?.address.length > 0 && (
+      {patient?.address && patient?.address.length > 0 && (
         <ExpandableCard title="Adress" defaultExpanded={true}>
           <div className="space-y-2 text-sm mt-3">
             {patient?.address?.map(
@@ -42,7 +42,7 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
           </div>
         </ExpandableCard>
       )}
-      {patient?.telecom.length > 0 && (
+      {patient?.telecom && patient?.telecom.length > 0 && (
         <ExpandableCard title="Patient telecom" defaultExpanded={true}>
           <div className="space-y-2 text-sm mt-3">
             {patient?.telecom?.map(
@@ -57,7 +57,7 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
           </div>
         </ExpandableCard>
       )}
-      {patient?.identifier.length > 0 && (
+      {patient?.identifier && patient?.identifier.length > 0 && (
         <ExpandableCard title="Identifiers" defaultExpanded={true}>
           <div className="space-y-2 text-sm mt-3">
             {patient?.identifier.map(
