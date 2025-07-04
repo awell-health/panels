@@ -59,6 +59,7 @@ interface VirtualizedTableProps {
   toggleSelectRow: (rowId: string) => void
   handleAssigneeClick: (taskId: string) => void
   onColumnUpdate: (updates: Partial<Column>) => void
+  onColumnDelete?: (columnId: string) => void
   onSortUpdate: (sort: Sort | undefined) => void
   currentView: string
   filters: Filter[]
@@ -83,6 +84,7 @@ export function VirtualizedTable({
   toggleSelectRow,
   handleAssigneeClick,
   onColumnUpdate,
+  onColumnDelete,
   onSortUpdate,
   currentView,
   filters,
@@ -258,7 +260,7 @@ export function VirtualizedTable({
       if (value) {
         newFilters.push({
           columnId: columnId,
-          value,
+          value: value.trim().toLowerCase(),
           fhirExpressionTemplate: `{{sourceField}}.lower().contains('{{value}}')`
         })
       }
@@ -436,6 +438,7 @@ export function VirtualizedTable({
       onFilter: handleFilter,
       filters,
       onColumnUpdate,
+      onColumnDelete,
     }),
     [
       visibleColumns,
@@ -445,6 +448,7 @@ export function VirtualizedTable({
       handleFilter,
       filters,
       onColumnUpdate,
+      onColumnDelete,
     ],
   )
 

@@ -31,7 +31,7 @@ export default function WorklistViewPage() {
     toggleTaskOwner,
     isLoading: isMedplumLoading,
   } = useMedplumStore()
-  const { updateView, addView, updateColumn, applyColumnChanges } =
+  const { updateView, updateColumn, applyColumnChanges } =
     useReactivePanelStore()
   const { openDrawer } = useDrawer()
   const params = useParams()

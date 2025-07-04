@@ -260,6 +260,8 @@ export class APIStorageAdapter implements StorageAdapter {
         {
           id: columnId,
           name: updates.name,
+          type: updates.type,
+          sourceField: updates.sourceField,
           properties: updates.properties,
           metadata: updates.metadata,
           tags: updates.tags,

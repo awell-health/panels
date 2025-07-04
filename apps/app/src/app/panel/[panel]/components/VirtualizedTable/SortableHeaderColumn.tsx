@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useRef, useState, useCallback } from 'react'
 import { ColumnMenu } from '../ColumnMenu'
+import { useStickyGridContext } from './StickyContext'
 
 interface SortableHeaderColumnProps {
   column: Column
@@ -24,6 +25,7 @@ interface SortableHeaderColumnProps {
   filterValue: string
   onFilter: (value: string) => void
   onColumnUpdate: (updates: Partial<Column>) => void
+  onColumnDelete?: (columnId: string) => void
 }
 
 export function SortableHeaderColumn({
@@ -35,6 +37,7 @@ export function SortableHeaderColumn({
   filterValue,
   onFilter,
   onColumnUpdate,
+  onColumnDelete,
 }: SortableHeaderColumnProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
@@ -224,6 +227,7 @@ export function SortableHeaderColumn({
         filterValue={filterValue}
         onFilter={onFilter}
         onColumnUpdate={onColumnUpdate}
+        onColumnDelete={onColumnDelete}
       />
     </div>
   )
