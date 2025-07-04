@@ -130,7 +130,8 @@ export function useColumnCreator({
       const result = await columnAiAssistantMessageHandler(
         conversation,
         currentViewType === 'patient'
-          ? patients.slice(0, 2)
+        // at some point we will need to stop sending the actual data values
+          ? patients.map(patient => ({ ...patient, tasks: patient.tasks.slice(0, 1) })).slice(0, 2)
           : tasks.slice(0, 2),
         user?.name,
         {
