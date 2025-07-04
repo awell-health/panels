@@ -1,20 +1,20 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { type FC, useEffect, useState } from "react";
+import { ChevronDown, ChevronUp } from 'lucide-react'
+import { type FC, useEffect, useState } from 'react'
 
 interface Props {
-  title: string;
-  children: React.ReactNode;
-  defaultExpanded?: boolean;
-  summary?: string;
+  title: string
+  children: React.ReactNode
+  defaultExpanded?: boolean
+  summary?: string
 }
 
 const ExpandableCard: FC<Props> = (props) => {
-  const { title, children, defaultExpanded = false, summary } = props;
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const { title, children, defaultExpanded = false, summary } = props
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
 
   useEffect(() => {
-    setIsExpanded(defaultExpanded);
-  }, [defaultExpanded]);
+    setIsExpanded(defaultExpanded)
+  }, [defaultExpanded])
 
   return (
     <div className="border border-gray-200 rounded-lg bg-white">
@@ -39,7 +39,7 @@ const ExpandableCard: FC<Props> = (props) => {
         <div className="px-3 pb-3 border-t border-gray-100">{children}</div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default ExpandableCard;
+export default ExpandableCard

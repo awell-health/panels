@@ -1,19 +1,19 @@
-import type { WorklistPatient } from "@/hooks/use-medplum-store";
-import { X, User } from "lucide-react";
-import StaticContent from "../StaticContent";
-import PatientTimeline from "./PatientTimeline";
-import PatientActions from "./PatientActionts";
+import type { WorklistPatient } from '@/hooks/use-medplum-store'
+import { X, User } from 'lucide-react'
+import StaticContent from '../StaticContent'
+import PatientTimeline from './PatientTimeline'
+import PatientActions from './PatientActionts'
 
 interface PatientDetailsProps {
-  patient: WorklistPatient;
-  onClose: () => void;
+  patient: WorklistPatient
+  onClose: () => void
 }
 
 const PatientDetails = ({ patient, onClose }: PatientDetailsProps) => {
-  const VIEWS = ["timeline", "actions", "content"];
-  const { tasks } = patient;
+  const VIEWS = ['timeline', 'actions', 'content']
+  const { tasks } = patient
 
-  const AHP_URL = tasks[0]?.input[0]?.valueUrl;
+  const AHP_URL = tasks[0]?.input[0]?.valueUrl
 
   return (
     <dialog className="modal modal-open">
@@ -26,10 +26,10 @@ const PatientDetails = ({ patient, onClose }: PatientDetailsProps) => {
             <span>DOB {patient.birthDate}</span>
             <span>·</span>
             <span>
-              ID{" "}
+              ID{' '}
               {patient.identifier
                 .map((id: { value: string }) => id.value)
-                .join(", ")}
+                .join(', ')}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -43,20 +43,20 @@ const PatientDetails = ({ patient, onClose }: PatientDetailsProps) => {
             <div
               key={view}
               className={`flex-1  overflow-y-auto p-2 border-r border-gray-200 ${
-                view === "content" ? "w-[40%]" : "w-[30%]"
+                view === 'content' ? 'w-[40%]' : 'w-[30%]'
               }`}
             >
               <div className="h-full">
-                {view === "actions" && <PatientActions patient={patient} />}
-                {view === "content" && <StaticContent task={tasks[0]} />}
-                {view === "timeline" && <PatientTimeline patient={patient} />}
+                {view === 'actions' && <PatientActions patient={patient} />}
+                {view === 'content' && <StaticContent task={tasks[0]} />}
+                {view === 'timeline' && <PatientTimeline patient={patient} />}
               </div>
             </div>
           ))}
         </div>
       </div>
     </dialog>
-  );
-};
+  )
+}
 
-export default PatientDetails;
+export default PatientDetails

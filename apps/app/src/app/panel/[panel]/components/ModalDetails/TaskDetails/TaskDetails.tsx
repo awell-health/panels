@@ -1,22 +1,21 @@
-import type { WorklistTask } from "@/hooks/use-medplum-store";
-import TaskComments from "./TaskComments";
-import { User, X } from "lucide-react";
-import FramePanel from "../FramePanel";
-import { useState } from "react";
-import TaskStaticContent from "../StaticContent";
-import StaticContent from "../StaticContent";
+import type { WorklistTask } from '@/hooks/use-medplum-store'
+import TaskComments from './TaskComments'
+import { User, X } from 'lucide-react'
+import FramePanel from '../FramePanel'
+import { useState } from 'react'
+import StaticContent from '../StaticContent'
 
 interface TaskDetailsProps {
-  task: WorklistTask;
-  onClose: () => void;
+  task: WorklistTask
+  onClose: () => void
 }
 
 const TaskDetails = ({ task: taskData, onClose }: TaskDetailsProps) => {
-  const VIEWS = ["content", "ahp", "comments"];
-  const [task, setTask] = useState(taskData);
+  const VIEWS = ['content', 'ahp', 'comments']
+  const [task, setTask] = useState(taskData)
 
-  const AHP_URL = task.input[0]?.valueUrl;
-  const { patient } = task;
+  const AHP_URL = task.input[0]?.valueUrl
+  const { patient } = task
 
   return (
     <dialog className="modal modal-open">
@@ -39,13 +38,13 @@ const TaskDetails = ({ task: taskData, onClose }: TaskDetailsProps) => {
             <div
               key={view}
               className={`overflow-y-auto p-2 border-r border-gray-200 ${
-                view === "content" ? "w-[40%]" : "w-[30%]"
+                view === 'content' ? 'w-[40%]' : 'w-[30%]'
               }`}
             >
               <div className="h-full">
-                {view === "ahp" && <FramePanel url={AHP_URL} />}
-                {view === "content" && <StaticContent task={task} />}
-                {view === "comments" && (
+                {view === 'ahp' && <FramePanel url={AHP_URL} />}
+                {view === 'content' && <StaticContent task={task} />}
+                {view === 'comments' && (
                   <TaskComments notes={task.note} taskId={task.id} />
                 )}
               </div>
@@ -54,7 +53,7 @@ const TaskDetails = ({ task: taskData, onClose }: TaskDetailsProps) => {
         </div>
       </div>
     </dialog>
-  );
-};
+  )
+}
 
-export default TaskDetails;
+export default TaskDetails

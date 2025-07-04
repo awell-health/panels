@@ -1,19 +1,19 @@
-import { Loader2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Loader2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 interface FramePanelProps {
-  url: string;
+  url: string
 }
 
 const FramePanel = ({ url }: FramePanelProps) => {
-  const [loadingFrame, setLoadingFrame] = useState(true);
+  const [loadingFrame, setLoadingFrame] = useState(true)
 
   if (!url) {
     return (
       <div className="flex items-center justify-center h-full mt-10 gap-2">
         <span className="text-sm text-gray-500">No URL provided</span>
       </div>
-    );
+    )
   }
 
   return (
@@ -24,8 +24,8 @@ const FramePanel = ({ url }: FramePanelProps) => {
         className="w-full h-full"
         title="AHP"
         onLoad={() => {
-          console.log("Frame loaded");
-          setLoadingFrame(false);
+          console.log('Frame loaded')
+          setLoadingFrame(false)
         }}
       />
       {loadingFrame && (
@@ -37,7 +37,7 @@ const FramePanel = ({ url }: FramePanelProps) => {
         </div>
       )}
     </>
-  );
-};
+  )
+}
 
-export default FramePanel;
+export default FramePanel

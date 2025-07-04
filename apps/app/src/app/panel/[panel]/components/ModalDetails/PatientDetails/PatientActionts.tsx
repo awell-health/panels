@@ -1,7 +1,7 @@
-import type { WorklistPatient } from "@/hooks/use-medplum-store";
+import type { WorklistPatient } from '@/hooks/use-medplum-store'
 
 interface Props {
-  patient: WorklistPatient;
+  patient: WorklistPatient
 }
 
 const PatientActions = ({ patient }: Props) => {
@@ -12,7 +12,7 @@ const PatientActions = ({ patient }: Props) => {
         <div className="w-full bg-gray-200 rounded-full h-1">
           <div
             className="bg-blue-600 h-1 rounded-full"
-            style={{ width: "60%" }}
+            style={{ width: '60%' }}
           />
         </div>
 
@@ -142,7 +142,7 @@ const PatientActions = ({ patient }: Props) => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default PatientActions;
+export default PatientActions

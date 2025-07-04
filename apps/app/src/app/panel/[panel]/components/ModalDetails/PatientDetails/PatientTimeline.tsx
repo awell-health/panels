@@ -1,16 +1,16 @@
-import type { WorklistPatient } from "@/hooks/use-medplum-store";
-import { Bold, Italic, Link, List } from "lucide-react";
-import { useState } from "react";
+import type { WorklistPatient } from '@/hooks/use-medplum-store'
+import { Bold, Italic, Link, List } from 'lucide-react'
+import { useState } from 'react'
 
 interface Props {
-  patient: WorklistPatient;
+  patient: WorklistPatient
 }
 
 const PatientTimeline = ({ patient }: Props) => {
   const [messages, setMessages] = useState<
     Array<{ id: string; text: string; user: string; timestamp: string }>
-  >([]);
-  const [newMessage, setNewMessage] = useState("");
+  >([])
+  const [newMessage, setNewMessage] = useState('')
 
   return (
     <div className="p-4 overflow-y-auto h-full">
@@ -135,16 +135,16 @@ const PatientTimeline = ({ patient }: Props) => {
                   const newMsg = {
                     id: Date.now().toString(),
                     text: newMessage,
-                    user: "Current User",
-                    timestamp: new Date().toLocaleString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
+                    user: 'Current User',
+                    timestamp: new Date().toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
                     }),
-                  };
-                  setMessages([newMsg, ...messages]);
-                  setNewMessage("");
+                  }
+                  setMessages([newMsg, ...messages])
+                  setNewMessage('')
                 }
               }}
               className="btn btn-primary btn-sm"
@@ -155,7 +155,7 @@ const PatientTimeline = ({ patient }: Props) => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default PatientTimeline;
+export default PatientTimeline

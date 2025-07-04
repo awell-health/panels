@@ -1,58 +1,58 @@
-import type { WorklistTask } from "@/hooks/use-medplum-store";
-import { ChevronDown, ChevronUp, Search } from "lucide-react";
-import { Fragment, useState } from "react";
-import { RenderWithCopy } from "./RenderWithCopy";
-import { calculateAge } from "./utils";
-import ExpandableCard from "./ExpandableCard";
+import type { WorklistTask } from '@/hooks/use-medplum-store'
+import { ChevronDown, ChevronUp, Search } from 'lucide-react'
+import { Fragment, useState } from 'react'
+import { RenderWithCopy } from './RenderWithCopy'
+import { calculateAge } from './utils'
+import ExpandableCard from './ExpandableCard'
 
 interface StaticContentProps {
-  task: WorklistTask;
+  task: WorklistTask
 }
 
 // Function to check if a string is valid JSON
 const isJSON = (str: string): boolean => {
-  if (typeof str !== "string") return false;
+  if (typeof str !== 'string') return false
   try {
-    JSON.parse(str);
-    return true;
+    JSON.parse(str)
+    return true
   } catch {
-    return false;
+    return false
   }
-};
+}
 
 // More comprehensive isObject function
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const isObject = (value: any): boolean => {
   // Check if value is null (typeof null === 'object' in JavaScript)
-  if (value === null) return false;
+  if (value === null) return false
 
   // Check if it's an object type
-  if (typeof value !== "object") return false;
+  if (typeof value !== 'object') return false
 
   // Check if it's not an array
-  if (Array.isArray(value)) return false;
+  if (Array.isArray(value)) return false
 
   // Check if it's not a Date, RegExp, or other built-in objects if you want to exclude them
   // if (value instanceof Date) return false;
   // if (value instanceof RegExp) return false;
 
-  return true;
-};
+  return true
+}
 
 const StaticContent = ({ task }: StaticContentProps) => {
   const getTitle = (url: string) => {
-    return url?.split("/").pop()?.toUpperCase();
-  };
+    return url?.split('/').pop()?.toUpperCase()
+  }
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const { patient, extension } = task;
+  const { patient, extension } = task
 
   const HighlightText = ({ text }: { text: string | undefined }) => {
-    const shouldHighlight = text && searchQuery.length > 2;
+    const shouldHighlight = text && searchQuery.length > 2
 
     if (shouldHighlight && text) {
-      const parts = text.split(new RegExp(`(${searchQuery})`, "gi"));
+      const parts = text.split(new RegExp(`(${searchQuery})`, 'gi'))
       return parts.map((part, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
         <Fragment key={`${part}-${index}`}>
@@ -62,11 +62,11 @@ const StaticContent = ({ task }: StaticContentProps) => {
             part
           )}
         </Fragment>
-      ));
+      ))
     }
 
-    return text;
-  };
+    return text
+  }
 
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   const rederArrayValue = (value: any[]) => {
@@ -82,16 +82,16 @@ const StaticContent = ({ task }: StaticContentProps) => {
           </div>
         </ExpandableCard>
       </div>
-    );
-  };
+    )
+  }
 
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   const renderObjectValue = (value: Record<string, any>) => {
-    const keysLength = Object.keys(value).length;
-    const visibleObject = 5;
+    const keysLength = Object.keys(value).length
+    const visibleObject = 5
 
     if (keysLength === 0) {
-      return "-";
+      return '-'
     }
 
     return (
@@ -113,36 +113,36 @@ const StaticContent = ({ task }: StaticContentProps) => {
           </div>
         )}
       </div>
-    );
-  };
+    )
+  }
 
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   const renderValue = (value: string | Record<string, any>, key?: string) => {
-    if (value === "[object Object]") {
-      return "unknown";
+    if (value === '[object Object]') {
+      return 'unknown'
     }
 
     if (Array.isArray(value)) {
-      return rederArrayValue(value);
+      return rederArrayValue(value)
     }
 
     if (isObject(value)) {
       // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-      return renderObjectValue(value as Record<string, any>);
+      return renderObjectValue(value as Record<string, any>)
     }
 
     if (isJSON(value as string)) {
-      const jsonValue = JSON.parse(value as string);
-      const jsonValueKeys = Object.keys(jsonValue);
+      const jsonValue = JSON.parse(value as string)
+      const jsonValueKeys = Object.keys(jsonValue)
 
       if (jsonValueKeys.length === 0) {
-        return renderValue(jsonValue);
+        return renderValue(jsonValue)
       }
 
-      return renderObjectValue(jsonValue);
+      return renderObjectValue(jsonValue)
     }
 
-    const containsHTML = (str: string) => /<[a-z][\s\S]*>/i.test(str);
+    const containsHTML = (str: string) => /<[a-z][\s\S]*>/i.test(str)
 
     if (containsHTML(value as string)) {
       return (
@@ -151,33 +151,33 @@ const StaticContent = ({ task }: StaticContentProps) => {
             className="text-sm "
             // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
             dangerouslySetInnerHTML={{
-              __html: value.replaceAll("\n", "<br />"),
+              __html: value.replaceAll('\n', '<br />'),
             }}
           />
         </RenderWithCopy>
-      );
+      )
     }
 
-    if (key === "status") {
+    if (key === 'status') {
       const statuses = {
-        completed: "badge-success",
-        successful: "badge-success",
-        cancelled: "badge-error",
-        pending: "badge-warning",
-        in_progress: "badge-info",
-        on_hold: "badge-warning",
-        entered_in_error: "badge-error",
-        unknown: "badge-error",
-      };
+        completed: 'badge-success',
+        successful: 'badge-success',
+        cancelled: 'badge-error',
+        pending: 'badge-warning',
+        in_progress: 'badge-info',
+        on_hold: 'badge-warning',
+        entered_in_error: 'badge-error',
+        unknown: 'badge-error',
+      }
       return (
         <span
           className={`badge ${
             statuses[value as keyof typeof statuses]
           } badge-xs`}
         >
-          {value.toString()}{" "}
+          {value.toString()}{' '}
         </span>
-      );
+      )
     }
 
     if (value) {
@@ -185,11 +185,11 @@ const StaticContent = ({ task }: StaticContentProps) => {
         <RenderWithCopy text={value as string}>
           <HighlightText text={value as string} />
         </RenderWithCopy>
-      );
+      )
     }
 
-    return "-";
-  };
+    return '-'
+  }
 
   const renderKeyValue = (key: string, value: string) => {
     return (
@@ -201,12 +201,12 @@ const StaticContent = ({ task }: StaticContentProps) => {
         </strong>
         {renderValue(value, key)}
       </div>
-    );
-  };
+    )
+  }
 
   const arrayDataComponent = (
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    data: Record<string, any> | Array<Record<string, any>>
+    data: Record<string, any> | Array<Record<string, any>>,
   ) => {
     if (Array.isArray(data)) {
       return (
@@ -214,7 +214,7 @@ const StaticContent = ({ task }: StaticContentProps) => {
           {data.map((item, index) => (
             <ExpandableCard
               key={`${item.id}-${index}`}
-              title={getTitle(item?.url) ?? ""}
+              title={getTitle(item?.url) ?? ''}
               defaultExpanded={searchQuery.length > 0}
             >
               <div className="flex flex-col gap-2">
@@ -222,25 +222,25 @@ const StaticContent = ({ task }: StaticContentProps) => {
                   {item?.extension?.map(
                     (
                       ext: { url: string; valueString: string },
-                      index: number
+                      index: number,
                     ) => {
-                      const { valueString, url } = ext;
+                      const { valueString, url } = ext
 
                       if (Array.isArray(valueString)) {
-                        return arrayDataComponent(valueString);
+                        return arrayDataComponent(valueString)
                       }
 
-                      return renderKeyValue(url, valueString);
-                    }
+                      return renderKeyValue(url, valueString)
+                    },
                   )}
                 </div>
               </div>
             </ExpandableCard>
           ))}
         </>
-      );
+      )
     }
-  };
+  }
 
   return (
     <div className="p-4 overflow-y-auto h-full">
@@ -266,7 +266,7 @@ const StaticContent = ({ task }: StaticContentProps) => {
         <ExpandableCard
           title="Patient Information"
           summary={`${patient?.name}, ${calculateAge(
-            patient?.birthDate
+            patient?.birthDate,
           )} years`}
           defaultExpanded={true}
         >
@@ -310,7 +310,7 @@ const StaticContent = ({ task }: StaticContentProps) => {
             {patient?.telecom?.map(
               (
                 telecom: { id: string; system: string; value: string },
-                index: number
+                index: number,
               ) => (
                 <div
                   className="flex justify-between"
@@ -323,7 +323,7 @@ const StaticContent = ({ task }: StaticContentProps) => {
                     </RenderWithCopy>
                   </span>
                 </div>
-              )
+              ),
             )}
           </div>
         </ExpandableCard>
@@ -476,7 +476,7 @@ const StaticContent = ({ task }: StaticContentProps) => {
         </ExpandableCard> */}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default StaticContent;
+export default StaticContent

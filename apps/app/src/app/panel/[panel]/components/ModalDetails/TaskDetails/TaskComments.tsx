@@ -1,29 +1,29 @@
-import { useMedplumStore, type WorklistTask } from "@/hooks/use-medplum-store";
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useMedplumStore, type WorklistTask } from '@/hooks/use-medplum-store'
+import { Loader2 } from 'lucide-react'
+import { useState } from 'react'
 
 interface TaskCommentProps {
-  notes: WorklistTask["note"];
-  taskId: string;
+  notes: WorklistTask['note']
+  taskId: string
 }
 
 const TaskComment = ({ notes, taskId }: TaskCommentProps) => {
-  const [newComment, setNewComment] = useState("");
-  const [comments, setComments] = useState(notes);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newComment, setNewComment] = useState('')
+  const [comments, setComments] = useState(notes)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const { addNotesToTask } = useMedplumStore();
+  const { addNotesToTask } = useMedplumStore()
 
   const handleSubmitComment = async () => {
     if (newComment.trim() && taskId) {
-      setIsSubmitting(true);
-      const task = await addNotesToTask(taskId, newComment.trim());
+      setIsSubmitting(true)
+      const task = await addNotesToTask(taskId, newComment.trim())
 
-      setNewComment("");
-      setComments(task.note);
-      setIsSubmitting(false);
+      setNewComment('')
+      setComments(task.note)
+      setIsSubmitting(false)
     }
-  };
+  }
   return (
     <div className="flex flex-col p-2 gap-2">
       {comments && comments.length > 0 && (
@@ -39,10 +39,10 @@ const TaskComment = ({ notes, taskId }: TaskCommentProps) => {
                 <p className="text-xs text-gray-500">
                   {note.time
                     ? new Date(note.time).toLocaleString()
-                    : "No timestamp"}
+                    : 'No timestamp'}
                 </p>
               </div>
-            )
+            ),
           )}
         </div>
       )}
@@ -67,12 +67,12 @@ const TaskComment = ({ notes, taskId }: TaskCommentProps) => {
               Saving...
             </span>
           ) : (
-            "Add Comment"
+            'Add Comment'
           )}
         </button>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default TaskComment;
+export default TaskComment
