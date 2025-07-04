@@ -140,17 +140,25 @@ export function MedplumClientProvider({
             cacheTime: 10000,
           })
           if (!clientRef.current.isAuthenticated()) {
-            console.log(
-              'MedplumProvider: Client not authenticated, starting login',
-            )
             await clientRef.current.startClientLogin(
               medplumClientId,
               medplumSecret,
             )
           } else {
-            console.log(
-              'MedplumProvider: Client already authenticated, skipping login',
-            )
+            if (
+              clientRef.current.getActiveLogin()?.profile?.id !==
+              medplumClientId
+            ) {
+              console.log('MedplumProvider: Reauthentication required')
+              await clientRef.current.startClientLogin(
+                medplumClientId,
+                medplumSecret,
+              )
+            } else {
+              console.log(
+                'MedplumProvider: Client already authenticated, skipping login',
+              )
+            }
           }
         }
 
