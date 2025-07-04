@@ -1,17 +1,15 @@
 'use client'
 
-import type {
-  Column,
-  Panel,
-  View,
-  ColumnChangesResponse,
-} from '@/types/panel'
+import type { Column, Panel, View, ColumnChangesResponse } from '@/types/panel'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 
 import { getRuntimeConfig } from '@/lib/config'
 import { ReactiveStore } from '@/lib/reactive/reactive-store'
-import { getStorageAdapter, type StorageMode } from '@/lib/storage/storage-factory'
+import {
+  getStorageAdapter,
+  type StorageMode,
+} from '@/lib/storage/storage-factory'
 import type { StorageAdapter } from '@/lib/storage/types'
 import { useAuthentication } from './use-authentication'
 import { logger } from '../lib/logger'
@@ -131,9 +129,7 @@ export class ReactivePanelStore {
   }
 
   // Panel operations - simplified since panels are now independent
-  async createPanel(
-    panel: Omit<Panel, 'id'>,
-  ): Promise<Panel> {
+  async createPanel(panel: Omit<Panel, 'id'>): Promise<Panel> {
     if (!this.storage) {
       throw new Error('Storage adapter not initialized')
     }
@@ -158,10 +154,7 @@ export class ReactivePanelStore {
     }
   }
 
-  async updatePanel(
-    id: string,
-    updates: Partial<Panel>,
-  ): Promise<void> {
+  async updatePanel(id: string, updates: Partial<Panel>): Promise<void> {
     if (!this.storage) {
       throw new Error('Storage adapter not initialized')
     }
@@ -212,10 +205,7 @@ export class ReactivePanelStore {
   }
 
   // View operations - now independent of panels
-  async addView(
-    panelId: string,
-    view: Omit<View, 'id'>,
-  ): Promise<View> {
+  async addView(panelId: string, view: Omit<View, 'id'>): Promise<View> {
     if (!this.storage) {
       throw new Error('Storage adapter not initialized')
     }
@@ -259,7 +249,11 @@ export class ReactivePanelStore {
         const optimisticView = { ...currentView, ...updates }
         this.reactiveStore?.setView(optimisticView)
       }
-      const updatedView = await this.storage.updateView(panelId, viewId, updates)
+      const updatedView = await this.storage.updateView(
+        panelId,
+        viewId,
+        updates,
+      )
       // Update reactive store
       this.reactiveStore?.setView(updatedView)
 
@@ -419,8 +413,14 @@ export class ReactivePanelStore {
                 panelId,
                 name: change.column.name || 'New Column',
                 type: change.column.type || 'text',
-                sourceField: change.column.sourceField || change.column.name || 'New Column',
-                tags: change.viewType === 'patient' ? ['panels:patients'] : ['panels:tasks'],
+                sourceField:
+                  change.column.sourceField ||
+                  change.column.name ||
+                  'New Column',
+                tags:
+                  change.viewType === 'patient'
+                    ? ['panels:patients']
+                    : ['panels:tasks'],
                 properties: {
                   display: {
                     visible: true,
@@ -432,7 +432,11 @@ export class ReactivePanelStore {
               const createdColumn = await this.addColumn(panelId, newColumn)
               if (viewId) {
                 await this.updateView(panelId, viewId, {
-                  visibleColumns: [...(this.reactiveStore?.getView(panelId, viewId)?.visibleColumns || []), createdColumn.id],
+                  visibleColumns: [
+                    ...(this.reactiveStore?.getView(panelId, viewId)
+                      ?.visibleColumns || []),
+                    createdColumn.id,
+                  ],
                 })
               }
               return { operation: `create-${change.id}`, success: true }
@@ -463,7 +467,10 @@ export class ReactivePanelStore {
             return { operation: `delete-${change.id}`, success: true }
 
           default:
-            logger.warn({ operation: change.operation }, 'Unknown column change operation')
+            logger.warn(
+              { operation: change.operation },
+              'Unknown column change operation',
+            )
             return {
               operation: `unknown-${change.id}`,
               success: false,
@@ -471,7 +478,8 @@ export class ReactivePanelStore {
             }
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
         logger.error(
           { error, change },
           `Failed to apply column change: ${change.operation} for column ${change.id}`,
@@ -497,13 +505,16 @@ export class ReactivePanelStore {
       return {
         operation: `${change.operation}-${change.id}`,
         success: false,
-        error: result.status === 'rejected' ? result.reason?.message || 'Unknown error' : 'No result returned',
+        error:
+          result.status === 'rejected'
+            ? result.reason?.message || 'Unknown error'
+            : 'No result returned',
       }
     })
 
     // Log summary of results
-    const successful = processedResults.filter(r => r.success).length
-    const failed = processedResults.filter(r => !r.success).length
+    const successful = processedResults.filter((r) => r.success).length
+    const failed = processedResults.filter((r) => !r.success).length
 
     logger.info(
       { successful, failed, total: processedResults.length, panelId },
@@ -511,9 +522,9 @@ export class ReactivePanelStore {
     )
 
     if (failed > 0) {
-      const failedOperations = processedResults.filter(r => !r.success)
+      const failedOperations = processedResults.filter((r) => !r.success)
       throw new Error(
-        `Failed to apply ${failed} of ${processedResults.length} column changes: ${failedOperations.map(r => r.error).join(', ')}`,
+        `Failed to apply ${failed} of ${processedResults.length} column changes: ${failedOperations.map((r) => r.error).join(', ')}`,
       )
     }
   }
@@ -526,7 +537,9 @@ export class ReactivePanelStore {
 
     // Check if this method exists on the storage adapter
     if ('getColumnsForPanel' in this.storage) {
-      const adapter = this.storage as StorageAdapter & { getColumnsForPanel: (panelId: string) => Promise<Column[]> }
+      const adapter = this.storage as StorageAdapter & {
+        getColumnsForPanel: (panelId: string) => Promise<Column[]>
+      }
       return await adapter.getColumnsForPanel(panelId)
     }
 
@@ -541,7 +554,9 @@ export class ReactivePanelStore {
 
     // Check if this method exists on the storage adapter
     if ('getViewsForPanel' in this.storage) {
-      const adapter = this.storage as StorageAdapter & { getViewsForPanel: (panelId: string) => Promise<View[]> }
+      const adapter = this.storage as StorageAdapter & {
+        getViewsForPanel: (panelId: string) => Promise<View[]>
+      }
       return await adapter.getViewsForPanel(panelId)
     }
 

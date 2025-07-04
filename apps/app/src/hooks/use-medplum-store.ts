@@ -101,14 +101,8 @@ const mapTasksToWorklistTasks = (
 }
 
 export function useMedplumStore() {
-  const {
-    patients,
-    tasks,
-    isLoading,
-    error,
-    addNotesToTask,
-    toggleTaskOwner,
-  } = useMedplum()
+  const { patients, tasks, isLoading, error, addNotesToTask, toggleTaskOwner } =
+    useMedplum()
 
   // Map the raw FHIR resources to our worklist format
   const mappedPatients = useMemo(

@@ -55,7 +55,8 @@ export default function WorklistPage() {
     toggleTaskOwner,
     isLoading: isMedplumLoading,
   } = useMedplumStore()
-  const { updatePanel, updateColumn, deleteColumn, applyColumnChanges } = useReactivePanelStore()
+  const { updatePanel, updateColumn, deleteColumn, applyColumnChanges } =
+    useReactivePanelStore()
   const {
     panel,
     isLoading: isPanelLoading,

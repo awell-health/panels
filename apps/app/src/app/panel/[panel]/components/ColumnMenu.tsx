@@ -2,14 +2,7 @@
 
 import type { Column, Sort } from '@/types/panel'
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
-import {
-  ArrowUpDown,
-  Calendar,
-  Hash,
-  Text,
-  ToggleLeft,
-  X
-} from 'lucide-react'
+import { ArrowUpDown, Calendar, Hash, Text, ToggleLeft, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -387,15 +380,17 @@ export function ColumnMenu({
             >
               Save Changes
             </button>
-            {onColumnDelete && <button
-              type="button"
-              className="w-full px-2 py-1 text-xs text-white bg-red-500 rounded hover:bg-red-600"
-              onClick={() => {
-                setShowDeleteConfirm(true)
-              }}
-            >
-              Delete Column
-            </button>}
+            {onColumnDelete && (
+              <button
+                type="button"
+                className="w-full px-2 py-1 text-xs text-white bg-red-500 rounded hover:bg-red-600"
+                onClick={() => {
+                  setShowDeleteConfirm(true)
+                }}
+              >
+                Delete Column
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -416,6 +411,6 @@ export function ColumnMenu({
         message={`Are you sure you want to delete the column "${column.name}"?`}
       />
     </>,
-    document.body
+    document.body,
   )
 }
