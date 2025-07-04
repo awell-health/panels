@@ -116,9 +116,9 @@ export function SortableHeaderColumn({
     options:
       column.type === 'boolean'
         ? [
-          { value: 'True', color: '#10B981' },
-          { value: 'False', color: '#EF4444' },
-        ]
+            { value: 'True', color: '#10B981' },
+            { value: 'False', color: '#EF4444' },
+          ]
         : undefined,
   }
 

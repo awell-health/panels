@@ -1,16 +1,16 @@
 import { z } from 'zod'
 
 export const SupportedColumnTypes = [
-    'text',
-    'number',
-    'date',
-    'datetime',
-    'boolean',
-    'select',
-    'multi_select',
-    'user',
-    'file',
-    'custom'
+  'text',
+  'number',
+  'date',
+  'datetime',
+  'boolean',
+  'select',
+  'multi_select',
+  'user',
+  'file',
+  'custom',
 ] as const
 
 export const ColumnPropertiesSchema = z.object({
@@ -128,9 +128,7 @@ export type ColumnsResponse = z.infer<typeof ColumnsResponseSchema>
 
 export const ColumnInfoSchema = z.object({
   name: z.string().optional(),
-  type: z
-    .enum(SupportedColumnTypes)
-    .optional(),
+  type: z.enum(SupportedColumnTypes).optional(),
   properties: ColumnPropertiesSchema.optional(),
   metadata: z.record(z.any()).optional(),
   // For calculated columns

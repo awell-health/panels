@@ -5,7 +5,14 @@ import { getRuntimeConfig } from '@/lib/config'
 import { MedplumStore } from '@/lib/medplum'
 import { MedplumClient } from '@medplum/core'
 import type { Bot, Patient, Practitioner, Task } from '@medplum/fhirtypes'
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from 'react'
 
 type MedplumContextType = {
   patients: Patient[]
@@ -18,7 +25,9 @@ type MedplumContextType = {
 
 const MedplumContext = createContext<MedplumContextType | null>(null)
 
-export function MedplumClientProvider({ children }: { children: React.ReactNode }) {
+export function MedplumClientProvider({
+  children,
+}: { children: React.ReactNode }) {
   const [patients, setPatients] = useState<Patient[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [error, setError] = useState<Error | null>(null)
@@ -32,38 +41,45 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
   } = useAuthentication()
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null)
   const [medplumStore, setMedplumStore] = useState<MedplumStore | null>(null)
-  
+
   // Refs to store cleanup functions
-  const unsubscribeRef = useRef<{ patients?: () => void; tasks?: () => void }>({})
+  const unsubscribeRef = useRef<{ patients?: () => void; tasks?: () => void }>(
+    {},
+  )
   const isInitializedRef = useRef(false)
   const isInitializingRef = useRef(false)
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null)
   const clientRef = useRef<MedplumClient | null>(null)
 
-  const updateResource = useCallback(<T extends { id?: string }>(
-    currentResources: T[],
-    updatedResource: T,
-  ): T[] => {
-    const resourceIndex = currentResources.findIndex(
-      (r) => r.id === updatedResource.id,
-    )
-    if (resourceIndex === -1) {
-      return [...currentResources, updatedResource]
-    }
-    const newResources = [...currentResources]
-    newResources[resourceIndex] = updatedResource
-    return newResources
-  }, [])
+  const updateResource = useCallback(
+    <T extends { id?: string }>(
+      currentResources: T[],
+      updatedResource: T,
+    ): T[] => {
+      const resourceIndex = currentResources.findIndex(
+        (r) => r.id === updatedResource.id,
+      )
+      if (resourceIndex === -1) {
+        return [...currentResources, updatedResource]
+      }
+      const newResources = [...currentResources]
+      newResources[resourceIndex] = updatedResource
+      return newResources
+    },
+    [],
+  )
 
   // Multi-tab coordination
   useEffect(() => {
     // Create broadcast channel for multi-tab communication
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       broadcastChannelRef.current = new BroadcastChannel('medplum-auth')
-      
+
       broadcastChannelRef.current.onmessage = (event) => {
         if (event.data.type === 'AUTH_COMPLETED') {
-          console.log('MedplumProvider: Auth completed in another tab, reusing token')
+          console.log(
+            'MedplumProvider: Auth completed in another tab, reusing token',
+          )
           // Another tab completed authentication, try to reuse the token
           const { token, clientId, clientSecret } = event.data.payload
           if (clientId === medplumClientId && clientSecret === medplumSecret) {
@@ -71,12 +87,13 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
             clientRef.current?.setAccessToken(token)
           }
         } else if (event.data.type === 'AUTH_EXPIRED') {
-          console.log('MedplumProvider: Auth expired in another tab, clearing token')
+          console.log(
+            'MedplumProvider: Auth expired in another tab, clearing token',
+          )
           setMedplumStore(null)
         }
       }
     }
-
 
     return () => {
       if (broadcastChannelRef.current) {
@@ -87,25 +104,26 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
 
   // Initialize Medplum store
   useEffect(() => {
-    
     // Prevent multiple simultaneous initializations
     if (isInitializingRef.current) {
       console.log('MedplumProvider: Already initializing, skipping')
       return
     }
-    
+
     // If we already have a client and store, don't reinitialize
     if (clientRef.current && medplumStore) {
-      console.log('MedplumProvider: Client and store already exist, skipping initialization')
+      console.log(
+        'MedplumProvider: Client and store already exist, skipping initialization',
+      )
       return
     }
-    
+
     const initializeMedplumStore = async () => {
       isInitializingRef.current = true
-      
+
       try {
         const { medplumBaseUrl, medplumWsBaseUrl } = await getRuntimeConfig()
-       
+
         if (!medplumBaseUrl || !medplumWsBaseUrl) {
           console.error(
             'Medplum base URL or Medplum WebSocket base URL is not set',
@@ -114,7 +132,7 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
           )
           return
         }
-        
+
         // Only create new client if we don't have one
         if (!clientRef.current) {
           clientRef.current = new MedplumClient({
@@ -122,11 +140,18 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
             cacheTime: 10000,
           })
           if (!clientRef.current.isAuthenticated()) {
-            console.log('MedplumProvider: Client not authenticated, starting login')
-            await clientRef.current.startClientLogin(medplumClientId, medplumSecret)
+            console.log(
+              'MedplumProvider: Client not authenticated, starting login',
+            )
+            await clientRef.current.startClientLogin(
+              medplumClientId,
+              medplumSecret,
+            )
           } else {
-            console.log('MedplumProvider: Client already authenticated, skipping login')
-          }    
+            console.log(
+              'MedplumProvider: Client already authenticated, skipping login',
+            )
+          }
         }
 
         const store = new MedplumStore(clientRef.current, medplumWsBaseUrl)
@@ -134,7 +159,11 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
         setMedplumStore(store)
       } catch (error) {
         console.error('Failed to initialize Medplum store:', error)
-        setError(error instanceof Error ? error : new Error('Failed to initialize Medplum store'))
+        setError(
+          error instanceof Error
+            ? error
+            : new Error('Failed to initialize Medplum store'),
+        )
       } finally {
         isInitializingRef.current = false
       }
@@ -147,14 +176,14 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
 
   // Load data and setup subscriptions
   useEffect(() => {
-    console.log('MedplumProvider: Loading data and setting up subscriptions', { 
+    console.log('MedplumProvider: Loading data and setting up subscriptions', {
       hasMedplumStore: !!medplumStore,
       authenticatedUserId,
       name,
       email,
-      isInitialized: isInitializedRef.current
+      isInitialized: isInitializedRef.current,
     })
-    
+
     if (!medplumStore || isInitializedRef.current) {
       return
     }
@@ -177,7 +206,7 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
     }
 
     const setupSubscriptions = async () => {
-      try {        
+      try {
         // Set up new subscriptions
         const [unsubscribePatients, unsubscribeTasks] = await Promise.all([
           medplumStore.subscribeToPatients((updatedPatient) => {
@@ -236,27 +265,32 @@ export function MedplumClientProvider({ children }: { children: React.ReactNode 
     }
   }, [medplumStore, updateResource, authenticatedUserId, name, email])
 
-  const addNotesToTask = useCallback(async (taskId: string, note: string) => {
-    if (!medplumStore) {
-      throw new Error('Medplum store not initialized')
-    }
-    const task = await medplumStore.addNoteToTask(taskId, note)
-    setTasks((currentTasks) => updateResource(currentTasks, task))
-    return task
-  }, [medplumStore, updateResource])
+  const addNotesToTask = useCallback(
+    async (taskId: string, note: string) => {
+      if (!medplumStore) {
+        throw new Error('Medplum store not initialized')
+      }
+      const task = await medplumStore.addNoteToTask(taskId, note)
+      setTasks((currentTasks) => updateResource(currentTasks, task))
+      return task
+    },
+    [medplumStore, updateResource],
+  )
 
-  const toggleTaskOwner = useCallback(async (taskId: string) => {
-    if (!medplumStore) {
-      throw new Error('Medplum store not initialized')
-    }
-    const task = await medplumStore.toggleTaskOwner(
-      taskId,
-      practitioner?.id ?? '',
-    )
-    setTasks((currentTasks) => updateResource(currentTasks, task))
-    return task
-  }, [medplumStore, practitioner?.id, updateResource])
-
+  const toggleTaskOwner = useCallback(
+    async (taskId: string) => {
+      if (!medplumStore) {
+        throw new Error('Medplum store not initialized')
+      }
+      const task = await medplumStore.toggleTaskOwner(
+        taskId,
+        practitioner?.id ?? '',
+      )
+      setTasks((currentTasks) => updateResource(currentTasks, task))
+      return task
+    },
+    [medplumStore, practitioner?.id, updateResource],
+  )
 
   const value = {
     patients,

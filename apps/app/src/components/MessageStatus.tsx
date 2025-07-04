@@ -16,7 +16,7 @@ export function MessageStatus({
   retryCount = 0,
   maxRetries = 3,
   error,
-  className = ''
+  className = '',
 }: MessageStatusProps) {
   const canRetry = status === 'failed' && onRetry && retryCount < maxRetries
 
@@ -28,7 +28,7 @@ export function MessageStatus({
           text: 'Pending',
           color: 'text-gray-400',
           bgColor: 'bg-gray-50',
-          showSpinner: false
+          showSpinner: false,
         }
       case 'sending':
         return {
@@ -36,7 +36,7 @@ export function MessageStatus({
           text: 'Sending',
           color: 'text-blue-500',
           bgColor: 'bg-blue-50',
-          showSpinner: true
+          showSpinner: true,
         }
       case 'sent':
         return {
@@ -44,7 +44,7 @@ export function MessageStatus({
           text: 'Sent',
           color: 'text-green-500',
           bgColor: 'bg-green-50',
-          showSpinner: false
+          showSpinner: false,
         }
       case 'failed':
         return {
@@ -52,7 +52,7 @@ export function MessageStatus({
           text: 'Failed to send',
           color: 'text-red-500',
           bgColor: 'bg-red-50',
-          showSpinner: false
+          showSpinner: false,
         }
       case 'retrying':
         return {
@@ -60,7 +60,7 @@ export function MessageStatus({
           text: `Retrying (${retryCount}/${maxRetries})`,
           color: 'text-orange-500',
           bgColor: 'bg-orange-50',
-          showSpinner: true
+          showSpinner: true,
         }
       default:
         return {
@@ -68,7 +68,7 @@ export function MessageStatus({
           text: 'Unknown',
           color: 'text-gray-400',
           bgColor: 'bg-gray-50',
-          showSpinner: false
+          showSpinner: false,
         }
     }
   }
@@ -78,15 +78,17 @@ export function MessageStatus({
 
   return (
     <div className={`flex items-center gap-2 text-xs ${className}`}>
-      <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${config.bgColor}`}>
+      <div
+        className={`flex items-center gap-1 px-2 py-1 rounded-full ${config.bgColor}`}
+      >
         {config.showSpinner ? (
-          <div className={`animate-spin rounded-full h-3 w-3 border border-current border-t-transparent ${config.color}`} />
+          <div
+            className={`animate-spin rounded-full h-3 w-3 border border-current border-t-transparent ${config.color}`}
+          />
         ) : (
           <Icon className={`h-3 w-3 ${config.color}`} />
         )}
-        <span className={`${config.color} font-medium`}>
-          {config.text}
-        </span>
+        <span className={`${config.color} font-medium`}>{config.text}</span>
       </div>
 
       {/* Error details tooltip/popover for failed messages */}
@@ -118,13 +120,11 @@ export function MessageStatus({
       {status === 'failed' && retryCount >= maxRetries && (
         <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
           <AlertCircle className="h-3 w-3 text-gray-500" />
-          <span className="text-gray-600 font-medium">
-            Max retries reached
-          </span>
+          <span className="text-gray-600 font-medium">Max retries reached</span>
         </div>
       )}
     </div>
   )
 }
 
-export default MessageStatus 
+export default MessageStatus
