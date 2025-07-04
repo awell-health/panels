@@ -93,9 +93,7 @@ export function VirtualizedTable({
   handleDragEnd,
 }: VirtualizedTableProps) {
   // Drag and drop state
-  const [activeColumn, setActiveColumn] = useState<Column | null>(
-    null,
-  )
+  const [activeColumn, setActiveColumn] = useState<Column | null>(null)
 
   // Row hover state
   const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null)
@@ -105,14 +103,15 @@ export function VirtualizedTable({
 
   // Filter visible columns and sort by order
   const visibleColumns = useMemo(() => {
-    const filteredColumns = columns.filter((col: Column) => col.properties?.display?.visible !== false)
+    const filteredColumns = columns.filter(
+      (col: Column) => col.properties?.display?.visible !== false,
+    )
     if (orderColumnMode === 'auto') {
-      return filteredColumns
-        .sort((a: Column, b: Column) => {
-          const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
-          const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
-          return orderA - orderB
-        })
+      return filteredColumns.sort((a: Column, b: Column) => {
+        const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+        const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+        return orderA - orderB
+      })
     }
     return filteredColumns
   }, [columns, orderColumnMode])
@@ -144,13 +143,17 @@ export function VirtualizedTable({
           const column = columns.find((c) => c.id === filter.columnId)
           if (column) {
             if (filter.fhirExpressionTemplate) {
-              const fhirPath = template(filter.fhirExpressionTemplate, { interpolate: /{{([\s\S]+?)}}/g })({ sourceField: column.sourceField, value: filter.value })
+              const fhirPath = template(filter.fhirExpressionTemplate, {
+                interpolate: /{{([\s\S]+?)}}/g,
+              })({ sourceField: column.sourceField, value: filter.value })
               return isMatchingFhirPathCondition(row, fhirPath)
             }
             return true
           }
           // Legacy behaviour
-          const legacyColumn = columns.find((c) => c.sourceField === filter.fhirPathFilter?.[0])
+          const legacyColumn = columns.find(
+            (c) => c.sourceField === filter.fhirPathFilter?.[0],
+          )
           if (legacyColumn && filter.fhirPathFilter) {
             const fhirPath = `${legacyColumn.sourceField}.lower().contains('${filter.fhirPathFilter[1].toLowerCase()}')`
             return isMatchingFhirPathCondition(row, fhirPath)
@@ -163,7 +166,9 @@ export function VirtualizedTable({
     // Then apply sorting
     if (!initialSort) return filteredData
 
-    const sortFhirPath = columns.find((c) => c.id === initialSort.columnId)?.sourceField
+    const sortFhirPath = columns.find(
+      (c) => c.id === initialSort.columnId,
+    )?.sourceField
     if (!sortFhirPath) return filteredData
 
     return [...filteredData].sort((a, b) => {
@@ -259,7 +264,7 @@ export function VirtualizedTable({
         newFilters.push({
           columnId: columnId,
           value,
-          fhirExpressionTemplate: `{{sourceField}}.lower().contains('{{value}}')`
+          fhirExpressionTemplate: `{{sourceField}}.lower().contains('{{value}}')`,
         })
       }
       onFiltersChange(newFilters)

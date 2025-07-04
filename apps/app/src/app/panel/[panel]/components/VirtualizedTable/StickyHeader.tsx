@@ -30,7 +30,9 @@ export function StickyHeader({
     if (filter) {
       return filter.value
     }
-    const legacyFilter = filters?.find((f) => f.fhirPathFilter?.[0] === column.sourceField)
+    const legacyFilter = filters?.find(
+      (f) => f.fhirPathFilter?.[0] === column.sourceField,
+    )
     if (legacyFilter?.fhirPathFilter) {
       return legacyFilter.fhirPathFilter[1]
     }
@@ -82,7 +84,7 @@ export function StickyHeader({
               onSort={() => onSort?.(column.id)}
               filterValue={getFilterValue(column)}
               onFilter={(value: string) => onFilter?.(column.id, value)}
-              onColumnUpdate={onColumnUpdate || (() => { })}
+              onColumnUpdate={onColumnUpdate || (() => {})}
             />
           </div>
         ))}

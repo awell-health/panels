@@ -19,7 +19,6 @@ const getFieldValue = (field: any): string => {
 
 // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
 const formatAddress = (address: any): React.ReactNode => {
-  
   if (!address) return ''
   if (typeof address === 'string') return address
   const addresses = Array.isArray(address) ? address : [address]
@@ -36,11 +35,16 @@ const formatAddress = (address: any): React.ReactNode => {
         if (addr.state) parts.push(addr.state)
         if (addr.postalCode) parts.push(addr.postalCode)
         const addressText = parts.filter(Boolean).join(', ')
-        
+
         return (
-          <div key={`address-${addr.use || 'unknown'}-${index}`} className="mb-2">
+          <div
+            key={`address-${addr.use || 'unknown'}-${index}`}
+            className="mb-2"
+          >
             <span className="text-sm rounded text-xs">
-              {addr.use && <span className="font-bold capitalize">{addr.use}</span>}
+              {addr.use && (
+                <span className="font-bold capitalize">{addr.use}</span>
+              )}
               {addr.use && addressText && <span>: </span>}
               {addressText && <span>{addressText}</span>}
             </span>
@@ -56,17 +60,22 @@ const formatAddress = (address: any): React.ReactNode => {
 const formatTelecom = (telecom: any): React.ReactNode => {
   if (!telecom) return ''
   if (typeof telecom === 'string') return telecom
-  
+
   const telecoms = Array.isArray(telecom) ? telecom : [telecom]
-  
+
   return telecoms
     .map((t, index) => {
       if (typeof t === 'string') return t
       if (typeof t === 'object' && 'value' in t) {
         return (
-          <div key={`telecom-${t.system || 'unknown'}-${index}`} className="mb-2">
+          <div
+            key={`telecom-${t.system || 'unknown'}-${index}`}
+            className="mb-2"
+          >
             <span className="text-sm rounded text-xs">
-              {t.system && <span className="font-bold capitalize">{t.system}</span>}
+              {t.system && (
+                <span className="font-bold capitalize">{t.system}</span>
+              )}
               {t.system && t.value && <span>: </span>}
               {t.value && <span>{t.value}</span>}
             </span>
@@ -82,15 +91,18 @@ const formatTelecom = (telecom: any): React.ReactNode => {
 const formatIdentifier = (identifier: any): React.ReactNode => {
   if (!identifier) return ''
   if (typeof identifier === 'string') return identifier
-  
+
   const identifiers = Array.isArray(identifier) ? identifier : [identifier]
-  
+
   return identifiers
     .map((id, index) => {
       if (typeof id === 'string') return id
       if (typeof id === 'object') {
         return (
-          <div key={`identifier-${id.system || 'unknown'}-${id.value || index}`} className="mb-2">
+          <div
+            key={`identifier-${id.system || 'unknown'}-${id.value || index}`}
+            className="mb-2"
+          >
             <span className="text-sm rounded text-xs font-mono">
               {id.system && <span className="font-bold">{id.system}</span>}
               {id.system && id.value && <span>: </span>}
@@ -115,10 +127,14 @@ const formatIdentifier = (identifier: any): React.ReactNode => {
 const formatMaritalStatus = (maritalStatus: any): string => {
   if (!maritalStatus) return ''
   if (typeof maritalStatus === 'string') return maritalStatus
-  if (typeof maritalStatus === 'object' && 'coding' in maritalStatus) return maritalStatus.coding[0].display
-  if (typeof maritalStatus === 'object' && 'text' in maritalStatus) return maritalStatus.text
-  if (typeof maritalStatus === 'object' && 'value' in maritalStatus) return maritalStatus.value
-  if (typeof maritalStatus === 'object' && 'coding' in maritalStatus) return maritalStatus.coding[0].display
+  if (typeof maritalStatus === 'object' && 'coding' in maritalStatus)
+    return maritalStatus.coding[0].display
+  if (typeof maritalStatus === 'object' && 'text' in maritalStatus)
+    return maritalStatus.text
+  if (typeof maritalStatus === 'object' && 'value' in maritalStatus)
+    return maritalStatus.value
+  if (typeof maritalStatus === 'object' && 'coding' in maritalStatus)
+    return maritalStatus.coding[0].display
   return String(maritalStatus)
 }
 
@@ -170,10 +186,12 @@ export function PatientDetails({ patient }: PatientDetailsProps) {
               {getFieldValue(patient.gender)}
             </p>
           </div>
-         
+
           {patient.maritalStatus && (
             <div className="bg-gray-50 p-3 rounded">
-              <p className="text-xs font-medium text-gray-500">Marital Status</p>
+              <p className="text-xs font-medium text-gray-500">
+                Marital Status
+              </p>
               <p className="text-sm" title="FHIR Path: maritalStatus">
                 {formatMaritalStatus(patient.maritalStatus)}
               </p>
@@ -182,13 +200,18 @@ export function PatientDetails({ patient }: PatientDetailsProps) {
         </div>
 
         {patient.identifier && (
-            <div className="bg-gray-50 p-3 rounded mt-4">
-                <p className="text-xs font-medium text-gray-500 mb-2">Identifiers</p>
-                <div className="text-sm" title="FHIR Path: identifier.where(system='system_code').value">
-                  {formatIdentifier(patient.identifier)}
-                </div>
-              </div>
-          )}
+          <div className="bg-gray-50 p-3 rounded mt-4">
+            <p className="text-xs font-medium text-gray-500 mb-2">
+              Identifiers
+            </p>
+            <div
+              className="text-sm"
+              title="FHIR Path: identifier.where(system='system_code').value"
+            >
+              {formatIdentifier(patient.identifier)}
+            </div>
+          </div>
+        )}
 
         {patient.telecom && (
           <div className="bg-gray-50 p-3 rounded mt-4">
@@ -216,8 +239,6 @@ export function PatientDetails({ patient }: PatientDetailsProps) {
             </p>
           </div>
         )}
-
-        
       </div>
     </div>
   )

@@ -2,7 +2,8 @@ import { createStytchB2BUIClient } from '@stytch/nextjs/b2b/ui'
 import { getRuntimeConfig } from './config'
 
 // Global variable to store the Stytch client instance
-let stytchClientInstance: ReturnType<typeof createStytchB2BUIClient> | null = null
+let stytchClientInstance: ReturnType<typeof createStytchB2BUIClient> | null =
+  null
 
 /**
  * Get or create the Stytch client instance
@@ -42,4 +43,4 @@ export async function getStytchClient() {
  */
 export function clearStytchClient() {
   stytchClientInstance = null
-} 
+}

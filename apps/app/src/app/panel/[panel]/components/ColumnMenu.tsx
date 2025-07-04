@@ -1,14 +1,7 @@
 'use client'
 
 import type { Column, Sort } from '@/types/panel'
-import {
-  ArrowUpDown,
-  Calendar,
-  Hash,
-  Text,
-  ToggleLeft,
-  X
-} from 'lucide-react'
+import { ArrowUpDown, Calendar, Hash, Text, ToggleLeft, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 

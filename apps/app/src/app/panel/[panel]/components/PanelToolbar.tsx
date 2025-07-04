@@ -40,7 +40,7 @@ export default function PanelToolbar({
             {/* View dropdown - only show on panel page */}
             <WorklistViewDropDown
               currentView={currentView}
-              onViewChange={setCurrentView || (() => { })}
+              onViewChange={setCurrentView || (() => {})}
             />
           </div>
         )}
@@ -116,4 +116,4 @@ export default function PanelToolbar({
       </div>
     </div>
   )
-} 
+}

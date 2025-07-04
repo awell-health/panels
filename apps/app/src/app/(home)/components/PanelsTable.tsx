@@ -154,8 +154,12 @@ const PanelRow: React.FC<{
   const { columns: allColumns } = useReactiveColumns(id)
   const { views } = useReactiveViews(id)
 
-  const patientColumns = allColumns.filter(col => col.tags?.includes('panels:patients'))
-  const taskColumns = allColumns.filter(col => col.tags?.includes('panels:tasks'))
+  const patientColumns = allColumns.filter((col) =>
+    col.tags?.includes('panels:patients'),
+  )
+  const taskColumns = allColumns.filter((col) =>
+    col.tags?.includes('panels:tasks'),
+  )
   const totalColumns = patientColumns.length + taskColumns.length
 
   const { deletePanel } = useReactivePanelStore()
