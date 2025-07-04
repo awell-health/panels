@@ -80,8 +80,6 @@
   overflow: hidden;
 }
 
-
-
 .footer-area {
   grid-area: footer;
   overflow: hidden;
@@ -152,8 +150,6 @@
   }
 }
 
-
-
 /* Prevent horizontal overflow */
 html,
 body {
@@ -174,7 +170,7 @@ body {
   padding: 12px;
   margin: 8px 0;
   overflow-x: auto;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
   font-size: 11px;
   line-height: 1.4;
   color: #212529;

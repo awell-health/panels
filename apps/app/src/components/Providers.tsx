@@ -9,17 +9,21 @@ import { Loader2 } from 'lucide-react'
 import { AuthenticationStoreProvider } from '@/hooks/use-authentication'
 import { useEffect, useState } from 'react'
 import { getStytchClient } from '@/lib/stytch-client'
-import type { StytchB2BUIClient, StytchProjectConfiguration } from '@stytch/vanilla-js/dist/b2b'
+import type {
+  StytchB2BUIClient,
+  StytchProjectConfiguration,
+} from '@stytch/vanilla-js/dist/b2b'
 
-export default function Providers({ children }: { children: React.ReactNode }) {  
+export default function Providers({ children }: { children: React.ReactNode }) {
   const [authStytchPublicToken, setAuthStytchPublicToken] = useState<
     string | undefined
   >(undefined)
   const [authCookiesAllowedDomain, setAuthCookiesAllowedDomain] = useState<
     string | undefined
   >(undefined)
-  const [stytch, setStytch] = useState<StytchB2BUIClient<Partial<StytchProjectConfiguration>> | null>(null)
-
+  const [stytch, setStytch] = useState<StytchB2BUIClient<
+    Partial<StytchProjectConfiguration>
+  > | null>(null)
 
   useEffect(() => {
     const initializeStytch = async () => {

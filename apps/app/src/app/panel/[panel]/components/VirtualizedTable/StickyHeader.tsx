@@ -22,15 +22,24 @@ export function StickyHeader({
   tableDataLength,
   getColumnWidth,
 }: StickyHeaderProps) {
-  const { columns, onSort, sortConfig, onFilter, filters, onColumnUpdate, onColumnDelete } =
-    useStickyGridContext()
+  const {
+    columns,
+    onSort,
+    sortConfig,
+    onFilter,
+    filters,
+    onColumnUpdate,
+    onColumnDelete,
+  } = useStickyGridContext()
 
   const getFilterValue = (column: Column) => {
     const filter = filters?.find((f) => f.columnId === column.id)
     if (filter) {
       return filter.value
     }
-    const legacyFilter = filters?.find((f) => f.fhirPathFilter?.[0] === column.sourceField)
+    const legacyFilter = filters?.find(
+      (f) => f.fhirPathFilter?.[0] === column.sourceField,
+    )
     if (legacyFilter?.fhirPathFilter) {
       return legacyFilter.fhirPathFilter[1]
     }
@@ -82,7 +91,7 @@ export function StickyHeader({
               onSort={() => onSort?.(column.id)}
               filterValue={getFilterValue(column)}
               onFilter={(value: string) => onFilter?.(column.id, value)}
-              onColumnUpdate={onColumnUpdate || (() => { })}
+              onColumnUpdate={onColumnUpdate || (() => {})}
               onColumnDelete={onColumnDelete}
             />
           </div>

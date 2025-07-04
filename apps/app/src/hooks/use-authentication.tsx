@@ -140,7 +140,7 @@ export function AuthenticationStoreProvider({
     if (!member || !organization || !config.environment) {
       return undefined
     }
-    
+
     return new AuthenticationStore(member, organization, config.environment)
   }, [member, organization, config.environment])
 
@@ -183,29 +183,32 @@ export function useAuthentication() {
   const currentEmail = store.getEmail()
 
   // Use useMemo to create a stable object that only changes when the underlying data changes
-  const authData = useMemo(() => ({
-    user: currentUser,
-    organization: currentOrganization,
-    populateStore: store.populateStore,
-    clearStore: store.clearStore,
-    medplumClientId: currentMedplumClientId,
-    medplumSecret: currentMedplumSecret,
-    organizationSlug: currentOrganizationSlug,
-    userId: currentUserId,
-    name: currentName,
-    email: currentEmail,
-  }), [
-    currentUser,
-    currentOrganization,
-    store.populateStore,
-    store.clearStore,
-    currentMedplumClientId,
-    currentMedplumSecret,
-    currentOrganizationSlug,
-    currentUserId,
-    currentName,
-    currentEmail,
-  ])
+  const authData = useMemo(
+    () => ({
+      user: currentUser,
+      organization: currentOrganization,
+      populateStore: store.populateStore,
+      clearStore: store.clearStore,
+      medplumClientId: currentMedplumClientId,
+      medplumSecret: currentMedplumSecret,
+      organizationSlug: currentOrganizationSlug,
+      userId: currentUserId,
+      name: currentName,
+      email: currentEmail,
+    }),
+    [
+      currentUser,
+      currentOrganization,
+      store.populateStore,
+      store.clearStore,
+      currentMedplumClientId,
+      currentMedplumSecret,
+      currentOrganizationSlug,
+      currentUserId,
+      currentName,
+      currentEmail,
+    ],
+  )
 
   return authData
 }

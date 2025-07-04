@@ -5,7 +5,9 @@ import { Settings } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-export type ColumnWithVisibility = Pick<Column, 'id' | 'name'> & { visible: boolean }
+export type ColumnWithVisibility = Pick<Column, 'id' | 'name'> & {
+  visible: boolean
+}
 
 type ColumnsDropdownProps = {
   columns: ColumnWithVisibility[]
@@ -23,7 +25,7 @@ export function ColumnsDropdown({
   const buttonRef = useRef<HTMLButtonElement>(null)
 
   // Calculate visible vs total columns from pre-computed visibility
-  const visibleCount = columns.filter(col => col.visible).length
+  const visibleCount = columns.filter((col) => col.visible).length
   const totalCount = columns.length
 
   useEffect(() => {

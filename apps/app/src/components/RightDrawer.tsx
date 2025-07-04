@@ -41,9 +41,7 @@ export default function RightDrawer({
 
         {/* Scrollable Content Area - Both horizontal and vertical scrolling */}
         <div className="flex-1 overflow-auto p-4 text-xs font-normal text-gray-700">
-          <div className="drawer-content">
-            {children}
-          </div>
+          <div className="drawer-content">{children}</div>
         </div>
       </div>
     </div>

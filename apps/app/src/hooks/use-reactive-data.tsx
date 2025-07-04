@@ -1,10 +1,6 @@
 'use client'
 
-import type {
-  Column,
-  Panel,
-  View,
-} from '@/types/panel'
+import type { Column, Panel, View } from '@/types/panel'
 import { useMemo } from 'react'
 import { useRow, useTable, useValue } from 'tinybase/ui-react'
 import { useReactivePanelStore } from './use-reactive-panel-store'
@@ -12,12 +8,16 @@ import { useReactivePanelStore } from './use-reactive-panel-store'
 /**
  * Deserialize panel data from TinyBase format
  */
-function deserializePanel(data: Record<string, string | number | boolean>): Panel {
+function deserializePanel(
+  data: Record<string, string | number | boolean>,
+): Panel {
   return {
     id: data.id as string,
     name: data.name as string,
     description: (data.description as string) || undefined,
-    metadata: data.metadata ? JSON.parse(data.metadata as string) : { filters: [] },
+    metadata: data.metadata
+      ? JSON.parse(data.metadata as string)
+      : { filters: [] },
     createdAt: data.createdAt ? new Date(data.createdAt as string) : new Date(),
   }
 }
@@ -25,14 +25,20 @@ function deserializePanel(data: Record<string, string | number | boolean>): Pane
 /**
  * Deserialize view data from TinyBase format
  */
-function deserializeView(data: Record<string, string | number | boolean>): View {
+function deserializeView(
+  data: Record<string, string | number | boolean>,
+): View {
   return {
     id: data.id as string,
     name: data.name as string,
     panelId: data.panelId as string,
-    visibleColumns: data.visibleColumns ? JSON.parse(data.visibleColumns as string) : [],
+    visibleColumns: data.visibleColumns
+      ? JSON.parse(data.visibleColumns as string)
+      : [],
     isPublished: Boolean(data.isPublished),
-    metadata: data.metadata ? JSON.parse(data.metadata as string) : { filters: [], viewType: 'patient' },
+    metadata: data.metadata
+      ? JSON.parse(data.metadata as string)
+      : { filters: [], viewType: 'patient' },
     createdAt: data.createdAt ? new Date(data.createdAt as string) : new Date(),
   }
 }
@@ -40,7 +46,9 @@ function deserializeView(data: Record<string, string | number | boolean>): View 
 /**
  * Deserialize column data from TinyBase format
  */
-function deserializeColumn(data: Record<string, string | number | boolean>): Column {
+function deserializeColumn(
+  data: Record<string, string | number | boolean>,
+): Column {
   return {
     id: data.id as string,
     panelId: data.panelId as string,
@@ -48,7 +56,9 @@ function deserializeColumn(data: Record<string, string | number | boolean>): Col
     type: data.type as Column['type'],
     sourceField: (data.sourceField as string) || undefined,
     tags: data.tags ? JSON.parse(data.tags as string) : [],
-    properties: data.properties ? JSON.parse(data.properties as string) : { display: {} },
+    properties: data.properties
+      ? JSON.parse(data.properties as string)
+      : { display: {} },
     metadata: data.metadata ? JSON.parse(data.metadata as string) : {},
   }
 }
@@ -147,7 +157,7 @@ export function useReactiveColumns(panelId: string) {
     if (!columnsTable) return []
     return Object.values(columnsTable)
       .map(deserializeColumn)
-      .filter(column => column.panelId === panelId)
+      .filter((column) => column.panelId === panelId)
   }, [columnsTable, panelId])
 
   return {
@@ -174,7 +184,7 @@ export function useReactiveViews(panelId: string) {
     if (!viewsTable) return []
     return Object.values(viewsTable)
       .map(deserializeView)
-      .filter(view => view.panelId === panelId)
+      .filter((view) => view.panelId === panelId)
   }, [viewsTable, panelId])
 
   return {
@@ -190,5 +200,9 @@ export function useReactiveViews(panelId: string) {
  */
 export function useSaveState(operationId: string) {
   const { store } = useReactivePanelStore()
-  return useValue(`saveState_${operationId}`, store) as 'saving' | 'saved' | 'error' | undefined
+  return useValue(`saveState_${operationId}`, store) as
+    | 'saving'
+    | 'saved'
+    | 'error'
+    | undefined
 }
