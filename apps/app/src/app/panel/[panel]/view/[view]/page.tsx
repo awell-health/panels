@@ -7,17 +7,22 @@ import { useDrawer } from '@/contexts/DrawerContext'
 import { useColumnCreator } from '@/hooks/use-column-creator'
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
-import { useReactiveColumns, useReactivePanel, useReactiveView } from '@/hooks/use-reactive-data'
+import {
+  useReactiveColumns,
+  useReactivePanel,
+  useReactiveView,
+} from '@/hooks/use-reactive-data'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
 import type { Column, ColumnChangesResponse, Filter, Sort } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
 import { useAuthentication } from '@/hooks/use-authentication'
+import ModalDetails from '../../components/ModalDetails/ModalDetails'
 
 export default function WorklistViewPage() {
   const {
@@ -44,10 +49,8 @@ export default function WorklistViewPage() {
     isLoading: isViewLoading,
     error: viewError,
   } = useReactiveView(panelId, viewId)
-  const {
-    columns: allColumns,
-    isLoading: isColumnsLoading,
-  } = useReactiveColumns(panelId)
+  const { columns: allColumns, isLoading: isColumnsLoading } =
+    useReactiveColumns(panelId)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
 
   const searchData = view?.metadata.viewType === 'patient' ? patients : tasks
@@ -55,13 +58,19 @@ export default function WorklistViewPage() {
     // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
     useSearch(searchData)
 
+  const [selectedItem, setSelectedItem] = useState<
+    WorklistPatient | WorklistTask | null
+  >(null)
+
   // Get columns using new filtering approach
-  const columns = allColumns.filter(col =>
+  const columns = allColumns.filter((col) =>
     view?.metadata.viewType === 'patient'
       ? col.tags?.includes('panels:patients')
-      : col.tags?.includes('panels:tasks')
+      : col.tags?.includes('panels:tasks'),
   )
-  const visibleColumns = (view?.visibleColumns.map(col => columns.find(c => c.id === col)).filter(col => col !== undefined) ?? []) as Column[]
+  const visibleColumns = (view?.visibleColumns
+    .map((col) => columns.find((c) => c.id === col))
+    .filter((col) => col !== undefined) ?? []) as Column[]
 
   const tableData = filteredData ?? []
 
@@ -125,32 +134,39 @@ export default function WorklistViewPage() {
   }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here
-  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id || !view) {
-      return
-    }
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id || !view) {
+        return
+      }
 
-    // Find the active column's index and the over column's index
-    const oldIndex = view.visibleColumns.findIndex((col) => col === active.id)
-    const newIndex = view.visibleColumns.findIndex((col) => col === over.id)
+      // Find the active column's index and the over column's index
+      const oldIndex = view.visibleColumns.findIndex((col) => col === active.id)
+      const newIndex = view.visibleColumns.findIndex((col) => col === over.id)
 
-    if (oldIndex === -1 || newIndex === -1) {
-      return
-    }
+      if (oldIndex === -1 || newIndex === -1) {
+        return
+      }
 
-    // Reorder the columns
-    const reorderedColumns = arrayMove(view.visibleColumns, oldIndex, newIndex)
+      // Reorder the columns
+      const reorderedColumns = arrayMove(
+        view.visibleColumns,
+        oldIndex,
+        newIndex,
+      )
 
-    // Update the view's visible columns order
-    try {
-      await updateView?.(panelId, viewId, {
-        visibleColumns: reorderedColumns,
-      })
-    } catch (error) {
-      console.error('Failed to reorder columns:', error)
-    }
-  }, [view])
+      // Update the view's visible columns order
+      try {
+        await updateView?.(panelId, viewId, {
+          visibleColumns: reorderedColumns,
+        })
+      } catch (error) {
+        console.error('Failed to reorder columns:', error)
+      }
+    },
+    [view],
+  )
 
   const handleColumnChanges = async (columnChanges: ColumnChangesResponse) => {
     if (!view || !panel) return
@@ -194,10 +210,7 @@ export default function WorklistViewPage() {
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
       if (view?.metadata.viewType === 'task') {
-        openDrawer(
-          <TaskDetails taskData={row as WorklistTask} />,
-          row.description || 'Task Details',
-        )
+        setSelectedItem(row as WorklistPatient | WorklistTask)
       } else if (view?.metadata.viewType === 'patient') {
         openDrawer(
           <PatientContext patient={row as WorklistPatient} />,
@@ -237,7 +250,10 @@ export default function WorklistViewPage() {
     }
   }
 
-  const onColumnVisibilityChange = async (columnId: string, visible: boolean) => {
+  const onColumnVisibilityChange = async (
+    columnId: string,
+    visible: boolean,
+  ) => {
     if (!view) return
 
     try {
@@ -245,13 +261,13 @@ export default function WorklistViewPage() {
         // Add column to visibleColumns if not already there
         if (!view.visibleColumns.includes(columnId)) {
           await updateView?.(panelId, viewId, {
-            visibleColumns: [...view.visibleColumns, columnId]
+            visibleColumns: [...view.visibleColumns, columnId],
           })
         }
       } else {
         // Remove column from visibleColumns
         await updateView?.(panelId, viewId, {
-          visibleColumns: view.visibleColumns.filter(id => id !== columnId)
+          visibleColumns: view.visibleColumns.filter((id) => id !== columnId),
         })
       }
     } catch (error) {
@@ -259,7 +275,8 @@ export default function WorklistViewPage() {
     }
   }
 
-  const isLoading = isPanelLoading || isViewLoading || isColumnsLoading || !panel || !view
+  const isLoading =
+    isPanelLoading || isViewLoading || isColumnsLoading || !panel || !view
 
   return (
     <>
@@ -287,9 +304,9 @@ export default function WorklistViewPage() {
               onSearchModeChange={setSearchMode}
               currentView={view?.metadata.viewType}
               setCurrentView={onViewTypeChange}
-              columns={columns.map(col => ({
+              columns={columns.map((col) => ({
                 ...col,
-                visible: view.visibleColumns.includes(col.id)
+                visible: view.visibleColumns.includes(col.id),
               }))}
               onAddColumn={onAddColumn}
               onColumnVisibilityChange={onColumnVisibilityChange}
@@ -301,15 +318,15 @@ export default function WorklistViewPage() {
               <VirtualizedTable
                 isLoading={isMedplumLoading}
                 selectedRows={[]}
-                toggleSelectAll={() => { }}
+                toggleSelectAll={() => {}}
                 columns={visibleColumns}
                 orderColumnMode="manual"
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
-                handlePDFClick={() => { }}
-                handleTaskClick={() => { }}
-                handleRowHover={() => { }}
-                toggleSelectRow={() => { }}
+                handlePDFClick={() => {}}
+                handleTaskClick={() => {}}
+                handleRowHover={() => {}}
+                toggleSelectRow={() => {}}
                 handleAssigneeClick={(taskId: string) =>
                   toggleTaskOwner(taskId)
                 }
@@ -324,6 +341,12 @@ export default function WorklistViewPage() {
               />
             </div>
           </div>
+          {selectedItem && (
+            <ModalDetails
+              row={selectedItem}
+              onClose={() => setSelectedItem(null)}
+            />
+          )}
           <div className="footer-area">
             <PanelFooter
               columnsCounter={columns.length}

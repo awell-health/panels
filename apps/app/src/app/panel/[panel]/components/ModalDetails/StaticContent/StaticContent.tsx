@@ -1,72 +1,27 @@
-import type { WorklistTask } from '@/hooks/use-medplum-store'
-import { ChevronDown, ChevronUp, Search } from 'lucide-react'
+import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
+import { Search } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import { RenderWithCopy } from './RenderWithCopy'
-import { calculateAge } from './utils'
+import { calculateAge, isJSON } from './utils'
 import ExpandableCard from './ExpandableCard'
+import { isObject, isString } from 'lodash'
+import WellpathContent from './WellpathContent/WellpathContent'
+import HighlightText from './HighlightContent'
+import { useAuthentication } from '../../../../../../hooks/use-authentication'
+import EncompassContent from './EncompassContent/EncompassContent'
 
 interface StaticContentProps {
-  task: WorklistTask
+  task?: WorklistTask
+  patient?: WorklistPatient
 }
 
-// Function to check if a string is valid JSON
-const isJSON = (str: string): boolean => {
-  if (typeof str !== 'string') return false
-  try {
-    JSON.parse(str)
-    return true
-  } catch {
-    return false
-  }
-}
-
-// More comprehensive isObject function
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-const isObject = (value: any): boolean => {
-  // Check if value is null (typeof null === 'object' in JavaScript)
-  if (value === null) return false
-
-  // Check if it's an object type
-  if (typeof value !== 'object') return false
-
-  // Check if it's not an array
-  if (Array.isArray(value)) return false
-
-  // Check if it's not a Date, RegExp, or other built-in objects if you want to exclude them
-  // if (value instanceof Date) return false;
-  // if (value instanceof RegExp) return false;
-
-  return true
-}
-
-const StaticContent = ({ task }: StaticContentProps) => {
+const StaticContent = ({ task, patient }: StaticContentProps) => {
+  const { organizationSlug } = useAuthentication()
   const getTitle = (url: string) => {
     return url?.split('/').pop()?.toUpperCase()
   }
 
   const [searchQuery, setSearchQuery] = useState('')
-
-  const { patient, extension } = task
-
-  const HighlightText = ({ text }: { text: string | undefined }) => {
-    const shouldHighlight = text && searchQuery.length > 2
-
-    if (shouldHighlight && text) {
-      const parts = text.split(new RegExp(`(${searchQuery})`, 'gi'))
-      return parts.map((part, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-        <Fragment key={`${part}-${index}`}>
-          {part.toLowerCase() === searchQuery.toLowerCase() ? (
-            <span className="bg-yellow-200">{part}</span>
-          ) : (
-            part
-          )}
-        </Fragment>
-      ))
-    }
-
-    return text
-  }
 
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   const rederArrayValue = (value: any[]) => {
@@ -146,44 +101,20 @@ const StaticContent = ({ task }: StaticContentProps) => {
 
     if (containsHTML(value as string)) {
       return (
-        <RenderWithCopy text={value as string}>
-          <div
-            className="text-sm "
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
-            dangerouslySetInnerHTML={{
-              __html: value.replaceAll('\n', '<br />'),
-            }}
-          />
-        </RenderWithCopy>
-      )
-    }
-
-    if (key === 'status') {
-      const statuses = {
-        completed: 'badge-success',
-        successful: 'badge-success',
-        cancelled: 'badge-error',
-        pending: 'badge-warning',
-        in_progress: 'badge-info',
-        on_hold: 'badge-warning',
-        entered_in_error: 'badge-error',
-        unknown: 'badge-error',
-      }
-      return (
-        <span
-          className={`badge ${
-            statuses[value as keyof typeof statuses]
-          } badge-xs`}
-        >
-          {value.toString()}{' '}
-        </span>
+        <div
+          className="text-sm "
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+          dangerouslySetInnerHTML={{
+            __html: value.replaceAll('\n', '<br />'),
+          }}
+        />
       )
     }
 
     if (value) {
       return (
         <RenderWithCopy text={value as string}>
-          <HighlightText text={value as string} />
+          <HighlightText text={value as string} searchQuery={searchQuery} />
         </RenderWithCopy>
       )
     }
@@ -196,7 +127,7 @@ const StaticContent = ({ task }: StaticContentProps) => {
       <div>
         <strong>
           <RenderWithCopy text={key}>
-            <HighlightText text={key} />
+            <HighlightText text={key} searchQuery={searchQuery} />
           </RenderWithCopy>
         </strong>
         {renderValue(value, key)}
@@ -204,7 +135,7 @@ const StaticContent = ({ task }: StaticContentProps) => {
     )
   }
 
-  const arrayDataComponent = (
+  const renderExtensionData = (
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     data: Record<string, any> | Array<Record<string, any>>,
   ) => {
@@ -227,10 +158,15 @@ const StaticContent = ({ task }: StaticContentProps) => {
                       const { valueString, url } = ext
 
                       if (Array.isArray(valueString)) {
-                        return arrayDataComponent(valueString)
+                        return renderExtensionData(valueString)
                       }
 
-                      return renderKeyValue(url, valueString)
+                      return (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                        <Fragment key={`${url}-${index}`}>
+                          {renderKeyValue(url, valueString)}
+                        </Fragment>
+                      )
                     },
                   )}
                 </div>
@@ -241,6 +177,14 @@ const StaticContent = ({ task }: StaticContentProps) => {
       )
     }
   }
+  const DevData = () => (
+    <>
+      {task && <WellpathContent task={task} searchQuery={searchQuery} />}
+      {task && <EncompassContent task={task} searchQuery={searchQuery} />}
+    </>
+  )
+
+  const extension = task?.extension ?? patient?.extension ?? []
 
   return (
     <div className="p-4 overflow-y-auto h-full">
@@ -256,224 +200,27 @@ const StaticContent = ({ task }: StaticContentProps) => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </label>
-        <div className="text-xs text-gray-500 mt-1">
+        <div className="text-xs text-gray-500 mt-2">
           Type at least 3 characters to search
         </div>
       </div>
 
       <div className="space-y-3">
-        {/* Patient Information */}
-        <ExpandableCard
-          title="Patient Information"
-          summary={`${patient?.name}, ${calculateAge(
-            patient?.birthDate,
-          )} years`}
-          defaultExpanded={true}
-        >
-          <div className="space-y-2 text-sm mt-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Full Name:</span>
-              <span className="text-gray-900 font-medium">
-                <RenderWithCopy text={patient?.name}>
-                  <HighlightText text={patient?.name} />
-                </RenderWithCopy>
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Age:</span>
-              <span className="text-gray-900">
-                <RenderWithCopy
-                  text={`${calculateAge(patient?.birthDate)} years`}
-                >
-                  <HighlightText
-                    text={`${calculateAge(patient?.birthDate)} years`}
-                  />
-                </RenderWithCopy>
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">MRN:</span>
-              <span className="text-gray-900">
-                <RenderWithCopy text={patient?.id}>
-                  <HighlightText text={patient?.id} />
-                </RenderWithCopy>
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">DOB:</span>
-              <span className="text-gray-900">
-                <RenderWithCopy text={patient?.birthDate}>
-                  <HighlightText text={patient?.birthDate} />
-                </RenderWithCopy>
-              </span>
-            </div>
-            {patient?.telecom?.map(
-              (
-                telecom: { id: string; system: string; value: string },
-                index: number,
-              ) => (
-                <div
-                  className="flex justify-between"
-                  key={`${telecom.id}-${index}`}
-                >
-                  <span className="text-gray-600">{telecom.system}:</span>
-                  <span className="text-gray-900">
-                    <RenderWithCopy text={telecom.value}>
-                      <HighlightText text={telecom.value} />
-                    </RenderWithCopy>
-                  </span>
-                </div>
-              ),
+        {task && (
+          <>
+            {organizationSlug === 'wellpath' && (
+              <WellpathContent task={task} searchQuery={searchQuery} />
             )}
-          </div>
-        </ExpandableCard>
+            {organizationSlug === 'encompass-health' && (
+              <EncompassContent task={task} searchQuery={searchQuery} />
+            )}
 
-        {arrayDataComponent(extension)}
+            {organizationSlug === 'awell-dev' && <DevData />}
+          </>
+        )}
 
-        {/* <h2 className="text-lg font-bold">MOCKED CONTENT</h2> */}
-
-        {/* Discharge Summary */}
-        {/* <ExpandableCard
-          title="Discharge Summary"
-          summary="Community-acquired pneumonia, 4-day stay"
-        >
-          <div className="text-sm text-gray-700 space-y-2 mt-3">
-            <p>
-              <strong>Primary Diagnosis:</strong> Community-acquired pneumonia
-            </p>
-            <p>
-              <strong>Secondary Diagnoses:</strong> COPD exacerbation
-            </p>
-            <p>
-              <strong>Treatment Received:</strong> IV antibiotics (Ceftriaxone),
-              oxygen therapy, bronchodilators
-            </p>
-            <p>
-              <strong>Length of Stay:</strong> 4 days (June 16-20, 2025)
-            </p>
-            <p>
-              <strong>Discharge Condition:</strong> Stable, improved respiratory
-              status
-            </p>
-            <p>
-              <strong>Discharge Instructions:</strong> Continue oral
-              antibiotics, use inhaler as needed, follow up with PCP in 1 week
-            </p>
-          </div>
-        </ExpandableCard> */}
-
-        {/* Current Medications */}
-        {/* <ExpandableCard
-          title="Current Medications"
-          summary="2 active prescriptions"
-        >
-          <div className="space-y-3 mt-3">
-            <div className="bg-gray-50 p-3 rounded">
-              <div className="font-medium text-sm">Amoxicillin 500mg</div>
-              <div className="text-gray-600 text-sm">3x daily for 7 days</div>
-              <div className="text-xs text-gray-500 mt-1">
-                Prescribed: June 20, 2025
-              </div>
-            </div>
-            <div className="bg-gray-50 p-3 rounded">
-              <div className="font-medium text-sm">Albuterol Inhaler</div>
-              <div className="text-gray-600 text-sm">
-                2 puffs every 4-6 hours as needed
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                For shortness of breath
-              </div>
-            </div>
-          </div>
-        </ExpandableCard> */}
-
-        {/* Risk Factors */}
-        {/* <ExpandableCard
-          title="Risk Factors"
-          summary="3 identified risk factors"
-        >
-          <div className="space-y-2 text-sm mt-3">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-red-500 rounded-full" />
-              <span>
-                <strong>High Risk:</strong> Recent hospitalization for pneumonia
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full" />
-              <span>
-                <strong>Moderate Risk:</strong> Age 65+ with COPD history
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full" />
-              <span>
-                <strong>Moderate Risk:</strong> Lives alone (spouse available)
-              </span>
-            </div>
-          </div>
-        </ExpandableCard> */}
-
-        {/* Care Team */}
-        {/* <ExpandableCard title="Care Team" summary="4 team members assigned">
-          <div className="space-y-3 mt-3">
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium text-sm">Dr. Smith</div>
-                <div className="text-gray-600 text-xs">
-                  Primary Care Physician
-                </div>
-              </div>
-              <div className="text-xs text-gray-500">(555) 234-5678</div>
-            </div>
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium text-sm">Sarah Johnson, RN</div>
-                <div className="text-gray-600 text-xs">Care Coordinator</div>
-              </div>
-              <div className="text-xs text-gray-500">(555) 345-6789</div>
-            </div>
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium text-sm">Mike Chen</div>
-                <div className="text-gray-600 text-xs">Discharge Planner</div>
-              </div>
-              <div className="text-xs text-gray-500">(555) 456-7890</div>
-            </div>
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium text-sm">Dr. Martinez</div>
-                <div className="text-gray-600 text-xs">Attending Physician</div>
-              </div>
-              <div className="text-xs text-gray-500">(555) 567-8901</div>
-            </div>
-          </div>
-        </ExpandableCard> */}
-
-        {/* Insurance & Coverage */}
-        {/* <ExpandableCard
-          title="Insurance & Coverage"
-          summary="Medicare Primary, Coverage verified"
-        >
-          <div className="space-y-2 text-sm mt-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Primary Insurance:</span>
-              <span className="text-gray-900">Medicare Part A & B</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Member ID:</span>
-              <span className="text-gray-900">1EG4-TE5-MK73</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Coverage Status:</span>
-              <span className="text-green-600">Active & Verified</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Copay:</span>
-              <span className="text-gray-900">$0 (Medicare covered)</span>
-            </div>
-          </div>
-        </ExpandableCard> */}
+        {/* Extension Raw Data */}
+        {renderExtensionData(extension)}
       </div>
     </div>
   )

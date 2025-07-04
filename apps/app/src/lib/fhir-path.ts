@@ -176,7 +176,7 @@ export const getNestedValue = (
     }
     return result.length === 0 ? undefined : result
   } catch (error) {
-    console.error('Error evaluating FHIRPath:', error)
+    console.info('Error evaluating FHIRPath:', error)
     return ''
   }
 }

@@ -1,16 +1,26 @@
-import { Loader2 } from 'lucide-react'
+import { Loader2, CheckCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 interface FramePanelProps {
   url: string
+  status: string
 }
 
-const FramePanel = ({ url }: FramePanelProps) => {
+const FramePanel = ({ url, status }: FramePanelProps) => {
   const [loadingFrame, setLoadingFrame] = useState(true)
+
+  if (status === 'completed') {
+    return (
+      <div className="flex items-center justify-center h-full gap-2">
+        <CheckCircle className="h-8 w-8 text-gray-500" />
+        <span className=" text-gray-500">Task completed</span>
+      </div>
+    )
+  }
 
   if (!url) {
     return (
-      <div className="flex items-center justify-center h-full mt-10 gap-2">
+      <div className="flex items-center justify-center h-full gap-2">
         <span className="text-sm text-gray-500">No URL provided</span>
       </div>
     )
@@ -24,7 +34,6 @@ const FramePanel = ({ url }: FramePanelProps) => {
         className="w-full h-full"
         title="AHP"
         onLoad={() => {
-          console.log('Frame loaded')
           setLoadingFrame(false)
         }}
       />

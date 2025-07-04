@@ -6,7 +6,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useReactiveViews, useReactiveColumns, useReactiveView } from '@/hooks/use-reactive-data'
+import {
+  useReactiveViews,
+  useReactiveColumns,
+  useReactiveView,
+} from '@/hooks/use-reactive-data'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import type { Panel, View } from '@/types/panel'
 import {
@@ -16,7 +20,7 @@ import {
   Users,
   CheckSquare,
   Copy,
-  FileText
+  FileText,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -94,7 +98,10 @@ export default function PanelNavigation({
     if (newTitle && newTitle !== (currentViewToUpdate?.name || '')) {
       onViewTitleChange?.(newTitle)
     } else {
-      setViewTitles((prev) => ({ ...prev, [viewId]: currentViewToUpdate?.name || '' }))
+      setViewTitles((prev) => ({
+        ...prev,
+        [viewId]: currentViewToUpdate?.name || '',
+      }))
     }
     setEditingViewId(null)
   }
@@ -148,13 +155,13 @@ export default function PanelNavigation({
       switch (type) {
         case 'patient': {
           // Create new patient view with all patient columns
-          const patientColumns = columns.filter(col =>
-            col.tags?.includes('panels:patients')
+          const patientColumns = columns.filter((col) =>
+            col.tags?.includes('panels:patients'),
           )
           newView = await addView(panel.id, {
             name: 'New Patient View',
             panelId: panel.id,
-            visibleColumns: patientColumns.map(col => col.id),
+            visibleColumns: patientColumns.map((col) => col.id),
             createdAt: new Date(),
             isPublished: false,
             metadata: {
@@ -166,13 +173,13 @@ export default function PanelNavigation({
         }
         case 'task': {
           // Create new task view with all task columns
-          const taskColumns = columns.filter(col =>
-            col.tags?.includes('panels:tasks')
+          const taskColumns = columns.filter((col) =>
+            col.tags?.includes('panels:tasks'),
           )
           newView = await addView(panel.id, {
             name: 'New Task View',
             panelId: panel.id,
-            visibleColumns: taskColumns.map(col => col.id),
+            visibleColumns: taskColumns.map((col) => col.id),
             createdAt: new Date(),
             isPublished: false,
             metadata: {
@@ -185,15 +192,15 @@ export default function PanelNavigation({
         case 'from-panel': {
           // Create view from current panel - use panel filters and current view type
           const viewType = currentViewType || 'patient'
-          const relevantColumns = columns.filter(col =>
+          const relevantColumns = columns.filter((col) =>
             viewType === 'patient'
               ? col.tags?.includes('panels:patients')
-              : col.tags?.includes('panels:tasks')
+              : col.tags?.includes('panels:tasks'),
           )
           newView = await addView(panel.id, {
             name: `${panel.name} View`,
             panelId: panel.id,
-            visibleColumns: relevantColumns.map(col => col.id),
+            visibleColumns: relevantColumns.map((col) => col.id),
             createdAt: new Date(),
             isPublished: false,
             metadata: {
@@ -245,34 +252,38 @@ export default function PanelNavigation({
       {
         type: 'patient' as ViewCreationType,
         title: 'New Patient View',
-        description: 'Start fresh with a patient-focused view showing all patient data',
+        description:
+          'Start fresh with a patient-focused view showing all patient data',
         icon: Users,
         available: true,
       },
       {
         type: 'task' as ViewCreationType,
         title: 'New Task View',
-        description: 'Start fresh with a task-focused view showing all task data',
+        description:
+          'Start fresh with a task-focused view showing all task data',
         icon: CheckSquare,
         available: true,
       },
       {
         type: 'from-panel' as ViewCreationType,
         title: 'View from Current Panel',
-        description: 'Create a view that inherits your current filters and view settings',
+        description:
+          'Create a view that inherits your current filters and view settings',
         icon: FileText,
         available: !selectedViewId, // Only available on panel page
       },
       {
         type: 'copy-view' as ViewCreationType,
         title: 'Copy Current View',
-        description: 'Duplicate this view with all its columns, filters, and settings',
+        description:
+          'Duplicate this view with all its columns, filters, and settings',
         icon: Copy,
         available: selectedViewId && currentView, // Only available on view page
       },
     ]
 
-    return options.filter(option => option.available)
+    return options.filter((option) => option.available)
   }
 
   return (
@@ -310,11 +321,12 @@ export default function PanelNavigation({
               <div
                 className={`
                   h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
-                  ${editingPanel
-                    ? 'bg-slate-50 border-blue-200' // Highlight when editing
-                    : !selectedViewId
-                      ? 'bg-white border-gray-200'
-                      : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                  ${
+                    editingPanel
+                      ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                      : !selectedViewId
+                        ? 'bg-white border-blue-200'
+                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
                   }
                 `}
               >
@@ -377,10 +389,7 @@ export default function PanelNavigation({
                       className="ml-2 text-gray-400 hover:text-gray-600"
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleDeleteViewClick(
-                          panel.id,
-                          panel.name,
-                        )
+                        handleDeleteViewClick(panel.id, panel.name)
                       }}
                     >
                       <X className="h-3 w-3" />
@@ -412,11 +421,12 @@ export default function PanelNavigation({
                 <div
                   className={`
                     h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
-                    ${editingViewId === view.id
-                      ? 'bg-slate-50 border-blue-200' // Highlight when editing
-                      : view.id === selectedViewId
-                        ? 'bg-white border-gray-200'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                    ${
+                      editingViewId === view.id
+                        ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                        : view.id === selectedViewId
+                          ? 'bg-white border-gray-200'
+                          : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
                     }
                   `}
                 >
@@ -448,13 +458,13 @@ export default function PanelNavigation({
                       />
                       {(viewTitles[view.id] || '').trim() !==
                         (view.name || '') && (
-                          <span
-                            className="text-xs text-orange-500 ml-1"
-                            title="Unsaved changes"
-                          >
-                            •
-                          </span>
-                        )}
+                        <span
+                          className="text-xs text-orange-500 ml-1"
+                          title="Unsaved changes"
+                        >
+                          •
+                        </span>
+                      )}
                       {getSaveStatusIcon(view.id)}
                     </div>
                   ) : (
@@ -512,7 +522,9 @@ export default function PanelNavigation({
       {/* Create View Modal */}
       <Dialog
         open={showCreateViewModal}
-        onOpenChange={(open) => !open && !creatingView && setShowCreateViewModal(false)}
+        onOpenChange={(open) =>
+          !open && !creatingView && setShowCreateViewModal(false)
+        }
       >
         <DialogContent className="p-0 m-0 overflow-hidden max-w-2xl">
           <DialogHeader className="px-6 pt-6 pb-4">
@@ -582,14 +594,10 @@ export default function PanelNavigation({
         isOpen={showDeleteModal}
         onClose={handleDeleteModalClose}
         onConfirm={handleDeleteViewConfirm}
-        title={
-          viewToDelete?.id === panel.id
-            ? 'Delete Panel'
-            : 'Delete View'
-        }
+        title={viewToDelete?.id === panel.id ? 'Delete Panel' : 'Delete View'}
         message={`Are you sure you want to delete the ${viewToDelete?.id === panel.id ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
         isDeleting={!!deletingViewId}
       />
     </>
   )
-} 
+}

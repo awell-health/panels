@@ -26,11 +26,9 @@ import type {
 } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Loader2 } from 'lucide-react'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { AddIngestionModal } from './components/AddIngestionModal'
-import { PatientContext } from './components/PatientContext'
-import { TaskDetails } from './components/TaskDetails'
 import { ModalDetails } from './components/ModalDetails'
 
 interface SortConfig {
@@ -45,8 +43,6 @@ export default function WorklistPage() {
   const [isAddingIngestionSource, setIsAddingIngestionSource] = useState(false)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
 
-  const searchParams = useSearchParams()
-  const showModalDetails = searchParams?.get('modal') === '1'
   const [selectedItem, setSelectedItem] = useState<
     WorklistPatient | WorklistTask | null
   >(null)
@@ -90,7 +86,11 @@ export default function WorklistPage() {
   useEffect(() => {
     if (panel) {
       setTableFilters(panel.metadata.filters)
-      setCurrentView(panel.metadata.viewType as ViewType)
+      setCurrentView(
+        panel.metadata.viewType
+          ? (panel.metadata.viewType as ViewType)
+          : 'patient',
+      )
     }
   }, [panel])
 
@@ -181,30 +181,21 @@ export default function WorklistPage() {
     setTableFilters(filters)
   }
 
-  console.log('showModalDetails', showModalDetails)
   // Centralized row click handler
   const handleRowClick = useCallback(
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
-      console.log('row', row)
-      if (showModalDetails) {
-        setSelectedItem(row as WorklistPatient | WorklistTask)
-        return
-      }
-
       if (currentView === 'task') {
-        openDrawer(
-          <TaskDetails taskData={row as WorklistTask} />,
-          row.description || 'Task Details',
-        )
+        setSelectedItem(row as WorklistPatient | WorklistTask)
       } else if (currentView === 'patient') {
-        openDrawer(
-          <PatientContext patient={row as WorklistPatient} />,
-          `${row.name} - Patient Details`,
-        )
+        setSelectedItem(row as WorklistPatient | WorklistTask)
+        // openDrawer(
+        //   <PatientContext patient={row as WorklistPatient} />,
+        //   `${row.name} - Patient Details`,
+        // )
       }
     },
-    [currentView, openDrawer, showModalDetails],
+    [currentView],
   )
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here
@@ -331,7 +322,7 @@ export default function WorklistPage() {
               )}
             </div>
           </div>
-          {selectedItem && showModalDetails && (
+          {selectedItem && (
             <ModalDetails
               row={selectedItem}
               onClose={() => setSelectedItem(null)}
