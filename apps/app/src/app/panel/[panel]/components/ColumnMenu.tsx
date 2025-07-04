@@ -1,6 +1,7 @@
 'use client'
 
 import type { Column, Sort } from '@/types/panel'
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
 import {
   ArrowUpDown,
   Calendar,
@@ -22,6 +23,7 @@ type ColumnMenuProps = {
   filterValue: string
   onFilter: (value: string) => void
   onColumnUpdate?: (updates: Partial<Column>) => void
+  onColumnDelete?: (columnId: string) => void
 }
 
 export function ColumnMenu({
@@ -34,6 +36,7 @@ export function ColumnMenu({
   filterValue,
   onFilter,
   onColumnUpdate,
+  onColumnDelete,
 }: ColumnMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [localFilterValue, setLocalFilterValue] = useState(filterValue)
@@ -43,6 +46,7 @@ export function ColumnMenu({
     column.metadata?.description,
   )
   const [localColumnType, setLocalColumnType] = useState(column.type)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Update local values when props change
   useEffect(() => {
@@ -57,11 +61,12 @@ export function ColumnMenu({
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as HTMLElement
-      // Don't close if clicking on any input element
+      // Don't close if clicking on any input element or if modal is open
       if (
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT'
+        target.tagName === 'SELECT' ||
+        showDeleteConfirm
       ) {
         return
       }
@@ -78,7 +83,7 @@ export function ColumnMenu({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, showDeleteConfirm])
 
   // Get sort label based on column type and current sort state
   const getSortLabel = () => {
@@ -144,7 +149,14 @@ export function ColumnMenu({
     onClose()
   }
 
-  if (!isOpen) return null
+  const handleDeleteColumnConfirm = () => {
+    onColumnDelete?.(column.id)
+    setShowDeleteConfirm(false)
+    onClose()
+  }
+
+  // Don't unmount the component if the delete confirmation modal is open
+  if (!isOpen && !showDeleteConfirm) return null
 
   const menuContent = (
     <div
@@ -375,6 +387,15 @@ export function ColumnMenu({
             >
               Save Changes
             </button>
+            {onColumnDelete && <button
+              type="button"
+              className="w-full px-2 py-1 text-xs text-white bg-red-500 rounded hover:bg-red-600"
+              onClick={() => {
+                setShowDeleteConfirm(true)
+              }}
+            >
+              Delete Column
+            </button>}
           </div>
         </div>
       </div>
@@ -382,5 +403,19 @@ export function ColumnMenu({
   )
 
   // Use portal to render the menu at the document body level
-  return createPortal(menuContent, document.body)
+  return createPortal(
+    <>
+      {menuContent}
+      <ConfirmDeleteModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false)
+        }}
+        onConfirm={handleDeleteColumnConfirm}
+        title="Delete Column"
+        message={`Are you sure you want to delete the column "${column.name}"?`}
+      />
+    </>,
+    document.body
+  )
 }

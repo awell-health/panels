@@ -13,6 +13,7 @@ interface StickyGridContextValue {
   onFilter?: (columnKey: string, value: string) => void
   filters?: Filter[]
   onColumnUpdate?: (updates: Partial<Column>) => void
+  onColumnDelete?: (columnId: string) => void
 }
 
 const StickyGridContext = createContext<StickyGridContextValue | null>(null)

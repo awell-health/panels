@@ -42,7 +42,7 @@ export default function WorklistPage() {
     toggleTaskOwner,
     isLoading: isMedplumLoading,
   } = useMedplumStore()
-  const { updatePanel, updateColumn, applyColumnChanges } = useReactivePanelStore()
+  const { updatePanel, updateColumn, deleteColumn, applyColumnChanges } = useReactivePanelStore()
   const {
     panel,
     isLoading: isPanelLoading,
@@ -144,6 +144,18 @@ export default function WorklistPage() {
       await updateColumn?.(panel.id, updates.id, updates)
     } catch (error) {
       console.error('Failed to update column:', error)
+    }
+  }
+
+  const onColumnDelete = async (columnId: string) => {
+    if (!panel) {
+      return
+    }
+
+    try {
+      await deleteColumn?.(panel.id, columnId)
+    } catch (error) {
+      console.error('Failed to delete column:', error)
     }
   }
 
@@ -289,6 +301,7 @@ export default function WorklistPage() {
                 currentView={currentView}
                 currentUserName={user?.name}
                 onColumnUpdate={onColumnUpdate}
+                onColumnDelete={onColumnDelete}
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}
                 initialSort={panel.metadata.sort || null}
