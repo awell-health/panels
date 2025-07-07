@@ -5,6 +5,7 @@ import { VirtualizedTable } from '@/app/panel/[panel]/components/VirtualizedTabl
 import PanelFooter from '@/app/panel/[panel]/components/PanelFooter'
 import { useDrawer } from '@/contexts/DrawerContext'
 import { useColumnCreator } from '@/hooks/use-column-creator'
+import { useColumnOperations } from '@/hooks/use-column-operations'
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import {
@@ -31,8 +32,8 @@ export default function WorklistViewPage() {
     toggleTaskOwner,
     isLoading: isMedplumLoading,
   } = useMedplumStore()
-  const { updateView, updateColumn, applyColumnChanges } =
-    useReactivePanelStore()
+  const { updateView } = useReactivePanelStore()
+  const { updateColumn, applyColumnChanges } = useColumnOperations()
   const { openDrawer } = useDrawer()
   const params = useParams()
   const panelId = params.panel as string
@@ -109,7 +110,7 @@ export default function WorklistViewPage() {
 
     try {
       // Update the column in the panel
-      await updateColumn?.(panelId, updates.id, updates)
+      await updateColumn(panelId, updates.id, updates)
     } catch (error) {
       console.error('Failed to update column:', error)
     }

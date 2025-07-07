@@ -25,7 +25,6 @@ interface DrawerContextType {
     props: T,
     title: string,
   ) => void
-  updateDrawerProps: <T extends Record<string, unknown>>(props: T) => void
   closeDrawer: () => void
 }
 
@@ -52,21 +51,6 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  const updateDrawerProps = useCallback(
-    <T extends Record<string, unknown>>(props: T) => {
-      setContent((prev) => {
-        if (prev) {
-          return {
-            ...prev,
-            props: props as Record<string, unknown>,
-          }
-        }
-        return null
-      })
-    },
-    [],
-  )
-
   const closeDrawer = useCallback(() => {
     setIsOpen(false)
     // Clear content after animation
@@ -82,10 +66,9 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
       content,
       title,
       openDrawer,
-      updateDrawerProps,
       closeDrawer,
     }),
-    [isOpen, content, title, openDrawer, updateDrawerProps, closeDrawer],
+    [isOpen, content, title, openDrawer, closeDrawer],
   )
 
   return (

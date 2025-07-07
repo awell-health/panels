@@ -31,7 +31,7 @@ export function useColumnCreator({
   currentViewId,
   onColumnChanges,
 }: UseColumnCreatorProps) {
-  const { openDrawer, updateDrawerProps, closeDrawer } = useDrawer()
+  const { openDrawer, closeDrawer } = useDrawer()
   const { user } = useAuthentication()
   const sourceData = currentViewType === 'patient' ? patients : tasks
 
@@ -149,6 +149,8 @@ export function useColumnCreator({
           },
         )
 
+        const hasColumnChanges = !!result.columnChanges
+
         if (result.columnChanges) {
           logger.info(
             {
@@ -179,7 +181,7 @@ export function useColumnCreator({
           )
         }
 
-        return result.response
+        return { response: result.response, hasColumnChanges }
       } catch (error) {
         logger.error(
           {
@@ -197,7 +199,7 @@ export function useColumnCreator({
         throw error
       }
     },
-    [currentViewType, user?.name, currentViewId, onColumnChanges],
+    [currentViewType, user?.name, currentViewId, onColumnChanges, columns],
   )
 
   // Extract onClose to be stable and prevent infinite renders
@@ -225,13 +227,6 @@ export function useColumnCreator({
     }),
     [handleSendMessage],
   )
-
-  // Update drawer props when context changes (if drawer is open)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only the props matter for this
-  // TODO: Test if this is still needed after context stability fix
-  // useEffect(() => {
-  //   updateDrawerProps(drawerProps)
-  // }, [drawerProps])
 
   // Wrap onAddColumn with proper dependencies
   // biome-ignore lint/correctness/useExhaustiveDependencies: the open drawer function is stable
