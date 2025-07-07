@@ -311,9 +311,9 @@ export default function WorklistPage() {
                 handleTaskClick={() => {}}
                 handleRowHover={() => {}}
                 toggleSelectRow={() => {}}
-                handleAssigneeClick={(taskId: string) =>
-                  toggleTaskOwner(taskId)
-                }
+                handleAssigneeClick={async (taskId: string) => {
+                  await toggleTaskOwner(taskId)
+                }}
                 currentView={currentView}
                 currentUserName={user?.name}
                 onColumnUpdate={onColumnUpdate}

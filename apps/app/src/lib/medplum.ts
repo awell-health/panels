@@ -282,23 +282,21 @@ export class MedplumStore {
           userId,
         ) as Promise<Practitioner>,
       ])
+
       if (task.owner?.reference === `Practitioner/${userId}`) {
-        // Remove the owner from the task - OPTIMISTIC RESPONSE
-        const optimisticTask = {
+        // Remove the owner from the task
+        const updatedTask = {
           ...task,
           owner: undefined,
         } as Task
 
-        // Perform actual update in background
-        this.performTaskUpdateInBackground(optimisticTask, 'removeOwner')
-
-        return optimisticTask
+        return await this.client.updateResource(updatedTask)
       }
 
       const displayName = `${Array.isArray(practitioner.name?.[0]?.given) ? practitioner.name[0].given.join(' ') : (practitioner.name?.[0]?.given ?? '')} ${Array.isArray(practitioner.name?.[0]?.family) ? practitioner.name[0].family.join(' ') : (practitioner.name?.[0]?.family ?? '')}`
 
-      // Update the task owner - OPTIMISTIC RESPONSE
-      const optimisticTask = {
+      // Update the task owner
+      const updatedTask = {
         ...task,
         resourceType: 'Task',
         owner: {
@@ -308,27 +306,10 @@ export class MedplumStore {
         },
       } as Task
 
-      // Perform actual update in background
-      this.performTaskUpdateInBackground(optimisticTask, 'setOwner')
-
-      return optimisticTask
+      return await this.client.updateResource(updatedTask)
     } catch (error) {
       console.error('Error updating task owner:', error)
       throw error
-    }
-  }
-
-  // Background task update method
-  private async performTaskUpdateInBackground(
-    updatedTask: Task,
-    operation: 'setOwner' | 'removeOwner',
-  ): Promise<void> {
-    try {
-      await this.client.updateResource(updatedTask)
-    } catch (error) {
-      console.error(`Background task update failed for ${operation}:`, error)
-      // TODO: Consider implementing retry logic or notifying UI of failure
-      // For now, we could trigger a refresh or show an error notification
     }
   }
 }

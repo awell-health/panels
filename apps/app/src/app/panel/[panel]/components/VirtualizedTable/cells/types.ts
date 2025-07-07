@@ -14,7 +14,7 @@ export interface BaseCellProps {
 export interface InteractiveCellProps extends BaseCellProps {
   onPDFClick?: (pdfUrl: string, patientName: string) => void
   onTaskClick?: (task: string, taskStatus: string, patientName: string) => void
-  onAssigneeClick?: () => void
+  onAssigneeClick?: () => Promise<void>
   currentUserName?: string
   currentView?: string
 }
