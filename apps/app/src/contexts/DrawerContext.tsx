@@ -9,7 +9,9 @@ import React, {
   type ComponentType,
 } from 'react'
 
-interface DrawerContent<T extends Record<string, unknown> = Record<string, unknown>> {
+interface DrawerContent<
+  T extends Record<string, unknown> = Record<string, unknown>,
+> {
   component: ComponentType<T>
   props: T
 }
@@ -18,7 +20,11 @@ interface DrawerContextType {
   isOpen: boolean
   content: DrawerContent | null
   title: string
-  openDrawer: <T extends Record<string, unknown>>(component: ComponentType<T>, props: T, title: string) => void
+  openDrawer: <T extends Record<string, unknown>>(
+    component: ComponentType<T>,
+    props: T,
+    title: string,
+  ) => void
   updateDrawerProps: <T extends Record<string, unknown>>(props: T) => void
   closeDrawer: () => void
 }
@@ -30,26 +36,36 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
   const [content, setContent] = useState<DrawerContent | null>(null)
   const [title, setTitle] = useState('')
 
-  const openDrawer = useCallback(<T extends Record<string, unknown>>(component: ComponentType<T>, props: T, title: string) => {
-    setContent({
-      component: component as ComponentType<Record<string, unknown>>,
-      props: props as Record<string, unknown>,
-    })
-    setTitle(title)
-    setIsOpen(true)
-  }, [])
+  const openDrawer = useCallback(
+    <T extends Record<string, unknown>>(
+      component: ComponentType<T>,
+      props: T,
+      title: string,
+    ) => {
+      setContent({
+        component: component as ComponentType<Record<string, unknown>>,
+        props: props as Record<string, unknown>,
+      })
+      setTitle(title)
+      setIsOpen(true)
+    },
+    [],
+  )
 
-  const updateDrawerProps = useCallback(<T extends Record<string, unknown>>(props: T) => {
-    setContent(prev => {
-      if (prev) {
-        return {
-          ...prev,
-          props: props as Record<string, unknown>,
+  const updateDrawerProps = useCallback(
+    <T extends Record<string, unknown>>(props: T) => {
+      setContent((prev) => {
+        if (prev) {
+          return {
+            ...prev,
+            props: props as Record<string, unknown>,
+          }
         }
-      }
-      return null
-    })
-  }, [])
+        return null
+      })
+    },
+    [],
+  )
 
   const closeDrawer = useCallback(() => {
     setIsOpen(false)
@@ -60,14 +76,17 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Memoize the context value to prevent unnecessary re-renders
-  const contextValue = useMemo(() => ({
-    isOpen,
-    content,
-    title,
-    openDrawer,
-    updateDrawerProps,
-    closeDrawer,
-  }), [isOpen, content, title, openDrawer, updateDrawerProps, closeDrawer])
+  const contextValue = useMemo(
+    () => ({
+      isOpen,
+      content,
+      title,
+      openDrawer,
+      updateDrawerProps,
+      closeDrawer,
+    }),
+    [isOpen, content, title, openDrawer, updateDrawerProps, closeDrawer],
+  )
 
   return (
     <DrawerContext.Provider value={contextValue}>
