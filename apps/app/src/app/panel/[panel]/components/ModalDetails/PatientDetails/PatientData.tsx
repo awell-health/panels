@@ -30,11 +30,12 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
                   className="mb-2 border-b border-gray-200 pb-2"
                 >
                   {Object.keys(address).map((key) => (
-                    <CardRowItem
-                      key={key}
-                      label={startCase(key)}
-                      value={address[key as keyof typeof address] ?? '-'}
-                    />
+                    <div className="flex justify-between" key={key}>
+                      <span className="text-gray-600">{startCase(key)}</span>
+                      <span className="text-gray-900 font-normal max-w-[60%]">
+                        {address[key as keyof typeof address] ?? '-'}
+                      </span>
+                    </div>
                   ))}
                 </div>
               ),
@@ -61,9 +62,12 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
         <ExpandableCard title="Identifiers" defaultExpanded={true}>
           <div className="space-y-2 text-sm mt-3">
             {patient?.identifier.map(
-              (identifier: { system: string; value: string }) => (
+              (
+                identifier: { system: string; value: string },
+                index: number,
+              ) => (
                 <CardRowItem
-                  key={identifier.value}
+                  key={`${identifier.value}-${index}`}
                   label={identifier.system}
                   value={identifier.value}
                 />
@@ -72,7 +76,7 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
           </div>
         </ExpandableCard>
       )}
-      <StaticContent patient={patient} />
+      {patient.extension && <StaticContent patient={patient} />}
     </div>
   )
 }
