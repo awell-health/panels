@@ -4,9 +4,9 @@ import PanelFooter from '@/app/panel/[panel]/components/PanelFooter'
 import PanelNavigation from '@/app/panel/[panel]/components/PanelNavigation'
 import PanelToolbar from '@/app/panel/[panel]/components/PanelToolbar'
 import { VirtualizedTable } from '@/app/panel/[panel]/components/VirtualizedTable'
-import { useDrawer } from '@/contexts/DrawerContext'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
+import { useColumnOperations } from '@/hooks/use-column-operations'
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import {
@@ -20,9 +20,9 @@ import { arrayMove } from '@/lib/utils'
 import type {
   Column,
   ColumnChangesResponse,
-  ViewType,
   Filter,
   Sort,
+  ViewType,
 } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Loader2 } from 'lucide-react'
@@ -30,11 +30,6 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { AddIngestionModal } from './components/AddIngestionModal'
 import { ModalDetails } from './components/ModalDetails'
-
-interface SortConfig {
-  key: string
-  direction: 'asc' | 'desc'
-}
 
 export default function WorklistPage() {
   const params = useParams()
@@ -55,8 +50,9 @@ export default function WorklistPage() {
     toggleTaskOwner,
     isLoading: isMedplumLoading,
   } = useMedplumStore()
-  const { updatePanel, updateColumn, deleteColumn, applyColumnChanges } =
-    useReactivePanelStore()
+  const { updatePanel } = useReactivePanelStore()
+  const { updateColumn, deleteColumn, applyColumnChanges } =
+    useColumnOperations()
   const {
     panel,
     isLoading: isPanelLoading,
@@ -64,8 +60,7 @@ export default function WorklistPage() {
   } = useReactivePanel(panelId)
   const { columns: allColumns, isLoading: isColumnsLoading } =
     useReactiveColumns(panelId)
-  const { views, isLoading: isViewsLoading } = useReactiveViews(panelId)
-  const { openDrawer } = useDrawer()
+  const { isLoading: isViewsLoading } = useReactiveViews(panelId)
 
   const router = useRouter()
 
@@ -154,7 +149,7 @@ export default function WorklistPage() {
     }
 
     try {
-      await updateColumn?.(panel.id, updates.id, updates)
+      await updateColumn(panel.id, updates.id, updates)
     } catch (error) {
       console.error('Failed to update column:', error)
     }
@@ -165,8 +160,12 @@ export default function WorklistPage() {
       return
     }
 
+    // Find the column name for better toast messages
+    const column = allColumns.find((col) => col.id === columnId)
+    const columnName = column?.name
+
     try {
-      await deleteColumn?.(panel.id, columnId)
+      await deleteColumn(panel.id, columnId, columnName)
     } catch (error) {
       console.error('Failed to delete column:', error)
     }

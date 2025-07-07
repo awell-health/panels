@@ -14,7 +14,9 @@ import {
 
 interface AIConversationDrawerProps {
   onClose: () => void
-  onSendMessage: (conversation: Array<ChatMessage>) => Promise<string>
+  onSendMessage: (
+    conversation: Array<ChatMessage>,
+  ) => Promise<{ response: string; hasColumnChanges?: boolean }>
   getInitialMessage: () => Promise<string>
 }
 
@@ -25,6 +27,7 @@ export default function AIConversationDrawer({
     Promise.resolve("Hi, I'm your Assistant. How can I help you?"),
 }: AIConversationDrawerProps) {
   const [inputMessage, setInputMessage] = useState('')
+  const [hasColumnChanges, setHasColumnChanges] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -35,7 +38,16 @@ export default function AIConversationDrawer({
     retryMessage,
     isAnyMessageProcessing,
   } = useAIConversation({
-    onSendMessage,
+    onSendMessage: async (conversation) => {
+      const result = await onSendMessage(conversation)
+
+      // Track if column changes occurred
+      if (result.hasColumnChanges) {
+        setHasColumnChanges(true)
+      }
+
+      return result.response
+    },
     getInitialMessage,
     maxRetries: 3,
     retryDelay: 1000,
@@ -61,7 +73,8 @@ export default function AIConversationDrawer({
   }, [messages.length, isAnyMessageProcessing, isInitialLoading])
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isAnyMessageProcessing) return
+    if (!inputMessage.trim() || isAnyMessageProcessing || hasColumnChanges)
+      return
 
     const messageToSend = inputMessage
     setInputMessage('')
@@ -106,6 +119,27 @@ export default function AIConversationDrawer({
             <span className="text-sm text-gray-500">
               Agent is analyzing your request...
             </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const getColumnChangesNotice = () => {
+    if (!hasColumnChanges) return null
+
+    return (
+      <div className="flex justify-start">
+        <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 max-w-[80%]">
+          <div className="flex items-start space-x-2">
+            <div className="text-blue-600 font-medium">
+              🎉 Column changes applied!
+            </div>
+          </div>
+          <div className="text-blue-700 mt-2">
+            The columns have been updated successfully. Please start a new
+            conversation to get the updated list of columns and continue working
+            with the latest data.
           </div>
         </div>
       </div>
@@ -203,6 +237,7 @@ export default function AIConversationDrawer({
           <>
             {messages.map(renderMessage)}
             {getProcessingIndicator()}
+            {getColumnChangesNotice()}
             {/* Invisible element to scroll to */}
             <div ref={messagesEndRef} />
           </>
@@ -220,21 +255,31 @@ export default function AIConversationDrawer({
               e.key === 'Enter' && !e.shiftKey && handleSendMessage()
             }
             placeholder={
-              isAnyMessageProcessing
-                ? 'Please wait for the current message to complete...'
-                : 'Type your message...'
+              hasColumnChanges
+                ? 'Please start a new conversation to continue with updated columns...'
+                : isAnyMessageProcessing
+                  ? 'Please wait for the current message to complete...'
+                  : 'Type your message...'
             }
-            disabled={isInitialLoading || isAnyMessageProcessing}
+            disabled={
+              isInitialLoading || isAnyMessageProcessing || hasColumnChanges
+            }
             className="flex-1 px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           />
           <button
             type="button"
             onClick={handleSendMessage}
             disabled={
-              isInitialLoading || isAnyMessageProcessing || !inputMessage.trim()
+              isInitialLoading ||
+              isAnyMessageProcessing ||
+              !inputMessage.trim() ||
+              hasColumnChanges
             }
             className={`px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-              isInitialLoading || isAnyMessageProcessing || !inputMessage.trim()
+              isInitialLoading ||
+              isAnyMessageProcessing ||
+              !inputMessage.trim() ||
+              hasColumnChanges
                 ? 'opacity-50 cursor-not-allowed'
                 : ''
             }`}
