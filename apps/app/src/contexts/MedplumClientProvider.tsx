@@ -47,7 +47,6 @@ export function MedplumClientProvider({
     {},
   )
   const isInitializedRef = useRef(false)
-  const isInitializingRef = useRef(false)
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null)
   const clientRef = useRef<MedplumClient | null>(null)
 
@@ -104,24 +103,9 @@ export function MedplumClientProvider({
 
   // Initialize Medplum store
   useEffect(() => {
-    // Prevent multiple simultaneous initializations
-    if (isInitializingRef.current) {
-      console.log('MedplumProvider: Already initializing, skipping')
-      return
-    }
-
-    // If we already have a client and store, don't reinitialize
-    if (clientRef.current && medplumStore) {
-      console.log(
-        'MedplumProvider: Client and store already exist, skipping initialization',
-      )
-      return
-    }
-
     const initializeMedplumStore = async () => {
-      isInitializingRef.current = true
-
       try {
+        setIsLoading(true)
         const { medplumBaseUrl, medplumWsBaseUrl } = await getRuntimeConfig()
 
         if (!medplumBaseUrl || !medplumWsBaseUrl) {
@@ -145,21 +129,25 @@ export function MedplumClientProvider({
               medplumSecret,
             )
           } else {
-            if (
-              clientRef.current.getActiveLogin()?.profile?.id !==
-              medplumClientId
-            ) {
-              console.log('MedplumProvider: Reauthentication required')
-              await clientRef.current.startClientLogin(
-                medplumClientId,
-                medplumSecret,
-              )
-            } else {
-              console.log(
-                'MedplumProvider: Client already authenticated, skipping login',
-              )
-            }
+            console.log(
+              'MedplumProvider: Client already authenticated, skipping login',
+            )
           }
+        }
+
+        if (
+          clientRef.current &&
+          clientRef.current.getActiveLogin()?.profile?.reference !==
+            `ClientApplication/${medplumClientId}`
+        ) {
+          console.log(
+            'MedplumProvider: Reauthenticating in a different client login',
+            medplumClientId,
+          )
+          await clientRef.current.startClientLogin(
+            medplumClientId,
+            medplumSecret,
+          )
         }
 
         const store = new MedplumStore(clientRef.current, medplumWsBaseUrl)
@@ -173,33 +161,27 @@ export function MedplumClientProvider({
             : new Error('Failed to initialize Medplum store'),
         )
       } finally {
-        isInitializingRef.current = false
+        setIsLoading(false)
       }
     }
 
     if (medplumClientId && medplumSecret) {
       initializeMedplumStore()
     }
-  }, [medplumClientId, medplumSecret, medplumStore])
+  }, [medplumClientId, medplumSecret])
 
   // Load data and setup subscriptions
   useEffect(() => {
-    console.log('MedplumProvider: Loading data and setting up subscriptions', {
-      hasMedplumStore: !!medplumStore,
-      authenticatedUserId,
-      name,
-      email,
-      isInitialized: isInitializedRef.current,
-    })
-
-    if (!medplumStore || isInitializedRef.current) {
+    if (!medplumStore) {
       return
     }
 
+    console.log('MedplumProvider: Loading data and setting up subscriptions', {
+      medplumStore: medplumStore,
+    })
+
     const loadData = async () => {
       try {
-        setIsLoading(true)
-
         const [loadedPatients, loadedTasks] = await Promise.all([
           medplumStore.getPatients(),
           medplumStore.getTasks(),
@@ -208,8 +190,6 @@ export function MedplumClientProvider({
         setTasks(loadedTasks)
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to load data'))
-      } finally {
-        setIsLoading(false)
       }
     }
 
@@ -242,6 +222,27 @@ export function MedplumClientProvider({
       }
     }
 
+    loadData()
+    setupSubscriptions()
+
+    // Cleanup function
+    return () => {
+      if (unsubscribeRef.current.patients) {
+        unsubscribeRef.current.patients()
+        unsubscribeRef.current.patients = undefined
+      }
+      if (unsubscribeRef.current.tasks) {
+        unsubscribeRef.current.tasks()
+        unsubscribeRef.current.tasks = undefined
+      }
+    }
+  }, [medplumStore, updateResource])
+
+  useEffect(() => {
+    if (!medplumStore) {
+      return
+    }
+
     const getOrCreatePractitioner = async () => {
       if (!authenticatedUserId) {
         console.error('No authenticated user ID found')
@@ -254,24 +255,8 @@ export function MedplumClientProvider({
       setPractitioner(practitioner)
     }
 
-    loadData()
-    setupSubscriptions()
     getOrCreatePractitioner()
-
-    // Cleanup function
-    return () => {
-      console.log('MedplumProvider: Cleaning up subscriptions')
-      if (unsubscribeRef.current.patients) {
-        unsubscribeRef.current.patients()
-        unsubscribeRef.current.patients = undefined
-      }
-      if (unsubscribeRef.current.tasks) {
-        unsubscribeRef.current.tasks()
-        unsubscribeRef.current.tasks = undefined
-      }
-      isInitializedRef.current = false
-    }
-  }, [medplumStore, updateResource, authenticatedUserId, name, email])
+  }, [medplumStore, authenticatedUserId, name, email])
 
   const addNotesToTask = useCallback(
     async (taskId: string, note: string) => {
