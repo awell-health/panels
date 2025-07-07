@@ -8,10 +8,8 @@ interface TaskDetailsProps {
   task: WorklistTask
 }
 
-const TaskDetails = ({ task: taskData }: TaskDetailsProps) => {
+const TaskDetails = ({ task }: TaskDetailsProps) => {
   const VIEWS = ['content', 'ahp', 'comments']
-  const [task, setTask] = useState(taskData)
-
   const AHP_URL = task.input[0]?.valueUrl
 
   return (
@@ -25,7 +23,11 @@ const TaskDetails = ({ task: taskData }: TaskDetailsProps) => {
         >
           <div className="h-full">
             {view === 'ahp' && (
-              <FramePanel url={AHP_URL} status={task.status} />
+              <FramePanel
+                url={AHP_URL}
+                status={task.status}
+                taskName={task.description}
+              />
             )}
             {view === 'content' && <StaticContent task={task} />}
             {view === 'comments' && (

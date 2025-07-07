@@ -9,7 +9,7 @@ const statuses = {
   },
   received: {
     label: 'Received',
-    color: 'bg-green-400',
+    color: 'bg-green-500',
   },
   accepted: {
     label: 'Accepted',
@@ -41,7 +41,7 @@ const statuses = {
   },
   completed: {
     label: 'Completed',
-    color: 'bg-green-400',
+    color: 'bg-green-500',
   },
   'entered-in-error': {
     label: 'Entered in error',
@@ -53,7 +53,7 @@ const TaskStatusBadge = ({ status }: { status: string }) => {
   const statusData = statuses[status as keyof typeof statuses]
 
   return (
-    <div className={`badge badge-soft badge-sm text-white ${statusData.color}`}>
+    <div className={`badge badge-soft badge-xs text-white ${statusData.color}`}>
       {statusData.label}
     </div>
   )

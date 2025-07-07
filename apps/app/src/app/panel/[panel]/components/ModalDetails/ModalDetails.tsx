@@ -3,7 +3,7 @@ import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
 import { User, X } from 'lucide-react'
 import TaskStatusBadge from './TaskDetails/TaskStatusBadge'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ModalDetailsProps {
   row: WorklistPatient | WorklistTask
@@ -11,11 +11,12 @@ interface ModalDetailsProps {
 }
 
 const ModalDetails = ({ row, onClose }: ModalDetailsProps) => {
-  const { patient, status } = row
+  const { patient } = row
   const patientName = patient?.name || row.name || ''
   const dateOfBirth = patient?.birthDate || row.birthDate || ''
-
   const modalRef = useRef<HTMLDivElement>(null)
+
+  const [selectedTask, setSelectedTask] = useState<WorklistTask | null>(null)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -50,17 +51,21 @@ const ModalDetails = ({ row, onClose }: ModalDetailsProps) => {
         <div className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2 text-sm text-gray-700 pl-4">
             <User className="h-5 w-5" />
-            <span className="font-medium">{patientName}</span>
+            {selectedTask ? (
+              <button
+                type="button"
+                className="hover:underline text-medium text-blue-600 cursor-pointer"
+                onClick={() => setSelectedTask(null)}
+              >
+                {patientName}
+              </button>
+            ) : (
+              <span className="font-medium">{patientName}</span>
+            )}
             {dateOfBirth && (
               <>
                 <span>·</span>
                 <span>DOB {dateOfBirth}</span>
-              </>
-            )}
-            {status && (
-              <>
-                <span>·</span>
-                <TaskStatusBadge status={status} />
               </>
             )}
           </div>
@@ -72,7 +77,15 @@ const ModalDetails = ({ row, onClose }: ModalDetailsProps) => {
         </div>
         <div className="flex flex-1 overflow-hidden">
           {row.resourceType === 'Patient' && (
-            <PatientDetails patient={row as WorklistPatient} />
+            <>
+              {!selectedTask && (
+                <PatientDetails
+                  patient={row as WorklistPatient}
+                  setSelectedTask={setSelectedTask}
+                />
+              )}
+              {selectedTask && <TaskDetails task={selectedTask} />}
+            </>
           )}
           {row.resourceType === 'Task' && (
             <TaskDetails task={row as WorklistTask} />

@@ -5,7 +5,8 @@ import FhirExpandableCard from '../FhirExpandableCard'
 const EncompassContent: React.FC<{
   task: WorklistTask
   searchQuery: string
-}> = ({ task, searchQuery }) => {
+  expanded: boolean
+}> = ({ task, searchQuery, expanded }) => {
   return (
     <>
       {encompassCards.map((card) => (
@@ -14,6 +15,7 @@ const EncompassContent: React.FC<{
           task={task}
           searchQuery={searchQuery}
           card={card}
+          expanded={expanded}
         />
       ))}
     </>
