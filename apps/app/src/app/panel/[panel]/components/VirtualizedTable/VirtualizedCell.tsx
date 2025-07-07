@@ -23,7 +23,7 @@ interface VirtualizedCellProps {
     ) => void
     onPDFClick: (pdfUrl: string, patientName: string) => void
     onTaskClick: (task: string, taskStatus: string, patientName: string) => void
-    onAssigneeClick: (taskId: string) => void
+    onAssigneeClick: (taskId: string) => Promise<void>
     currentView: string
     currentUserName?: string
     hoveredRowIndex: number | null

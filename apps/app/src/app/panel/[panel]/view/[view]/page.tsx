@@ -329,9 +329,9 @@ export default function WorklistViewPage() {
                 handleTaskClick={() => {}}
                 handleRowHover={() => {}}
                 toggleSelectRow={() => {}}
-                handleAssigneeClick={(taskId: string) =>
-                  toggleTaskOwner(taskId)
-                }
+                handleAssigneeClick={async (taskId: string) => {
+                  await toggleTaskOwner(taskId)
+                }}
                 currentView={view?.metadata.viewType ?? 'patient'}
                 currentUserName={user?.name}
                 onColumnUpdate={onColumnUpdate}

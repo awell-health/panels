@@ -57,7 +57,7 @@ interface VirtualizedTableProps {
     rect: DOMRect | null,
   ) => void
   toggleSelectRow: (rowId: string) => void
-  handleAssigneeClick: (taskId: string) => void
+  handleAssigneeClick: (taskId: string) => Promise<void>
   onColumnUpdate: (updates: Partial<Column>) => void
   onColumnDelete?: (columnId: string) => void
   onSortUpdate: (sort: Sort | undefined) => void
