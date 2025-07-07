@@ -212,10 +212,7 @@ export default function WorklistViewPage() {
       if (view?.metadata.viewType === 'task') {
         setSelectedItem(row as WorklistPatient | WorklistTask)
       } else if (view?.metadata.viewType === 'patient') {
-        openDrawer(
-          <PatientContext patient={row as WorklistPatient} />,
-          `${row.name} - Patient Details`,
-        )
+        openDrawer(PatientContext, { patient: row as WorklistPatient }, `${row.name} - Patient Details`)
       }
     },
     [view?.metadata.viewType, openDrawer],
@@ -318,15 +315,15 @@ export default function WorklistViewPage() {
               <VirtualizedTable
                 isLoading={isMedplumLoading}
                 selectedRows={[]}
-                toggleSelectAll={() => {}}
+                toggleSelectAll={() => { }}
                 columns={visibleColumns}
                 orderColumnMode="manual"
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
-                handlePDFClick={() => {}}
-                handleTaskClick={() => {}}
-                handleRowHover={() => {}}
-                toggleSelectRow={() => {}}
+                handlePDFClick={() => { }}
+                handleTaskClick={() => { }}
+                handleRowHover={() => { }}
+                toggleSelectRow={() => { }}
                 handleAssigneeClick={(taskId: string) =>
                   toggleTaskOwner(taskId)
                 }

@@ -1,20 +1,22 @@
 'use client'
 
 import type React from 'react'
+import { useDrawer } from '@/contexts/DrawerContext'
 
 interface RightDrawerProps {
   open: boolean
   onClose: () => void
   title?: string
-  children: React.ReactNode
+  children?: React.ReactNode
 }
 
 export default function RightDrawer({
   open,
   onClose,
   title,
-  children,
 }: RightDrawerProps) {
+  const { content } = useDrawer()
+
   return (
     <div
       className="bg-white shadow-[-2px_0_8px_rgba(0,0,0,0.1)] overflow-hidden"
@@ -41,7 +43,9 @@ export default function RightDrawer({
 
         {/* Scrollable Content Area - Both horizontal and vertical scrolling */}
         <div className="flex-1 overflow-auto p-4 text-xs font-normal text-gray-700">
-          <div className="drawer-content">{children}</div>
+          <div className="drawer-content">
+            {content && <content.component {...content.props} />}
+          </div>
         </div>
       </div>
     </div>

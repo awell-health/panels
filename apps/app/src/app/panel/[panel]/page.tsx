@@ -304,14 +304,14 @@ export default function WorklistPage() {
               <VirtualizedTable
                 isLoading={isMedplumLoading}
                 selectedRows={selectedRows}
-                toggleSelectAll={() => {}}
+                toggleSelectAll={() => { }}
                 columns={columns}
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
-                handlePDFClick={() => {}}
-                handleTaskClick={() => {}}
-                handleRowHover={() => {}}
-                toggleSelectRow={() => {}}
+                handlePDFClick={() => { }}
+                handleTaskClick={() => { }}
+                handleRowHover={() => { }}
+                toggleSelectRow={() => { }}
                 handleAssigneeClick={(taskId: string) =>
                   toggleTaskOwner(taskId)
                 }
@@ -329,7 +329,7 @@ export default function WorklistPage() {
                 <AddIngestionModal
                   isOpen={isAddingIngestionSource}
                   onClose={() => setIsAddingIngestionSource(false)}
-                  onSelectSource={() => {}}
+                  onSelectSource={() => { }}
                   ingestionBots={[]}
                 />
               )}
