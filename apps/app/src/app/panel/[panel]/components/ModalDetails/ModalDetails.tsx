@@ -11,7 +11,7 @@ interface ModalDetailsProps {
 }
 
 const ModalDetails = ({ row, onClose }: ModalDetailsProps) => {
-  const { patient, status } = row
+  const { patient } = row
   const patientName = patient?.name || row.name || ''
   const dateOfBirth = patient?.birthDate || row.birthDate || ''
 
@@ -55,12 +55,6 @@ const ModalDetails = ({ row, onClose }: ModalDetailsProps) => {
               <>
                 <span>·</span>
                 <span>DOB {dateOfBirth}</span>
-              </>
-            )}
-            {status && (
-              <>
-                <span>·</span>
-                <TaskStatusBadge status={status} />
               </>
             )}
           </div>
