@@ -8,13 +8,9 @@ interface TaskDetailsProps {
   task: WorklistTask
 }
 
-const TaskDetails = ({ task: taskData }: TaskDetailsProps) => {
+const TaskDetails = ({ task }: TaskDetailsProps) => {
   const VIEWS = ['content', 'ahp', 'comments']
-  const [task, setTask] = useState(taskData)
-
   const AHP_URL = task.input[0]?.valueUrl
-
-  console.log(task)
 
   return (
     <>
