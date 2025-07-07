@@ -9,7 +9,7 @@ const statuses = {
   },
   received: {
     label: 'Received',
-    color: 'bg-green-400',
+    color: 'bg-green-500',
   },
   accepted: {
     label: 'Accepted',
@@ -41,7 +41,7 @@ const statuses = {
   },
   completed: {
     label: 'Completed',
-    color: 'bg-green-400',
+    color: 'bg-green-500',
   },
   'entered-in-error': {
     label: 'Entered in error',

@@ -11,17 +11,37 @@ interface Props {
     name: string
     fields: { label: string; key: string; fhirPath: string }[]
   }
+  expanded: boolean
 }
 
-const FhirExpandableCard: FC<Props> = ({ task, searchQuery, card }) => {
+const FhirExpandableCard: FC<Props> = ({
+  task,
+  searchQuery,
+  card,
+  expanded,
+}) => {
   const getFieldValue = (fhirPath: string) => {
     const fieldValue = getNestedValue(task, fhirPath)
 
     return fieldValue
   }
 
+  if (searchQuery) {
+    const containString = card.fields.some(
+      (field) =>
+        field.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        getNestedValue(task, field.fhirPath)
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()),
+    )
+
+    if (!containString) {
+      return <></>
+    }
+  }
+
   return (
-    <ExpandableCard title={card.name} defaultExpanded={true}>
+    <ExpandableCard title={card.name} defaultExpanded={expanded}>
       <div className="space-y-2 text-sm mt-3">
         {card.fields.map((field) => (
           <CardRowItem

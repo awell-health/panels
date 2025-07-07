@@ -7,31 +7,40 @@ import FhirExpandableCard from '../FhirExpandableCard'
 const WellpathContent: React.FC<{
   task: WorklistTask
   searchQuery: string
-}> = ({ task, searchQuery }) => {
+  expanded: boolean
+}> = ({ task, searchQuery, expanded }) => {
   const { patient } = task
+
+  const showPatientDemographics = searchQuery
+    ? patient?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      patient?.birthDate?.toLowerCase().includes(searchQuery.toLowerCase())
+    : true
 
   return (
     <>
-      <ExpandableCard title="Patient demographics" defaultExpanded={true}>
-        <div className="space-y-2 text-sm mt-3">
-          <CardRowItem
-            label="Full Name"
-            value={patient?.name}
-            searchQuery={searchQuery}
-          />
-          <CardRowItem
-            label="Date of Birth"
-            value={patient?.birthDate}
-            searchQuery={searchQuery}
-          />
-        </div>
-      </ExpandableCard>
+      {showPatientDemographics && (
+        <ExpandableCard title="Patient demographics" defaultExpanded={expanded}>
+          <div className="space-y-2 text-sm mt-3">
+            <CardRowItem
+              label="Full Name"
+              value={patient?.name}
+              searchQuery={searchQuery}
+            />
+            <CardRowItem
+              label="Date of Birth"
+              value={patient?.birthDate}
+              searchQuery={searchQuery}
+            />
+          </div>
+        </ExpandableCard>
+      )}
       {wellpathCards.map((card) => (
         <FhirExpandableCard
           key={card.name}
           task={task}
           searchQuery={searchQuery}
           card={card}
+          expanded={expanded}
         />
       ))}
     </>

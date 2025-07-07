@@ -1,6 +1,8 @@
 import type { FC } from 'react'
 import HighlightText from './HighlightContent'
 import { RenderWithCopy } from './RenderWithCopy'
+import RenderValue from './RenderValue'
+import { hasSearchQuery } from './utils'
 
 interface Props {
   label: string
@@ -9,33 +11,22 @@ interface Props {
 }
 
 const CardRowItem: FC<Props> = ({ label, value, searchQuery = '' }) => {
-  const renderValue = (val: string) => {
-    const containsHTML = (str: string) => /<[a-z][\s\S]*>/i.test(str)
-
-    if (containsHTML(value as string)) {
-      return (
-        <div
-          className="text-sm "
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
-          dangerouslySetInnerHTML={{
-            __html: value?.replaceAll('\n', '<br />') ?? '',
-          }}
-        />
-      )
+  if (searchQuery) {
+    if (
+      !hasSearchQuery(label, searchQuery) &&
+      !hasSearchQuery(value ?? '', searchQuery)
+    ) {
+      return null
     }
-
-    return (
-      <RenderWithCopy text={value}>
-        <HighlightText text={value} searchQuery={searchQuery} />
-      </RenderWithCopy>
-    )
   }
 
   return (
     <div className="flex justify-between">
-      <span className="text-gray-600">{label}:</span>
+      <span className="text-gray-600">
+        <HighlightText text={label} searchQuery={searchQuery} />
+      </span>
       <span className="text-gray-900 font-normal max-w-[60%]">
-        {value && renderValue(value)}
+        {value && <RenderValue value={value} searchQuery={searchQuery} />}
         {!value && <span className="text-gray-900 mr-4">-</span>}
       </span>
     </div>
