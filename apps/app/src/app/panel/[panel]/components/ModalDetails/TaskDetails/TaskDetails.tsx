@@ -14,6 +14,8 @@ const TaskDetails = ({ task: taskData }: TaskDetailsProps) => {
 
   const AHP_URL = task.input[0]?.valueUrl
 
+  console.log(task)
+
   return (
     <>
       {VIEWS.map((view) => (
@@ -25,7 +27,11 @@ const TaskDetails = ({ task: taskData }: TaskDetailsProps) => {
         >
           <div className="h-full">
             {view === 'ahp' && (
-              <FramePanel url={AHP_URL} status={task.status} />
+              <FramePanel
+                url={AHP_URL}
+                status={task.status}
+                taskName={task.description}
+              />
             )}
             {view === 'content' && <StaticContent task={task} />}
             {view === 'comments' && (
