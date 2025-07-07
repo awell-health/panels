@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 export function calculateAge(dateString: string): number {
   const birthDate = new Date(dateString)
   const today = new Date()
@@ -32,4 +34,25 @@ export const isObject = (value: any): boolean => {
   // if (value instanceof RegExp) return false;
 
   return true
+}
+
+export const hasSearchQuery = (value: string, searchQuery: string): boolean => {
+  return value.toLowerCase().includes(searchQuery.toLowerCase())
+}
+
+// Custom debounce hook
+export const useDebounce = <T>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [value, delay])
+
+  return debouncedValue
 }

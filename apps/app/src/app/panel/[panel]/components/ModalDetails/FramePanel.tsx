@@ -34,7 +34,9 @@ const FramePanel = ({ url, status, taskName }: FramePanelProps) => {
         </div>
       </div>
       {isCompleted ? (
-        <div className="flex items-center justify-center  gap-2">
+        <div
+          className={`flex items-center justify-center gap-2 ${containerHeight}`}
+        >
           <CheckCircle className="h-8 w-8 text-gray-500" />
           <span className="text-sm text-gray-500">Task completed</span>
         </div>
@@ -49,7 +51,7 @@ const FramePanel = ({ url, status, taskName }: FramePanelProps) => {
           }}
         />
       )}
-      {loadingFrame && (
+      {!isCompleted && loadingFrame && (
         <div
           className={`flex items-center justify-center ${containerHeight} gap-2`}
         >
