@@ -12,7 +12,7 @@ import {
   useReactiveView,
 } from '@/hooks/use-reactive-data'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
-import type { Panel, View } from '@/types/panel'
+import type { Panel, View, Filter } from '@/types/panel'
 import {
   LayoutGrid,
   Plus,
@@ -29,6 +29,7 @@ interface PanelNavigationProps {
   panel: Panel
   selectedViewId?: string
   currentViewType?: 'patient' | 'task'
+  currentFilters?: Filter[]
   onPanelTitleChange?: (newTitle: string) => void
   onViewTitleChange?: (newTitle: string) => void
 }
@@ -39,6 +40,7 @@ export default function PanelNavigation({
   panel,
   selectedViewId,
   currentViewType,
+  currentFilters,
   onPanelTitleChange,
   onViewTitleChange,
 }: PanelNavigationProps) {
@@ -190,7 +192,7 @@ export default function PanelNavigation({
           break
         }
         case 'from-panel': {
-          // Create view from current panel - use panel filters and current view type
+          // Create view from current panel - use current applied filters and current view type
           const viewType = currentViewType || 'patient'
           const relevantColumns = columns.filter((col) =>
             viewType === 'patient'
@@ -204,7 +206,7 @@ export default function PanelNavigation({
             createdAt: new Date(),
             isPublished: false,
             metadata: {
-              filters: panel.metadata.filters || [],
+              filters: currentFilters || panel.metadata.filters || [],
               sort: panel.metadata.sort || undefined,
               viewType: viewType,
             },
