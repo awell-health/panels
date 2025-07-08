@@ -1,7 +1,6 @@
 import type { WorklistTask } from '@/hooks/use-medplum-store'
 import TaskComments from './TaskComments'
 import FramePanel from '../FramePanel'
-import { useState } from 'react'
 import StaticContent from '../StaticContent'
 
 interface TaskDetailsProps {
@@ -9,7 +8,7 @@ interface TaskDetailsProps {
 }
 
 const TaskDetails = ({ task }: TaskDetailsProps) => {
-  const VIEWS = ['content', 'ahp', 'comments']
+  const VIEWS = ['content', 'ahp', 'notes']
   const AHP_URL = task.input[0]?.valueUrl
 
   return (
@@ -30,8 +29,12 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
               />
             )}
             {view === 'content' && <StaticContent task={task} />}
-            {view === 'comments' && (
-              <TaskComments notes={task.note} taskId={task.id} />
+            {view === 'notes' && (
+              <TaskComments
+                notes={task.note}
+                taskId={task.id}
+                patientId={task.patientId}
+              />
             )}
           </div>
         </div>

@@ -206,17 +206,9 @@ export default function WorklistPage() {
   const handleRowClick = useCallback(
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
-      if (currentView === 'task') {
-        setSelectedItem(row as WorklistPatient | WorklistTask)
-      } else if (currentView === 'patient') {
-        setSelectedItem(row as WorklistPatient | WorklistTask)
-        // openDrawer(
-        //   <PatientContext patient={row as WorklistPatient} />,
-        //   `${row.name} - Patient Details`,
-        // )
-      }
+      setSelectedItem(row as WorklistPatient | WorklistTask)
     },
-    [currentView],
+    [],
   )
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here

@@ -210,17 +210,9 @@ export default function WorklistViewPage() {
   const handleRowClick = useCallback(
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
-      if (view?.metadata.viewType === 'task') {
-        setSelectedItem(row as WorklistPatient | WorklistTask)
-      } else if (view?.metadata.viewType === 'patient') {
-        openDrawer(
-          PatientContext,
-          { patient: row as WorklistPatient },
-          `${row.name} - Patient Details`,
-        )
-      }
+      setSelectedItem(row as WorklistPatient | WorklistTask)
     },
-    [view?.metadata.viewType, openDrawer],
+    [],
   )
 
   const onViewTitleChange = async (newTitle: string) => {

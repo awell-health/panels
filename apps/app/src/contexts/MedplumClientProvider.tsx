@@ -4,7 +4,14 @@ import { useAuthentication } from '@/hooks/use-authentication'
 import { getRuntimeConfig } from '@/lib/config'
 import { MedplumStore } from '@/lib/medplum'
 import { MedplumClient } from '@medplum/core'
-import type { Bot, Patient, Practitioner, Task } from '@medplum/fhirtypes'
+import type {
+  Bot,
+  Encounter,
+  Observation,
+  Patient,
+  Practitioner,
+  Task,
+} from '@medplum/fhirtypes'
 import {
   createContext,
   useContext,
@@ -21,6 +28,8 @@ type MedplumContextType = {
   error: Error | null
   addNotesToTask: (taskId: string, notes: string) => Promise<Task>
   toggleTaskOwner: (taskId: string) => Promise<Task>
+  getPatientObservations: (patientId: string) => Promise<Observation[]>
+  getPatientEncounters: (patientId: string) => Promise<Encounter[]>
 }
 
 const MedplumContext = createContext<MedplumContextType | null>(null)
@@ -270,6 +279,28 @@ export function MedplumClientProvider({
     [medplumStore, updateResource],
   )
 
+  const getPatientObservations = useCallback(
+    async (patientId: string) => {
+      if (!medplumStore) {
+        throw new Error('Medplum store not initialized')
+      }
+      const observations = await medplumStore.getObservations(patientId)
+      return observations
+    },
+    [medplumStore],
+  )
+
+  const getPatientEncounters = useCallback(
+    async (patientId: string) => {
+      if (!medplumStore) {
+        throw new Error('Medplum store not initialized')
+      }
+      const encounters = await medplumStore.getEncounters(patientId)
+      return encounters
+    },
+    [medplumStore],
+  )
+
   const toggleTaskOwner = useCallback(
     async (taskId: string) => {
       if (!medplumStore) {
@@ -292,6 +323,8 @@ export function MedplumClientProvider({
     error,
     addNotesToTask,
     toggleTaskOwner,
+    getPatientObservations,
+    getPatientEncounters,
   }
 
   return (

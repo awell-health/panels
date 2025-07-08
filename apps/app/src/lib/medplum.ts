@@ -2,6 +2,8 @@ import type { MedplumClient } from '@medplum/core'
 import type {
   Bot,
   Bundle,
+  Encounter,
+  Observation,
   Parameters,
   Patient,
   Practitioner,
@@ -217,6 +219,20 @@ export class MedplumStore {
       category: 'Connector',
     })
     return (bundle.entry || []).map((entry) => entry.resource as Bot)
+  }
+
+  async getObservations(patientId: string): Promise<Observation[]> {
+    const bundle = await this.client.search('Observation', {
+      subject: `Patient/${patientId}`,
+    })
+    return (bundle.entry || []).map((entry) => entry.resource as Observation)
+  }
+
+  async getEncounters(patientId: string): Promise<Encounter[]> {
+    const bundle = await this.client.search('Encounter', {
+      subject: `Patient/${patientId}`,
+    })
+    return (bundle.entry || []).map((entry) => entry.resource as Encounter)
   }
 
   // Get the current access token

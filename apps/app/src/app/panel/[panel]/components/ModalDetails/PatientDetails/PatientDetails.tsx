@@ -1,12 +1,10 @@
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
-import StaticContent from '../StaticContent'
 import PatientData from './PatientData'
-import ExpandableCard from '../StaticContent/ExpandableCard'
 import TaskStatusBadge from '../TaskDetails/TaskStatusBadge'
-import { ArrowRightIcon, ChevronRightIcon } from 'lucide-react'
-import { useParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
-import TaskDetails from '../TaskDetails/TaskDetails'
+import { ChevronRightIcon } from 'lucide-react'
+
+import NotesTimeline from '../NotesTimeline'
+import { sortBy } from 'lodash'
 
 interface PatientDetailsProps {
   patient: WorklistPatient
@@ -14,8 +12,19 @@ interface PatientDetailsProps {
 }
 
 const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
-  const VIEWS = ['data', 'content']
+  const VIEWS = ['data', 'content', 'timeline']
   const { tasks } = patient
+  let notes: WorklistTask['note'] = []
+
+  notes = sortBy(notes, 'time')
+
+  const thread = tasks
+    .filter((task) => task.note && task.note.length > 0)
+    .map((task) => ({
+      text: task.description,
+      time: task.created,
+      notes: task.note,
+    }))
 
   return (
     <>
@@ -23,12 +32,14 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
         <div
           key={view}
           className={`flex-1  overflow-y-auto p-2 border-r border-gray-200 ${
-            view === 'content' ? 'w-[50%]' : 'w-[50%]'
+            view === 'content' ? 'w-[40%]' : 'w-[30%]'
           }`}
         >
           <div className="h-full p-2">
             {view === 'data' && <PatientData patient={patient} />}
-            {/* {view === 'actions' && <PatientActions patient={patient} />} */}
+            {view === 'timeline' && (
+              <NotesTimeline thread={thread} patientId={patient.id} />
+            )}
             {view === 'content' && (
               <div>
                 <div className="text-lg font-medium text-gray-500 mb-4">

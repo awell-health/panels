@@ -1,15 +1,18 @@
 import { useMedplumStore, type WorklistTask } from '@/hooks/use-medplum-store'
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { useDateTimeFormat } from '../../../../../../hooks/use-date-time-format'
+import NotesTimeline from '../NotesTimeline'
 
 interface TaskCommentProps {
   notes: WorklistTask['note']
   taskId: string
+  patientId: string
 }
 
-const TaskComment = ({ notes, taskId }: TaskCommentProps) => {
+const TaskComment = ({ notes, taskId, patientId }: TaskCommentProps) => {
   const [newComment, setNewComment] = useState('')
-  const [comments, setComments] = useState<WorklistTask['note']>(notes)
+  const [comments, setComments] = useState<WorklistTask['note']>(notes ?? [])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { addNotesToTask } = useMedplumStore()
@@ -50,33 +53,9 @@ const TaskComment = ({ notes, taskId }: TaskCommentProps) => {
 
   return (
     <div className="flex flex-col p-2 gap-2">
-      {comments && comments.length > 0 && (
-        <div className=" rounded w-full mb-4 flex flex-col gap-2">
-          {comments.map(
-            // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
-            (note: any, index: number) => (
-              <div
-                key={note.id ?? index}
-                className="bg-white p-3 rounded-md shadow-md border border-gray-200"
-              >
-                <p className="text-sm text-gray-800 mb-1">{note.text}</p>
-                <div className="flex justify-between">
-                  {/* <p className="text-xs text-gray-500 font-semibold">
-                    username
-                  </p> */}
-                  <p className="text-xs text-gray-500">
-                    {note.time
-                      ? new Date(note.time).toLocaleString()
-                      : 'No timestamp'}
-                  </p>
-                </div>
-              </div>
-            ),
-          )}
-        </div>
-      )}
+      <NotesTimeline notes={comments} patientId={patientId} />
 
-      <div className="w-full">
+      <div className="w-full mt-auto">
         <textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
