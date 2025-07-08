@@ -16,13 +16,15 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
   const { tasks } = patient
   let notes: WorklistTask['note'] = []
 
-  for (const task of patient.tasks || []) {
-    if (task.note) {
-      notes.push(...task.note)
-    }
-  }
-
   notes = sortBy(notes, 'time')
+
+  const thread = tasks
+    .filter((task) => task.note && task.note.length > 0)
+    .map((task) => ({
+      text: task.description,
+      time: task.created,
+      notes: task.note,
+    }))
 
   return (
     <>
@@ -35,7 +37,9 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
         >
           <div className="h-full p-2">
             {view === 'data' && <PatientData patient={patient} />}
-            {view === 'timeline' && <NotesTimeline notes={notes} />}
+            {view === 'timeline' && (
+              <NotesTimeline thread={thread} patientId={patient.id} />
+            )}
             {view === 'content' && (
               <div>
                 <div className="text-lg font-medium text-gray-500 mb-4">

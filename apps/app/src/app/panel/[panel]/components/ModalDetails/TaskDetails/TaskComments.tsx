@@ -7,11 +7,12 @@ import NotesTimeline from '../NotesTimeline'
 interface TaskCommentProps {
   notes: WorklistTask['note']
   taskId: string
+  patientId: string
 }
 
-const TaskComment = ({ notes, taskId }: TaskCommentProps) => {
+const TaskComment = ({ notes, taskId, patientId }: TaskCommentProps) => {
   const [newComment, setNewComment] = useState('')
-  const [comments, setComments] = useState<WorklistTask['note']>(notes)
+  const [comments, setComments] = useState<WorklistTask['note']>(notes ?? [])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { addNotesToTask } = useMedplumStore()
@@ -52,9 +53,9 @@ const TaskComment = ({ notes, taskId }: TaskCommentProps) => {
 
   return (
     <div className="flex flex-col p-2 gap-2">
-      <NotesTimeline notes={comments} />
+      <NotesTimeline notes={comments} patientId={patientId} />
 
-      <div className="w-full">
+      <div className="w-full mt-auto">
         <textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
