@@ -21,6 +21,9 @@ import {
   CheckSquare,
   Copy,
   FileText,
+  Edit2Icon,
+  EditIcon,
+  Edit3Icon,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -288,6 +291,15 @@ export default function PanelNavigation({
     return options.filter((option) => option.available)
   }
 
+  const tabClassesBase =
+    'h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap'
+  const tabClassesEdit = 'bg-slate-50 border-blue-300 [&>div>input]:border-b'
+  const tabClassesSelected =
+    'bg-white border-gray-400 [&>div>span]:font-semibold'
+  const tabClassesNotSelected = 'bg-gray-100 hover:bg-gray-100 border-gray-200'
+  const tabClassesInput =
+    'bg-transparent border-b border-blue-300 focus:outline-none focus:ring-0 p-0 pb-0.5 text-xs'
+
   return (
     <>
       <div className="bg-gray-50 relative pt-4">
@@ -322,13 +334,13 @@ export default function PanelNavigation({
             >
               <div
                 className={`
-                  h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
+                  ${tabClassesBase}
                   ${
                     editingPanel
-                      ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                      ? tabClassesEdit
                       : !selectedViewId
-                        ? 'bg-white border-blue-200'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                        ? tabClassesSelected
+                        : tabClassesNotSelected
                   }
                 `}
               >
@@ -351,7 +363,7 @@ export default function PanelNavigation({
                           setEditingPanel(false)
                         }
                       }}
-                      className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-xs"
+                      className={tabClassesInput}
                     />
                     {panelTitle.trim() !== panel.name && (
                       <span
@@ -422,13 +434,13 @@ export default function PanelNavigation({
               >
                 <div
                   className={`
-                    h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
+                    ${tabClassesBase}
                     ${
                       editingViewId === view.id
-                        ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                        ? tabClassesEdit
                         : view.id === selectedViewId
-                          ? 'bg-white border-gray-200'
-                          : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                          ? tabClassesSelected
+                          : tabClassesNotSelected
                     }
                   `}
                 >
@@ -456,8 +468,11 @@ export default function PanelNavigation({
                             setEditingViewId(null)
                           }
                         }}
-                        className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-xs"
+                        className={tabClassesInput}
                       />
+                      <span className="-ml-2">
+                        <Edit3Icon className="h-3 w-3 text-blue-500" />
+                      </span>
                       {(viewTitles[view.id] || '').trim() !==
                         (view.name || '') && (
                         <span
