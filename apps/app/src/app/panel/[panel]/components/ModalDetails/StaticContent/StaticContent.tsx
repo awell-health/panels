@@ -9,6 +9,7 @@ import { useAuthentication } from '../../../../../../hooks/use-authentication'
 import EncompassContent from './EncompassContent/EncompassContent'
 import RenderValue from './RenderValue'
 import SearchInput from './SearchInput'
+import WaypointContent from './WaypointContent'
 
 interface StaticContentProps {
   task?: WorklistTask
@@ -96,18 +97,24 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
   const DevData = () => (
     <>
       {task && (
-        <WellpathContent
-          task={task}
-          searchQuery={searchQuery}
-          expanded={expandAll.wellpath}
-        />
-      )}
-      {task && (
-        <EncompassContent
-          task={task}
-          searchQuery={searchQuery}
-          expanded={expandAll.encompass}
-        />
+        <>
+          <WellpathContent
+            task={task}
+            searchQuery={searchQuery}
+            expanded={expandAll.wellpath}
+          />
+
+          <EncompassContent
+            task={task}
+            searchQuery={searchQuery}
+            expanded={expandAll.encompass}
+          />
+          <WaypointContent
+            task={task}
+            searchQuery={searchQuery}
+            expanded={expandAll.encompass}
+          />
+        </>
       )}
     </>
   )
@@ -156,6 +163,13 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
             )}
             {organizationSlug === 'encompass-health' && (
               <EncompassContent
+                task={task}
+                searchQuery={searchQuery}
+                expanded={expandAll.encompass}
+              />
+            )}
+            {organizationSlug === 'waypoint' && (
+              <WaypointContent
                 task={task}
                 searchQuery={searchQuery}
                 expanded={expandAll.encompass}
