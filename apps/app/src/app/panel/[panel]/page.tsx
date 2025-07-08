@@ -77,7 +77,6 @@ export default function WorklistPage() {
     // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
     useSearch(tableData)
 
-  // Set filters from panel
   useEffect(() => {
     if (panel) {
       setTableFilters(panel.metadata.filters)
@@ -198,7 +197,6 @@ export default function WorklistPage() {
           filters,
         },
       })
-      setTableFilters(filters)
     } catch (error) {
       console.error('Failed to update panel filters:', error)
     }
