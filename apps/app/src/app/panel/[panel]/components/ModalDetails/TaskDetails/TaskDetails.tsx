@@ -3,14 +3,17 @@ import TaskComments from './TaskComments'
 import FramePanel from '../FramePanel'
 import { useState } from 'react'
 import StaticContent from '../StaticContent'
+import TaskTimeline from './TaskTimeline'
 
 interface TaskDetailsProps {
   task: WorklistTask
 }
 
 const TaskDetails = ({ task }: TaskDetailsProps) => {
-  const VIEWS = ['content', 'ahp', 'comments']
+  const VIEWS = ['content', 'ahp', 'notes']
   const AHP_URL = task.input[0]?.valueUrl
+
+  console.log(task)
 
   return (
     <>
@@ -30,7 +33,7 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
               />
             )}
             {view === 'content' && <StaticContent task={task} />}
-            {view === 'comments' && (
+            {view === 'notes' && (
               <TaskComments notes={task.note} taskId={task.id} />
             )}
           </div>
