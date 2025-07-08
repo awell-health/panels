@@ -9,7 +9,7 @@ interface TaskCommentProps {
 
 const TaskComment = ({ notes, taskId }: TaskCommentProps) => {
   const [newComment, setNewComment] = useState('')
-  const [comments, setComments] = useState(notes)
+  const [comments, setComments] = useState<WorklistTask['note']>(notes)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { addNotesToTask } = useMedplumStore()
@@ -17,13 +17,37 @@ const TaskComment = ({ notes, taskId }: TaskCommentProps) => {
   const handleSubmitComment = async () => {
     if (newComment.trim() && taskId) {
       setIsSubmitting(true)
-      const task = await addNotesToTask(taskId, newComment.trim())
+      const tempID = new Date().toISOString()
+
+      setComments((prev: WorklistTask['note']) => [
+        ...prev,
+        {
+          id: tempID,
+          text: newComment.trim(),
+          time: new Date().toISOString(),
+        },
+      ])
 
       setNewComment('')
-      setComments(task.note)
-      setIsSubmitting(false)
+
+      try {
+        const task = await addNotesToTask(taskId, newComment.trim())
+        setComments((prev: WorklistTask['note']) =>
+          prev.map((n: WorklistTask['note']) =>
+            n.id === tempID ? task.note : n,
+          ),
+        )
+
+        setComments(task.note)
+        setIsSubmitting(false)
+      } catch (error) {
+        console.error('Failed to add comment:', error)
+      } finally {
+        setIsSubmitting(false)
+      }
     }
   }
+
   return (
     <div className="flex flex-col p-2 gap-2">
       {comments && comments.length > 0 && (
@@ -36,11 +60,16 @@ const TaskComment = ({ notes, taskId }: TaskCommentProps) => {
                 className="bg-white p-3 rounded-md shadow-md border border-gray-200"
               >
                 <p className="text-sm text-gray-800 mb-1">{note.text}</p>
-                <p className="text-xs text-gray-500">
-                  {note.time
-                    ? new Date(note.time).toLocaleString()
-                    : 'No timestamp'}
-                </p>
+                <div className="flex justify-between">
+                  {/* <p className="text-xs text-gray-500 font-semibold">
+                    username
+                  </p> */}
+                  <p className="text-xs text-gray-500">
+                    {note.time
+                      ? new Date(note.time).toLocaleString()
+                      : 'No timestamp'}
+                  </p>
+                </div>
               </div>
             ),
           )}
