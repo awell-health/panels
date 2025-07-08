@@ -1,9 +1,11 @@
+import { useToastHelpers } from '@/contexts/ToastContext'
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
+import { useMedplumStore } from '@/hooks/use-medplum-store'
+import { logger } from '@/lib/logger'
+import { User, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
-import { User, X } from 'lucide-react'
-import TaskStatusBadge from './TaskDetails/TaskStatusBadge'
-import { useEffect, useRef, useState } from 'react'
 
 interface ModalDetailsProps {
   row: WorklistPatient | WorklistTask
@@ -17,6 +19,31 @@ const ModalDetails = ({ row, onClose }: ModalDetailsProps) => {
   const modalRef = useRef<HTMLDivElement>(null)
 
   const [selectedTask, setSelectedTask] = useState<WorklistTask | null>(null)
+
+  const { deletePatient } = useMedplumStore()
+  const { showSuccess, showError } = useToastHelpers()
+
+  const handleDeleteRequest = async () => {
+    try {
+      await deletePatient(patient?.id || row.id)
+      showSuccess(
+        'Patient deleted',
+        'Patient and all associated tasks have been deleted.',
+      )
+      onClose() // Close the modal after successful deletion
+    } catch (error) {
+      logger.error(
+        {
+          operationType: 'delete-patient',
+          component: 'modal-details',
+          action: 'delete-patient',
+        },
+        'Failed to delete patient',
+        error instanceof Error ? error : new Error(String(error)),
+      )
+      showError('Delete failed', 'Failed to delete patient. Please try again.')
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -82,6 +109,7 @@ const ModalDetails = ({ row, onClose }: ModalDetailsProps) => {
                 <PatientDetails
                   patient={row as WorklistPatient}
                   setSelectedTask={setSelectedTask}
+                  onDeleteRequest={handleDeleteRequest}
                 />
               )}
               {selectedTask && <TaskDetails task={selectedTask} />}

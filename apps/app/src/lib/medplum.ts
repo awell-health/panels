@@ -328,6 +328,34 @@ export class MedplumStore {
       throw error
     }
   }
+
+  async deletePatient(patientId: string): Promise<void> {
+    try {
+      // First, get all tasks for this patient
+      const tasksBundle = await this.client.search('Task', {
+        subject: `Patient/${patientId}`,
+      })
+
+      const tasks = (tasksBundle.entry || []).map(
+        (entry) => entry.resource as Task,
+      )
+
+      // Delete all tasks for this patient
+      await Promise.all(
+        tasks.map((task) =>
+          task.id
+            ? this.client.deleteResource('Task', task.id)
+            : Promise.resolve(),
+        ),
+      )
+
+      // Delete the patient
+      await this.client.deleteResource('Patient', patientId)
+    } catch (error) {
+      console.error('Error deleting patient:', error)
+      throw error
+    }
+  }
 }
 
 // Export a singleton instance

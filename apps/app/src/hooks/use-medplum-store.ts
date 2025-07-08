@@ -110,6 +110,7 @@ export function useMedplumStore() {
     toggleTaskOwner,
     getPatientObservations,
     getPatientEncounters,
+    deletePatient,
   } = useMedplum()
 
   // Map the raw FHIR resources to our worklist format
@@ -132,5 +133,6 @@ export function useMedplumStore() {
     toggleTaskOwner,
     getPatientObservations,
     getPatientEncounters,
+    deletePatient,
   }
 }
