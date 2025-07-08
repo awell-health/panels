@@ -30,6 +30,7 @@ type MedplumContextType = {
   toggleTaskOwner: (taskId: string) => Promise<Task>
   getPatientObservations: (patientId: string) => Promise<Observation[]>
   getPatientEncounters: (patientId: string) => Promise<Encounter[]>
+  deletePatient: (patientId: string) => Promise<void>
 }
 
 const MedplumContext = createContext<MedplumContextType | null>(null)
@@ -316,6 +317,26 @@ export function MedplumClientProvider({
     [medplumStore, practitioner?.id, updateResource],
   )
 
+  const deletePatient = useCallback(
+    async (patientId: string) => {
+      if (!medplumStore) {
+        throw new Error('Medplum store not initialized')
+      }
+      await medplumStore.deletePatient(patientId)
+      // Remove the patient from the patients array
+      setPatients((currentPatients) =>
+        currentPatients.filter((patient) => patient.id !== patientId),
+      )
+      // Remove all tasks for this patient from the tasks array
+      setTasks((currentTasks) =>
+        currentTasks.filter(
+          (task) => task.for?.reference !== `Patient/${patientId}`,
+        ),
+      )
+    },
+    [medplumStore],
+  )
+
   const value = {
     patients,
     tasks,
@@ -325,6 +346,7 @@ export function MedplumClientProvider({
     toggleTaskOwner,
     getPatientObservations,
     getPatientEncounters,
+    deletePatient,
   }
 
   return (
