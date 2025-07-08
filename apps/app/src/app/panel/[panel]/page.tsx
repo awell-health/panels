@@ -188,8 +188,20 @@ export default function WorklistPage() {
     }
   }
 
-  const onFiltersChange = (filters: Filter[]) => {
-    setTableFilters(filters)
+  const onFiltersChange = async (filters: Filter[]) => {
+    if (!panel) return
+
+    try {
+      await updatePanel?.(panel.id, {
+        metadata: {
+          ...panel.metadata,
+          filters,
+        },
+      })
+      setTableFilters(filters)
+    } catch (error) {
+      console.error('Failed to update panel filters:', error)
+    }
   }
 
   // Centralized row click handler
@@ -274,6 +286,7 @@ export default function WorklistPage() {
                 selectedViewId={undefined}
                 currentViewType={currentView}
                 onPanelTitleChange={onPanelTitleChange}
+                currentFilters={tableFilters}
               />
             )}
           </div>
