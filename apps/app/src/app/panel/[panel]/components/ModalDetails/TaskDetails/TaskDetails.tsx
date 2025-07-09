@@ -23,22 +23,18 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
         >
           <div className="h-full">
             {view === 'ahp' && (
-              <div className="flex flex-col h-full">
-                <div className="flex-1 min-h-0">
-                  <FramePanel
-                    url={AHP_URL}
-                    status={task.status}
-                    taskName={task.description}
-                  />
-                </div>
-                <div className="mt-4 flex-shrink-0">
-                  <ConnectorsSection task={task} showAhpConnector={!!AHP_URL} />
-                </div>
-              </div>
+              <FramePanel
+                url={AHP_URL}
+                status={task.status}
+                taskName={task.description}
+              />
             )}
             {view === 'content' && (
               <div className="p-2">
                 <StaticContent task={task} />
+                <div className="mt-4">
+                  <ConnectorsSection task={task} showAhpConnector={!!AHP_URL} />
+                </div>
               </div>
             )}
             {view === 'notes' && <TaskComments task={task} />}
