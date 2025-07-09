@@ -206,15 +206,6 @@ export async function handler(
     }
 
     task.input = [...(inputs || []), newInput]
-    // Initialize note array if it doesn't exist
-    if (!task.note) {
-      task.note = []
-    }
-    task.note.push({
-      text: 'Connector input added for Awell Care',
-      authorString: '[Awell] Connector bot',
-      time: new Date().toISOString(),
-    })
     taskChanged = true
   }
 
@@ -240,15 +231,6 @@ export async function handler(
       }
 
       task.input = [...(inputs || []), newInput]
-      // Initialize note array if it doesn't exist
-      if (!task.note) {
-        task.note = []
-      }
-      task.note.push({
-        text: 'Connector input added for Awell Hosted Pages',
-        authorString: '[Awell] Connector bot',
-        time: new Date().toISOString(),
-      })
       taskChanged = true
     }
   }

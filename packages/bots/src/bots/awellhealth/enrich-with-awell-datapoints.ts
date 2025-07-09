@@ -253,26 +253,11 @@ async function updateTaskWithExtensions(
     task.extension = []
   }
 
-  // Initialize note array if it doesn't exist
-  if (!task.note) {
-    task.note = []
-  }
-
   try {
     console.log(
       `Adding ${nonJsonExtensions.length} non-JSON data point extensions to task`,
     )
     task.extension.push(...nonJsonExtensions)
-
-    // Add a note about the data point enrichment
-    const totalDataPoints = nonJsonExtensions.length + jsonExtensions.length
-    const noteText = `Enriched with ${totalDataPoints} Awell data points`
-
-    task.note.push({
-      text: noteText,
-      authorString: '[Awell] Data enrichment bot',
-      time: new Date().toISOString(),
-    })
 
     await medplum.updateResource(task)
     console.log(
