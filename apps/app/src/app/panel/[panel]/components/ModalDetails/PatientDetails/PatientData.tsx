@@ -2,7 +2,7 @@ import type { FC } from 'react'
 import type { WorklistPatient } from '../../../../../../hooks/use-medplum-store'
 import ExpandableCard from '../StaticContent/ExpandableCard'
 import CardRowItem from '../StaticContent/CardRowItem'
-import { startCase } from 'lodash'
+import { divide, startCase } from 'lodash'
 import StaticContent from '../StaticContent'
 
 interface PatientDataProps {

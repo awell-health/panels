@@ -4,7 +4,8 @@ import { waypointCards } from './waypointCards'
 import CardRowItem from '../CardRowItem'
 import ExpandableCard from '../ExpandableCard'
 import { getNestedValue } from '../../../../../../../lib/fhir-path'
-import { get, startCase } from 'lodash'
+import { get, startCase, take } from 'lodash'
+import { getCardSummary, getExtensionValue } from '../utils'
 
 const WaypointContent: React.FC<{
   task: WorklistTask
@@ -18,19 +19,17 @@ const WaypointContent: React.FC<{
       patient?.birthDate?.toLowerCase().includes(searchQuery.toLowerCase())
     : true
 
-  const getExtensionValue = (url: string) => {
-    return patient?.extension?.[0]?.extension?.find(
-      (extension: { url: string }) => extension.url === url,
-    )?.valueString
-  }
-
-  const communicationPref = getExtensionValue('communication_pref')
-  const dialysisProvider = getExtensionValue('organization')
+  const communicationPref = getExtensionValue(patient, 'communication_pref')
+  const dialysisProvider = getExtensionValue(patient, 'organization')
 
   return (
     <>
       {showPatientDemographics && patient && (
-        <ExpandableCard title="Patient demographics" defaultExpanded={expanded}>
+        <ExpandableCard
+          title="Patient demographics"
+          defaultExpanded={expanded}
+          summary={`${patient?.name}, ${patient?.birthDate}${dialysisProvider ? `, ${dialysisProvider}` : ''}`}
+        >
           <div className="space-y-2 text-sm mt-3">
             <CardRowItem
               label="Full name"
@@ -75,13 +74,14 @@ const WaypointContent: React.FC<{
           key={card.name}
           title={card.name}
           defaultExpanded={expanded}
+          summary={patient ? getCardSummary(patient, card) : ''}
         >
           <div className="space-y-2 text-sm mt-3">
             {card.fields.map((field) => (
               <CardRowItem
                 key={field.key}
                 label={field.label}
-                value={getExtensionValue(field.key)}
+                value={getExtensionValue(patient, field.key)}
                 searchQuery={searchQuery}
               />
             ))}

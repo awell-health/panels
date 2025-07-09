@@ -36,7 +36,11 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
                 </div>
               </div>
             )}
-            {view === 'content' && <StaticContent task={task} />}
+            {view === 'content' && (
+              <div className="p-2">
+                <StaticContent task={task} />
+              </div>
+            )}
             {view === 'notes' && (
               <TaskComments
                 notes={task.note}

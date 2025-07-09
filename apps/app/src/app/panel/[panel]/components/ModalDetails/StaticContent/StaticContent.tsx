@@ -10,6 +10,7 @@ import EncompassContent from './EncompassContent/EncompassContent'
 import RenderValue from './RenderValue'
 import SearchInput from './SearchInput'
 import WaypointContent from './WaypointContent'
+import { take } from 'lodash'
 
 interface StaticContentProps {
   task?: WorklistTask
@@ -42,12 +43,14 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
 
     return (
       <div className="flex justify-between">
-        <strong>
+        <span className="">
           <RenderWithCopy text={key}>
             <HighlightText text={key} searchQuery={searchQuery} />
           </RenderWithCopy>
-        </strong>
-        <RenderValue value={value} searchQuery={searchQuery} />
+        </span>
+        <span className="text-gray-900 font-normal max-w-[60%]">
+          <RenderValue value={value} searchQuery={searchQuery} />
+        </span>
       </div>
     )
   }
@@ -64,6 +67,7 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
               key={`${item.id}-${index}`}
               title={getTitle(item?.url) ?? ''}
               defaultExpanded={searchQuery.length > 0 || expandAll.extension}
+              summary={`Show ${item?.extension?.length} items`}
             >
               <div className="flex flex-col gap-2">
                 <div className="text-sm text-gray-700 space-y-2 mt-3">
@@ -138,7 +142,7 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
   }
 
   return (
-    <div className="p-4 overflow-y-auto h-full">
+    <div className="overflow-y-auto h-full">
       <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
         <div

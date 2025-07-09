@@ -162,8 +162,8 @@ const NotesTimeline: FC<Props> = ({ notes, thread, patientId }) => {
   return (
     <div className="h-full">
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="flex justify-center items-center gap-2 h-64 text-sm text-gray-500">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading timeline...
         </div>
       ) : (
         <div className="max-w-xl mx-auto p-2">
