@@ -2,6 +2,7 @@ import type { MedplumClient } from '@medplum/core'
 import type {
   Bot,
   Bundle,
+  DetectedIssue,
   Encounter,
   Observation,
   Parameters,
@@ -233,6 +234,13 @@ export class MedplumStore {
       subject: `Patient/${patientId}`,
     })
     return (bundle.entry || []).map((entry) => entry.resource as Encounter)
+  }
+
+  async getDetectedIssues(patientId: string): Promise<DetectedIssue[]> {
+    const bundle = await this.client.search('DetectedIssue', {
+      patient: `Patient/${patientId}`,
+    })
+    return (bundle.entry || []).map((entry) => entry.resource as DetectedIssue)
   }
 
   // Get the current access token

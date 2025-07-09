@@ -4,12 +4,12 @@ import {
   type WorklistTask,
 } from '../../../../../hooks/use-medplum-store'
 import { useDateTimeFormat } from '../../../../../hooks/use-date-time-format'
-import type { Encounter, Observation } from '@medplum/fhirtypes'
+import type { DetectedIssue, Encounter, Observation } from '@medplum/fhirtypes'
 import { CircleSmall, Loader2 } from 'lucide-react'
 import { sortBy } from 'lodash'
 
-interface TimelineDatItem {
-  type: 'observation' | 'encounter' | 'note' | 'thread'
+export interface TimelineDatItem {
+  type: 'observation' | 'encounter' | 'note' | 'detected-issue' | 'task'
   title: string
   datetime: string
   description?: string
@@ -17,13 +17,9 @@ interface TimelineDatItem {
   notes?: WorklistTask['note']
 }
 interface Props {
-  notes?: WorklistTask['note']
+  notes: WorklistTask['note']
   patientId: string
-  thread?: {
-    text: string
-    time: string
-    notes: WorklistTask['note']
-  }[]
+  timelineItems?: TimelineDatItem[]
 }
 
 const mapNotes = (data: WorklistTask['note']): TimelineDatItem[] => {
@@ -32,7 +28,17 @@ const mapNotes = (data: WorklistTask['note']): TimelineDatItem[] => {
       type: 'note',
       title: item.text,
       datetime: item.time ?? '',
-      author: item.author ?? '  ',
+      author: item.authorString ?? '  ',
+    }
+  })
+}
+
+const mapDetectedIssues = (data: DetectedIssue[]): TimelineDatItem[] => {
+  return data.map((item) => {
+    return {
+      type: 'detected-issue',
+      title: `${item.code?.text} [${item.severity}]`,
+      datetime: item.identifiedDateTime ?? '',
     }
   })
 }
@@ -75,29 +81,18 @@ const mapTimelineEncounters = (data: Encounter[]): TimelineDatItem[] => {
   })
 }
 
-const mapThread = (
-  data: {
-    text: string
-    time: string
-    notes: WorklistTask['note']
-  }[],
-): TimelineDatItem[] => {
-  return data.map((item) => ({
-    type: 'thread',
-    title: item.text,
-    datetime: item.time,
-    notes: item.notes,
-  }))
-}
-
-const NotesTimeline: FC<Props> = ({ notes, thread, patientId }) => {
+const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
   const { formatDateTime } = useDateTimeFormat()
-  const { getPatientObservations, getPatientEncounters } = useMedplumStore()
+  const {
+    getPatientObservations,
+    getPatientEncounters,
+    getPatientDetectedIssues,
+  } = useMedplumStore()
   const [isLoading, setIsLoading] = useState(false)
 
   const [timelineData, setTimelineData] = useState<TimelineDatItem[]>([
+    ...(timelineItems ?? []),
     ...mapNotes(notes ?? []),
-    ...mapThread(thread ?? []),
   ])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
@@ -107,7 +102,7 @@ const NotesTimeline: FC<Props> = ({ notes, thread, patientId }) => {
     )
 
     setTimelineData([...filteredTimelineNotes, ...mapNotes(notes ?? [])])
-  }, [notes, thread])
+  }, [notes])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
@@ -119,10 +114,12 @@ const NotesTimeline: FC<Props> = ({ notes, thread, patientId }) => {
       setIsLoading(true)
       const encounters = await getPatientEncounters(patientId)
       const observations = await getPatientObservations(patientId)
+      const detectedIssues = await getPatientDetectedIssues(patientId)
 
       const updatedTimelineData = [
         ...mapTimelineObservations(observations),
         ...mapTimelineEncounters(encounters),
+        ...mapDetectedIssues(detectedIssues),
       ]
 
       setTimelineData([...timelineData, ...updatedTimelineData])
@@ -132,23 +129,16 @@ const NotesTimeline: FC<Props> = ({ notes, thread, patientId }) => {
     fetchTimelineData()
   }, [getPatientObservations, getPatientEncounters, patientId])
 
-  const getBadgeColor = (type: string) => {
-    switch (type) {
-      case 'final':
-        return 'badge-primary'
-      case 'preliminary':
-        return 'badge-secondary'
-      default:
-        return 'badge-default'
-    }
-  }
-
   const getIndicatorColor = (type: string) => {
     switch (type) {
       case 'observation':
         return 'bg-blue-400'
       case 'encounter':
         return 'bg-green-400'
+      case 'detected-issue':
+        return 'bg-red-400'
+      case 'task':
+        return 'bg-cyan-400'
       default:
         return 'bg-gray-400'
     }
@@ -186,24 +176,7 @@ const NotesTimeline: FC<Props> = ({ notes, thread, patientId }) => {
                               {item.title}
                             </span>
                           </div>
-                          {item.type === 'thread' && (
-                            <div className="flex flex-col gap-2 mt-1 ">
-                              {item.notes?.map((note: WorklistTask['note']) => {
-                                return (
-                                  <div
-                                    key={note.time}
-                                    className="flex flex-col gap-1"
-                                  >
-                                    <span>{note.text}</span>
-                                    <span className="text-xs text-gray-500">
-                                      {formatDateTime(note.time)}
-                                    </span>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                          <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
                             {item.author && <span>{item.author}</span>}
                             <span>{formatDateTime(item.datetime)}</span>
                           </div>

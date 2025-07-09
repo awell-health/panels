@@ -1,19 +1,19 @@
 import { useMedplumStore, type WorklistTask } from '@/hooks/use-medplum-store'
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
-import { useDateTimeFormat } from '../../../../../../hooks/use-date-time-format'
-import NotesTimeline from '../NotesTimeline'
+import NotesTimeline, { type TimelineDatItem } from '../NotesTimeline'
 
 interface TaskCommentProps {
-  notes: WorklistTask['note']
-  taskId: string
-  patientId: string
+  task: WorklistTask
 }
 
-const TaskComment = ({ notes, taskId, patientId }: TaskCommentProps) => {
+const TaskComment = ({ task }: TaskCommentProps) => {
   const [newComment, setNewComment] = useState('')
-  const [comments, setComments] = useState<WorklistTask['note']>(notes ?? [])
+  const [comments, setComments] = useState<WorklistTask['note']>(
+    task.note ?? [],
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const taskId = task.id
 
   const { addNotesToTask } = useMedplumStore()
 
@@ -51,9 +51,26 @@ const TaskComment = ({ notes, taskId, patientId }: TaskCommentProps) => {
     }
   }
 
+  const timelineItems: TimelineDatItem[] = [
+    {
+      type: 'task',
+      title: 'Task created',
+      datetime: task.authoredOn,
+    },
+    {
+      type: 'task',
+      title: 'Task completed',
+      datetime: task.lastModified,
+    },
+  ]
+
   return (
     <div className="flex flex-col p-2 gap-2">
-      <NotesTimeline notes={comments} patientId={patientId} />
+      <NotesTimeline
+        notes={comments}
+        patientId={task.patientId}
+        timelineItems={timelineItems}
+      />
 
       <div className="w-full mt-auto">
         <textarea

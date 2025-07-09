@@ -3,7 +3,7 @@ import PatientData from './PatientData'
 import TaskStatusBadge from '../TaskDetails/TaskStatusBadge'
 import { ChevronRightIcon, Trash2Icon } from 'lucide-react'
 
-import NotesTimeline from '../NotesTimeline'
+import NotesTimeline, { type TimelineDatItem } from '../NotesTimeline'
 import { sortBy } from 'lodash'
 
 interface PatientDetailsProps {
@@ -19,17 +19,30 @@ const PatientDetails = ({
 }: PatientDetailsProps) => {
   const VIEWS = ['data', 'content', 'timeline']
   const { tasks } = patient
-  let notes: WorklistTask['note'] = []
+  const notes: WorklistTask['note'] = []
+  const timelineItems: TimelineDatItem[] = []
 
-  notes = sortBy(notes, 'time')
+  for (const task of tasks) {
+    if (task.note) {
+      notes.push(...task.note)
+    }
 
-  const thread = tasks
-    .filter((task) => task.note && task.note.length > 0)
-    .map((task) => ({
-      text: task.description,
-      time: task.created,
-      notes: task.note,
-    }))
+    if (task.authoredOn) {
+      timelineItems.push({
+        type: 'task',
+        title: `Task created: ${task.description}`,
+        datetime: task.authoredOn,
+      })
+    }
+
+    if (task.lastModified) {
+      timelineItems.push({
+        type: 'task',
+        title: `Task completed: ${task.description}`,
+        datetime: task.lastModified,
+      })
+    }
+  }
 
   return (
     <>
@@ -43,7 +56,11 @@ const PatientDetails = ({
           <div className="h-full p-2">
             {view === 'data' && <PatientData patient={patient} />}
             {view === 'timeline' && (
-              <NotesTimeline thread={thread} patientId={patient.id} />
+              <NotesTimeline
+                patientId={patient.id}
+                notes={notes}
+                timelineItems={timelineItems}
+              />
             )}
             {view === 'content' && (
               <div>

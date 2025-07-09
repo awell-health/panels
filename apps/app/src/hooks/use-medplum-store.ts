@@ -110,6 +110,7 @@ export function useMedplumStore() {
     toggleTaskOwner,
     getPatientObservations,
     getPatientEncounters,
+    getPatientDetectedIssues,
     deletePatient,
   } = useMedplum()
 
@@ -133,6 +134,7 @@ export function useMedplumStore() {
     toggleTaskOwner,
     getPatientObservations,
     getPatientEncounters,
+    getPatientDetectedIssues,
     deletePatient,
   }
 }
