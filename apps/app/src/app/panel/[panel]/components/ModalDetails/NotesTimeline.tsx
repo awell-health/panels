@@ -41,9 +41,26 @@ const mapNotes = (data: WorklistTask['note']): TimelineDatItem[] => {
 const mapTimelineObservations = (data: Observation[]): TimelineDatItem[] => {
   return data.map((item) => {
     const codingDisplay = item.code?.coding?.[0]?.display
+    const itemsToDisplay = []
+    if (codingDisplay) {
+      itemsToDisplay.push(codingDisplay)
+    }
+
+    if (item.code?.text) {
+      itemsToDisplay.push(item.code.text)
+    }
+
+    if (item.valueQuantity) {
+      itemsToDisplay.push(Object.values(item.valueQuantity).join(' '))
+    }
+
+    if (item.valueString) {
+      itemsToDisplay.push(item.valueString)
+    }
+
     return {
       type: 'observation',
-      title: `${codingDisplay}, ${item.valueQuantity?.value} ${item.valueQuantity?.unit}`,
+      title: itemsToDisplay.join(', '),
       datetime: item.effectiveDateTime ?? '',
       status: item.status,
     }
