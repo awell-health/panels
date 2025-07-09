@@ -14,7 +14,7 @@ interface ModalDetailsProps {
 }
 
 const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
-  const { patients, deletePatient } = useMedplumStore()
+  const { patients, tasks, deletePatient } = useMedplumStore()
   const { showSuccess, showError } = useToastHelpers()
   const modalRef = useRef<HTMLDivElement>(null)
 
@@ -24,22 +24,21 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
   )
   const [selectedTask, setSelectedTask] = useState<WorklistTask | null>(null)
 
-  // Initialize internal state based on props
   useEffect(() => {
     if (patient) {
-      // Scenario 1: Patient provided, no task (or task ignored)
       setCurrentPatient(patient)
-      setSelectedTask(null)
-    } else if (task) {
-      // Scenario 2: Task provided, no patient - resolve patient from store
+    }
+  }, [patient])
+
+  useEffect(() => {
+    if (task) {
+      setSelectedTask(task)
       const resolvedPatient = patients.find((p) => p.id === task.patientId)
       if (resolvedPatient) {
         setCurrentPatient(resolvedPatient)
         setSelectedTask(task)
       } else {
-        // Handle error case where patient is not found
         setCurrentPatient(null)
-        setSelectedTask(null)
         logger.error(
           {
             operationType: 'resolve-patient',
@@ -51,7 +50,17 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
         )
       }
     }
-  }, [patient, task, patients])
+  }, [task, patients])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: This hook needs to refresh the selected task when it's been updated in medplum
+  useEffect(() => {
+    if (selectedTask) {
+      const updatedTask = tasks.find((t) => t.id === selectedTask.id)
+      if (updatedTask) {
+        setSelectedTask(updatedTask)
+      }
+    }
+  }, [tasks])
 
   // Get patient name and DOB for header
   const patientName = currentPatient?.name || ''
@@ -170,7 +179,6 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
             <PatientDetails
               patient={currentPatient}
               setSelectedTask={setSelectedTask}
-              onDeleteRequest={handleDeleteRequest}
             />
           )}
         </div>

@@ -1,28 +1,36 @@
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
-import PatientData from './PatientData'
+import { ChevronRightIcon } from 'lucide-react'
 import TaskStatusBadge from '../TaskDetails/TaskStatusBadge'
-import { ChevronRightIcon, Trash2Icon } from 'lucide-react'
+import PatientData from './PatientData'
+import PatientConnectorsSection from '../TaskDetails/PatientConnectorsSection'
 
 import NotesTimeline, { type TimelineDatItem } from '../NotesTimeline'
-import { sortBy } from 'lodash'
+import { useMedplumStore } from '@/hooks/use-medplum-store'
+import { useEffect, useState } from 'react'
 
 interface PatientDetailsProps {
   patient: WorklistPatient
   setSelectedTask: (task: WorklistTask | null) => void
-  onDeleteRequest: () => void
 }
 
-const PatientDetails = ({
-  patient,
-  setSelectedTask,
-  onDeleteRequest,
-}: PatientDetailsProps) => {
+const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
   const VIEWS = ['data', 'content', 'timeline']
-  const { tasks } = patient
+  const { tasks } = useMedplumStore()
+
+  // State for patient-specific tasks
+  const [patientTasks, setPatientTasks] = useState<WorklistTask[]>([])
+
+  // Filter tasks for the current patient when tasks change
+  useEffect(() => {
+    const filteredTasks = tasks.filter((task) => task.patientId === patient.id)
+    setPatientTasks(filteredTasks)
+  }, [tasks, patient.id])
+
   const notes: WorklistTask['note'] = []
   const timelineItems: TimelineDatItem[] = []
 
-  for (const task of tasks) {
+  // Use patientTasks instead of tasks
+  for (const task of patientTasks) {
     if (task.note) {
       notes.push(...task.note)
     }
@@ -54,7 +62,14 @@ const PatientDetails = ({
           }`}
         >
           <div className="h-full p-2">
-            {view === 'data' && <PatientData patient={patient} />}
+            {view === 'data' && (
+              <div>
+                <PatientData patient={patient} />
+                <div className="mt-4">
+                  <PatientConnectorsSection patient={patient} />
+                </div>
+              </div>
+            )}
             {view === 'timeline' && (
               <NotesTimeline
                 patientId={patient.id}
@@ -68,7 +83,7 @@ const PatientDetails = ({
                   Tasks list:
                 </div>
                 <div className="flex flex-col gap-3">
-                  {tasks.map((task) => (
+                  {patientTasks.map((task) => (
                     // biome-ignore lint/a11y/useKeyWithClickEvents: <explanation>
                     <div
                       key={task.id}
