@@ -14,7 +14,7 @@ interface ModalDetailsProps {
 }
 
 const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
-  const { patients, deletePatient } = useMedplumStore()
+  const { patients, tasks, deletePatient } = useMedplumStore()
   const { showSuccess, showError } = useToastHelpers()
   const modalRef = useRef<HTMLDivElement>(null)
 
@@ -51,6 +51,16 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
       }
     }
   }, [task, patients])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: This hook needs to refresh the selected task when it's been updated in medplum
+  useEffect(() => {
+    if (selectedTask) {
+      const updatedTask = tasks.find((t) => t.id === selectedTask.id)
+      if (updatedTask) {
+        setSelectedTask(updatedTask)
+      }
+    }
+  }, [tasks])
 
   // Get patient name and DOB for header
   const patientName = currentPatient?.name || ''
