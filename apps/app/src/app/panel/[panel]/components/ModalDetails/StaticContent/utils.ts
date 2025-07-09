@@ -1,5 +1,6 @@
 import { take } from 'lodash'
 import { useEffect, useState } from 'react'
+import { isValid, parseISO } from 'date-fns'
 import type {
   WorklistPatient,
   WorklistTask,
@@ -10,6 +11,17 @@ export function calculateAge(dateString: string): number {
   const today = new Date()
 
   return today.getFullYear() - birthDate.getFullYear()
+}
+
+export const isISODate = (dateString: string): boolean => {
+  if (typeof dateString !== 'string') return false
+
+  try {
+    const parsedDate = parseISO(dateString)
+    return isValid(parsedDate)
+  } catch {
+    return false
+  }
 }
 
 export const isJSON = (str: string): boolean => {

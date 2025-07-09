@@ -2,8 +2,9 @@ import type { FC } from 'react'
 import { RenderWithCopy } from './RenderWithCopy'
 import HighlightText from './HighlightContent'
 import ExpandableCard from './ExpandableCard'
-import { hasSearchQuery, isJSON } from './utils'
+import { hasSearchQuery, isISODate, isJSON } from './utils'
 import { isObject } from 'lodash'
+import { useDateTimeFormat } from '../../../../../../hooks/use-date-time-format'
 
 interface Props {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -15,6 +16,8 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
   if (!value) {
     return '-'
   }
+
+  const { formatDateTime } = useDateTimeFormat()
 
   const haseSearchTerm =
     searchQuery.length > 0 && hasSearchQuery(JSON.stringify(value), searchQuery)
@@ -110,6 +113,10 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
     }
 
     return renderObjectValue(jsonValue)
+  }
+
+  if (value && isISODate(value as string)) {
+    return formatDateTime(value as string)
   }
 
   const containsHTML = (str: string) => /<[a-z][\s\S]*>/i.test(str)
