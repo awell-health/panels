@@ -51,7 +51,7 @@ export default function WorklistPage() {
     isLoading: isMedplumLoading,
   } = useMedplumStore()
   const { updatePanel } = useReactivePanelStore()
-  const { updateColumn, deleteColumn, applyColumnChanges } =
+  const { updateColumn, deleteColumn, applyColumnChanges, reorderColumns } =
     useColumnOperations()
   const {
     panel,
@@ -211,7 +211,6 @@ export default function WorklistPage() {
     [],
   )
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event
@@ -219,40 +218,42 @@ export default function WorklistPage() {
         return
       }
 
+      // Get fresh columns data for current view to avoid stale state
+      // Filter and sort columns to match what user sees in the table
+      const currentColumns = allColumns
+        .filter((col) =>
+          currentView === 'patient'
+            ? col.tags?.includes('panels:patients')
+            : col.tags?.includes('panels:tasks'),
+        )
+        .filter((col) => col.properties?.display?.visible !== false)
+        .sort((a, b) => {
+          const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+          const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+          return orderA - orderB
+        })
+
       // Find the active column's index and the over column's index
-      const oldIndex = columns.findIndex((col) => col.id === active.id)
-      const newIndex = columns.findIndex((col) => col.id === over.id)
+      const oldIndex = currentColumns.findIndex((col) => col.id === active.id)
+      const newIndex = currentColumns.findIndex((col) => col.id === over.id)
 
       if (oldIndex === -1 || newIndex === -1) {
         return
       }
 
       // Reorder the columns
-      const reorderedColumns = arrayMove(columns, oldIndex, newIndex)
+      const reorderedColumns = arrayMove(currentColumns, oldIndex, newIndex)
 
-      // Update column order in each column's display properties
-      const columnsWithOrder = reorderedColumns.map((col, index) => ({
-        ...col,
-        properties: {
-          ...col.properties,
-          display: {
-            ...col.properties?.display,
-            order: index,
-          },
-        },
-      }))
-
-      await Promise.all(
-        columnsWithOrder.map(async (column) => {
-          try {
-            await onColumnUpdate(column)
-          } catch (error) {
-            console.error('Failed to update column order:', error)
-          }
-        }),
-      )
+      // Use the dedicated reorder method which shows only one toast
+      if (panel) {
+        try {
+          await reorderColumns(panel.id, reorderedColumns)
+        } catch (error) {
+          console.error('Failed to reorder columns:', error)
+        }
+      }
     },
-    [columns],
+    [allColumns, currentView, panel, reorderColumns],
   )
 
   const isLoading =

@@ -149,9 +149,57 @@ export function useColumnOperations() {
     [store, showSuccess, showError],
   )
 
+  const reorderColumns = useCallback(
+    async (panelId: string, reorderedColumns: Column[]): Promise<void> => {
+      const progressToastId = showProgress(
+        'Reordering columns...',
+        'Updating column order',
+      )
+
+      try {
+        // Batch update all columns with their new order
+        await Promise.all(
+          reorderedColumns.map(async (column, index) => {
+            await store.updateColumn(panelId, column.id, {
+              ...column,
+              properties: {
+                ...column.properties,
+                display: {
+                  ...column.properties?.display,
+                  order: index,
+                },
+              },
+            })
+          }),
+        )
+
+        updateToast(progressToastId, {
+          type: 'success',
+          title: 'Columns reordered',
+          message: 'Column order has been updated',
+          duration: 3000,
+          dismissible: true,
+        })
+      } catch (error) {
+        updateToast(progressToastId, {
+          type: 'error',
+          title: 'Could not reorder columns',
+          message: 'Column order could not be updated. Please try again.',
+          duration: 0,
+          dismissible: true,
+          onRetry: () => reorderColumns(panelId, reorderedColumns),
+        })
+
+        throw error
+      }
+    },
+    [store, showProgress, updateToast],
+  )
+
   return {
     updateColumn,
     applyColumnChanges,
     deleteColumn,
+    reorderColumns,
   }
 }
