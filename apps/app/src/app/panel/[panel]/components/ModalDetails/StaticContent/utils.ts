@@ -1,4 +1,9 @@
+import { take } from 'lodash'
 import { useEffect, useState } from 'react'
+import type {
+  WorklistPatient,
+  WorklistTask,
+} from '../../../../../../hooks/use-medplum-store'
 
 export function calculateAge(dateString: string): number {
   const birthDate = new Date(dateString)
@@ -55,4 +60,41 @@ export const useDebounce = <T>(value: T, delay: number): T => {
   }, [value, delay])
 
   return debouncedValue
+}
+
+export const getExtensionValue = (
+  source: WorklistPatient | WorklistTask | undefined,
+  url: string,
+) => {
+  if (!source) return ''
+
+  return source?.extension?.[0]?.extension?.find(
+    (extension: { url: string }) => extension.url === url,
+  )?.valueString
+}
+
+export const getCardSummary = (
+  source: WorklistPatient | WorklistTask,
+  card: {
+    fields: { label: string; key: string }[]
+  },
+): string => {
+  console.log('card', card)
+  console.log('take(card.fields, 3)', take(card.fields, 3))
+  const summary = take(card.fields, 3)
+    .map((field) => {
+      const value = getExtensionValue(source, field.key)
+      if (value) {
+        return `${field.label}: ${value}`
+      }
+
+      return null
+    })
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(', ')
+
+  console.log('summary', summary)
+
+  return summary
 }

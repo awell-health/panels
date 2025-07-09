@@ -3,6 +3,7 @@ import ExpandableCard from './ExpandableCard'
 import CardRowItem from './CardRowItem'
 import type { WorklistTask } from '../../../../../../hooks/use-medplum-store'
 import type { FC } from 'react'
+import { getCardSummary } from './utils'
 
 interface Props {
   task: WorklistTask
@@ -41,7 +42,11 @@ const FhirExpandableCard: FC<Props> = ({
   }
 
   return (
-    <ExpandableCard title={card.name} defaultExpanded={expanded}>
+    <ExpandableCard
+      title={card.name}
+      defaultExpanded={expanded}
+      summary={getCardSummary(task, card)}
+    >
       <div className="space-y-2 text-sm mt-3">
         {card.fields.map((field) => (
           <CardRowItem

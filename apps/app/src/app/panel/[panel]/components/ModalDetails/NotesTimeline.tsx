@@ -13,7 +13,6 @@ interface TimelineDatItem {
   title: string
   datetime: string
   description?: string
-  status?: string
   author?: string
   notes?: WorklistTask['note']
 }
@@ -62,7 +61,6 @@ const mapTimelineObservations = (data: Observation[]): TimelineDatItem[] => {
       type: 'observation',
       title: itemsToDisplay.join(', '),
       datetime: item.effectiveDateTime ?? '',
-      status: item.status,
     }
   })
 }
@@ -73,7 +71,6 @@ const mapTimelineEncounters = (data: Encounter[]): TimelineDatItem[] => {
       type: 'encounter',
       title: item.class?.display ?? '',
       datetime: item.period?.start ?? '',
-      status: item.status,
     }
   })
 }
@@ -162,8 +159,8 @@ const NotesTimeline: FC<Props> = ({ notes, thread, patientId }) => {
   return (
     <div className="h-full">
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="flex justify-center items-center gap-2 h-64 text-sm text-gray-500">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading timeline...
         </div>
       ) : (
         <div className="max-w-xl mx-auto p-2">
@@ -185,12 +182,12 @@ const NotesTimeline: FC<Props> = ({ notes, thread, patientId }) => {
                         </div>
                         <div>
                           <div className="min-w-0 flex-1 py-0 flex gap-2 items-center">
-                            <span className="font-base text-gray-900 text-sm">
+                            <span className=" text-gray-700 text-xs font-normal">
                               {item.title}
                             </span>
                           </div>
                           {item.type === 'thread' && (
-                            <div className="flex flex-col gap-2 mt-1 text-gray-700 text-sm">
+                            <div className="flex flex-col gap-2 mt-1 ">
                               {item.notes?.map((note: WorklistTask['note']) => {
                                 return (
                                   <div
@@ -207,13 +204,6 @@ const NotesTimeline: FC<Props> = ({ notes, thread, patientId }) => {
                             </div>
                           )}
                           <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                            {item.status && (
-                              <div
-                                className={`badge badge-outline badge-xs ${getBadgeColor(item.status)}`}
-                              >
-                                {item.status}
-                              </div>
-                            )}
                             {item.author && <span>{item.author}</span>}
                             <span>{formatDateTime(item.datetime)}</span>
                           </div>

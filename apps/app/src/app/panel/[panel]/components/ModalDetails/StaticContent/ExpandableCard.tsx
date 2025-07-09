@@ -20,13 +20,13 @@ const ExpandableCard: FC<Props> = (props) => {
     <div className="border border-gray-200 rounded-lg bg-white">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-3 flex items-center justify-between bg-gray-100 hover:bg-gray-200 transition-colors"
+        className="w-full p-3 flex items-center justify-between  hover:bg-gray-100 transition-colors"
         type="button"
       >
         <div className="flex-1 text-left cursor-pointer">
           <h4 className="font-medium text-gray-900 truncate">{title}</h4>
           {summary && !isExpanded && (
-            <p className="text-sm text-gray-600 mt-1">{summary}</p>
+            <p className="text-xs text-gray-600 mt-1">{summary}</p>
           )}
         </div>
         {isExpanded ? (
