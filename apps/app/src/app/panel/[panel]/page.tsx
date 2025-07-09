@@ -218,6 +218,7 @@ export default function WorklistPage() {
     [],
   )
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the visible columns that matter here
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event
@@ -245,7 +246,7 @@ export default function WorklistPage() {
         }
       }
     },
-    [visibleColumns, panel, reorderColumns],
+    [visibleColumns],
   )
 
   const isLoading =
@@ -290,14 +291,14 @@ export default function WorklistPage() {
               <VirtualizedTable
                 isLoading={isMedplumLoading}
                 selectedRows={selectedRows}
-                toggleSelectAll={() => { }}
+                toggleSelectAll={() => {}}
                 columns={visibleColumns}
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
-                handlePDFClick={() => { }}
-                handleTaskClick={() => { }}
-                handleRowHover={() => { }}
-                toggleSelectRow={() => { }}
+                handlePDFClick={() => {}}
+                handleTaskClick={() => {}}
+                handleRowHover={() => {}}
+                toggleSelectRow={() => {}}
                 handleAssigneeClick={async (taskId: string) => {
                   await toggleTaskOwner(taskId)
                 }}
@@ -315,7 +316,7 @@ export default function WorklistPage() {
                 <AddIngestionModal
                   isOpen={isAddingIngestionSource}
                   onClose={() => setIsAddingIngestionSource(false)}
-                  onSelectSource={() => { }}
+                  onSelectSource={() => {}}
                   ingestionBots={[]}
                 />
               )}
