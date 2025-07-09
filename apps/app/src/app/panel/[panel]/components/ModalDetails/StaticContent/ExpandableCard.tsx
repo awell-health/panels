@@ -24,7 +24,9 @@ const ExpandableCard: FC<Props> = (props) => {
         type="button"
       >
         <div className="flex-1 text-left cursor-pointer">
-          <h4 className="font-medium text-gray-900 truncate">{title}</h4>
+          <h4 className="font-medium text-medium text-gray-900 truncate">
+            {title}
+          </h4>
           {summary && !isExpanded && (
             <p className="text-xs text-gray-600 mt-1">{summary}</p>
           )}

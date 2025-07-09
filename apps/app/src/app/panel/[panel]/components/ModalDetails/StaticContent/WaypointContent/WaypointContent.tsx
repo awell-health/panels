@@ -1,4 +1,4 @@
-import type { WorklistTask } from '@/hooks/use-medplum-store'
+import { useMedplumStore, type WorklistTask } from '@/hooks/use-medplum-store'
 import FhirExpandableCard from '../FhirExpandableCard'
 import { waypointCards } from './waypointCards'
 import CardRowItem from '../CardRowItem'
@@ -6,6 +6,9 @@ import ExpandableCard from '../ExpandableCard'
 import { getNestedValue } from '../../../../../../../lib/fhir-path'
 import { get, startCase, take } from 'lodash'
 import { getCardSummary, getExtensionValue } from '../utils'
+import { useEffect, useState } from 'react'
+import type { Observation } from '@medplum/fhirtypes'
+import HighlightText from '../HighlightContent'
 
 const WaypointContent: React.FC<{
   task: WorklistTask
@@ -14,6 +17,8 @@ const WaypointContent: React.FC<{
 }> = ({ task, searchQuery, expanded }) => {
   const { patient } = task
 
+  const { getPatientObservations } = useMedplumStore()
+
   const showPatientDemographics = searchQuery
     ? patient?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       patient?.birthDate?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -21,6 +26,21 @@ const WaypointContent: React.FC<{
 
   const communicationPref = getExtensionValue(patient, 'communication_pref')
   const dialysisProvider = getExtensionValue(patient, 'organization')
+
+  const [observations, setObservations] = useState<Observation[]>([])
+
+  useEffect(() => {
+    const fetchObservations = async () => {
+      const observations = await getPatientObservations(patient?.id ?? '')
+      setObservations(observations)
+    }
+
+    fetchObservations()
+  }, [patient, getPatientObservations])
+
+  const ckdStage = observations.find(
+    (observation) => observation.code?.text === 'CKD Stage',
+  )
 
   return (
     <>
@@ -69,7 +89,7 @@ const WaypointContent: React.FC<{
           </div>
         </ExpandableCard>
       )}
-      {waypointCards.map((card) => (
+      {waypointCards.map((card, index) => (
         <ExpandableCard
           key={card.name}
           title={card.name}
@@ -85,6 +105,18 @@ const WaypointContent: React.FC<{
                 searchQuery={searchQuery}
               />
             ))}
+            {index === 0 && ckdStage && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">
+                  <HighlightText text={'CKD Stage'} searchQuery={searchQuery} />
+                </span>
+                <span className="text-gray-900 font-normal max-w-[60%]">
+                  <div className="badge badge-error badge-sm text-white">
+                    {ckdStage.valueString}
+                  </div>
+                </span>
+              </div>
+            )}
           </div>
         </ExpandableCard>
       ))}

@@ -26,7 +26,7 @@ const mapNotes = (data: WorklistTask['note']): TimelineDatItem[] => {
   return data.map((item: WorklistTask['note']) => {
     return {
       type: 'note',
-      title: item.text,
+      title: `Note: ${item.text}`,
       datetime: item.time ?? '',
       author: item.authorString ?? '  ',
     }
@@ -37,7 +37,7 @@ const mapDetectedIssues = (data: DetectedIssue[]): TimelineDatItem[] => {
   return data.map((item) => {
     return {
       type: 'detected-issue',
-      title: `${item.code?.text} [${item.severity}]`,
+      title: `Issue detected: ${item.code?.text} [${item.severity}]`,
       datetime: item.identifiedDateTime ?? '',
     }
   })
@@ -47,26 +47,25 @@ const mapTimelineObservations = (data: Observation[]): TimelineDatItem[] => {
   return data.map((item) => {
     const codingDisplay = item.code?.coding?.[0]?.display
     const itemsToDisplay = []
+    let value = ''
+
     if (codingDisplay) {
       itemsToDisplay.push(codingDisplay)
-    }
-
-    if (item.code?.text) {
+    } else if (item.code?.text) {
       itemsToDisplay.push(item.code.text)
     }
 
     if (item.valueQuantity) {
-      itemsToDisplay.push(Object.values(item.valueQuantity).join(' '))
-    }
-
-    if (item.valueString) {
-      itemsToDisplay.push(item.valueString)
+      value = Object.values(item.valueQuantity).join(' ')
+    } else if (item.valueString) {
+      value = item.valueString
     }
 
     return {
       type: 'observation',
-      title: itemsToDisplay.join(', '),
+      title: `Observation: ${itemsToDisplay.join(', ')}`,
       datetime: item.effectiveDateTime ?? '',
+      description: value,
     }
   })
 }
@@ -75,7 +74,7 @@ const mapTimelineEncounters = (data: Encounter[]): TimelineDatItem[] => {
   return data.map((item) => {
     return {
       type: 'encounter',
-      title: item.class?.display ?? '',
+      title: `Encounter: ${item.type?.[0]?.text}`,
       datetime: item.period?.start ?? '',
     }
   })
@@ -176,6 +175,11 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
                               {item.title}
                             </span>
                           </div>
+                          {item.description && (
+                            <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
+                              <span>{item.description}</span>
+                            </div>
+                          )}
                           <div className="flex items-center gap-1 mt-1 text-xs text-gray-500">
                             {item.author && <span>{item.author}</span>}
                             <span>{formatDateTime(item.datetime)}</span>
