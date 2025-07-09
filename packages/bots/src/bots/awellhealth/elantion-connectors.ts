@@ -95,15 +95,6 @@ export async function handler(
   }
 
   task.input = [...(inputs || []), newInput]
-  // Initialize note array if it doesn't exist
-  if (!task.note) {
-    task.note = []
-  }
-  task.note.push({
-    text: 'Connector input added for Elation',
-    authorString: '[Awell] Connector bot',
-    time: new Date().toISOString(),
-  })
 
   console.log('Updating task with new Elation inputs')
   await medplum.updateResource(task)

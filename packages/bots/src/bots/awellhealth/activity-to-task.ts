@@ -571,6 +571,8 @@ async function createOrUpdateTask(
     intent: 'order',
     priority: 'routine',
     description: activity.action_component.title,
+    authoredOn: activity.date,
+    lastModified: new Date().toISOString(),
     for: { reference: `Patient/${patientId}` },
     code: {
       coding: [
@@ -701,18 +703,7 @@ async function createEnrichmentCommunication(
       payload: [
         {
           contentString: JSON.stringify({
-            taskId: taskId,
-            activityId: activity.id,
-            pathwayId: pathway?.id || 'Unknown',
-            pathwayDefinitionId: pathway?.pathway_definition_id || 'Unknown',
-            stakeholderId: activity.indirect_object?.id || 'Unknown',
-            stakeholderName: activity.indirect_object?.name || 'Unknown',
-            stepTitle: activity.action_component.title,
-            patientId: patientId,
-            activityStatus: activity.status,
-            pathwayTitle: pathway?.pathway_title || 'Unknown',
-            releaseId: activity.action_component.release_id,
-            activityType: activity.object?.type || 'Unknown',
+            eventData,
           }),
         },
       ],
