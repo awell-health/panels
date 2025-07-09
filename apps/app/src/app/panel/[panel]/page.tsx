@@ -339,7 +339,16 @@ export default function WorklistPage() {
           </div>
           {selectedItem && (
             <ModalDetails
-              row={selectedItem}
+              patient={
+                selectedItem.resourceType === 'Patient'
+                  ? (selectedItem as WorklistPatient)
+                  : undefined
+              }
+              task={
+                selectedItem.resourceType === 'Task'
+                  ? (selectedItem as WorklistTask)
+                  : undefined
+              }
               onClose={() => setSelectedItem(null)}
             />
           )}
