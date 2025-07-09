@@ -2,7 +2,7 @@ import { useToastHelpers } from '@/contexts/ToastContext'
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import { logger } from '@/lib/logger'
-import { User, X } from 'lucide-react'
+import { Trash2Icon, User, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
@@ -94,6 +94,16 @@ const ModalDetails = ({ row, onClose }: ModalDetailsProps) => {
                 <span>·</span>
                 <span>DOB {dateOfBirth}</span>
               </>
+            )}
+            {row.resourceType === 'Patient' && (
+              <button
+                type="button"
+                onClick={handleDeleteRequest}
+                className="btn btn-outline btn-error btn-xs ml-2"
+              >
+                <Trash2Icon className="w-4 h-4" />
+                Delete Patient & Tasks
+              </button>
             )}
           </div>
           <div className="flex items-center gap-2">

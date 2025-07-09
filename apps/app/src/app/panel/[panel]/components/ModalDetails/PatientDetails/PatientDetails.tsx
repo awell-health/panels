@@ -41,21 +41,7 @@ const PatientDetails = ({
           }`}
         >
           <div className="h-full p-2">
-            {view === 'data' && (
-              <div>
-                <div className="mb-4 pb-4 border-b border-gray-200">
-                  <button
-                    type="button"
-                    onClick={onDeleteRequest}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200 rounded-md transition-colors"
-                  >
-                    <Trash2Icon className="w-4 h-4" />
-                    Delete Patient & Tasks
-                  </button>
-                </div>
-                <PatientData patient={patient} />
-              </div>
-            )}
+            {view === 'data' && <PatientData patient={patient} />}
             {view === 'timeline' && (
               <NotesTimeline thread={thread} patientId={patient.id} />
             )}
