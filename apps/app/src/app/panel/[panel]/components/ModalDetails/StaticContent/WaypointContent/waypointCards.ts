@@ -51,14 +51,14 @@ export const waypointCards = [
     name: 'Vital signs',
     fields: [
       {
-        label: 'Weight (kg)',
-        key: 'observation_weight_kg',
+        label: 'Weight (lbs)',
+        key: 'observation_weight_lbs',
         fhirPath:
           'entry.resource.ofType(Observation)' +
           ".where(code.coding.code='29463-7')" + // Body weight
           '.sortBy(effectiveDateTime).last().valueQuantity.value ∥ ' +
           "entry.resource.ofType(Patient).extension.where(url='<https://awellhealth.com/fhir/StructureDefinition/awell-data-points>')" +
-          ".extension.where(url='observation_weight_kg').valueString",
+          ".extension.where(url='observation_weight_lbs').valueString",
       },
       {
         label: 'Systolic BP (mmHg)',
