@@ -438,20 +438,24 @@ async function findOrCreatePatient(
     }
   } else {
     if (patientProfile) {
-      newPatient = await medplum.createResource(
+      newPatient = await medplum.upsertResource(
         createFhirPatient(awellPatientId, patientProfile),
+        `identifier=${awellPatientId}`,
       )
     } else {
-      newPatient = await medplum.createResource({
-        resourceType: 'Patient',
-        identifier: [
-          {
-            system: 'https://awellhealth.com/patients',
-            value: awellPatientId,
-          },
-        ],
-        active: true,
-      })
+      newPatient = await medplum.upsertResource(
+        {
+          resourceType: 'Patient',
+          identifier: [
+            {
+              system: 'https://awellhealth.com/patients',
+              value: awellPatientId,
+            },
+          ],
+          active: true,
+        },
+        `identifier=${awellPatientId}`,
+      )
     }
     console.log(
       'New patient created:',
@@ -472,7 +476,8 @@ async function findOrCreatePatient(
 // Helper function to create extensions
 function createTaskExtensions(
   activity: ActivityData['activity'],
-  pathway: ActivityData['pathway'],
+  pathway: ActivityData['pathway'] | undefined,
+  eventData: ActivityData,
 ): Array<{
   url: string
   valueString?: string
@@ -495,7 +500,10 @@ function createTaskExtensions(
         },
         {
           url: 'pathway-definition-id',
-          valueString: pathway.pathway_definition_id,
+          valueString:
+            pathway?.pathway_definition_id ||
+            eventData.pathway_definition_id ||
+            'Unknown',
         },
         {
           url: 'pathway-id',
@@ -503,7 +511,7 @@ function createTaskExtensions(
         },
         {
           url: 'pathway-title',
-          valueString: pathway.pathway_title,
+          valueString: pathway?.pathway_title || 'Unknown',
         },
         {
           url: 'activity-id',
@@ -515,7 +523,7 @@ function createTaskExtensions(
         },
         {
           url: 'pathway-start-date',
-          valueString: pathway.start_date,
+          valueString: pathway?.start_date || 'Unknown',
         },
         {
           url: 'release-id',
@@ -534,7 +542,8 @@ async function createOrUpdateTask(
   medplum: MedplumClient,
   activity: ActivityData['activity'],
   patientId: string,
-  pathway: ActivityData['pathway'],
+  pathway: ActivityData['pathway'] | undefined,
+  eventData: ActivityData,
 ): Promise<string> {
   const taskIdentifier = {
     system: 'https://awellhealth.com/activities',
@@ -573,7 +582,7 @@ async function createOrUpdateTask(
       ],
     },
     identifier: [taskIdentifier],
-    extension: createTaskExtensions(activity, pathway),
+    extension: createTaskExtensions(activity, pathway, eventData),
   }
 
   try {
@@ -615,7 +624,7 @@ async function createOrUpdateTask(
           taskId: resultTask.id,
           activityId: activity.id,
           patientId: patientId,
-          pathwayId: pathway.id,
+          pathwayId: pathway?.id || 'Unknown',
         },
         null,
         2,
@@ -648,8 +657,9 @@ async function createEnrichmentCommunication(
   medplum: MedplumClient,
   activity: ActivityData['activity'],
   patientId: string,
-  pathway: ActivityData['pathway'],
+  pathway: ActivityData['pathway'] | undefined,
   taskId: string,
+  eventData: ActivityData,
 ): Promise<void> {
   try {
     const communication: Communication = {
@@ -693,14 +703,14 @@ async function createEnrichmentCommunication(
           contentString: JSON.stringify({
             taskId: taskId,
             activityId: activity.id,
-            pathwayId: pathway.id,
-            pathwayDefinitionId: pathway.pathway_definition_id,
+            pathwayId: pathway?.id || 'Unknown',
+            pathwayDefinitionId: pathway?.pathway_definition_id || 'Unknown',
             stakeholderId: activity.indirect_object?.id || 'Unknown',
             stakeholderName: activity.indirect_object?.name || 'Unknown',
             stepTitle: activity.action_component.title,
             patientId: patientId,
             activityStatus: activity.status,
-            pathwayTitle: pathway.pathway_title,
+            pathwayTitle: pathway?.pathway_title || 'Unknown',
             releaseId: activity.action_component.release_id,
             activityType: activity.object?.type || 'Unknown',
           }),
@@ -716,7 +726,7 @@ async function createEnrichmentCommunication(
           communicationId: resultCommunication.id,
           activityId: activity.id,
           patientId: patientId,
-          pathwayId: pathway.id,
+          pathwayId: pathway?.id || eventData.pathway_id || 'Unknown',
           lastUpdated: resultCommunication.meta?.lastUpdated,
         },
         null,
@@ -780,6 +790,7 @@ export async function handler(
       activity,
       patientId,
       pathway,
+      event.input,
     )
     await createEnrichmentCommunication(
       medplum,
@@ -787,6 +798,7 @@ export async function handler(
       patientId,
       pathway,
       taskId,
+      event.input,
     )
 
     console.log(
