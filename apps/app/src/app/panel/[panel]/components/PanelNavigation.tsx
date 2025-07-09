@@ -163,6 +163,16 @@ export default function PanelNavigation({
           const patientColumns = columns.filter((col) =>
             col.tags?.includes('panels:patients'),
           )
+
+          // Create columnVisibility with all columns visible
+          const columnVisibility = patientColumns.reduce(
+            (acc, col) => {
+              acc[col.id] = true
+              return acc
+            },
+            {} as Record<string, boolean>,
+          )
+
           newView = await addView(panel.id, {
             name: 'New Patient View',
             panelId: panel.id,
@@ -172,6 +182,7 @@ export default function PanelNavigation({
             metadata: {
               filters: [],
               viewType: 'patient',
+              columnVisibility,
             },
           })
           break
@@ -181,6 +192,16 @@ export default function PanelNavigation({
           const taskColumns = columns.filter((col) =>
             col.tags?.includes('panels:tasks'),
           )
+
+          // Create columnVisibility with all columns visible
+          const columnVisibility = taskColumns.reduce(
+            (acc, col) => {
+              acc[col.id] = true
+              return acc
+            },
+            {} as Record<string, boolean>,
+          )
+
           newView = await addView(panel.id, {
             name: 'New Task View',
             panelId: panel.id,
@@ -190,6 +211,7 @@ export default function PanelNavigation({
             metadata: {
               filters: [],
               viewType: 'task',
+              columnVisibility,
             },
           })
           break
@@ -202,16 +224,32 @@ export default function PanelNavigation({
               ? col.tags?.includes('panels:patients')
               : col.tags?.includes('panels:tasks'),
           )
+
+          // Only include visible columns from the panel
+          const visibleColumns = relevantColumns
+            .filter((col) => col.properties?.display?.visible !== false)
+            .map((col) => col.id)
+
+          // Create columnVisibility metadata based on panel's current visibility
+          const columnVisibility = relevantColumns.reduce(
+            (acc, col) => {
+              acc[col.id] = col.properties?.display?.visible !== false
+              return acc
+            },
+            {} as Record<string, boolean>,
+          )
+
           newView = await addView(panel.id, {
             name: `${panel.name} View`,
             panelId: panel.id,
-            visibleColumns: relevantColumns.map((col) => col.id),
+            visibleColumns,
             createdAt: new Date(),
             isPublished: false,
             metadata: {
               filters: currentFilters || panel.metadata.filters || [],
               sort: panel.metadata.sort || undefined,
               viewType: viewType,
+              columnVisibility,
             },
           })
           break
@@ -219,6 +257,25 @@ export default function PanelNavigation({
         case 'copy-view': {
           // Copy current view
           if (!currentView) return
+
+          // Ensure columnVisibility exists, create it if needed for backward compatibility
+          let columnVisibility = currentView.metadata.columnVisibility
+          if (!columnVisibility) {
+            const viewType = currentView.metadata.viewType
+            const relevantColumns = columns.filter((col) =>
+              viewType === 'patient'
+                ? col.tags?.includes('panels:patients')
+                : col.tags?.includes('panels:tasks'),
+            )
+            columnVisibility = relevantColumns.reduce(
+              (acc, col) => {
+                acc[col.id] = currentView.visibleColumns.includes(col.id)
+                return acc
+              },
+              {} as Record<string, boolean>,
+            )
+          }
+
           newView = await addView(panel.id, {
             name: `${currentView.name} (copy)`,
             panelId: panel.id,
@@ -227,6 +284,7 @@ export default function PanelNavigation({
             isPublished: false,
             metadata: {
               ...currentView.metadata,
+              columnVisibility,
             },
           })
           break

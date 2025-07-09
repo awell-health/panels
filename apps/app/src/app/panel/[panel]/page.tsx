@@ -7,6 +7,7 @@ import { VirtualizedTable } from '@/app/panel/[panel]/components/VirtualizedTabl
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
 import { useColumnOperations } from '@/hooks/use-column-operations'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import {
@@ -62,14 +63,20 @@ export default function WorklistPage() {
     useReactiveColumns(panelId)
   const { isLoading: isViewsLoading } = useReactiveViews(panelId)
 
+  // Create column visibility context for panel
+  const columnVisibilityContext = useColumnVisibility(panelId)
+
   const router = useRouter()
 
   // Get columns for current view type using tag-based filtering
-  const columns = allColumns.filter((col) =>
+  const allColumnsForViewType = allColumns.filter((col) =>
     currentView === 'patient'
       ? col.tags?.includes('panels:patients')
       : col.tags?.includes('panels:tasks'),
   )
+
+  // Get only visible columns using column visibility context
+  const visibleColumns = columnVisibilityContext.getVisibleColumns()
 
   // Set table data based on current view
   const tableData = currentView === 'patient' ? patients : tasks
@@ -211,7 +218,7 @@ export default function WorklistPage() {
     [],
   )
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here
+  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the visible columns that matter here
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event
@@ -220,15 +227,15 @@ export default function WorklistPage() {
       }
 
       // Find the active column's index and the over column's index
-      const oldIndex = columns.findIndex((col) => col.id === active.id)
-      const newIndex = columns.findIndex((col) => col.id === over.id)
+      const oldIndex = visibleColumns.findIndex((col) => col.id === active.id)
+      const newIndex = visibleColumns.findIndex((col) => col.id === over.id)
 
       if (oldIndex === -1 || newIndex === -1) {
         return
       }
 
       // Reorder the columns
-      const reorderedColumns = arrayMove(columns, oldIndex, newIndex)
+      const reorderedColumns = arrayMove(visibleColumns, oldIndex, newIndex)
 
       // Update column order in each column's display properties
       const columnsWithOrder = reorderedColumns.map((col, index) => ({
@@ -252,7 +259,7 @@ export default function WorklistPage() {
         }),
       )
     },
-    [columns],
+    [visibleColumns],
   )
 
   const isLoading =
@@ -288,17 +295,8 @@ export default function WorklistPage() {
               onSearchModeChange={setSearchMode}
               currentView={currentView}
               setCurrentView={updatePanelViewType}
-              columns={columns.map((col) => ({
-                ...col,
-                visible: col.properties?.display?.visible !== false,
-              }))}
+              columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
-              onColumnVisibilityChange={(columnId, visible) =>
-                onColumnUpdate({
-                  id: columnId,
-                  properties: { display: { visible } },
-                })
-              }
             />
           </div>
           <div className="content-area">
@@ -307,7 +305,7 @@ export default function WorklistPage() {
                 isLoading={isMedplumLoading}
                 selectedRows={selectedRows}
                 toggleSelectAll={() => {}}
-                columns={columns}
+                columns={visibleColumns}
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
                 handlePDFClick={() => {}}
@@ -354,7 +352,7 @@ export default function WorklistPage() {
           )}
           <div className="footer-area">
             <PanelFooter
-              columnsCounter={columns.length}
+              columnsCounter={visibleColumns.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}
