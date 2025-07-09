@@ -1,5 +1,5 @@
 import type { BotEvent, MedplumClient } from '@medplum/core'
-import type { Patient, BundleEntry } from '@medplum/fhirtypes'
+import type { BundleEntry, Patient } from '@medplum/fhirtypes'
 
 // Type definition for observation details
 interface ObservationDetails {
@@ -25,8 +25,20 @@ const OBSERVATION_IDS = [
   'uaz1iQmTESPT',
   'MKNSHn3UD5sR',
   'kOHcXDHBIzUa',
+  'WIjuq76K7SBz',
+  'Ishz9pSGkJBD',
+  'DTAGURJlhN3H',
+  'gIHHenuvypiZ',
+  '9Eee2fNv0xb4',
+  'JpmWTYLWS187',
+  'JW8UzMRGqjfi',
+  'D9oD8Uxx38kG',
+  'NEo1y6hPujJa',
+  'P4RyWS8bWWLt',
+  'xsDmxTlZ0PAz',
+  'imeMqggxB59W',
 ]
-const ENCOUNTER_IDS = ['54sxFoMUSZGx', 'exs1LmSV01uN9TtKoRdHZ']
+const ENCOUNTER_IDS = ['54sxFoMUSZGx']
 
 const ENCOUNTER_DICT: Record<string, string> = {
   encounter_class: 'W9g0WAwiodltREpc4p5fw',
@@ -101,6 +113,118 @@ const OBSERVATION_DICT: Record<string, ObservationDetails> = {
     coding: { system: 'http://loinc.org', code: '29463-7', display: 'Weight' },
     category: 'laboratory',
   },
+  WIjuq76K7SBz: {
+    definition_name: 'observation_cardioSymptoms',
+    unit: 'NA',
+    display: 'Cardiovascular Symptoms',
+    coding: {
+      system: 'http://loinc.org',
+      code: 'LA33-6',
+      display: 'Cardiovascular Symptoms',
+    },
+    category: 'survey',
+  },
+  Ishz9pSGkJBD: {
+    definition_name: 'observation_dietary',
+    unit: 'NA',
+    display: 'Dietary Assessment',
+    coding: {
+      system: 'http://loinc.org',
+      code: 'LA33-6',
+      display: 'Dietary Assessment',
+    },
+    category: 'survey',
+  },
+  DTAGURJlhN3H: {
+    definition_name: 'observation_siteInfectionRisk',
+    unit: 'NA',
+    display: 'Site Infection Risk',
+    coding: {
+      system: 'http://loinc.org',
+      code: 'LA33-6',
+      display: 'Site Infection Risk',
+    },
+    category: 'survey',
+  },
+  gIHHenuvypiZ: {
+    definition_name: 'observation_swelling',
+    unit: 'NA',
+    display: 'Swelling',
+    coding: { system: 'http://loinc.org', code: 'LA33-6', display: 'Swelling' },
+    category: 'survey',
+  },
+  '9Eee2fNv0xb4': {
+    definition_name: 'observation_weightGain',
+    unit: 'lbs',
+    display: 'Weight Gain',
+    coding: {
+      system: 'http://loinc.org',
+      code: 'LA33-6',
+      display: 'Weight Gain',
+    },
+    category: 'survey',
+  },
+  JpmWTYLWS187: {
+    definition_name: 'observation_creatinine_mg_dl',
+    unit: 'mg/dL',
+    display: 'Creatinine',
+    coding: {
+      system: 'http://loinc.org',
+      code: '2160-0',
+      display: 'Creatinine',
+    },
+    category: 'laboratory',
+  },
+  JW8UzMRGqjfi: {
+    definition_name: 'observation_dbp_mmHg',
+    unit: 'mmHg',
+    display: 'Diastolic Blood Pressure',
+    coding: {
+      system: 'http://loinc.org',
+      code: '8480-6',
+      display: 'Diastolic Blood Pressure',
+    },
+    category: 'vital-signs',
+  },
+  D9oD8Uxx38kG: {
+    definition_name: 'observation_egfr_ml_min',
+    unit: 'mL/min',
+    display: 'eGFR',
+    coding: { system: 'http://loinc.org', code: '33914-3', display: 'eGFR' },
+    category: 'laboratory',
+  },
+  NEo1y6hPujJa: {
+    definition_name: 'observation_hba1c_percent',
+    unit: '%',
+    display: 'HbA1c',
+    coding: { system: 'http://loinc.org', code: '30425-0', display: 'HbA1c' },
+    category: 'laboratory',
+  },
+  P4RyWS8bWWLt: {
+    definition_name: 'observation_sbp_mmHg',
+    unit: 'mmHg',
+    display: 'Systolic Blood Pressure',
+    coding: {
+      system: 'http://loinc.org',
+      code: '8480-6',
+      display: 'Systolic Blood Pressure',
+    },
+    category: 'vital-signs',
+  },
+  xsDmxTlZ0PAz: {
+    definition_name: 'observation_sodium_mmol_l',
+    unit: 'mmol/L',
+    display: 'Sodium',
+    coding: { system: 'http://loinc.org', code: '2955-2', display: 'Sodium' },
+    category: 'laboratory',
+  },
+  imeMqggxB59W: {
+    definition_name: 'observation_weight_lbs',
+    unit: 'lbs',
+    display: 'Weight',
+    coding: { system: 'http://loinc.org', code: '29463-7', display: 'Weight' },
+    category: 'laboratory',
+  },
 }
 
 // Types for the datapoint payload
@@ -115,7 +239,7 @@ interface DataPointPayload {
     date: string
     release_id: string
   }
-  pathway: {
+  pathway?: {
     id: string
     pathway_definition_id: string
     patient_id: string
@@ -175,7 +299,7 @@ async function findPatientByIdentifier(
 }
 
 // Create or find patient
-async function findOrCreatePatient(
+async function upsertPatient(
   medplum: MedplumClient,
   patientId: string,
   patientIdentifiers: Array<{ system: string; value: string }>,
@@ -198,14 +322,17 @@ async function findOrCreatePatient(
     })),
   ]
 
-  const newPatient = (await medplum.updateResource({
-    resourceType: 'Patient',
-    identifier: identifiers,
-    active: true,
-  })) as Patient
+  const newPatient = (await medplum.upsertResource(
+    {
+      resourceType: 'Patient',
+      identifier: identifiers,
+      active: true,
+    },
+    `identifier=${patientId}`,
+  )) as Patient
 
   console.log(
-    'New patient created:',
+    'Upserted patient:',
     JSON.stringify(
       {
         originalId: patientId,
@@ -233,6 +360,7 @@ export async function handler(
         eventType: event.input.event_type,
         pathwayId: event.input.pathway_id,
         patientId: patient_id,
+        hasPathway: !!pathway,
       },
       null,
       2,
@@ -240,11 +368,27 @@ export async function handler(
   )
 
   try {
+    // Log pathway information for debugging
+    if (!pathway) {
+      console.log(
+        'Warning: Pathway object is missing from event input:',
+        JSON.stringify(
+          {
+            dataPointId: data_point.id,
+            patientId: patient_id,
+            pathwayId: event.input.pathway_id,
+          },
+          null,
+          2,
+        ),
+      )
+    }
+
     // Find or create patient
-    const patientId = await findOrCreatePatient(
+    const patientId = await upsertPatient(
       medplum,
       patient_id,
-      pathway.patient_identifiers,
+      pathway?.patient_identifiers || [],
     )
 
     // Route datapoint to appropriate bot based on data_point_definition_id
@@ -299,7 +443,7 @@ export async function handler(
             dataPointId: data_point.id,
             dataPointDefinitionId: data_point.data_point_definition_id,
             botId: BOT_ROUTER_DICT['encounter-bot'],
-            pathwayId: pathway.id,
+            pathwayId: pathway?.id || 'unknown',
           },
           null,
           2,
@@ -315,7 +459,7 @@ export async function handler(
         data_point,
         encounter_dict: ENCOUNTER_DICT,
         patient_id: patientId,
-        pathway_id: pathway.id,
+        pathway_id: pathway?.id || event.input.pathway_id,
       } as DataPointRouterPayload)
 
       console.log(
