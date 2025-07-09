@@ -24,22 +24,21 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
   )
   const [selectedTask, setSelectedTask] = useState<WorklistTask | null>(null)
 
-  // Initialize internal state based on props
   useEffect(() => {
     if (patient) {
-      // Scenario 1: Patient provided, no task (or task ignored)
       setCurrentPatient(patient)
-      setSelectedTask(null)
-    } else if (task) {
-      // Scenario 2: Task provided, no patient - resolve patient from store
+    }
+  }, [patient])
+
+  useEffect(() => {
+    if (task) {
+      setSelectedTask(task)
       const resolvedPatient = patients.find((p) => p.id === task.patientId)
       if (resolvedPatient) {
         setCurrentPatient(resolvedPatient)
         setSelectedTask(task)
       } else {
-        // Handle error case where patient is not found
         setCurrentPatient(null)
-        setSelectedTask(null)
         logger.error(
           {
             operationType: 'resolve-patient',
@@ -51,7 +50,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
         )
       }
     }
-  }, [patient, task, patients])
+  }, [task, patients])
 
   // Get patient name and DOB for header
   const patientName = currentPatient?.name || ''
@@ -170,7 +169,6 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
             <PatientDetails
               patient={currentPatient}
               setSelectedTask={setSelectedTask}
-              onDeleteRequest={handleDeleteRequest}
             />
           )}
         </div>
