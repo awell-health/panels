@@ -41,13 +41,7 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
                 <StaticContent task={task} />
               </div>
             )}
-            {view === 'notes' && (
-              <TaskComments
-                notes={task.note}
-                taskId={task.id}
-                patientId={task.patientId}
-              />
-            )}
+            {view === 'notes' && <TaskComments task={task} />}
           </div>
         </div>
       ))}

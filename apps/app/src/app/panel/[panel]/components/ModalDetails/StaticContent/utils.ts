@@ -79,8 +79,6 @@ export const getCardSummary = (
     fields: { label: string; key: string }[]
   },
 ): string => {
-  console.log('card', card)
-  console.log('take(card.fields, 3)', take(card.fields, 3))
   const summary = take(card.fields, 3)
     .map((field) => {
       const value = getExtensionValue(source, field.key)
@@ -93,8 +91,6 @@ export const getCardSummary = (
     .filter(Boolean)
     .slice(0, 2)
     .join(', ')
-
-  console.log('summary', summary)
 
   return summary
 }
