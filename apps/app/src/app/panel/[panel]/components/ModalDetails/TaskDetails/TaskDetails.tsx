@@ -2,6 +2,7 @@ import type { WorklistTask } from '@/hooks/use-medplum-store'
 import TaskComments from './TaskComments'
 import FramePanel from '../FramePanel'
 import StaticContent from '../StaticContent'
+import ConnectorsSection from './ConnectorsSection'
 
 interface TaskDetailsProps {
   task: WorklistTask
@@ -22,11 +23,18 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
         >
           <div className="h-full">
             {view === 'ahp' && (
-              <FramePanel
-                url={AHP_URL}
-                status={task.status}
-                taskName={task.description}
-              />
+              <div className="flex flex-col h-full">
+                <div className="flex-1 min-h-0">
+                  <FramePanel
+                    url={AHP_URL}
+                    status={task.status}
+                    taskName={task.description}
+                  />
+                </div>
+                <div className="mt-4 flex-shrink-0">
+                  <ConnectorsSection task={task} showAhpConnector={!!AHP_URL} />
+                </div>
+              </div>
             )}
             {view === 'content' && <StaticContent task={task} />}
             {view === 'notes' && (
