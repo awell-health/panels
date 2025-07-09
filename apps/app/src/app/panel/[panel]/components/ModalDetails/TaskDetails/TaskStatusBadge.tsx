@@ -1,4 +1,4 @@
-const statuses = {
+export const statuses = {
   draft: {
     label: 'Draft',
     color: 'bg-gray-400',
@@ -47,6 +47,10 @@ const statuses = {
     label: 'Entered in error',
     color: 'bg-gray-400',
   },
+}
+
+export const isTaskStatus = (status: string): boolean => {
+  return status.toLowerCase() in statuses
 }
 
 const TaskStatusBadge = ({ status }: { status: string }) => {
