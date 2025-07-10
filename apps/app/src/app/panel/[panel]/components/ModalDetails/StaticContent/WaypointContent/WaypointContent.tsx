@@ -70,10 +70,13 @@ const WaypointContent: React.FC<{
             )}
 
             {patient?.telecom?.map(
-              (telecom: { system: string; value: string }) => (
+              (telecom: { system: string; value: string; use?: string }) => (
                 <CardRowItem
-                  key={telecom.system}
-                  label={startCase(telecom.system)}
+                  key={telecom.system + telecom.value + telecom.use}
+                  label={
+                    startCase(telecom.system) +
+                    (telecom.use ? ` [${telecom.use}]` : '')
+                  }
                   value={telecom.value}
                   searchQuery={searchQuery}
                 />
