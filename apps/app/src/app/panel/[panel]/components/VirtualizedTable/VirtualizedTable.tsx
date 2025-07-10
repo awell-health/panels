@@ -103,19 +103,16 @@ export function VirtualizedTable({
   // Grid ref for resetting cached dimensions
   const gridRef = useRef<VariableSizeGrid>(null)
 
-  // Filter visible columns and sort by order
+  // Sort columns by order if needed
   const visibleColumns = useMemo(() => {
-    const filteredColumns = columns.filter(
-      (col: Column) => col.properties?.display?.visible !== false,
-    )
     if (orderColumnMode === 'auto') {
-      return filteredColumns.sort((a: Column, b: Column) => {
+      return columns.sort((a: Column, b: Column) => {
         const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
         const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
         return orderA - orderB
       })
     }
-    return filteredColumns
+    return columns
   }, [columns, orderColumnMode])
 
   // Create a stable key for grid re-rendering

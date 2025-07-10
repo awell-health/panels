@@ -55,6 +55,8 @@ export type View = {
     filters: Filter[]
     viewType: ViewType
     sort?: Sort
+    // Column visibility state for this view (columnId -> visible)
+    columnVisibility?: Record<string, boolean>
     [key: string]: unknown
   }
 }
@@ -84,4 +86,20 @@ export type ColumnChange = {
 export type ColumnChangesResponse = {
   changes: ColumnChange[]
   explanation: string
+}
+
+// Column visibility management types
+export type ColumnVisibilityContext = {
+  type: 'panel' | 'view'
+  panelId: string
+  viewId?: string
+  columns: Column[]
+  getVisibility: (columnId: string) => boolean
+  setVisibility: (columnId: string, visible: boolean) => Promise<void>
+  getVisibleColumns: () => Column[]
+  getAllColumns: () => Column[]
+}
+
+export type ColumnWithVisibility = Pick<Column, 'id' | 'name'> & {
+  visible: boolean
 }

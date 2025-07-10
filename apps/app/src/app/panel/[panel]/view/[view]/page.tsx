@@ -5,6 +5,7 @@ import { useDrawer } from '@/contexts/DrawerContext'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
 import { useColumnOperations } from '@/hooks/use-column-operations'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import {
@@ -52,6 +53,9 @@ export default function WorklistViewPage() {
     useReactiveColumns(panelId)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
 
+  // Create column visibility context for view
+  const columnVisibilityContext = useColumnVisibility(panelId, viewId)
+
   const searchData = view?.metadata.viewType === 'patient' ? patients : tasks
   const { searchTerm, setSearchTerm, searchMode, setSearchMode, filteredData } =
     // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
@@ -62,14 +66,14 @@ export default function WorklistViewPage() {
   >(null)
 
   // Get columns using new filtering approach
-  const columns = allColumns.filter((col) =>
+  const allColumnsForViewType = allColumns.filter((col) =>
     view?.metadata.viewType === 'patient'
       ? col.tags?.includes('panels:patients')
       : col.tags?.includes('panels:tasks'),
   )
-  const visibleColumns = (view?.visibleColumns
-    .map((col) => columns.find((c) => c.id === col))
-    .filter((col) => col !== undefined) ?? []) as Column[]
+
+  // Get only visible columns using column visibility context
+  const visibleColumns = columnVisibilityContext.getVisibleColumns()
 
   const tableData = filteredData ?? []
 
@@ -182,7 +186,7 @@ export default function WorklistViewPage() {
     patients,
     tasks,
     panel,
-    columns,
+    columns: allColumnsForViewType,
     currentViewId: viewId,
     onColumnChanges: handleColumnChanges,
   })
@@ -242,31 +246,6 @@ export default function WorklistViewPage() {
     }
   }
 
-  const onColumnVisibilityChange = async (
-    columnId: string,
-    visible: boolean,
-  ) => {
-    if (!view) return
-
-    try {
-      if (visible) {
-        // Add column to visibleColumns if not already there
-        if (!view.visibleColumns.includes(columnId)) {
-          await updateView?.(panelId, viewId, {
-            visibleColumns: [...view.visibleColumns, columnId],
-          })
-        }
-      } else {
-        // Remove column from visibleColumns
-        await updateView?.(panelId, viewId, {
-          visibleColumns: view.visibleColumns.filter((id) => id !== columnId),
-        })
-      }
-    } catch (error) {
-      console.error('Failed to update view column visibility:', error)
-    }
-  }
-
   const isLoading =
     isPanelLoading || isViewLoading || isColumnsLoading || !panel || !view
 
@@ -296,12 +275,8 @@ export default function WorklistViewPage() {
               onSearchModeChange={setSearchMode}
               currentView={view?.metadata.viewType}
               setCurrentView={onViewTypeChange}
-              columns={columns.map((col) => ({
-                ...col,
-                visible: view.visibleColumns.includes(col.id),
-              }))}
+              columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
-              onColumnVisibilityChange={onColumnVisibilityChange}
               isViewPage={true}
             />
           </div>
@@ -350,7 +325,7 @@ export default function WorklistViewPage() {
           )}
           <div className="footer-area">
             <PanelFooter
-              columnsCounter={columns.length}
+              columnsCounter={visibleColumns.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}
