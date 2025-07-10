@@ -1,5 +1,3 @@
-// Constants
-
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type {
   Task,
