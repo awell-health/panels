@@ -1,8 +1,8 @@
 'use client'
 import { Code, Plus, Search } from 'lucide-react'
-import { type ColumnWithVisibility, ColumnsDropdown } from './ColumnsDropdown'
+import { ColumnsDropdown } from './ColumnsDropdown'
 import WorklistViewDropDown from './ViewTypeDropdown'
-import type { ViewType } from '@/types/panel'
+import type { ViewType, ColumnVisibilityContext } from '@/types/panel'
 
 interface PanelToolbarProps {
   searchTerm: string
@@ -13,9 +13,8 @@ interface PanelToolbarProps {
   onEnrichData?: () => void
   currentView: ViewType
   setCurrentView?: (view: ViewType) => void
-  columns: ColumnWithVisibility[]
+  columnVisibilityContext: ColumnVisibilityContext
   onAddColumn: () => void
-  onColumnVisibilityChange: (columnId: string, visible: boolean) => void
   isViewPage?: boolean
 }
 
@@ -27,9 +26,8 @@ export default function PanelToolbar({
   onEnrichData,
   currentView,
   setCurrentView,
-  columns,
+  columnVisibilityContext,
   onAddColumn,
-  onColumnVisibilityChange,
   isViewPage = false,
 }: PanelToolbarProps) {
   return (
@@ -89,10 +87,7 @@ export default function PanelToolbar({
             <Plus className="mr-1 h-3 w-3" /> Add column
           </button>
 
-          <ColumnsDropdown
-            columns={columns}
-            onColumnVisibilityChange={onColumnVisibilityChange}
-          />
+          <ColumnsDropdown context={columnVisibilityContext} />
         </div>
 
         <div className="flex items-center space-x-2">
