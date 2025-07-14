@@ -118,6 +118,39 @@ const hasTimeInfo = (date: string | Date): boolean => {
   return false
 }
 
+// Pure function for formatting dates ignoring timezone - exported for testing
+export const formatDateIgnoringTimeZone = (
+  date: string | Date | null | undefined,
+  dateFormat: DateFormat = DATE_FORMATS.US_DATE,
+): string => {
+  if (!date) return ''
+  try {
+    let dateObj: Date
+
+    if (typeof date === 'string') {
+      // For ISO strings, parse without timezone conversion
+      if (date.includes('T')) {
+        // Remove timezone info and parse as local time
+        const dateWithoutTz = date.replace(/[Z+\-]\d{2}:?\d{2}$/, '')
+        dateObj = parseISO(dateWithoutTz)
+      } else {
+        dateObj = parseISO(`${date}T00:00:00`)
+      }
+    } else {
+      dateObj = date
+    }
+
+    if (!isValid(dateObj)) {
+      return String(date)
+    }
+
+    return formatDateFns(dateObj, dateFormat.pattern)
+  } catch (error) {
+    console.error('Error formatting date:', error)
+    return String(date)
+  }
+}
+
 export function useDateTimeFormat(): UseDateTimeFormatReturn {
   const [selectedDateFormat, setSelectedDateFormat] =
     useState<DateFormatKey>(getStoredDateFormat)
@@ -231,44 +264,11 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
     [selectedDateFormat, selectedDateTimeFormat],
   )
 
-  const formatDateIgnoringTimeZone = useCallback(
+  const formatDateIgnoringTimeZoneHook = useCallback(
     (date: string | Date | null | undefined): string => {
-      if (!date) return ''
-      try {
-        let dateObj: Date
-
-        if (typeof date === 'string') {
-          // For ISO strings, parse without timezone conversion
-          if (date.includes('T')) {
-            // Remove timezone info and parse as local time
-            const dateWithoutTz = date.replace(/[Z+\-]\d{2}:?\d{2}$/, '')
-            dateObj = parseISO(dateWithoutTz)
-          } else {
-            dateObj = parseISO(`${date}T00:00:00`)
-          }
-        } else {
-          dateObj = date
-        }
-
-        if (!isValid(dateObj)) {
-          return String(date)
-        }
-
-        // Determine if this date has time information
-        const hasTime = hasTimeInfo(date)
-
-        // Use appropriate format based on time presence
-        const formatConfig = hasTime
-          ? DATE_TIME_FORMATS[selectedDateTimeFormat]
-          : DATE_FORMATS[selectedDateFormat]
-
-        return formatDateFns(dateObj, formatConfig.pattern)
-      } catch (error) {
-        console.error('Error formatting date:', error)
-        return String(date)
-      }
+      return formatDateIgnoringTimeZone(date, DATE_FORMATS[selectedDateFormat])
     },
-    [selectedDateFormat, selectedDateTimeFormat],
+    [selectedDateFormat],
   )
 
   const updateDateFormat = useCallback(async (formatKey: DateFormatKey) => {
@@ -320,7 +320,7 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
     availableDateFormats: DATE_FORMATS,
     availableDateTimeFormats: DATE_TIME_FORMATS,
     formatDateTime,
-    formatDateIgnoringTimeZone,
+    formatDateIgnoringTimeZone: formatDateIgnoringTimeZoneHook,
     updateDateFormat,
     updateDateTimeFormat,
   }
