@@ -57,12 +57,15 @@ const TaskComment = ({ task }: TaskCommentProps) => {
       title: 'Task created',
       datetime: task.authoredOn,
     },
-    {
+  ]
+
+  if (task.status === 'completed') {
+    timelineItems.push({
       type: 'task',
       title: 'Task completed',
       datetime: task.lastModified,
-    },
-  ]
+    })
+  }
 
   return (
     <div className="flex flex-col p-2 gap-2">

@@ -178,7 +178,7 @@ function createPatientTelecom(profile: PatientProfile): ContactPoint[] {
     telecom.push({ system: 'email', value: email })
   }
   if (phone) {
-    telecom.push({ system: 'phone', value: phone })
+    telecom.push({ system: 'phone', value: phone, use: 'home' })
   }
   if (mobilePhone) {
     telecom.push({
@@ -533,6 +533,29 @@ async function handlePatientDeleted(
         JSON.stringify({ awellPatientId }, null, 2),
       )
       return
+    }
+
+    // delete all tasks for this patient
+    const tasks = await medplum.search(
+      'Task',
+      `subject=Patient/${existingPatient.resource.id}`,
+    )
+    if (tasks.entry) {
+      console.log(
+        'Deleting tasks for patient:',
+        JSON.stringify(
+          {
+            awellPatientId,
+            tasks: tasks.entry.length,
+            deletedAt: new Date().toISOString(),
+          },
+          null,
+          2,
+        ),
+      )
+      for (const task of tasks.entry) {
+        await medplum.deleteResource('Task', task.resource?.id || '')
+      }
     }
 
     // Hard delete - completely remove the resource

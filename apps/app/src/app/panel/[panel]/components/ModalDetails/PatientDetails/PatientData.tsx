@@ -20,7 +20,7 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
         </div>
       </ExpandableCard>
       {patient?.address && patient?.address.length > 0 && (
-        <ExpandableCard title="Adress" defaultExpanded={true}>
+        <ExpandableCard title="Address" defaultExpanded={true}>
           <div className="space-y-2 text-sm mt-3">
             {patient?.address?.map(
               (address: { system: string; value: string }, index: number) => (
@@ -47,10 +47,12 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
         <ExpandableCard title="Patient telecom" defaultExpanded={true}>
           <div className="space-y-2 text-sm mt-3">
             {patient?.telecom?.map(
-              (telecom: { system: string; value: string }) => (
+              (telecom: { system: string; value: string; use?: string }) => (
                 <CardRowItem
-                  key={telecom.value}
-                  label={telecom.system}
+                  key={telecom.system + telecom.value + telecom.use}
+                  label={
+                    telecom.system + (telecom.use ? ` [${telecom.use}]` : '')
+                  }
                   value={telecom.value}
                 />
               ),
