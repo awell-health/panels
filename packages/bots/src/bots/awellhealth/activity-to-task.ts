@@ -106,7 +106,7 @@ interface ActivityData {
       step_id: string
       track_id: string
     }
-    action_component: {
+    action_component?: {
       definition_id: string
       release_id: string
       title: string
@@ -517,7 +517,7 @@ function createTaskExtensions(
         },
         {
           url: 'step-name',
-          valueString: activity.action_component.title,
+          valueString: activity.action_component?.title ?? 'Unknown',
         },
         {
           url: 'pathway-start-date',
@@ -525,7 +525,7 @@ function createTaskExtensions(
         },
         {
           url: 'release-id',
-          valueString: activity.action_component.release_id,
+          valueString: activity.action_component?.release_id ?? 'Unknown',
         },
         {
           url: 'activity-type',
@@ -562,13 +562,20 @@ async function createOrUpdateTask(
 
   // Set task status based on activity status
   const taskStatus = activity.status === 'done' ? 'completed' : 'requested'
+  const taskDescription =
+    activity.action_component?.title ?? activity.object?.name
+
+  if (!taskDescription) {
+    console.log('No task description found, skipping task creation')
+    return ''
+  }
 
   const task: Task = {
     resourceType: 'Task',
     status: taskStatus,
     intent: 'order',
     priority: 'routine',
-    description: activity.action_component.title,
+    description: taskDescription,
     authoredOn: activity.date,
     lastModified: new Date().toISOString(),
     for: { reference: `Patient/${patientId}` },
