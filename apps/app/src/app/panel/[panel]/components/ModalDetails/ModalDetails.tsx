@@ -6,6 +6,7 @@ import { Trash2Icon, User, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
+import { useAuthentication } from '@/hooks/use-authentication'
 
 interface ModalDetailsProps {
   patient?: WorklistPatient
@@ -15,6 +16,7 @@ interface ModalDetailsProps {
 
 const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
   const { patients, tasks, deletePatient } = useMedplumStore()
+  const { isAdmin } = useAuthentication()
   const { showSuccess, showError } = useToastHelpers()
   const modalRef = useRef<HTMLDivElement>(null)
 
@@ -144,7 +146,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
                 <span>DOB {dateOfBirth}</span>
               </>
             )}
-            {currentPatient && !selectedTask && (
+            {currentPatient && !selectedTask && isAdmin && (
               <button
                 type="button"
                 onClick={handleDeleteRequest}
