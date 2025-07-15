@@ -2,6 +2,7 @@ import type { MedplumClient } from '@medplum/core'
 import type {
   Bot,
   Bundle,
+  Composition,
   DetectedIssue,
   Encounter,
   Observation,
@@ -227,6 +228,13 @@ export class MedplumStore {
       subject: `Patient/${patientId}`,
     })
     return (bundle.entry || []).map((entry) => entry.resource as Observation)
+  }
+
+  async getCompositions(patientId: string): Promise<Composition[]> {
+    const bundle = await this.client.search('Composition', {
+      subject: `Patient/${patientId}`,
+    })
+    return (bundle.entry || []).map((entry) => entry.resource as Composition)
   }
 
   async getEncounters(patientId: string): Promise<Encounter[]> {

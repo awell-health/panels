@@ -3,6 +3,10 @@ import ExpandableCard from '../ExpandableCard'
 import CardRowItem from '../CardRowItem'
 import { wellpathCards } from './wellpathCards'
 import FhirExpandableCard from '../FhirExpandableCard'
+import { useEffect, useState } from 'react'
+import { useMedplumStore } from '@/hooks/use-medplum-store'
+import type { Composition } from '@medplum/fhirtypes'
+import RenderValue from '../RenderValue'
 
 const WellpathContent: React.FC<{
   task: WorklistTask
@@ -15,6 +19,17 @@ const WellpathContent: React.FC<{
     ? patient?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       patient?.birthDate?.toLowerCase().includes(searchQuery.toLowerCase())
     : true
+
+  const { getPatientCompositions } = useMedplumStore()
+  const [compositions, setCompositions] = useState<Composition[]>([])
+
+  useEffect(() => {
+    const fetchCompositions = async () => {
+      const compositions = await getPatientCompositions(patient?.id ?? '')
+      setCompositions(compositions)
+    }
+    fetchCompositions()
+  }, [patient, getPatientCompositions])
 
   return (
     <>
@@ -47,6 +62,21 @@ const WellpathContent: React.FC<{
           expanded={expanded}
         />
       ))}
+
+      {compositions.map((composition) =>
+        composition.section?.map((section) => (
+          <ExpandableCard
+            key={`${composition.id}-${section.id}-${section.title}`}
+            title={`${composition.title} - ${section.title}`}
+            defaultExpanded={expanded}
+          >
+            <RenderValue
+              value={section.text?.div ?? ''}
+              searchQuery={searchQuery}
+            />
+          </ExpandableCard>
+        )),
+      )}
     </>
   )
 }

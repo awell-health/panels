@@ -7,7 +7,7 @@ import { getNestedValue } from '../../../../../../../lib/fhir-path'
 import { get, startCase, take } from 'lodash'
 import { getCardSummary, getExtensionValue } from '../utils'
 import { useEffect, useState } from 'react'
-import type { Observation } from '@medplum/fhirtypes'
+import type { Composition, Observation } from '@medplum/fhirtypes'
 import HighlightText from '../HighlightContent'
 
 const WaypointContent: React.FC<{
@@ -28,6 +28,7 @@ const WaypointContent: React.FC<{
   const dialysisProvider = getExtensionValue(patient, 'organization')
 
   const [observations, setObservations] = useState<Observation[]>([])
+  const [compositions, setCompositions] = useState<Composition[]>([])
 
   useEffect(() => {
     const fetchObservations = async () => {
@@ -41,6 +42,8 @@ const WaypointContent: React.FC<{
   const ckdStage = observations.find(
     (observation) => observation.code?.text === 'CKD Stage',
   )
+
+  // TODO add a composition card element
 
   return (
     <>
