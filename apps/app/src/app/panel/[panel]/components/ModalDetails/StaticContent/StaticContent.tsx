@@ -107,7 +107,6 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
             searchQuery={searchQuery}
             expanded={expandAll.wellpath}
           />
-
           <EncompassContent
             task={task}
             searchQuery={searchQuery}

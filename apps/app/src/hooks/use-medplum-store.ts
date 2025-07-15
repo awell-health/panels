@@ -111,6 +111,7 @@ export function useMedplumStore() {
     getPatientObservations,
     getPatientEncounters,
     getPatientDetectedIssues,
+    getPatientCompositions,
     deletePatient,
   } = useMedplum()
 
@@ -136,5 +137,6 @@ export function useMedplumStore() {
     getPatientEncounters,
     getPatientDetectedIssues,
     deletePatient,
+    getPatientCompositions,
   }
 }

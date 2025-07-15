@@ -6,6 +6,7 @@ import { MedplumStore } from '@/lib/medplum'
 import { MedplumClient } from '@medplum/core'
 import type {
   Bot,
+  Composition,
   DetectedIssue,
   Encounter,
   Observation,
@@ -30,6 +31,7 @@ type MedplumContextType = {
   addNotesToTask: (taskId: string, notes: string) => Promise<Task>
   toggleTaskOwner: (taskId: string) => Promise<Task>
   getPatientObservations: (patientId: string) => Promise<Observation[]>
+  getPatientCompositions: (patientId: string) => Promise<Composition[]>
   getPatientEncounters: (patientId: string) => Promise<Encounter[]>
   getPatientDetectedIssues: (patientId: string) => Promise<DetectedIssue[]>
   deletePatient: (patientId: string) => Promise<void>
@@ -293,6 +295,17 @@ export function MedplumClientProvider({
     [medplumStore],
   )
 
+  const getPatientCompositions = useCallback(
+    async (patientId: string) => {
+      if (!medplumStore) {
+        throw new Error('Medplum store not initialized')
+      }
+      const compositions = await medplumStore.getCompositions(patientId)
+      return compositions
+    },
+    [medplumStore],
+  )
+
   const getPatientEncounters = useCallback(
     async (patientId: string) => {
       if (!medplumStore) {
@@ -359,6 +372,7 @@ export function MedplumClientProvider({
     getPatientObservations,
     getPatientEncounters,
     getPatientDetectedIssues,
+    getPatientCompositions,
     deletePatient,
   }
 
