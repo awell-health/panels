@@ -25,6 +25,6 @@ export async function getRuntimeConfig(): Promise<RuntimeConfig> {
     storageMode: process.env.APP_STORAGE_MODE || 'local',
     storageApiBaseUrl: process.env.APP_API_BASE_URL || '',
     environment: process.env.ENVIRONMENT || 'development',
-    adminRole: process.env.ADMIN_ROLE || 'panels_admin',
+    adminRole: process.env.ADMIN_ROLE || 'Org Admin',
   }
 }
