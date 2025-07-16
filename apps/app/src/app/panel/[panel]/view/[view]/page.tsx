@@ -66,7 +66,7 @@ export default function WorklistViewPage() {
     {
       pageSize: 50,
       maxRecords: 50000,
-      showLoadAll: true,
+      panelId,
     },
   )
 

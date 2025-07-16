@@ -53,20 +53,16 @@ export default function WorklistPage() {
     isLoading: isProgressiveLoading,
     isLoadingMore,
     hasMore,
-    totalCount,
-    loadedCount,
     error: progressiveError,
     loadMore,
-    loadAll,
     refresh,
-    showLoadAllButton,
     dataAfter,
   } = useProgressiveMedplumData(
     currentView === 'patient' ? 'Patient' : 'Task',
     {
       pageSize: 50,
       maxRecords: 50000,
-      showLoadAll: true,
+      panelId,
     },
   )
 

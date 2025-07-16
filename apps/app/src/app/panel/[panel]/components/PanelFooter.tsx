@@ -95,13 +95,18 @@ export default function PanelFooter({
 
         {/* Data loading controls */}
         <div className="flex items-center space-x-2">
-          {/* Cursor date display */}
-          {dataAfter && (
+          {dataAfter && hasMore && (
             <div className="text-xs text-gray-500 flex items-center">
               <span className="mr-1">Showing data after:</span>
               <span className="font-mono">
                 {new Date(dataAfter).toLocaleString()}
               </span>
+            </div>
+          )}
+
+          {!hasMore && (
+            <div className="text-xs text-gray-500 flex items-center">
+              <span className="mr-1">Showing all data</span>
             </div>
           )}
 

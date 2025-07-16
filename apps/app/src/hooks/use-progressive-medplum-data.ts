@@ -6,11 +6,12 @@ import {
   mapPatientsToWorklistPatients,
   mapTasksToWorklistTasks,
 } from '@/lib/fhir-to-table-data'
+import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
 
 export interface ProgressiveLoadingOptions {
-  pageSize?: number
-  maxRecords?: number
-  showLoadAll?: boolean
+  pageSize: number
+  maxRecords: number
+  panelId: string
 }
 
 export interface ProgressiveLoadingState<T> {
@@ -18,51 +19,38 @@ export interface ProgressiveLoadingState<T> {
   isLoading: boolean
   isLoadingMore: boolean
   hasMore: boolean
-  totalCount?: number
   loadedCount: number
   error: Error | null
+  dataAfter?: string
   loadMore: () => Promise<void>
   loadAll: () => Promise<void>
   refresh: () => Promise<void>
   reset: () => void
-  showLoadAllButton: boolean
-  dataAfter?: string
 }
 
 export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
   resourceType: T,
-  options: ProgressiveLoadingOptions = {},
+  options: ProgressiveLoadingOptions,
 ): ProgressiveLoadingState<
   T extends 'Patient' ? WorklistPatient : WorklistTask
 > {
-  const { pageSize = 1000, maxRecords = 100000, showLoadAll = true } = options
+  const { pageSize = 1000, maxRecords = 100000, panelId } = options
 
   const { getPatientsPaginated, getTasksPaginated } = useMedplum()
 
-  // State management
   const [data, setData] = useState<
     (T extends 'Patient' ? WorklistPatient : WorklistTask)[]
   >([])
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState<boolean>(true)
-  const [totalCount, setTotalCount] = useState<number | undefined>(undefined)
   const [error, setError] = useState<Error | null>(null)
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
-  const [dataAfter, setDataAfter] = useState<string | undefined>(undefined)
 
-  // Refs for tracking
   const isInitialLoadRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const isLoadMoreInProgressRef = useRef(false)
-
-  // Calculate if we should show load all button
-  const showLoadAllButton = useMemo(() => {
-    if (!showLoadAll) return false
-    if (!hasMore) return false
-    if (data.length >= maxRecords) return false
-    return data.length >= 10000
-  }, [showLoadAll, hasMore, data.length, maxRecords])
+  const previousResourceTypeRef = useRef<T>(resourceType)
 
   // Get the appropriate paginated method
   const getPaginatedData = useCallback(
@@ -93,7 +81,16 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
 
   // Load initial data
   const loadInitialData = useCallback(async () => {
-    if (isLoading || isInitialLoadRef.current) return
+    if (isLoading) return
+
+    // Check if resource type has changed
+    if (previousResourceTypeRef.current !== resourceType) {
+      // Resource type changed, reset the initial load flag
+      isInitialLoadRef.current = false
+      previousResourceTypeRef.current = resourceType
+    }
+
+    if (isInitialLoadRef.current) return
 
     try {
       setIsLoading(true)
@@ -105,6 +102,27 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       }
       abortControllerRef.current = new AbortController()
 
+      try {
+        const cached = panelDataStore.getData(panelId, resourceType)
+
+        if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
+          setData(
+            cached.data as (T extends 'Patient'
+              ? WorklistPatient
+              : WorklistTask)[],
+          )
+          // Restore pagination state from cache
+          setHasMore(cached.pagination.hasMore)
+          setNextCursor(cached.pagination.nextCursor)
+          isInitialLoadRef.current = true
+          setIsLoading(false)
+          return
+        }
+      } catch (err) {
+        console.error('Error getting cached data', err)
+      }
+
+      // Load from API if no cache hit
       const result = await getPaginatedData({ pageSize })
 
       if (abortControllerRef.current.signal.aborted) return
@@ -112,9 +130,19 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       setData(result.data)
       setHasMore(result.hasMore)
       setNextCursor(result.nextCursor)
-      setDataAfter(result.nextCursor)
-      setTotalCount(result.totalCount)
       isInitialLoadRef.current = true
+
+      if (panelDataStore && panelId) {
+        panelDataStore.setData(
+          panelId,
+          resourceType,
+          result.data as WorklistPatient[] | WorklistTask[],
+          {
+            nextCursor: result.nextCursor,
+            hasMore: result.hasMore,
+          },
+        )
+      }
     } catch (err) {
       if (abortControllerRef.current?.signal.aborted) return
       setError(
@@ -123,7 +151,7 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     } finally {
       setIsLoading(false)
     }
-  }, [isLoading, getPaginatedData, pageSize])
+  }, [isLoading, getPaginatedData, pageSize, panelId, resourceType])
 
   // Load more data
   const loadMore = useCallback(async () => {
@@ -154,15 +182,20 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
 
       if (abortControllerRef.current.signal.aborted) return
 
-      setData((prevData) => [...prevData, ...result.data])
+      const newData = [...data, ...result.data]
+      setData(newData)
       setHasMore(result.hasMore)
       setNextCursor(result.nextCursor)
-      if (result.nextCursor) {
-        setDataAfter(result.nextCursor)
-      }
-      if (result.totalCount !== undefined) {
-        setTotalCount(result.totalCount)
-      }
+
+      panelDataStore.updateData(
+        panelId,
+        resourceType,
+        result.data as WorklistPatient[] | WorklistTask[],
+        {
+          nextCursor: result.nextCursor,
+          hasMore: result.hasMore,
+        },
+      )
     } catch (err) {
       if (abortControllerRef.current?.signal.aborted) return
       setError(
@@ -176,10 +209,12 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     isLoadingMore,
     hasMore,
     nextCursor,
-    data.length,
+    data,
     maxRecords,
     getPaginatedData,
     pageSize,
+    panelId,
+    resourceType,
   ])
 
   // Load all data
@@ -217,10 +252,16 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
         setData(allData)
         setHasMore(hasMoreData === true)
         setNextCursor(currentCursor)
-        setDataAfter(currentCursor)
-        if (result.totalCount !== undefined) {
-          setTotalCount(result.totalCount)
-        }
+
+        panelDataStore.updateData(
+          panelId,
+          resourceType,
+          result.data as WorklistPatient[] | WorklistTask[],
+          {
+            nextCursor: currentCursor,
+            hasMore: hasMoreData,
+          },
+        )
 
         // Small delay to prevent overwhelming the UI
         await new Promise((resolve) => setTimeout(resolve, 100))
@@ -242,6 +283,8 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     nextCursor,
     getPaginatedData,
     pageSize,
+    panelId,
+    resourceType,
   ])
 
   // Refresh data
@@ -250,34 +293,29 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     setData([])
     setHasMore(true)
     setNextCursor(undefined)
-    setDataAfter(undefined)
-    setTotalCount(undefined)
     setError(null)
-    await loadInitialData()
-  }, [loadInitialData])
 
-  // Reset data
+    panelDataStore.removeData(panelId, resourceType)
+
+    await loadInitialData()
+  }, [loadInitialData, panelId, resourceType])
+
   const reset = useCallback(() => {
     isInitialLoadRef.current = false
     setData([])
     setHasMore(true)
     setNextCursor(undefined)
-    setDataAfter(undefined)
-    setTotalCount(undefined)
     setError(null)
     setIsLoading(false)
     setIsLoadingMore(false)
 
-    // Cancel any ongoing requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
-  }, [])
 
-  // Note: Window scroll detection is disabled for VirtualizedTable compatibility
-  // Scroll detection is handled by the VirtualizedTable component itself
-  // This prevents conflicts between window scroll and table scroll events
+    panelDataStore.removeData(panelId, resourceType)
+  }, [panelId, resourceType])
 
   // Load initial data on mount
   useEffect(() => {
@@ -298,14 +336,12 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     isLoading,
     isLoadingMore,
     hasMore,
-    totalCount,
     loadedCount: data.length,
     error,
+    dataAfter: nextCursor,
     loadMore,
     loadAll,
     refresh,
     reset,
-    showLoadAllButton,
-    dataAfter,
   }
 }
