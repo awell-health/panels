@@ -2,15 +2,17 @@
 
 // Runtime configuration utility
 export interface RuntimeConfig {
-  medplumBaseUrl?: string
-  medplumWsBaseUrl?: string
+  medplumBaseUrl: string
+  medplumWsBaseUrl: string
   authStytchPublicToken?: string
   authRedirectUrl?: string
   authCookiesAllowedDomain?: string
-  storageMode?: string
-  storageApiBaseUrl?: string
-  environment?: string
+  storageMode: string
+  storageApiBaseUrl: string
+  environment: string
   adminRole: string
+  captureKey?: string
+  captureInternalDomain?: string
 }
 
 // Get runtime configuration
@@ -25,6 +27,8 @@ export async function getRuntimeConfig(): Promise<RuntimeConfig> {
     storageMode: process.env.APP_STORAGE_MODE || 'local',
     storageApiBaseUrl: process.env.APP_API_BASE_URL || '',
     environment: process.env.ENVIRONMENT || 'development',
-    adminRole: process.env.ADMIN_ROLE || 'Org Admin',
+    adminRole: process.env.ADMIN_ROLE || 'admin',
+    captureKey: process.env.NEXT_PUBLIC_CAPTURE_KEY,
+    captureInternalDomain: process.env.NEXT_PUBLIC_CAPTURE_INTERNAL_DOMAIN,
   }
 }
