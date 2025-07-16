@@ -16,6 +16,19 @@ import type {
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ResourceHandler = (resource: any) => void
 
+// Pagination interfaces for progressive loading
+export interface PaginationOptions {
+  pageSize?: number
+  lastUpdated?: string // cursor for pagination
+}
+
+export interface PaginatedResult<T> {
+  data: T[]
+  hasMore: boolean
+  nextCursor?: string
+  totalCount?: number // Total count from FHIR bundle
+}
+
 // Data store class to handle all Medplum interactions
 export class MedplumStore {
   private client: MedplumClient
@@ -198,6 +211,84 @@ export class MedplumStore {
       return (bundle.entry || []).map((entry) => entry.resource as Task)
     } catch (error) {
       console.error('Error fetching tasks:', error)
+      throw error
+    }
+  }
+
+  async getPatientsPaginated(
+    options: PaginationOptions = {},
+  ): Promise<PaginatedResult<Patient>> {
+    try {
+      const pageSize = options.pageSize || 1000
+
+      const searchParams: Record<string, string> = {
+        _count: String(pageSize),
+        _sort: '-_lastUpdated',
+      }
+
+      if (options.lastUpdated) {
+        searchParams._lastUpdated = `lt${options.lastUpdated}`
+      }
+
+      const bundle = await this.client.search('Patient', searchParams)
+
+      const data = (bundle.entry || []).map(
+        (entry) => entry.resource as Patient,
+      )
+      const hasMore = data.length === pageSize
+
+      let nextCursor: string | undefined
+      if (hasMore && data.length > 0) {
+        const lastRecord = data[data.length - 1]
+        nextCursor = lastRecord.meta?.lastUpdated
+      }
+
+      return {
+        data,
+        hasMore,
+        nextCursor,
+        totalCount: bundle.total,
+      }
+    } catch (error) {
+      console.error('Error fetching paginated patients:', error)
+      throw error
+    }
+  }
+
+  async getTasksPaginated(
+    options: PaginationOptions = {},
+  ): Promise<PaginatedResult<Task>> {
+    try {
+      const pageSize = options.pageSize || 1000
+
+      const searchParams: Record<string, string> = {
+        _count: String(pageSize),
+        _sort: '-_lastUpdated',
+      }
+
+      if (options.lastUpdated) {
+        searchParams._lastUpdated = `lt${options.lastUpdated}`
+      }
+
+      const bundle = await this.client.search('Task', searchParams)
+
+      const data = (bundle.entry || []).map((entry) => entry.resource as Task)
+      const hasMore = data.length === pageSize
+
+      let nextCursor: string | undefined
+      if (hasMore && data.length > 0) {
+        const lastRecord = data[data.length - 1]
+        nextCursor = lastRecord.meta?.lastUpdated
+      }
+
+      return {
+        data,
+        hasMore,
+        nextCursor,
+        totalCount: bundle.total,
+      }
+    } catch (error) {
+      console.error('Error fetching paginated tasks:', error)
       throw error
     }
   }
