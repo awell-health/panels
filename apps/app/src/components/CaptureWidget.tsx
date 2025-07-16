@@ -102,5 +102,40 @@ export function CaptureWidget() {
     }
   }, [organizationSlug])
 
-  return null // This component doesn't render anything
+  // Render the trigger button
+  const internalDomain =
+    process.env.NEXT_PUBLIC_CAPTURE_INTERNAL_DOMAIN || 'awellhealth.com'
+  const isInternalUser = email?.endsWith(`@${internalDomain}`) ?? false
+  const captureKey = process.env.NEXT_PUBLIC_CAPTURE_KEY
+
+  if (!captureKey) {
+    return null // Don't render button if capture is not configured
+  }
+
+  return (
+    <button
+      type="button"
+      data-capture-trigger={isInternalUser ? 'extended' : 'customer'}
+      className="fixed top-4 right-4 z-50 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 flex items-center gap-2 text-sm font-medium"
+      aria-label="Report an issue"
+    >
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <title>Alert icon</title>
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+      Report an issue
+    </button>
+  )
 }
