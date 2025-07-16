@@ -1,12 +1,12 @@
 import { useToastHelpers } from '@/contexts/ToastContext'
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
-import { useMedplumStore } from '@/hooks/use-medplum-store'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { logger } from '@/lib/logger'
 import { Trash2Icon, User, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
 import { useAuthentication } from '@/hooks/use-authentication'
+import { useMedplumStore } from '@/hooks/use-medplum-store'
 
 interface ModalDetailsProps {
   patient?: WorklistPatient

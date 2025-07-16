@@ -6,11 +6,7 @@ import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
 import { useColumnOperations } from '@/hooks/use-column-operations'
 import { useColumnVisibility } from '@/hooks/use-column-visibility'
-import {
-  useMedplumStore,
-  type WorklistPatient,
-  type WorklistTask,
-} from '@/hooks/use-medplum-store'
+import { useMedplumStore } from '@/hooks/use-medplum-store'
 import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
 import {
   useReactiveColumns,
@@ -27,6 +23,7 @@ import { useCallback, useEffect, useState } from 'react'
 import ModalDetails from '../../components/ModalDetails/ModalDetails'
 import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 
 export default function WorklistViewPage() {
   const { updateView } = useReactivePanelStore()

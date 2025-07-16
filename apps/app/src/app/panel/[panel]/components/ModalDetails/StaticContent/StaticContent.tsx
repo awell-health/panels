@@ -1,4 +1,4 @@
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { Loader2, Search } from 'lucide-react'
 import { Fragment, useState, useEffect } from 'react'
 import { RenderWithCopy } from './RenderWithCopy'

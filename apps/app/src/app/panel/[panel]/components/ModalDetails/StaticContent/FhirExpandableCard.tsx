@@ -1,7 +1,7 @@
 import { getNestedValue } from '../../../../../../lib/fhir-path'
 import ExpandableCard from './ExpandableCard'
 import CardRowItem from './CardRowItem'
-import type { WorklistTask } from '../../../../../../hooks/use-medplum-store'
+import type { WorklistTask } from '@/lib/fhir-to-table-data'
 import type { FC } from 'react'
 import { getCardSummary } from './utils'
 

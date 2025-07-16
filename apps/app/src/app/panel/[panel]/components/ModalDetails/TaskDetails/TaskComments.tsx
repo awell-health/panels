@@ -1,4 +1,5 @@
-import { useMedplumStore, type WorklistTask } from '@/hooks/use-medplum-store'
+import { useMedplumStore } from '@/hooks/use-medplum-store'
+import type { WorklistTask } from '@/lib/fhir-to-table-data'
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import NotesTimeline, { type TimelineDatItem } from '../NotesTimeline'

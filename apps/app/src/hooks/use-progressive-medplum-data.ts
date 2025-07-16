@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
 import type { PaginationOptions, PaginatedResult } from '@/lib/medplum'
-import type { WorklistTask, WorklistPatient } from './use-medplum-store'
+import type { WorklistTask, WorklistPatient } from '@/lib/fhir-to-table-data'
 import {
   mapPatientsToWorklistPatients,
   mapTasksToWorklistTasks,

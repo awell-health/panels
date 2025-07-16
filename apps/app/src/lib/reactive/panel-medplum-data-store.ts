@@ -1,5 +1,5 @@
 import { createStore, type Store } from 'tinybase'
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 
 interface PaginationState {
   nextCursor?: string
@@ -37,7 +37,8 @@ class PanelMedplumDataStore {
     panelId: string,
     resourceType: 'Patient' | 'Task',
   ): string {
-    return `${panelId}:${resourceType}`
+    // for now we dont yet have different data per panel
+    return `${resourceType}`
   }
 
   /**

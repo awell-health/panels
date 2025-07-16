@@ -1,4 +1,4 @@
-import type { WorklistTask } from '@/hooks/use-medplum-store'
+import type { WorklistTask } from '@/lib/fhir-to-table-data'
 import ExpandableCard from '../ExpandableCard'
 import CardRowItem from '../CardRowItem'
 import { wellpathCards } from './wellpathCards'

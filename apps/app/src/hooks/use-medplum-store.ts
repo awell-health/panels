@@ -5,29 +5,6 @@ import {
 } from '@/lib/fhir-to-table-data'
 import { useMemo } from 'react'
 
-// Types for our worklist data
-export type WorklistPatient = {
-  id: string
-  name: string
-  tasks: WorklistTask[]
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  [key: string]: any // For dynamic columns
-}
-
-export type WorklistTask = {
-  id: string
-  description: string
-  status: string
-  priority?: string
-  dueDate?: string
-  patientId: string
-  patientName: string
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  [key: string]: any // For dynamic columns
-  // we shouldnt pass the worklist tasks inside the patient
-  patient?: WorklistPatient
-}
-
 export function useMedplumStore() {
   const {
     patients,

@@ -1,5 +1,5 @@
 import type { FC } from 'react'
-import type { WorklistPatient } from '../../../../../../hooks/use-medplum-store'
+import type { WorklistPatient } from '@/lib/fhir-to-table-data'
 import ExpandableCard from '../StaticContent/ExpandableCard'
 import CardRowItem from '../StaticContent/CardRowItem'
 import { divide, startCase } from 'lodash'

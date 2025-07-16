@@ -1,4 +1,4 @@
-import type { WorklistTask } from '@/hooks/use-medplum-store'
+import type { WorklistTask } from '@/lib/fhir-to-table-data'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import { useOptimistic, useTransition } from 'react'

@@ -1,11 +1,9 @@
 import { useEffect, useState, type FC } from 'react'
-import {
-  useMedplumStore,
-  type WorklistTask,
-} from '../../../../../hooks/use-medplum-store'
+import { useMedplumStore } from '../../../../../hooks/use-medplum-store'
+import type { WorklistTask } from '@/lib/fhir-to-table-data'
 import { useDateTimeFormat } from '../../../../../hooks/use-date-time-format'
 import type { DetectedIssue, Encounter, Observation } from '@medplum/fhirtypes'
-import { CircleSmall, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { sortBy } from 'lodash'
 
 export interface TimelineDatItem {

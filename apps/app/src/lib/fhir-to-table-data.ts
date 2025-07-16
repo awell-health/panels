@@ -1,5 +1,26 @@
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import type { Patient, Task } from '@medplum/fhirtypes'
+
+export type WorklistPatient = {
+  id: string
+  name: string
+  tasks: WorklistTask[]
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  [key: string]: any // For dynamic columns
+}
+
+export type WorklistTask = {
+  id: string
+  description: string
+  status: string
+  priority?: string
+  dueDate?: string
+  patientId: string
+  patientName: string
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  [key: string]: any // For dynamic columns
+  // we shouldnt pass the worklist tasks inside the patient
+  patient?: WorklistPatient
+}
 
 // Helper methods
 function getPatientName(patient: Patient): string {

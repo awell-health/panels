@@ -8,8 +8,6 @@ import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
 import { useColumnOperations } from '@/hooks/use-column-operations'
 import { useColumnVisibility } from '@/hooks/use-column-visibility'
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
-import { useMedplumStore } from '@/hooks/use-medplum-store'
 import {
   useReactiveColumns,
   useReactivePanel,
@@ -32,6 +30,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { AddIngestionModal } from './components/AddIngestionModal'
 import { ModalDetails } from './components/ModalDetails'
 import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import { useMedplum } from '@/contexts/MedplumClientProvider'
 
 export default function WorklistPage() {
   const params = useParams()
@@ -46,7 +46,7 @@ export default function WorklistPage() {
 
   const [selectedRows] = useState<string[]>([])
   const { user } = useAuthentication()
-  const { toggleTaskOwner } = useMedplumStore()
+  const { toggleTaskOwner } = useMedplum()
 
   const {
     data: progressiveData,
