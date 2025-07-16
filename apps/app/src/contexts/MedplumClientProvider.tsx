@@ -2,10 +2,13 @@
 
 import { useAuthentication } from '@/hooks/use-authentication'
 import { getRuntimeConfig } from '@/lib/config'
-import { MedplumStore } from '@/lib/medplum'
+import {
+  MedplumStore,
+  type PaginationOptions,
+  type PaginatedResult,
+} from '@/lib/medplum'
 import { MedplumClient } from '@medplum/core'
 import type {
-  Bot,
   Composition,
   DetectedIssue,
   Encounter,
@@ -35,6 +38,13 @@ type MedplumContextType = {
   getPatientEncounters: (patientId: string) => Promise<Encounter[]>
   getPatientDetectedIssues: (patientId: string) => Promise<DetectedIssue[]>
   deletePatient: (patientId: string) => Promise<void>
+  // Progressive loading methods
+  getPatientsPaginated: (
+    options: PaginationOptions,
+  ) => Promise<PaginatedResult<Patient>>
+  getTasksPaginated: (
+    options: PaginationOptions,
+  ) => Promise<PaginatedResult<Task>>
 }
 
 const MedplumContext = createContext<MedplumContextType | null>(null)
@@ -362,6 +372,27 @@ export function MedplumClientProvider({
     [medplumStore],
   )
 
+  // Progressive loading methods
+  const getPatientsPaginated = useCallback(
+    async (options: PaginationOptions) => {
+      if (!medplumStore) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumStore.getPatientsPaginated(options)
+    },
+    [medplumStore],
+  )
+
+  const getTasksPaginated = useCallback(
+    async (options: PaginationOptions) => {
+      if (!medplumStore) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumStore.getTasksPaginated(options)
+    },
+    [medplumStore],
+  )
+
   const value = {
     patients,
     tasks,
@@ -374,6 +405,8 @@ export function MedplumClientProvider({
     getPatientDetectedIssues,
     getPatientCompositions,
     deletePatient,
+    getPatientsPaginated,
+    getTasksPaginated,
   }
 
   return (

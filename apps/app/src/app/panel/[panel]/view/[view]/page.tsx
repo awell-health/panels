@@ -6,8 +6,12 @@ import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
 import { useColumnOperations } from '@/hooks/use-column-operations'
 import { useColumnVisibility } from '@/hooks/use-column-visibility'
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
-import { useMedplumStore } from '@/hooks/use-medplum-store'
+import {
+  useMedplumStore,
+  type WorklistPatient,
+  type WorklistTask,
+} from '@/hooks/use-medplum-store'
+import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
 import {
   useReactiveColumns,
   useReactivePanel,
@@ -25,12 +29,6 @@ import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
 
 export default function WorklistViewPage() {
-  const {
-    patients,
-    tasks,
-    toggleTaskOwner,
-    isLoading: isMedplumLoading,
-  } = useMedplumStore()
   const { updateView } = useReactivePanelStore()
   const { updateColumn, applyColumnChanges } = useColumnOperations()
   const { openDrawer } = useDrawer()
@@ -52,6 +50,35 @@ export default function WorklistViewPage() {
   const { columns: allColumns, isLoading: isColumnsLoading } =
     useReactiveColumns(panelId)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
+
+  const { toggleTaskOwner } = useMedplumStore()
+  const {
+    data: progressiveData,
+    isLoading: isProgressiveLoading,
+    isLoadingMore,
+    hasMore,
+    error: progressiveError,
+    loadMore,
+    refresh,
+    dataAfter,
+  } = useProgressiveMedplumData(
+    view?.metadata.viewType === 'patient' ? 'Patient' : 'Task',
+    {
+      pageSize: 50,
+      maxRecords: 50000,
+      showLoadAll: true,
+    },
+  )
+
+  // Get the appropriate data based on view type
+  const patients =
+    view?.metadata.viewType === 'patient'
+      ? (progressiveData as WorklistPatient[])
+      : []
+  const tasks =
+    view?.metadata.viewType === 'task'
+      ? (progressiveData as WorklistTask[])
+      : []
 
   // Create column visibility context for view
   const columnVisibilityContext = useColumnVisibility(panelId, viewId)
@@ -283,7 +310,7 @@ export default function WorklistViewPage() {
           <div className="content-area">
             <div className="table-scroll-container">
               <VirtualizedTable
-                isLoading={isMedplumLoading}
+                isLoading={isProgressiveLoading}
                 selectedRows={[]}
                 toggleSelectAll={() => {}}
                 columns={visibleColumns}
@@ -305,6 +332,9 @@ export default function WorklistViewPage() {
                 initialSort={view?.metadata.sort || null}
                 onRowClick={handleRowClick}
                 handleDragEnd={handleDragEnd}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+                isLoadingMore={isLoadingMore}
               />
             </div>
           </div>
@@ -329,6 +359,12 @@ export default function WorklistViewPage() {
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}
+              dataAfter={dataAfter}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              isLoadingMore={isLoadingMore}
+              onRefresh={refresh}
+              isLoading={isProgressiveLoading}
             />
           </div>
         </>

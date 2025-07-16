@@ -31,6 +31,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { AddIngestionModal } from './components/AddIngestionModal'
 import { ModalDetails } from './components/ModalDetails'
+import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
 
 export default function WorklistPage() {
   const params = useParams()
@@ -45,12 +46,35 @@ export default function WorklistPage() {
 
   const [selectedRows] = useState<string[]>([])
   const { user } = useAuthentication()
+  const { toggleTaskOwner } = useMedplumStore()
+
   const {
-    patients,
-    tasks,
-    toggleTaskOwner,
-    isLoading: isMedplumLoading,
-  } = useMedplumStore()
+    data: progressiveData,
+    isLoading: isProgressiveLoading,
+    isLoadingMore,
+    hasMore,
+    totalCount,
+    loadedCount,
+    error: progressiveError,
+    loadMore,
+    loadAll,
+    refresh,
+    showLoadAllButton,
+    dataAfter,
+  } = useProgressiveMedplumData(
+    currentView === 'patient' ? 'Patient' : 'Task',
+    {
+      pageSize: 50,
+      maxRecords: 50000,
+      showLoadAll: true,
+    },
+  )
+
+  const patients =
+    currentView === 'patient' ? (progressiveData as WorklistPatient[]) : []
+  const tasks =
+    currentView === 'task' ? (progressiveData as WorklistTask[]) : []
+
   const { updatePanel } = useReactivePanelStore()
   const { updateColumn, deleteColumn, applyColumnChanges, reorderColumns } =
     useColumnOperations()
@@ -289,7 +313,7 @@ export default function WorklistPage() {
           <div className="content-area">
             <div className="table-scroll-container">
               <VirtualizedTable
-                isLoading={isMedplumLoading}
+                isLoading={isProgressiveLoading}
                 selectedRows={selectedRows}
                 toggleSelectAll={() => {}}
                 columns={visibleColumns}
@@ -311,6 +335,9 @@ export default function WorklistPage() {
                 initialSort={panel.metadata.sort || null}
                 onRowClick={handleRowClick}
                 handleDragEnd={handleDragEnd}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+                isLoadingMore={isLoadingMore}
               />
               {isAddingIngestionSource && (
                 <AddIngestionModal
@@ -343,6 +370,12 @@ export default function WorklistPage() {
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}
+              dataAfter={dataAfter}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              isLoadingMore={isLoadingMore}
+              onRefresh={refresh}
+              isLoading={isProgressiveLoading}
             />
           </div>
         </>
