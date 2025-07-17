@@ -1,12 +1,30 @@
-import type { WorklistTask } from '@/hooks/use-medplum-store'
+import { useMedplumStore, type WorklistTask } from '@/hooks/use-medplum-store'
 import { encompassCards } from './encompassCards'
 import FhirExpandableCard from '../FhirExpandableCard'
+import { useState, useEffect } from 'react'
+import type { Composition } from '@medplum/fhirtypes'
+import RenderValue from '../RenderValue'
+import ExpandableCard from '../ExpandableCard'
 
 const EncompassContent: React.FC<{
   task: WorklistTask
   searchQuery: string
   expanded: boolean
 }> = ({ task, searchQuery, expanded }) => {
+  const { patient } = task
+
+  const { getPatientCompositions } = useMedplumStore()
+
+  const [compositions, setCompositions] = useState<Composition[]>([])
+
+  useEffect(() => {
+    const fetchCompositions = async () => {
+      const compositions = await getPatientCompositions(patient?.id ?? '')
+      setCompositions(compositions)
+    }
+    fetchCompositions()
+  }, [patient, getPatientCompositions])
+
   const patientCard = {
     name: 'Patient Demographics',
     fields: [
@@ -52,6 +70,20 @@ const EncompassContent: React.FC<{
           expanded={expanded}
         />
       ))}
+      {compositions.map((composition) =>
+        composition.section?.map((section) => (
+          <ExpandableCard
+            key={`${composition.id}-${section.id}-${section.title}`}
+            title={`${composition.title} - ${section.title}`}
+            defaultExpanded={expanded}
+          >
+            <RenderValue
+              value={section.text?.div ?? ''}
+              searchQuery={searchQuery}
+            />
+          </ExpandableCard>
+        )),
+      )}
     </>
   )
 }
