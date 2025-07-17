@@ -42,7 +42,7 @@ const ConnectorsSection = ({
   }, [task, showAhpConnector])
 
   return (
-    <div className="bg-gray-50 p-3 rounded">
+    <div className="">
       <div className="space-y-2">
         {connectors.length > 0 ? (
           connectors.map((connector, index) => (
@@ -52,7 +52,7 @@ const ConnectorsSection = ({
               onClick={() => {
                 window.open(connector.url, '_blank')
               }}
-              className="w-full bg-blue-400 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-500 transition-colors duration-200 text-left"
+              className="w-full cursor-pointer bg-blue-400 text-white p-2 rounded-md text-xs font-medium hover:bg-blue-500 transition-colors duration-200 text-left"
             >
               Complete the task in {connector.name}
             </button>

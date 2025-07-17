@@ -101,7 +101,9 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
           <thead>
             <tr>
               {columns.map((column) => (
-                <th key={column}>{column}</th>
+                <th key={column} className="text-xs">
+                  {column}
+                </th>
               ))}
             </tr>
           </thead>
@@ -175,7 +177,7 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
 
     return (
       <div
-        className="text-sm "
+        className="text-xs"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
         dangerouslySetInnerHTML={{
           __html: htmlContent,

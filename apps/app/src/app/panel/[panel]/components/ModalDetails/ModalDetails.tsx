@@ -123,13 +123,13 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
   const gender = currentPatient?.gender || ''
 
   return (
-    <dialog className="modal modal-open">
+    <dialog className="modal modal-open text-xs">
       <div
         className="modal-box max-w-[95vw] min-h-[70vh] max-h-[80vh] p-0 flex flex-col"
         ref={modalRef}
       >
         <div className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2 text-sm text-gray-700 pl-4">
+          <div className="flex items-center gap-2 text-gray-700 pl-4">
             <User className="h-5 w-5" />
             {!currentPatient ? (
               <span className="font-medium text-red-600">

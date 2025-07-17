@@ -30,7 +30,7 @@ const SearchInput: FC<Props> = ({ searchQuery, setSearchQuery, children }) => {
   return (
     <div className="relative mb-4">
       <label
-        className={`flex items-center gap-2 border rounded-md  w-full text-sm py-2 px-4 group ${
+        className={`flex items-center gap-2 border rounded-md  w-full text-xs py-2 px-4 group ${
           isActiveInput ? 'border-blue-500' : 'border-gray-200'
         }`}
       >
@@ -52,7 +52,7 @@ const SearchInput: FC<Props> = ({ searchQuery, setSearchQuery, children }) => {
         />
       </label>
       <div className="flex justify-between items-center mt-2">
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-gray-600">
           Type at least 3 characters to search
         </div>
         {children && children}
