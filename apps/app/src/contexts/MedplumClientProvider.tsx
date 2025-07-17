@@ -3,10 +3,11 @@
 import { useAuthentication } from '@/hooks/use-authentication'
 import { getRuntimeConfig } from '@/lib/config'
 import {
-  MedplumStore,
-  type PaginationOptions,
+  MedplumStoreClient,
   type PaginatedResult,
-} from '@/lib/medplum'
+  type PaginationOptions,
+} from '@/lib/medplum-client'
+import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
 import { MedplumClient } from '@medplum/core'
 import type {
   Composition,
@@ -27,10 +28,12 @@ import {
 } from 'react'
 
 type MedplumContextType = {
-  patients: Patient[]
-  tasks: Task[]
   isLoading: boolean
   error: Error | null
+  // Practitioner management
+  practitioner: Practitioner | null
+
+  // Data access methods (delegated to store)
   addNotesToTask: (taskId: string, notes: string) => Promise<Task>
   toggleTaskOwner: (taskId: string) => Promise<Task>
   getPatientObservations: (patientId: string) => Promise<Observation[]>
@@ -38,13 +41,14 @@ type MedplumContextType = {
   getPatientEncounters: (patientId: string) => Promise<Encounter[]>
   getPatientDetectedIssues: (patientId: string) => Promise<DetectedIssue[]>
   deletePatient: (patientId: string) => Promise<void>
-  // Progressive loading methods
   getPatientsPaginated: (
     options: PaginationOptions,
   ) => Promise<PaginatedResult<Patient>>
   getTasksPaginated: (
     options: PaginationOptions,
   ) => Promise<PaginatedResult<Task>>
+  getPatientsFromReferences: (patientRefList: string[]) => Promise<Patient[]>
+  getTasksForPatients: (patientIDs: string[]) => Promise<Task[]>
 }
 
 const MedplumContext = createContext<MedplumContextType | null>(null)
@@ -52,8 +56,6 @@ const MedplumContext = createContext<MedplumContextType | null>(null)
 export function MedplumClientProvider({
   children,
 }: { children: React.ReactNode }) {
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [tasks, setTasks] = useState<Task[]>([])
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const {
@@ -64,33 +66,16 @@ export function MedplumClientProvider({
     email,
   } = useAuthentication()
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null)
-  const [medplumStore, setMedplumStore] = useState<MedplumStore | null>(null)
+  const [medplumClient, setMedplumClient] = useState<MedplumStoreClient | null>(
+    null,
+  )
 
   // Refs to store cleanup functions
   const unsubscribeRef = useRef<{ patients?: () => void; tasks?: () => void }>(
     {},
   )
-  const isInitializedRef = useRef(false)
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null)
   const clientRef = useRef<MedplumClient | null>(null)
-
-  const updateResource = useCallback(
-    <T extends { id?: string }>(
-      currentResources: T[],
-      updatedResource: T,
-    ): T[] => {
-      const resourceIndex = currentResources.findIndex(
-        (r) => r.id === updatedResource.id,
-      )
-      if (resourceIndex === -1) {
-        return [...currentResources, updatedResource]
-      }
-      const newResources = [...currentResources]
-      newResources[resourceIndex] = updatedResource
-      return newResources
-    },
-    [],
-  )
 
   // Multi-tab coordination
   useEffect(() => {
@@ -113,7 +98,7 @@ export function MedplumClientProvider({
           console.log(
             'MedplumProvider: Auth expired in another tab, clearing token',
           )
-          setMedplumStore(null)
+          setMedplumClient(null)
         }
       }
     }
@@ -125,9 +110,9 @@ export function MedplumClientProvider({
     }
   }, [medplumClientId, medplumSecret])
 
-  // Initialize Medplum store
+  // Initialize Medplum client and store
   useEffect(() => {
-    const initializeMedplumStore = async () => {
+    const initializeMedplumClient = async () => {
       try {
         setIsLoading(true)
         const { medplumBaseUrl, medplumWsBaseUrl } = await getRuntimeConfig()
@@ -174,9 +159,13 @@ export function MedplumClientProvider({
           )
         }
 
-        const store = new MedplumStore(clientRef.current, medplumWsBaseUrl)
+        const store = new MedplumStoreClient(
+          clientRef.current,
+          medplumWsBaseUrl,
+        )
         await store.initialize(medplumClientId, medplumSecret)
-        setMedplumStore(store)
+        panelDataStore.registerAsListener(store)
+        setMedplumClient(store)
       } catch (error) {
         console.error('Failed to initialize Medplum store:', error)
         setError(
@@ -190,67 +179,36 @@ export function MedplumClientProvider({
     }
 
     if (medplumClientId && medplumSecret) {
-      initializeMedplumStore()
+      initializeMedplumClient()
     }
   }, [medplumClientId, medplumSecret])
 
-  // Load data and setup subscriptions
+  // Setup practitioner
   useEffect(() => {
-    if (!medplumStore) {
+    if (!medplumClient) {
       return
     }
 
-    console.log('MedplumProvider: Loading data and setting up subscriptions', {
-      medplumStore: medplumStore,
-    })
-
-    const loadData = async () => {
-      try {
-        const [loadedPatients, loadedTasks] = await Promise.all([
-          medplumStore.getPatients(),
-          medplumStore.getTasks(),
-        ])
-        setPatients(loadedPatients)
-        setTasks(loadedTasks)
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to load data'))
+    const getOrCreatePractitioner = async () => {
+      if (!authenticatedUserId) {
+        console.error('No authenticated user ID found')
+        return
       }
+      const practitioner = await medplumClient.getOrCreatePractitioner(
+        authenticatedUserId,
+        name && name.length > 0 ? name : (email ?? authenticatedUserId),
+      )
+      setPractitioner(practitioner)
     }
 
-    const setupSubscriptions = async () => {
-      try {
-        // Set up new subscriptions
-        const [unsubscribePatients, unsubscribeTasks] = await Promise.all([
-          medplumStore.subscribeToPatients((updatedPatient) => {
-            setPatients((currentPatients) =>
-              updateResource(currentPatients, updatedPatient),
-            )
-          }),
-          medplumStore.subscribeToTasks((updatedTask) => {
-            setTasks((currentTasks) =>
-              updateResource(currentTasks, updatedTask),
-            )
-          }),
-        ])
+    getOrCreatePractitioner()
+  }, [medplumClient, authenticatedUserId, name, email])
 
-        // Store cleanup functions
-        unsubscribeRef.current.patients = unsubscribePatients
-        unsubscribeRef.current.tasks = unsubscribeTasks
-        isInitializedRef.current = true
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err
-            : new Error('Failed to setup subscriptions'),
-        )
-      }
-    }
-
-    loadData()
-    setupSubscriptions()
-
-    // Cleanup function
+  // Cleanup subscriptions on unmount
+  useEffect(() => {
     return () => {
+      // Unregister panel data store from medplumClient listeners
+
       if (unsubscribeRef.current.patients) {
         unsubscribeRef.current.patients()
         unsubscribeRef.current.patients = undefined
@@ -260,144 +218,157 @@ export function MedplumClientProvider({
         unsubscribeRef.current.tasks = undefined
       }
     }
-  }, [medplumStore, updateResource])
-
-  useEffect(() => {
-    if (!medplumStore) {
-      return
-    }
-
-    const getOrCreatePractitioner = async () => {
-      if (!authenticatedUserId) {
-        console.error('No authenticated user ID found')
-        return
-      }
-      const practitioner = await medplumStore.getOrCreatePractitioner(
-        authenticatedUserId,
-        name && name.length > 0 ? name : (email ?? authenticatedUserId),
-      )
-      setPractitioner(practitioner)
-    }
-
-    getOrCreatePractitioner()
-  }, [medplumStore, authenticatedUserId, name, email])
+  }, [])
 
   const addNotesToTask = useCallback(
     async (taskId: string, note: string) => {
-      if (!medplumStore) {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      const task = await medplumStore.addNoteToTask(taskId, note)
-      setTasks((currentTasks) => updateResource(currentTasks, task))
-      return task
+      return await medplumClient.addNoteToTask(taskId, note)
     },
-    [medplumStore, updateResource],
+    [medplumClient, isLoading],
   )
 
   const getPatientObservations = useCallback(
     async (patientId: string) => {
-      if (!medplumStore) {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      const observations = await medplumStore.getObservations(patientId)
-      return observations
+      return await medplumClient.getObservations(patientId)
     },
-    [medplumStore],
+    [medplumClient, isLoading],
   )
 
   const getPatientCompositions = useCallback(
     async (patientId: string) => {
-      if (!medplumStore) {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      const compositions = await medplumStore.getCompositions(patientId)
-      return compositions
+      return await medplumClient.getCompositions(patientId)
     },
-    [medplumStore],
+    [medplumClient, isLoading],
   )
 
   const getPatientEncounters = useCallback(
     async (patientId: string) => {
-      if (!medplumStore) {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      const encounters = await medplumStore.getEncounters(patientId)
-      return encounters
+      return await medplumClient.getEncounters(patientId)
     },
-    [medplumStore],
+    [medplumClient, isLoading],
   )
+
   const getPatientDetectedIssues = useCallback(
     async (patientId: string) => {
-      if (!medplumStore) {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      const detectedIssues = await medplumStore.getDetectedIssues(patientId)
-      return detectedIssues
+      return await medplumClient.getDetectedIssues(patientId)
     },
-    [medplumStore],
+    [medplumClient, isLoading],
   )
 
   const toggleTaskOwner = useCallback(
     async (taskId: string) => {
-      if (!medplumStore) {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      const task = await medplumStore.toggleTaskOwner(
-        taskId,
-        practitioner?.id ?? '',
-      )
-      setTasks((currentTasks) => updateResource(currentTasks, task))
-      return task
+      return await medplumClient.toggleTaskOwner(taskId, practitioner?.id ?? '')
     },
-    [medplumStore, practitioner?.id, updateResource],
+    [medplumClient, practitioner?.id, isLoading],
   )
 
   const deletePatient = useCallback(
     async (patientId: string) => {
-      if (!medplumStore) {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      await medplumStore.deletePatient(patientId)
-      // Remove the patient from the patients array
-      setPatients((currentPatients) =>
-        currentPatients.filter((patient) => patient.id !== patientId),
-      )
-      // Remove all tasks for this patient from the tasks array
-      setTasks((currentTasks) =>
-        currentTasks.filter(
-          (task) => task.for?.reference !== `Patient/${patientId}`,
-        ),
-      )
+      await medplumClient.deletePatient(patientId)
     },
-    [medplumStore],
+    [medplumClient, isLoading],
   )
 
   // Progressive loading methods
   const getPatientsPaginated = useCallback(
     async (options: PaginationOptions) => {
-      if (!medplumStore) {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      return await medplumStore.getPatientsPaginated(options)
+      return await medplumClient.getPatientsPaginated(options)
     },
-    [medplumStore],
+    [medplumClient, isLoading],
   )
 
   const getTasksPaginated = useCallback(
     async (options: PaginationOptions) => {
-      if (!medplumStore) {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      return await medplumStore.getTasksPaginated(options)
+      return await medplumClient.getTasksPaginated(options)
     },
-    [medplumStore],
+    [medplumClient, isLoading],
+  )
+
+  const getPatientsFromReferences = useCallback(
+    async (patientRefList: string[]) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.getPatientsFromReferences(patientRefList)
+    },
+    [medplumClient, isLoading],
+  )
+
+  const getTasksForPatients = useCallback(
+    async (patientIDs: string[]) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.getTasksForPatients(patientIDs)
+    },
+    [medplumClient, isLoading],
   )
 
   const value = {
-    patients,
-    tasks,
+    store: medplumClient,
     isLoading,
     error,
+    practitioner,
     addNotesToTask,
     toggleTaskOwner,
     getPatientObservations,
@@ -407,6 +378,8 @@ export function MedplumClientProvider({
     deletePatient,
     getPatientsPaginated,
     getTasksPaginated,
+    getPatientsFromReferences,
+    getTasksForPatients,
   }
 
   return (

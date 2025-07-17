@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
-import type { PaginationOptions, PaginatedResult } from '@/lib/medplum'
+import type { PaginationOptions } from '@/lib/medplum-client'
 import type { WorklistTask, WorklistPatient } from '@/lib/fhir-to-table-data'
 import {
   mapPatientsToWorklistPatients,
   mapTasksToWorklistTasks,
 } from '@/lib/fhir-to-table-data'
 import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
+import { useRow } from 'tinybase/ui-react'
 
 export interface ProgressiveLoadingOptions {
   pageSize: number
@@ -23,7 +24,6 @@ export interface ProgressiveLoadingState<T> {
   error: Error | null
   dataAfter?: string
   loadMore: () => Promise<void>
-  loadAll: () => Promise<void>
   refresh: () => Promise<void>
   reset: () => void
 }
@@ -36,52 +36,123 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
 > {
   const { pageSize = 1000, maxRecords = 100000, panelId } = options
 
-  const { getPatientsPaginated, getTasksPaginated } = useMedplum()
+  const {
+    getPatientsPaginated,
+    getTasksPaginated,
+    getPatientsFromReferences,
+    getTasksForPatients,
+    isLoading: isMedplumLoading,
+  } = useMedplum()
 
-  const [data, setData] = useState<
-    (T extends 'Patient' ? WorklistPatient : WorklistTask)[]
-  >([])
+  // Get the reactive subscription from the store
+  const { store, table, key } = useMemo(() => {
+    return panelDataStore.getReactiveSubscription(panelId, resourceType)
+  }, [panelId, resourceType])
+
+  const storeRow = useRow(table, key, store)
+
+  // Parse the cached data from the store
+  const cachedData = useMemo(() => {
+    if (!storeRow || !storeRow.data) {
+      return null
+    }
+
+    try {
+      const parsed = JSON.parse(storeRow.data as string) as {
+        data: WorklistPatient[] | WorklistTask[]
+        pagination: { nextCursor?: string; hasMore: boolean }
+        lastUpdated: string
+        panelId: string
+        resourceType: 'Patient' | 'Task'
+      }
+      return parsed
+    } catch (error) {
+      console.warn('Failed to parse cached data:', error)
+      return null
+    }
+  }, [storeRow])
+
+  // Use local state for loading states and additional data management
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState<boolean>(true)
   const [error, setError] = useState<Error | null>(null)
-  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
+  const [additionalData, setAdditionalData] = useState<
+    (T extends 'Patient' ? WorklistPatient : WorklistTask)[]
+  >([])
 
   const isInitialLoadRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const isLoadMoreInProgressRef = useRef(false)
   const previousResourceTypeRef = useRef<T>(resourceType)
 
+  // Combine cached data with additional data
+  const data = useMemo(() => {
+    const cached = cachedData?.data || []
+    return [...cached, ...additionalData] as (T extends 'Patient'
+      ? WorklistPatient
+      : WorklistTask)[]
+  }, [cachedData, additionalData])
+
+  // Get pagination state from cached data
+  const hasMore = cachedData?.pagination.hasMore ?? true
+  const nextCursor = cachedData?.pagination.nextCursor
+
   // Get the appropriate paginated method
   const getPaginatedData = useCallback(
     async (
       paginationOptions: PaginationOptions,
-    ): Promise<
-      PaginatedResult<T extends 'Patient' ? WorklistPatient : WorklistTask>
-    > => {
+    ): Promise<{
+      hasMore: boolean
+      nextCursor?: string
+      totalCount?: number
+      mappedPatients: WorklistPatient[]
+      mappedTasks: WorklistTask[]
+    }> => {
       if (resourceType === 'Patient') {
         const result = await getPatientsPaginated(paginationOptions)
-        const mappedData = mapPatientsToWorklistPatients(result.data, [])
+        const tasks = await getTasksForPatients(
+          result.data.map((patient) => patient.id ?? ''),
+        )
+        const mappedPatients = mapPatientsToWorklistPatients(result.data, tasks)
+        const mappedTasks = mapTasksToWorklistTasks(result.data, tasks)
         return {
-          ...result,
-          data: mappedData,
-        } as PaginatedResult<
-          T extends 'Patient' ? WorklistPatient : WorklistTask
-        >
+          hasMore: result.hasMore,
+          nextCursor: result.nextCursor,
+          totalCount: result.totalCount,
+          mappedPatients,
+          mappedTasks,
+        }
       }
       const result = await getTasksPaginated(paginationOptions)
-      const mappedData = mapTasksToWorklistTasks([], result.data)
+      const patients = await getPatientsFromReferences(
+        result.data.map((task) => task.for?.reference ?? ''),
+      )
+      const mappedTasks = mapTasksToWorklistTasks(patients, result.data)
+      const mappedPatients = mapPatientsToWorklistPatients(
+        patients,
+        result.data,
+      )
       return {
-        ...result,
-        data: mappedData,
-      } as PaginatedResult<T extends 'Patient' ? WorklistPatient : WorklistTask>
+        hasMore: result.hasMore,
+        nextCursor: result.nextCursor,
+        totalCount: result.totalCount,
+        mappedPatients,
+        mappedTasks,
+      }
     },
-    [resourceType, getPatientsPaginated, getTasksPaginated],
+    [
+      resourceType,
+      getPatientsPaginated,
+      getTasksPaginated,
+      getPatientsFromReferences,
+      getTasksForPatients,
+    ],
   )
 
   // Load initial data
   const loadInitialData = useCallback(async () => {
-    if (isLoading) return
+    // Don't load if Medplum is still loading or if we're already loading
+    if (isMedplumLoading || isLoading) return
 
     // Check if resource type has changed
     if (previousResourceTypeRef.current !== resourceType) {
@@ -90,7 +161,9 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       previousResourceTypeRef.current = resourceType
     }
 
-    if (isInitialLoadRef.current) return
+    if (isInitialLoadRef.current) {
+      return
+    }
 
     try {
       setIsLoading(true)
@@ -102,48 +175,48 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       }
       abortControllerRef.current = new AbortController()
 
-      try {
-        const cached = panelDataStore.getData(panelId, resourceType)
+      // Check if we already have cached data
 
-        if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
-          setData(
-            cached.data as (T extends 'Patient'
-              ? WorklistPatient
-              : WorklistTask)[],
-          )
-          // Restore pagination state from cache
-          setHasMore(cached.pagination.hasMore)
-          setNextCursor(cached.pagination.nextCursor)
-          isInitialLoadRef.current = true
-          setIsLoading(false)
-          return
-        }
-      } catch (err) {
-        console.error('Error getting cached data', err)
+      if (
+        cachedData &&
+        Array.isArray(cachedData.data) &&
+        cachedData.data.length > 0
+      ) {
+        isInitialLoadRef.current = true
+        setIsLoading(false)
+        return
       }
 
-      // Load from API if no cache hit
       const result = await getPaginatedData({ pageSize })
 
-      if (abortControllerRef.current.signal.aborted) return
-
-      setData(result.data)
-      setHasMore(result.hasMore)
-      setNextCursor(result.nextCursor)
-      isInitialLoadRef.current = true
-
-      if (panelDataStore && panelId) {
-        panelDataStore.setData(
-          panelId,
-          resourceType,
-          result.data as WorklistPatient[] | WorklistTask[],
-          {
-            nextCursor: result.nextCursor,
-            hasMore: result.hasMore,
-          },
-        )
+      if (abortControllerRef.current.signal.aborted) {
+        return
       }
+
+      // Store the data in the panelDataStore
+      panelDataStore.setData(
+        panelId,
+        'Patient',
+        result.mappedPatients as WorklistPatient[],
+        {
+          nextCursor: result.nextCursor,
+          hasMore: result.hasMore,
+        },
+      )
+
+      panelDataStore.setData(
+        panelId,
+        'Task',
+        result.mappedTasks as WorklistTask[],
+        {
+          nextCursor: result.nextCursor,
+          hasMore: result.hasMore,
+        },
+      )
+
+      isInitialLoadRef.current = true
     } catch (err) {
+      console.error('Failed to load initial data', err)
       if (abortControllerRef.current?.signal.aborted) return
       setError(
         err instanceof Error ? err : new Error('Failed to load initial data'),
@@ -151,10 +224,21 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     } finally {
       setIsLoading(false)
     }
-  }, [isLoading, getPaginatedData, pageSize, panelId, resourceType])
+  }, [
+    isMedplumLoading,
+    isLoading,
+    getPaginatedData,
+    pageSize,
+    panelId,
+    resourceType,
+    cachedData,
+  ])
 
   // Load more data
   const loadMore = useCallback(async () => {
+    // Don't load more if Medplum is still loading
+    if (isMedplumLoading) return
+
     if (
       isLoadingMore ||
       !hasMore ||
@@ -175,6 +259,7 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       }
       abortControllerRef.current = new AbortController()
 
+      console.log('getPaginatedData - Loading more data')
       const result = await getPaginatedData({
         pageSize,
         lastUpdated: nextCursor,
@@ -182,15 +267,20 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
 
       if (abortControllerRef.current.signal.aborted) return
 
-      const newData = [...data, ...result.data]
-      setData(newData)
-      setHasMore(result.hasMore)
-      setNextCursor(result.nextCursor)
-
+      // Update the store with new data
       panelDataStore.updateData(
         panelId,
-        resourceType,
-        result.data as WorklistPatient[] | WorklistTask[],
+        'Patient',
+        result.mappedPatients as WorklistPatient[],
+        {
+          nextCursor: result.nextCursor,
+          hasMore: result.hasMore,
+        },
+      )
+      panelDataStore.updateData(
+        panelId,
+        'Task',
+        result.mappedTasks as WorklistTask[],
         {
           nextCursor: result.nextCursor,
           hasMore: result.hasMore,
@@ -206,6 +296,7 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       isLoadMoreInProgressRef.current = false
     }
   }, [
+    isMedplumLoading,
     isLoadingMore,
     hasMore,
     nextCursor,
@@ -214,85 +305,12 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     getPaginatedData,
     pageSize,
     panelId,
-    resourceType,
-  ])
-
-  // Load all data
-  const loadAll = useCallback(async () => {
-    if (isLoading || isLoadingMore || !hasMore || data.length >= maxRecords)
-      return
-
-    try {
-      setIsLoadingMore(true)
-      setError(null)
-
-      // Cancel any ongoing requests
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-      abortControllerRef.current = new AbortController()
-
-      let currentCursor = nextCursor
-      let allData = [...data]
-      let hasMoreData = hasMore as boolean
-
-      while (hasMoreData && allData.length < maxRecords && currentCursor) {
-        const result = await getPaginatedData({
-          pageSize,
-          lastUpdated: currentCursor,
-        })
-
-        if (abortControllerRef.current.signal.aborted) return
-
-        allData = [...allData, ...result.data]
-        hasMoreData = result.hasMore as boolean
-        currentCursor = result.nextCursor
-
-        // Update state incrementally for better UX
-        setData(allData)
-        setHasMore(hasMoreData === true)
-        setNextCursor(currentCursor)
-
-        panelDataStore.updateData(
-          panelId,
-          resourceType,
-          result.data as WorklistPatient[] | WorklistTask[],
-          {
-            nextCursor: currentCursor,
-            hasMore: hasMoreData,
-          },
-        )
-
-        // Small delay to prevent overwhelming the UI
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      }
-    } catch (err) {
-      if (abortControllerRef.current?.signal.aborted) return
-      setError(
-        err instanceof Error ? err : new Error('Failed to load all data'),
-      )
-    } finally {
-      setIsLoadingMore(false)
-    }
-  }, [
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    data,
-    maxRecords,
-    nextCursor,
-    getPaginatedData,
-    pageSize,
-    panelId,
-    resourceType,
   ])
 
   // Refresh data
   const refresh = useCallback(async () => {
     isInitialLoadRef.current = false
-    setData([])
-    setHasMore(true)
-    setNextCursor(undefined)
+    setAdditionalData([])
     setError(null)
 
     panelDataStore.removeData(panelId, resourceType)
@@ -302,9 +320,7 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
 
   const reset = useCallback(() => {
     isInitialLoadRef.current = false
-    setData([])
-    setHasMore(true)
-    setNextCursor(undefined)
+    setAdditionalData([])
     setError(null)
     setIsLoading(false)
     setIsLoadingMore(false)
@@ -317,10 +333,12 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     panelDataStore.removeData(panelId, resourceType)
   }, [panelId, resourceType])
 
-  // Load initial data on mount
+  // Load initial data on mount or when Medplum finishes loading
   useEffect(() => {
-    loadInitialData()
-  }, [loadInitialData])
+    if (!isMedplumLoading) {
+      loadInitialData()
+    }
+  }, [loadInitialData, isMedplumLoading])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -333,14 +351,13 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
 
   return {
     data,
-    isLoading,
+    isLoading: isLoading || isMedplumLoading,
     isLoadingMore,
     hasMore,
     loadedCount: data.length,
     error,
     dataAfter: nextCursor,
     loadMore,
-    loadAll,
     refresh,
     reset,
   }

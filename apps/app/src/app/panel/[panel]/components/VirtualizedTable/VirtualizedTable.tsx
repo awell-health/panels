@@ -399,7 +399,7 @@ export function VirtualizedTable({
   // Handle when items are rendered to detect when we're near the end
   const handleItemsRendered = useCallback(
     ({ overscanRowStopIndex }: { overscanRowStopIndex: number }) => {
-      if (!onLoadMore || !hasMore || isLoadingMore) return
+      if (!onLoadMore || !hasMore || isLoadingMore || isLoading) return
 
       const totalRows = filteredAndSortedData.length
       const threshold = 5
@@ -408,7 +408,13 @@ export function VirtualizedTable({
         onLoadMore()
       }
     },
-    [onLoadMore, hasMore, isLoadingMore, filteredAndSortedData.length],
+    [
+      onLoadMore,
+      hasMore,
+      isLoadingMore,
+      isLoading,
+      filteredAndSortedData.length,
+    ],
   )
 
   // Prepare data for rows - uses filtered and sorted data

@@ -1,5 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { MedplumStore, PaginationOptions, PaginatedResult } from './medplum'
+import {
+  MedplumStore,
+  PaginationOptions,
+  PaginatedResult,
+} from './medplum-client'
 import type { Patient, Task } from '@medplum/fhirtypes'
 
 // Mock MedplumClient

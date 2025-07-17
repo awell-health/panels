@@ -1,6 +1,13 @@
 import { createStore, type Store } from 'tinybase'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import {
+  mapPatientsToWorklistPatients,
+  mapTasksToWorklistTasks,
+} from '@/lib/fhir-to-table-data'
+import type { Patient, Task } from '@medplum/fhirtypes'
+import type { MedplumStoreClient } from '@/lib/medplum-client'
 
+const TABLE_NAME = 'panelData'
 interface PaginationState {
   nextCursor?: string
   hasMore: boolean
@@ -14,8 +21,16 @@ interface CachedData {
   resourceType: 'Patient' | 'Task'
 }
 
+export interface ReactiveDataGetter<T> {
+  getData: () => T[] | null
+  getPagination: () => PaginationState | null
+  getLastUpdated: () => string | null
+}
+
 class PanelMedplumDataStore {
   private store: Store
+  private unsubscribeFunctions: { patients?: () => void; tasks?: () => void } =
+    {}
 
   constructor() {
     this.store = createStore()
@@ -27,7 +42,7 @@ class PanelMedplumDataStore {
    */
   private initializeStore() {
     // Table for panel data - key is "panelId:resourceType"
-    this.store.setTable('panelData', {})
+    this.store.setTable(TABLE_NAME, {})
   }
 
   /**
@@ -39,6 +54,171 @@ class PanelMedplumDataStore {
   ): string {
     // for now we dont yet have different data per panel
     return `${resourceType}`
+  }
+
+  /**
+   * Subscribe to data changes for a specific panel and resource type
+   * Returns a reactive data getter that will automatically update when data changes
+   */
+  subscribeToData<T extends WorklistPatient | WorklistTask>(
+    panelId: string,
+    resourceType: 'Patient' | 'Task',
+  ): ReactiveDataGetter<T> {
+    const key = this.generateKey(panelId, resourceType)
+
+    return {
+      getData: (): T[] | null => {
+        const entry = this.store.getRow('panelData', key)
+        if (!entry || !entry.data) {
+          return null
+        }
+
+        try {
+          const cachedData = JSON.parse(entry.data as string) as CachedData
+          return cachedData.data as T[]
+        } catch (error) {
+          console.warn('Failed to parse cached data:', error)
+          return null
+        }
+      },
+
+      getPagination: (): PaginationState | null => {
+        const entry = this.store.getRow('panelData', key)
+        if (!entry || !entry.data) {
+          return null
+        }
+
+        try {
+          const cachedData = JSON.parse(entry.data as string) as CachedData
+          return cachedData.pagination
+        } catch (error) {
+          console.warn('Failed to parse cached data:', error)
+          return null
+        }
+      },
+
+      getLastUpdated: (): string | null => {
+        const entry = this.store.getRow('panelData', key)
+        if (!entry || !entry.data) {
+          return null
+        }
+
+        try {
+          const cachedData = JSON.parse(entry.data as string) as CachedData
+          return cachedData.lastUpdated
+        } catch (error) {
+          console.warn('Failed to parse cached data:', error)
+          return null
+        }
+      },
+    }
+  }
+
+  /**
+   * Get a reactive subscription to data changes for a specific panel and resource type
+   * This method returns the TinyBase store and key for use with TinyBase's reactive hooks
+   */
+  getReactiveSubscription(
+    panelId: string,
+    resourceType: 'Patient' | 'Task',
+  ): { store: Store; table: string; key: string } {
+    const key = this.generateKey(panelId, resourceType)
+    return {
+      store: this.store,
+      table: TABLE_NAME,
+      key,
+    }
+  }
+
+  /**
+   * Register this store as a listener to MedplumStore
+   */
+  registerAsListener(medplumStoreClient: MedplumStoreClient): void {
+    // Subscribe to patient updates
+    medplumStoreClient
+      .subscribeToPatients((updatedPatient: Patient) => {
+        this.handlePatientUpdate(updatedPatient)
+      })
+      .then((unsubscribe) => {
+        this.unsubscribeFunctions.patients = unsubscribe
+      })
+
+    // Subscribe to task updates
+    medplumStoreClient
+      .subscribeToTasks((updatedTask: Task) => {
+        this.handleTaskUpdate(updatedTask)
+      })
+      .then((unsubscribe) => {
+        this.unsubscribeFunctions.tasks = unsubscribe
+      })
+  }
+
+  /**
+   * Handle patient updates from MedplumStore
+   */
+  private handlePatientUpdate(updatedPatient: Patient): void {
+    // Get current patients data
+    const currentData = this.getData('default', 'Patient')
+    if (!currentData) return
+
+    const currentPatients = currentData.data as WorklistPatient[]
+
+    // Find and update the patient
+    const patientIndex = currentPatients.findIndex(
+      (p) => p.id === updatedPatient.id,
+    )
+    if (patientIndex !== -1) {
+      // Update existing patient
+      const updatedWorklistPatient = mapPatientsToWorklistPatients(
+        [updatedPatient],
+        [],
+      )
+      if (updatedWorklistPatient.length > 0) {
+        const newPatients = [...currentPatients]
+        newPatients[patientIndex] = updatedWorklistPatient[0]
+        this.setData('default', 'Patient', newPatients, currentData.pagination)
+      }
+    } else {
+      // Add new patient
+      const newWorklistPatient = mapPatientsToWorklistPatients(
+        [updatedPatient],
+        [],
+      )
+      if (newWorklistPatient.length > 0) {
+        const newPatients = [...currentPatients, newWorklistPatient[0]]
+        this.setData('default', 'Patient', newPatients, currentData.pagination)
+      }
+    }
+  }
+
+  /**
+   * Handle task updates from MedplumStore
+   */
+  private handleTaskUpdate(updatedTask: Task): void {
+    // Get current tasks data
+    const currentData = this.getData('default', 'Task')
+    if (!currentData) return
+
+    const currentTasks = currentData.data as WorklistTask[]
+
+    // Find and update the task
+    const taskIndex = currentTasks.findIndex((t) => t.id === updatedTask.id)
+    if (taskIndex !== -1) {
+      // Update existing task
+      const updatedWorklistTask = mapTasksToWorklistTasks([], [updatedTask])
+      if (updatedWorklistTask.length > 0) {
+        const newTasks = [...currentTasks]
+        newTasks[taskIndex] = updatedWorklistTask[0]
+        this.setData('default', 'Task', newTasks, currentData.pagination)
+      }
+    } else {
+      // Add new task
+      const newWorklistTask = mapTasksToWorklistTasks([], [updatedTask])
+      if (newWorklistTask.length > 0) {
+        const newTasks = [...currentTasks, newWorklistTask[0]]
+        this.setData('default', 'Task', newTasks, currentData.pagination)
+      }
+    }
   }
 
   /**

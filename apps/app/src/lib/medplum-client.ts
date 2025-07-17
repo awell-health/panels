@@ -28,9 +28,7 @@ export interface PaginatedResult<T> {
   nextCursor?: string
   totalCount?: number // Total count from FHIR bundle
 }
-
-// Data store class to handle all Medplum interactions
-export class MedplumStore {
+export class MedplumStoreClient {
   private client: MedplumClient
   private socketsBaseUrl: string
   private initialized = false
@@ -136,6 +134,8 @@ export class MedplumStore {
         } else {
           //console.log("Trying to handle resource", resourceType)
           // Call all handlers for this resource type
+          console.log('Bundle received', resourceType)
+
           const handlers = this.resourceHandlers.get(resourceType)
           if (handlers) {
             for (const handler of handlers) {
@@ -463,6 +463,47 @@ export class MedplumStore {
       throw error
     }
   }
-}
 
-// Export a singleton instance
+  async getPatientsFromReferences(patientRefs: string[]): Promise<Patient[]> {
+    const uniqueRefs = [...new Set(patientRefs)]
+
+    const bundle: Bundle = {
+      resourceType: 'Bundle',
+      type: 'batch',
+      entry: uniqueRefs.map((ref) => ({
+        request: {
+          method: 'GET',
+          url: ref,
+        },
+      })),
+    }
+    const response = (await this.client.executeBatch(bundle)) as Bundle<Patient>
+    return (response.entry ?? []).map((e) => e.resource as Patient)
+  }
+
+  async getTasksForPatients(patientIDs: string[]): Promise<Task[]> {
+    const uniqueIDs = [...new Set(patientIDs)]
+
+    const bundle: Bundle = {
+      resourceType: 'Bundle',
+      type: 'batch',
+      entry: uniqueIDs.map((id) => ({
+        request: {
+          method: 'GET',
+          url: `Task?patient=Patient/${id}`,
+        },
+      })),
+    }
+    const response = (await this.client.executeBatch(bundle)) as Bundle
+
+    const tasks = (response.entry ?? [])
+      .filter((entry) => entry.resource?.resourceType === 'Bundle')
+      .flatMap((entry) => {
+        const taskBundle = entry.resource as Bundle
+        return (taskBundle.entry ?? [])
+          .map((e) => e.resource as Task)
+          .filter((task) => task !== undefined)
+      })
+    return tasks
+  }
+}
