@@ -47,7 +47,7 @@ export class BaseColumn {
   @Enum({ items: () => ColumnType })
   type!: ColumnType
 
-  @Property()
+  @Property({ length: 1024 })
   sourceField!: string
 
   @Property({ type: 'jsonb', nullable: true })
