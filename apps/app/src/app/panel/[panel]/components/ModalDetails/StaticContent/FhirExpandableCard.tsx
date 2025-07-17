@@ -1,12 +1,15 @@
 import { getNestedValue } from '../../../../../../lib/fhir-path'
 import ExpandableCard from './ExpandableCard'
 import CardRowItem from './CardRowItem'
-import type { WorklistTask } from '../../../../../../hooks/use-medplum-store'
+import type {
+  WorklistPatient,
+  WorklistTask,
+} from '../../../../../../hooks/use-medplum-store'
 import type { FC } from 'react'
 import { getCardSummary } from './utils'
 
 interface Props {
-  task: WorklistTask
+  resource: WorklistTask | WorklistPatient
   searchQuery: string
   card: {
     name: string
@@ -16,13 +19,13 @@ interface Props {
 }
 
 const FhirExpandableCard: FC<Props> = ({
-  task,
+  resource,
   searchQuery,
   card,
   expanded,
 }) => {
   const getFieldValue = (fhirPath: string) => {
-    const fieldValue = getNestedValue(task, fhirPath)
+    const fieldValue = getNestedValue(resource, fhirPath)
 
     return fieldValue
   }
@@ -31,7 +34,7 @@ const FhirExpandableCard: FC<Props> = ({
     const containString = card.fields.some(
       (field) =>
         field.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        getNestedValue(task, field.fhirPath)
+        getNestedValue(resource, field.fhirPath)
           ?.toLowerCase()
           .includes(searchQuery.toLowerCase()),
     )
@@ -45,7 +48,7 @@ const FhirExpandableCard: FC<Props> = ({
     <ExpandableCard
       title={card.name}
       defaultExpanded={expanded}
-      summary={getCardSummary(task, card)}
+      summary={getCardSummary(resource, card)}
     >
       <div className="space-y-2 text-sm mt-3">
         {card.fields.map((field) => (

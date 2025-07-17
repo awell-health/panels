@@ -53,7 +53,7 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
 
     const renderKeyValue = (key: string, value: string) => {
       return (
-        <div>
+        <div key={key}>
           <strong>
             <RenderWithCopy text={key}>
               <HighlightText text={key} searchQuery={searchQuery} />
