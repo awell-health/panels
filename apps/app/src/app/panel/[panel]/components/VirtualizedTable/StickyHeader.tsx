@@ -53,7 +53,7 @@ export function StickyHeader({
     >
       {/* Selection column header */}
       <div
-        className="bg-white border-r border-gray-200 flex items-center justify-center"
+        className="bg-white border-r border-gray-200 flex items-center justify-center shrink-0"
         style={{ width: SELECTION_COLUMN_WIDTH }}
       >
         <input
