@@ -53,7 +53,7 @@ const WaypointContent: React.FC<{
           defaultExpanded={expanded}
           summary={`${patient?.name}, ${patient?.birthDate}${dialysisProvider ? `, ${dialysisProvider}` : ''}`}
         >
-          <div className="space-y-2 text-sm mt-3">
+          <div className="space-y-2 mt-3">
             <CardRowItem
               label="Full name"
               value={get(patient, 'name')}

@@ -50,7 +50,7 @@ const FhirExpandableCard: FC<Props> = ({
       defaultExpanded={expanded}
       summary={getCardSummary(resource, card)}
     >
-      <div className="space-y-2 text-sm mt-3">
+      <div className="space-y-2 mt-3">
         {card.fields.map((field) => (
           <CardRowItem
             key={field.key}

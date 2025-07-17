@@ -39,7 +39,7 @@ const WellpathContent: React.FC<{
           defaultExpanded={expanded}
           summary={`${patient?.name}, ${patient?.birthDate}`}
         >
-          <div className="space-y-2 text-sm mt-3">
+          <div className="space-y-2 mt-3">
             <CardRowItem
               label="Full Name"
               value={patient?.name}
