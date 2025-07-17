@@ -94,6 +94,11 @@ export const getCardSummary = (
   const summary = take(card.fields, 3)
     .map((field) => {
       const value = getExtensionValue(source, field.key)
+
+      if (isJSON(value)) {
+        return `${field.label}: ${JSON.parse(value).length} items`
+      }
+
       if (value) {
         return `${field.label}: ${value}`
       }

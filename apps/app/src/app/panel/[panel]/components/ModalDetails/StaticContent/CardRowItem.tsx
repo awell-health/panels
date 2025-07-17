@@ -25,7 +25,7 @@ const CardRowItem: FC<Props> = ({ label, value, searchQuery = '' }) => {
       <span className="text-gray-600">
         <HighlightText text={label} searchQuery={searchQuery} />
       </span>
-      <span className="text-gray-900 font-normal max-w-[60%]">
+      <span className="text-gray-900 font-normal max-w-[70%]">
         {value && <RenderValue value={value} searchQuery={searchQuery} />}
         {!value && <span className="text-gray-900 mr-4">-</span>}
       </span>
