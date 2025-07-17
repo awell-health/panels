@@ -56,7 +56,7 @@ const WellpathContent: React.FC<{
       {wellpathCards.map((card) => (
         <FhirExpandableCard
           key={card.name}
-          task={task}
+          resource={task}
           searchQuery={searchQuery}
           card={card}
           expanded={expanded}

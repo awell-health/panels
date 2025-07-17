@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
 import { useAuthentication } from '@/hooks/use-authentication'
+import type { Identifier } from '@medplum/fhirtypes'
 
 interface ModalDetailsProps {
   patient?: WorklistPatient
@@ -64,10 +65,6 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
     }
   }, [tasks])
 
-  // Get patient name and DOB for header
-  const patientName = currentPatient?.name || ''
-  const dateOfBirth = currentPatient?.birthDate || ''
-
   const handleDeleteRequest = async () => {
     if (!currentPatient) return
 
@@ -116,6 +113,15 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
     }
   }, [onClose])
 
+  // Get patient name and DOB for header
+  const patientName = currentPatient?.name || ''
+  const dateOfBirth = currentPatient?.birthDate || ''
+  const mrn = currentPatient?.identifier?.find(
+    (identifier: Identifier) =>
+      identifier.system === 'https://www.encompasshealth.com',
+  )?.value
+  const gender = currentPatient?.gender || ''
+
   return (
     <dialog className="modal modal-open">
       <div
@@ -140,21 +146,37 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
             ) : (
               <span className="font-medium">{patientName}</span>
             )}
-            {currentPatient && dateOfBirth && (
+            {currentPatient && (
               <>
-                <span>·</span>
-                <span>DOB {dateOfBirth}</span>
+                {dateOfBirth && (
+                  <>
+                    <span>·</span>
+                    <span>DOB {dateOfBirth}</span>
+                  </>
+                )}
+                {mrn && (
+                  <>
+                    <span>·</span>
+                    <span>MRN {mrn}</span>
+                  </>
+                )}
+                {gender && (
+                  <>
+                    <span>·</span>
+                    <span>Gender {gender}</span>
+                  </>
+                )}
+                {currentPatient && !selectedTask && isAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteRequest}
+                    className="btn btn-outline btn-error btn-xs ml-2"
+                  >
+                    <Trash2Icon className="w-4 h-4" />
+                    Delete Patient & Tasks
+                  </button>
+                )}
               </>
-            )}
-            {currentPatient && !selectedTask && isAdmin && (
-              <button
-                type="button"
-                onClick={handleDeleteRequest}
-                className="btn btn-outline btn-error btn-xs ml-2"
-              >
-                <Trash2Icon className="w-4 h-4" />
-                Delete Patient & Tasks
-              </button>
             )}
           </div>
           <div className="flex items-center gap-2">
