@@ -23,7 +23,7 @@ export function useMedplumStore() {
     table: patientTable,
     key: patientKey,
   } = useMemo(() => {
-    return panelDataStore.getReactiveSubscription('default', 'Patient')
+    return panelDataStore.getReactiveSubscription('Patient')
   }, [])
 
   const {
@@ -31,53 +31,25 @@ export function useMedplumStore() {
     table: taskTable,
     key: taskKey,
   } = useMemo(() => {
-    return panelDataStore.getReactiveSubscription('default', 'Task')
+    return panelDataStore.getReactiveSubscription('Task')
   }, [])
 
   // Use TinyBase's reactive hook to subscribe to changes
   const patientListener = useRow(patientTable, patientKey, patientStore)
   const taskListener = useRow(taskTable, taskKey, taskStore)
 
-  // Parse the cached data from the store
-  const patients = useMemo(() => {
-    if (!patientListener?.data) {
-      return []
-    }
+  // Get worklist data from the store
+  const worklistData = useMemo(() => {
+    return panelDataStore.getWorklistData()
+  }, [])
 
-    try {
-      const parsed = JSON.parse(patientListener.data as string) as {
-        data: WorklistPatient[] | WorklistTask[]
-        pagination: { nextCursor?: string; hasMore: boolean }
-        lastUpdated: string
-        panelId: string
-        resourceType: 'Patient' | 'Task'
-      }
-      return parsed.data as WorklistPatient[]
-    } catch (error) {
-      console.warn('Failed to parse cached patient data:', error)
-      return []
-    }
-  }, [patientListener?.data])
+  const patients = useMemo(() => {
+    return worklistData?.patients || []
+  }, [worklistData])
 
   const tasks = useMemo(() => {
-    if (!taskListener?.data) {
-      return []
-    }
-
-    try {
-      const parsed = JSON.parse(taskListener.data as string) as {
-        data: WorklistPatient[] | WorklistTask[]
-        pagination: { nextCursor?: string; hasMore: boolean }
-        lastUpdated: string
-        panelId: string
-        resourceType: 'Patient' | 'Task'
-      }
-      return parsed.data as WorklistTask[]
-    } catch (error) {
-      console.warn('Failed to parse cached task data:', error)
-      return []
-    }
-  }, [taskListener?.data])
+    return worklistData?.tasks || []
+  }, [worklistData])
 
   // Memoize the load functions to prevent unnecessary re-renders
   const loadPaginatedPatients = useCallback(
@@ -85,7 +57,7 @@ export function useMedplumStore() {
       pageSize?: number
       lastUpdated?: string
     }) => {
-      return panelDataStore.getData('default', 'Patient')
+      return panelDataStore.getData('Patient')
     },
     [],
   )
@@ -95,7 +67,7 @@ export function useMedplumStore() {
       pageSize?: number
       lastUpdated?: string
     }) => {
-      return panelDataStore.getData('default', 'Task')
+      return panelDataStore.getData('Task')
     },
     [],
   )

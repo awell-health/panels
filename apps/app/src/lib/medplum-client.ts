@@ -467,6 +467,10 @@ export class MedplumStoreClient {
   async getPatientsFromReferences(patientRefs: string[]): Promise<Patient[]> {
     const uniqueRefs = [...new Set(patientRefs)]
 
+    if (uniqueRefs.length === 0) {
+      return []
+    }
+
     const bundle: Bundle = {
       resourceType: 'Bundle',
       type: 'batch',
@@ -477,12 +481,17 @@ export class MedplumStoreClient {
         },
       })),
     }
+    console.log('getPatientsFromReferences', bundle)
     const response = (await this.client.executeBatch(bundle)) as Bundle<Patient>
     return (response.entry ?? []).map((e) => e.resource as Patient)
   }
 
   async getTasksForPatients(patientIDs: string[]): Promise<Task[]> {
     const uniqueIDs = [...new Set(patientIDs)]
+
+    if (uniqueIDs.length === 0) {
+      return []
+    }
 
     const bundle: Bundle = {
       resourceType: 'Bundle',

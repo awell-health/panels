@@ -2,12 +2,9 @@ import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
 import type { PaginationOptions } from '@/lib/medplum-client'
 import type { WorklistTask, WorklistPatient } from '@/lib/fhir-to-table-data'
-import {
-  mapPatientsToWorklistPatients,
-  mapTasksToWorklistTasks,
-} from '@/lib/fhir-to-table-data'
 import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
 import { useRow } from 'tinybase/ui-react'
+import type { Patient, Task } from '@medplum/fhirtypes'
 
 export interface ProgressiveLoadingOptions {
   pageSize: number
@@ -46,8 +43,8 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
 
   // Get the reactive subscription from the store
   const { store, table, key } = useMemo(() => {
-    return panelDataStore.getReactiveSubscription(panelId, resourceType)
-  }, [panelId, resourceType])
+    return panelDataStore.getReactiveSubscription(resourceType)
+  }, [resourceType])
 
   const storeRow = useRow(table, key, store)
 
@@ -57,41 +54,22 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       return null
     }
 
-    try {
-      const parsed = JSON.parse(storeRow.data as string) as {
-        data: WorklistPatient[] | WorklistTask[]
-        pagination: { nextCursor?: string; hasMore: boolean }
-        lastUpdated: string
-        panelId: string
-        resourceType: 'Patient' | 'Task'
-      }
-      return parsed
-    } catch (error) {
-      console.warn('Failed to parse cached data:', error)
-      return null
-    }
-  }, [storeRow])
+    return panelDataStore.getData(resourceType)
+  }, [storeRow, resourceType])
 
   // Use local state for loading states and additional data management
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState<Error | null>(null)
-  const [additionalData, setAdditionalData] = useState<
-    (T extends 'Patient' ? WorklistPatient : WorklistTask)[]
-  >([])
 
   const isInitialLoadRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const isLoadMoreInProgressRef = useRef(false)
   const previousResourceTypeRef = useRef<T>(resourceType)
 
-  // Combine cached data with additional data
   const data = useMemo(() => {
-    const cached = cachedData?.data || []
-    return [...cached, ...additionalData] as (T extends 'Patient'
-      ? WorklistPatient
-      : WorklistTask)[]
-  }, [cachedData, additionalData])
+    return panelDataStore.getWorklistDataByResourceType(resourceType) || []
+  }, [resourceType])
 
   // Get pagination state from cached data
   const hasMore = cachedData?.pagination.hasMore ?? true
@@ -105,39 +83,32 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       hasMore: boolean
       nextCursor?: string
       totalCount?: number
-      mappedPatients: WorklistPatient[]
-      mappedTasks: WorklistTask[]
+      patients: Patient[]
+      tasks: Task[]
     }> => {
       if (resourceType === 'Patient') {
         const result = await getPatientsPaginated(paginationOptions)
         const tasks = await getTasksForPatients(
           result.data.map((patient) => patient.id ?? ''),
         )
-        const mappedPatients = mapPatientsToWorklistPatients(result.data, tasks)
-        const mappedTasks = mapTasksToWorklistTasks(result.data, tasks)
         return {
           hasMore: result.hasMore,
           nextCursor: result.nextCursor,
           totalCount: result.totalCount,
-          mappedPatients,
-          mappedTasks,
+          patients: result.data,
+          tasks,
         }
       }
       const result = await getTasksPaginated(paginationOptions)
       const patients = await getPatientsFromReferences(
         result.data.map((task) => task.for?.reference ?? ''),
       )
-      const mappedTasks = mapTasksToWorklistTasks(patients, result.data)
-      const mappedPatients = mapPatientsToWorklistPatients(
-        patients,
-        result.data,
-      )
       return {
         hasMore: result.hasMore,
         nextCursor: result.nextCursor,
         totalCount: result.totalCount,
-        mappedPatients,
-        mappedTasks,
+        patients,
+        tasks: result.data,
       }
     },
     [
@@ -193,25 +164,25 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
         return
       }
 
-      // Store the data in the panelDataStore
       panelDataStore.setData(
-        panelId,
         'Patient',
-        result.mappedPatients as WorklistPatient[],
-        {
-          nextCursor: result.nextCursor,
-          hasMore: result.hasMore,
-        },
+        result.patients,
+        resourceType === 'Patient'
+          ? {
+              nextCursor: result.nextCursor,
+              hasMore: result.hasMore,
+            }
+          : undefined,
       )
-
       panelDataStore.setData(
-        panelId,
         'Task',
-        result.mappedTasks as WorklistTask[],
-        {
-          nextCursor: result.nextCursor,
-          hasMore: result.hasMore,
-        },
+        result.tasks,
+        resourceType === 'Task'
+          ? {
+              nextCursor: result.nextCursor,
+              hasMore: result.hasMore,
+            }
+          : undefined,
       )
 
       isInitialLoadRef.current = true
@@ -229,7 +200,6 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     isLoading,
     getPaginatedData,
     pageSize,
-    panelId,
     resourceType,
     cachedData,
   ])
@@ -269,22 +239,24 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
 
       // Update the store with new data
       panelDataStore.updateData(
-        panelId,
         'Patient',
-        result.mappedPatients as WorklistPatient[],
-        {
-          nextCursor: result.nextCursor,
-          hasMore: result.hasMore,
-        },
+        result.patients,
+        resourceType === 'Patient'
+          ? {
+              nextCursor: result.nextCursor,
+              hasMore: result.hasMore,
+            }
+          : undefined,
       )
       panelDataStore.updateData(
-        panelId,
         'Task',
-        result.mappedTasks as WorklistTask[],
-        {
-          nextCursor: result.nextCursor,
-          hasMore: result.hasMore,
-        },
+        result.tasks,
+        resourceType === 'Task'
+          ? {
+              nextCursor: result.nextCursor,
+              hasMore: result.hasMore,
+            }
+          : undefined,
       )
     } catch (err) {
       if (abortControllerRef.current?.signal.aborted) return
@@ -304,23 +276,21 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     maxRecords,
     getPaginatedData,
     pageSize,
-    panelId,
+    resourceType,
   ])
 
   // Refresh data
   const refresh = useCallback(async () => {
     isInitialLoadRef.current = false
-    setAdditionalData([])
     setError(null)
 
-    panelDataStore.removeData(panelId, resourceType)
+    panelDataStore.clearData(resourceType)
 
     await loadInitialData()
-  }, [loadInitialData, panelId, resourceType])
+  }, [loadInitialData, resourceType])
 
   const reset = useCallback(() => {
     isInitialLoadRef.current = false
-    setAdditionalData([])
     setError(null)
     setIsLoading(false)
     setIsLoadingMore(false)
@@ -330,8 +300,8 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       abortControllerRef.current = null
     }
 
-    panelDataStore.removeData(panelId, resourceType)
-  }, [panelId, resourceType])
+    panelDataStore.clearData(resourceType)
+  }, [resourceType])
 
   // Load initial data on mount or when Medplum finishes loading
   useEffect(() => {
@@ -348,9 +318,8 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       }
     }
   }, [])
-
   return {
-    data,
+    data: data as (T extends 'Patient' ? WorklistPatient : WorklistTask)[],
     isLoading: isLoading || isMedplumLoading,
     isLoadingMore,
     hasMore,
