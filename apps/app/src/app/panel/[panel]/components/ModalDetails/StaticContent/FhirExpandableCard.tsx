@@ -6,59 +6,96 @@ import type {
   WorklistTask,
 } from '../../../../../../hooks/use-medplum-store'
 import type { FC } from 'react'
-import { getCardSummary } from './utils'
+import type { Observation } from '@medplum/fhirtypes'
 
 interface Props {
-  resource: WorklistTask | WorklistPatient
   searchQuery: string
   card: {
     name: string
-    fields: { label: string; key: string; fhirPath: string }[]
+    fields: {
+      label: string
+      key: string
+      fhirPath: string
+      resourceType?: string
+    }[]
   }
   expanded: boolean
+  resources: {
+    Task?: WorklistTask
+    Patient?: WorklistPatient
+    // Observation?: Observation[] // fix FHIR paths to work with Observation type
+  }
 }
+type ResourceType = WorklistTask | WorklistPatient | Observation[]
 
 const FhirExpandableCard: FC<Props> = ({
-  resource,
   searchQuery,
   card,
   expanded,
+  resources,
 }) => {
-  const getFieldValue = (fhirPath: string) => {
-    const fieldValue = getNestedValue(resource, fhirPath)
+  const getFieldResourceValue = (
+    res: ResourceType | undefined,
+    fhirPath: string,
+  ) => {
+    if (!res) {
+      return ''
+    }
+
+    const fieldValue = getNestedValue(res, fhirPath)
 
     return fieldValue
   }
 
-  if (searchQuery) {
-    const containString = card.fields.some(
-      (field) =>
-        field.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        getNestedValue(resource, field.fhirPath)
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()),
-    )
-
-    if (!containString) {
-      return <></>
+  const renderResourceRow = (
+    rowResource: ResourceType | undefined,
+    field: {
+      label: string
+      key: string
+      fhirPath: string
+      resourceType?: string
+    },
+  ) => {
+    if (!rowResource) {
+      return null
     }
+    const value = getFieldResourceValue(rowResource, field.fhirPath)
+
+    return (
+      <CardRowItem
+        key={field.key}
+        label={field.label}
+        value={value}
+        searchQuery={searchQuery}
+      />
+    )
+  }
+
+  const containString = card.fields.some((field) => {
+    const isInLabels = field.label
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+
+    const resourceItem = resources[field.resourceType as keyof typeof resources]
+
+    const isInValue = getFieldResourceValue(resourceItem, field.fhirPath)
+      ?.toLowerCase()
+      .includes(searchQuery.toLowerCase())
+    return isInLabels || isInValue
+  })
+
+  if (!containString) {
+    return <></>
   }
 
   return (
-    <ExpandableCard
-      title={card.name}
-      defaultExpanded={expanded}
-      summary={getCardSummary(resource, card)}
-    >
+    <ExpandableCard title={card.name} defaultExpanded={expanded}>
       <div className="space-y-2 mt-3">
-        {card.fields.map((field) => (
-          <CardRowItem
-            key={field.key}
-            label={field.label}
-            value={getFieldValue(field.fhirPath)}
-            searchQuery={searchQuery}
-          />
-        ))}
+        {card.fields.map((field) => {
+          const resourceType = field.resourceType
+          const rowResource = resources[resourceType as keyof typeof resources]
+          return renderResourceRow(rowResource, field)
+        })}
       </div>
     </ExpandableCard>
   )
