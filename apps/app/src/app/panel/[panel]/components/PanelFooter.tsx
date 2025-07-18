@@ -85,9 +85,7 @@ export default function PanelFooter({
               onClick={onLoadMore}
               disabled={isLoadingMore || isLoading}
             >
-              <Plus
-                className={`h-3 w-3 ${isLoadingMore ? 'animate-spin' : ''}`}
-              />{' '}
+              <Plus className="h-3 w-3" />
               Fetch older data
             </button>
           )}

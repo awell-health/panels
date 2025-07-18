@@ -41,21 +41,13 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     isLoading: isMedplumLoading,
   } = useMedplum()
 
-  const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState<Error | null>(null)
-  const [hasMore, setHasMore] = useState(true)
-  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined)
 
   const isInitialLoadRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const isLoadMoreInProgressRef = useRef(false)
   const previousResourceTypeRef = useRef<T>(resourceType)
-
-  // Get the reactive subscription from the store
-  const { store, table } = useMemo(() => {
-    return panelDataStore.getDataReactiveTableSubscription(resourceType)
-  }, [resourceType])
 
   const {
     store: paginationStore,
@@ -65,26 +57,33 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     return panelDataStore.getPaginationReactiveSubscription(resourceType)
   }, [resourceType])
 
-  const resourceTable = useTable(table, store)
+  const { store: patientStore, table: patientTable } =
+    panelDataStore.getDataReactiveTableSubscription('Patient')
+  const { store: taskStore, table: taskTable } =
+    panelDataStore.getDataReactiveTableSubscription('Task')
+  const patientTableData = useTable(patientTable, patientStore)
+  const taskTableData = useTable(taskTable, taskStore)
+
   const paginationTableData = useTable(paginationTable, paginationStore)
 
   // Parse the cached data from the store
   const cachedData = useMemo(() => {
-    if (!resourceTable) {
+    if (!patientTableData && !taskTableData) {
       return null
     }
     return panelDataStore.getData(resourceType)
-  }, [resourceTable, resourceType])
+  }, [patientTableData, taskTableData, resourceType])
 
-  useMemo(() => {
+  const pagination = useMemo(() => {
     if (!paginationTableData || !paginationKey) {
       return null
     }
 
-    const pagination = panelDataStore.getPagination(resourceType)
-    setHasMore(pagination?.hasMore ?? false)
-    setNextCursor(pagination?.nextCursor)
+    return panelDataStore.getPagination(resourceType)
   }, [paginationTableData, paginationKey, resourceType])
+
+  const hasMore = pagination?.hasMore ?? true
+  const nextCursor = pagination?.nextCursor
 
   // Use local state for loading states and additional data management
 
@@ -96,7 +95,7 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
   }, [resourceType, cachedData])
 
   // Get the appropriate paginated method
-  const getPaginatedData = useCallback(
+  const fetchAndUpdateCachedData = useCallback(
     async (
       paginationOptions: PaginationOptions,
     ): Promise<{
@@ -107,28 +106,41 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       tasks: Task[]
     }> => {
       if (resourceType === 'Patient') {
-        const result = await getPatientsPaginated(paginationOptions)
+        const patients = await getPatientsPaginated(paginationOptions)
+        panelDataStore.updateData('Patient', patients.data)
+        panelDataStore.updatePagination('Patient', {
+          nextCursor: patients.nextCursor,
+          hasMore: patients.hasMore,
+        })
         const tasks = await getTasksForPatients(
-          result.data.map((patient) => patient.id ?? ''),
+          patients.data.map((patient) => patient.id ?? ''),
         )
+        panelDataStore.updateData('Task', tasks)
+
         return {
-          hasMore: result.hasMore,
-          nextCursor: result.nextCursor,
-          totalCount: result.totalCount,
-          patients: result.data,
+          hasMore: patients.hasMore,
+          nextCursor: patients.nextCursor,
+          totalCount: patients.totalCount,
+          patients: patients.data,
           tasks,
         }
       }
-      const result = await getTasksPaginated(paginationOptions)
+      const tasks = await getTasksPaginated(paginationOptions)
+      panelDataStore.updateData('Task', tasks.data)
+      panelDataStore.updatePagination('Task', {
+        nextCursor: tasks.nextCursor,
+        hasMore: tasks.hasMore,
+      })
       const patients = await getPatientsFromReferences(
-        result.data.map((task) => task.for?.reference ?? ''),
+        tasks.data.map((task) => task.for?.reference ?? ''),
       )
+      panelDataStore.updateData('Patient', patients)
       return {
-        hasMore: result.hasMore,
-        nextCursor: result.nextCursor,
-        totalCount: result.totalCount,
+        hasMore: tasks.hasMore,
+        nextCursor: tasks.nextCursor,
+        totalCount: tasks.totalCount,
         patients,
-        tasks: result.data,
+        tasks: tasks.data,
       }
     },
     [
@@ -143,7 +155,7 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
   // Load initial data
   const loadInitialData = useCallback(async () => {
     // Don't load if Medplum is still loading or if we're already loading
-    if (isMedplumLoading || isLoading) return
+    if (isMedplumLoading) return
 
     // Check if resource type has changed
     if (previousResourceTypeRef.current !== resourceType) {
@@ -157,7 +169,6 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     }
 
     try {
-      setIsLoading(true)
       setError(null)
 
       // Cancel any ongoing requests
@@ -174,24 +185,16 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
         cachedData.data.length > 0
       ) {
         isInitialLoadRef.current = true
-        setIsLoading(false)
+      }
+
+      if (hasMore) {
         setIsLoadingMore(true)
+        await fetchAndUpdateCachedData({ pageSize, lastUpdated: nextCursor })
+        if (abortControllerRef.current.signal.aborted) {
+          return
+        }
+        isInitialLoadRef.current = true
       }
-
-      const result = await getPaginatedData({ pageSize })
-
-      if (abortControllerRef.current.signal.aborted) {
-        return
-      }
-
-      panelDataStore.updateData('Patient', result.patients)
-      panelDataStore.updateData('Task', result.tasks)
-      panelDataStore.updatePagination(resourceType, {
-        nextCursor: result.nextCursor,
-        hasMore: result.hasMore,
-      })
-
-      isInitialLoadRef.current = true
     } catch (err) {
       console.error('Failed to load initial data', err)
       if (abortControllerRef.current?.signal.aborted) return
@@ -199,16 +202,16 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
         err instanceof Error ? err : new Error('Failed to load initial data'),
       )
     } finally {
-      setIsLoading(false)
       setIsLoadingMore(false)
     }
   }, [
     isMedplumLoading,
-    isLoading,
-    getPaginatedData,
+    fetchAndUpdateCachedData,
     pageSize,
     resourceType,
     cachedData,
+    hasMore,
+    nextCursor,
   ])
 
   // Load more data
@@ -236,20 +239,12 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       }
       abortControllerRef.current = new AbortController()
 
-      const result = await getPaginatedData({
+      await fetchAndUpdateCachedData({
         pageSize,
         lastUpdated: nextCursor,
       })
 
       if (abortControllerRef.current.signal.aborted) return
-
-      // Update the store with new data
-      panelDataStore.updateData('Patient', result.patients)
-      panelDataStore.updateData('Task', result.tasks)
-      panelDataStore.updatePagination(resourceType, {
-        nextCursor: result.nextCursor,
-        hasMore: result.hasMore,
-      })
     } catch (err) {
       if (abortControllerRef.current?.signal.aborted) return
       setError(
@@ -266,9 +261,8 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     nextCursor,
     data,
     maxRecords,
-    getPaginatedData,
+    fetchAndUpdateCachedData,
     pageSize,
-    resourceType,
   ])
 
   // Refresh data
@@ -277,14 +271,16 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     setError(null)
 
     panelDataStore.clearData(resourceType)
-
-    await loadInitialData()
-  }, [loadInitialData, resourceType])
+    if (data.length > 0) {
+      fetchAndUpdateCachedData({ pageSize: data.length })
+    } else {
+      fetchAndUpdateCachedData({ pageSize })
+    }
+  }, [resourceType, data, fetchAndUpdateCachedData, pageSize])
 
   const reset = useCallback(() => {
     isInitialLoadRef.current = false
     setError(null)
-    setIsLoading(false)
     setIsLoadingMore(false)
 
     if (abortControllerRef.current) {
@@ -312,7 +308,7 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
   }, [])
   return {
     data: data as (T extends 'Patient' ? WorklistPatient : WorklistTask)[],
-    isLoading: isLoading || isMedplumLoading,
+    isLoading: isMedplumLoading,
     isLoadingMore,
     hasMore,
     loadedCount: data.length,
