@@ -9,28 +9,20 @@ import type { MedplumStoreClient } from '@/lib/medplum-client'
 
 const PATIENTS_TABLE = 'patients'
 const TASKS_TABLE = 'tasks'
-const METADATA_TABLE = 'metadata'
+const PAGINATION_TABLE = 'pagination'
 
 interface PaginationState {
   nextCursor?: string
   hasMore: boolean
 }
 
-interface PanelMetadata {
+interface PaginationInfo {
   panelId: string
   resourceType: 'Patient' | 'Task'
   pagination: PaginationState
   lastUpdated: string
   itemCount: number
 }
-
-export interface ReactiveDataGetter<T> {
-  getData: () => T[] | null
-  getPagination: () => PaginationState | null
-  getLastUpdated: () => string | null
-  getItem: (id: string) => T | null
-}
-
 class PanelMedplumDataStore {
   private store: Store
   private unsubscribeFunctions: { patients?: () => void; tasks?: () => void } =
@@ -48,109 +40,42 @@ class PanelMedplumDataStore {
     // Separate tables for patients and tasks
     this.store.setTable(PATIENTS_TABLE, {})
     this.store.setTable(TASKS_TABLE, {})
-    // Table for panel metadata
-    this.store.setTable(METADATA_TABLE, {})
+    // Table for pagination information
+    this.store.setTable(PAGINATION_TABLE, {})
   }
 
   /**
    * Generate a unique key for a panel and resource type
    */
-  private generateMetadataKey(resourceType: 'Patient' | 'Task'): string {
+  private generatePaginationKey(resourceType: 'Patient' | 'Task'): string {
     // for now we dont yet have different data per panel
     return `default:${resourceType}`
-  }
-
-  /**
-   * Subscribe to data changes for a specific panel and resource type
-   * Returns a reactive data getter that will automatically update when data changes
-   */
-  subscribeToData<T extends Patient | Task>(
-    resourceType: 'Patient' | 'Task',
-  ): ReactiveDataGetter<T> {
-    const metadataKey = this.generateMetadataKey(resourceType)
-    const tableName = resourceType === 'Patient' ? PATIENTS_TABLE : TASKS_TABLE
-
-    return {
-      getData: (): T[] | null => {
-        const metadata = this.store.getRow(METADATA_TABLE, metadataKey)
-        if (!metadata) return null
-
-        // Get all items for this panel/resource type
-        const allRows = this.store.getTable(tableName)
-        const items: T[] = []
-
-        for (const [key, row] of Object.entries(allRows)) {
-          try {
-            const item = JSON.parse(row.data as string) as T
-            items.push(item)
-          } catch (error) {
-            console.warn('Failed to parse item data:', error)
-          }
-        }
-
-        return items
-      },
-
-      getPagination: (): PaginationState | null => {
-        const metadata = this.store.getRow(METADATA_TABLE, metadataKey)
-        if (!metadata) return null
-
-        try {
-          const parsedMetadata = JSON.parse(
-            metadata.data as string,
-          ) as PanelMetadata
-          return parsedMetadata.pagination
-        } catch (error) {
-          console.warn('Failed to parse metadata:', error)
-          return null
-        }
-      },
-
-      getLastUpdated: (): string | null => {
-        const metadata = this.store.getRow(METADATA_TABLE, metadataKey)
-        if (!metadata) return null
-
-        try {
-          const parsedMetadata = JSON.parse(
-            metadata.data as string,
-          ) as PanelMetadata
-          return parsedMetadata.lastUpdated
-        } catch (error) {
-          console.warn('Failed to parse metadata:', error)
-          return null
-        }
-      },
-
-      getItem: (id: string): T | null => {
-        const itemKey = `default:${id}`
-        const row = this.store.getRow(tableName, itemKey)
-
-        if (!row || !row.data) return null
-
-        try {
-          return JSON.parse(row.data as string) as T
-        } catch (error) {
-          console.warn('Failed to parse item data:', error)
-          return null
-        }
-      },
-    }
   }
 
   /**
    * Get a reactive subscription to data changes for a specific panel and resource type
    * This method returns the TinyBase store and key for use with TinyBase's reactive hooks
    */
-  getReactiveSubscription(resourceType: 'Patient' | 'Task'): {
+  getPaginationReactiveSubscription(resourceType: 'Patient' | 'Task'): {
     store: Store
     table: string
     key: string
   } {
-    const key = this.generateMetadataKey(resourceType)
+    const key = this.generatePaginationKey(resourceType)
     return {
       store: this.store,
-      table: METADATA_TABLE,
+      table: PAGINATION_TABLE,
       key,
+    }
+  }
+
+  getDataReactiveTableSubscription(resourceType: 'Patient' | 'Task'): {
+    store: Store
+    table: string
+  } {
+    return {
+      store: this.store,
+      table: resourceType === 'Patient' ? PATIENTS_TABLE : TASKS_TABLE,
     }
   }
 
@@ -199,9 +124,6 @@ class PanelMedplumDataStore {
   private handlePatientUpdate(updatedPatient: Patient): void {
     // Store the native FHIR Patient resource
     this.setItem('Patient', updatedPatient)
-
-    // Update metadata
-    this.updateMetadata('Patient')
   }
 
   /**
@@ -210,9 +132,6 @@ class PanelMedplumDataStore {
   private handleTaskUpdate(updatedTask: Task): void {
     // Store the native FHIR Task resource
     this.setItem('Task', updatedTask)
-
-    // Update metadata
-    this.updateMetadata('Task')
   }
 
   /**
@@ -243,66 +162,9 @@ class PanelMedplumDataStore {
     const tableName = resourceType === 'Patient' ? PATIENTS_TABLE : TASKS_TABLE
     const itemKey = `${panelId}:${itemId}`
     this.store.delRow(tableName, itemKey)
-    this.updateMetadata(resourceType)
   }
 
-  /**
-   * Update metadata for a panel/resource type combination
-   */
-  private updateMetadata(resourceType: 'Patient' | 'Task'): void {
-    const metadataKey = this.generateMetadataKey(resourceType)
-    const tableName = resourceType === 'Patient' ? PATIENTS_TABLE : TASKS_TABLE
-    const panelId = 'default'
-
-    // Count items for this panel/resource type
-    const allRows = this.store.getTable(tableName)
-    let itemCount = 0
-
-    for (const key of Object.keys(allRows)) {
-      if (key.startsWith(`${panelId}:`)) {
-        itemCount++
-      }
-    }
-
-    // Get existing metadata or create new
-    const existingMetadata = this.store.getRow(METADATA_TABLE, metadataKey)
-    let pagination: PaginationState = { hasMore: false }
-
-    if (existingMetadata) {
-      try {
-        const parsed = JSON.parse(
-          existingMetadata.data as string,
-        ) as PanelMetadata
-        pagination = parsed.pagination
-      } catch (error) {
-        console.warn('Failed to parse existing metadata:', error)
-      }
-    }
-
-    const metadata: PanelMetadata = {
-      panelId,
-      resourceType,
-      pagination,
-      lastUpdated: new Date().toISOString(),
-      itemCount,
-    }
-
-    this.store.setRow(METADATA_TABLE, metadataKey, {
-      data: JSON.stringify(metadata),
-      panelId,
-      resourceType,
-      lastUpdated: metadata.lastUpdated,
-    })
-  }
-
-  /**
-   * Set data and pagination state for a panel
-   */
-  setData(
-    resourceType: 'Patient' | 'Task',
-    data: Patient[] | Task[],
-    pagination?: PaginationState,
-  ): void {
+  setData(resourceType: 'Patient' | 'Task', data: Patient[] | Task[]): void {
     if (!data || !Array.isArray(data)) {
       console.warn('Invalid data provided to cache:', {
         resourceType,
@@ -318,80 +180,15 @@ class PanelMedplumDataStore {
     for (const item of data) {
       this.setItem(resourceType, item)
     }
-
-    // Update metadata
-    const metadataKey = this.generateMetadataKey(resourceType)
-    const metadata: PanelMetadata = {
-      panelId: 'default',
-      resourceType,
-      pagination: pagination || { hasMore: true },
-      lastUpdated: new Date().toISOString(),
-      itemCount: data.length,
-    }
-
-    this.store.setRow(METADATA_TABLE, metadataKey, {
-      data: JSON.stringify(metadata),
-      panelId: 'default',
-      resourceType,
-      lastUpdated: metadata.lastUpdated,
-    })
   }
 
-  /**
-   * Update existing data (append new data) and pagination state
-   */
   updateData(
     resourceType: 'Patient' | 'Task',
     newData: Patient[] | Task[],
-    pagination?: PaginationState,
   ): void {
     // Add new items individually
     for (const item of newData) {
       this.setItem(resourceType, item)
-    }
-
-    // Update metadata with new pagination
-    if (pagination) {
-      const metadataKey = this.generateMetadataKey(resourceType)
-      const existingMetadata = this.store.getRow(METADATA_TABLE, metadataKey)
-
-      let metadata: PanelMetadata
-      if (existingMetadata) {
-        try {
-          const parsed = JSON.parse(
-            existingMetadata.data as string,
-          ) as PanelMetadata
-          metadata = {
-            ...parsed,
-            pagination,
-            lastUpdated: new Date().toISOString(),
-          }
-        } catch (error) {
-          console.warn('Failed to parse existing metadata:', error)
-          metadata = {
-            panelId: 'default',
-            resourceType,
-            pagination,
-            lastUpdated: new Date().toISOString(),
-            itemCount: 0,
-          }
-        }
-      } else {
-        metadata = {
-          panelId: 'default',
-          resourceType,
-          pagination,
-          lastUpdated: new Date().toISOString(),
-          itemCount: 0,
-        }
-      }
-
-      this.store.setRow(METADATA_TABLE, metadataKey, {
-        data: JSON.stringify(metadata),
-        panelId: 'default',
-        resourceType,
-        lastUpdated: metadata.lastUpdated,
-      })
     }
   }
 
@@ -400,19 +197,9 @@ class PanelMedplumDataStore {
    */
   getData(resourceType: 'Patient' | 'Task'): {
     data: Patient[] | Task[]
-    pagination: PaginationState
   } | null {
-    const metadataKey = this.generateMetadataKey(resourceType)
     const tableName = resourceType === 'Patient' ? PATIENTS_TABLE : TASKS_TABLE
-    const entry = this.store.getRow(METADATA_TABLE, metadataKey)
-
-    if (!entry || !entry.data) {
-      return null
-    }
-
     try {
-      const cachedData = JSON.parse(entry.data as string) as PanelMetadata
-
       // Get all items for this panel/resource type
       const allRows = this.store.getTable(tableName)
       const items: (Patient | Task)[] = []
@@ -428,10 +215,25 @@ class PanelMedplumDataStore {
 
       return {
         data: items as Patient[] | Task[],
-        pagination: cachedData.pagination,
       }
     } catch (error) {
-      console.warn('Failed to parse cached data:', error)
+      console.warn('Failed to parse cached pagination info:', error)
+      return null
+    }
+  }
+
+  getPagination(resourceType: 'Patient' | 'Task'): PaginationState | null {
+    const paginationKey = this.generatePaginationKey(resourceType)
+    const entry = this.store.getRow(PAGINATION_TABLE, paginationKey)
+    if (!entry || !entry.data) {
+      return null
+    }
+
+    try {
+      const parsed = JSON.parse(entry.data as string) as PaginationInfo
+      return parsed.pagination
+    } catch (error) {
+      console.warn('Failed to parse cached pagination info:', error)
       return null
     }
   }
@@ -444,50 +246,44 @@ class PanelMedplumDataStore {
     pagination: PaginationState,
   ): void {
     const panelId = 'default'
-    const existing = this.getData(resourceType)
+    const paginationKey = this.generatePaginationKey(resourceType)
+    const existing = this.store.getRow(PAGINATION_TABLE, paginationKey)
 
-    if (existing) {
-      const metadataKey = this.generateMetadataKey(resourceType)
-      const existingMetadata = this.store.getRow(METADATA_TABLE, metadataKey)
-
-      let metadata: PanelMetadata
-      if (existingMetadata) {
-        try {
-          const parsed = JSON.parse(
-            existingMetadata.data as string,
-          ) as PanelMetadata
-          metadata = {
-            ...parsed,
-            pagination,
-            lastUpdated: new Date().toISOString(),
-          }
-        } catch (error) {
-          console.warn('Failed to parse existing metadata:', error)
-          metadata = {
-            panelId,
-            resourceType,
-            pagination,
-            lastUpdated: new Date().toISOString(),
-            itemCount: existing.data.length,
-          }
+    let paginationInfo: PaginationInfo
+    if (existing?.data) {
+      try {
+        const parsed = JSON.parse(existing.data as string) as PaginationInfo
+        paginationInfo = {
+          ...parsed,
+          pagination,
+          lastUpdated: new Date().toISOString(),
         }
-      } else {
-        metadata = {
+      } catch (error) {
+        console.warn('Failed to parse existing pagination info:', error)
+        paginationInfo = {
           panelId,
           resourceType,
           pagination,
           lastUpdated: new Date().toISOString(),
-          itemCount: existing.data.length,
+          itemCount: 0,
         }
       }
-
-      this.store.setRow(METADATA_TABLE, metadataKey, {
-        data: JSON.stringify(metadata),
+    } else {
+      paginationInfo = {
         panelId,
         resourceType,
-        lastUpdated: metadata.lastUpdated,
-      })
+        pagination,
+        lastUpdated: new Date().toISOString(),
+        itemCount: 0,
+      }
     }
+
+    this.store.setRow(PAGINATION_TABLE, paginationKey, {
+      data: JSON.stringify(paginationInfo),
+      panelId,
+      resourceType,
+      lastUpdated: paginationInfo.lastUpdated,
+    })
   }
 
   /**
@@ -509,8 +305,8 @@ class PanelMedplumDataStore {
       this.store.delRow(tableName, key)
     }
 
-    const metadataKey = this.generateMetadataKey(resourceType)
-    this.store.delRow(METADATA_TABLE, metadataKey)
+    const paginationKey = this.generatePaginationKey(resourceType)
+    this.store.delRow(PAGINATION_TABLE, paginationKey)
   }
 
   /**
@@ -519,7 +315,7 @@ class PanelMedplumDataStore {
   clearAllData(): void {
     this.store.setTable(PATIENTS_TABLE, {})
     this.store.setTable(TASKS_TABLE, {})
-    this.store.setTable(METADATA_TABLE, {})
+    this.store.setTable(PAGINATION_TABLE, {})
   }
 
   /**

@@ -60,7 +60,7 @@ export default function WorklistPage() {
   } = useProgressiveMedplumData(
     currentView === 'patient' ? 'Patient' : 'Task',
     {
-      pageSize: 500,
+      pageSize: 25,
       maxRecords: 50000,
       panelId,
     },

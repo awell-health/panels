@@ -481,7 +481,6 @@ export class MedplumStoreClient {
         },
       })),
     }
-    console.log('getPatientsFromReferences', bundle)
     const response = (await this.client.executeBatch(bundle)) as Bundle<Patient>
     return (response.entry ?? []).map((e) => e.resource as Patient)
   }

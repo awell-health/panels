@@ -1,8 +1,7 @@
 import { useMedplum } from '@/contexts/MedplumClientProvider'
-import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
-import { useMemo, useCallback } from 'react'
-import { useRow } from 'tinybase/ui-react'
+import { useMemo } from 'react'
+import { useTable } from 'tinybase/ui-react'
 
 export function useMedplumStore() {
   const {
@@ -18,30 +17,28 @@ export function useMedplumStore() {
   } = useMedplum()
 
   // Get the reactive subscription from the store
-  const {
-    store: patientStore,
-    table: patientTable,
-    key: patientKey,
-  } = useMemo(() => {
-    return panelDataStore.getReactiveSubscription('Patient')
+  const { store: patientStore, table: patientTable } = useMemo(() => {
+    return panelDataStore.getDataReactiveTableSubscription('Patient')
   }, [])
 
-  const {
-    store: taskStore,
-    table: taskTable,
-    key: taskKey,
-  } = useMemo(() => {
-    return panelDataStore.getReactiveSubscription('Task')
+  const { store: taskStore, table: taskTable } = useMemo(() => {
+    return panelDataStore.getDataReactiveTableSubscription('Task')
   }, [])
 
   // Use TinyBase's reactive hook to subscribe to changes
-  const patientListener = useRow(patientTable, patientKey, patientStore)
-  const taskListener = useRow(taskTable, taskKey, taskStore)
+  const patientData = useTable(patientTable, patientStore)
+  const taskData = useTable(taskTable, taskStore)
 
   // Get worklist data from the store
   const worklistData = useMemo(() => {
+    if (!patientData && !taskData) {
+      return {
+        patients: [],
+        tasks: [],
+      }
+    }
     return panelDataStore.getWorklistData()
-  }, [])
+  }, [patientData, taskData])
 
   const patients = useMemo(() => {
     return worklistData?.patients || []
@@ -50,27 +47,6 @@ export function useMedplumStore() {
   const tasks = useMemo(() => {
     return worklistData?.tasks || []
   }, [worklistData])
-
-  // Memoize the load functions to prevent unnecessary re-renders
-  const loadPaginatedPatients = useCallback(
-    (options?: {
-      pageSize?: number
-      lastUpdated?: string
-    }) => {
-      return panelDataStore.getData('Patient')
-    },
-    [],
-  )
-
-  const loadPaginatedTasks = useCallback(
-    (options?: {
-      pageSize?: number
-      lastUpdated?: string
-    }) => {
-      return panelDataStore.getData('Task')
-    },
-    [],
-  )
 
   return {
     patients,
@@ -84,7 +60,5 @@ export function useMedplumStore() {
     getPatientDetectedIssues,
     deletePatient,
     getPatientCompositions,
-    loadPaginatedPatients,
-    loadPaginatedTasks,
   }
 }
