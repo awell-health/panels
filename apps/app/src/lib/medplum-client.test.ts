@@ -1,10 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import {
-  MedplumStore,
-  PaginationOptions,
-  PaginatedResult,
-} from './medplum-client'
-import type { Patient, Task } from '@medplum/fhirtypes'
+import { MedplumStoreClient } from './medplum-client'
 
 // Mock MedplumClient
 const mockClient = {
@@ -21,12 +16,12 @@ const mockClient = {
 }
 
 describe('MedplumStore Pagination', () => {
-  let store: MedplumStore
+  let store: MedplumStoreClient
 
   beforeEach(() => {
     vi.clearAllMocks()
     // biome-ignore lint/suspicious/noExplicitAny: Mock client for testing
-    store = new MedplumStore(mockClient as any, 'wss://test.com')
+    store = new MedplumStoreClient(mockClient as any, 'wss://test.com')
   })
 
   describe('getPatientsPaginated', () => {
