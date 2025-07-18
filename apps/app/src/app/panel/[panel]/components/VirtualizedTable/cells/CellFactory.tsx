@@ -5,6 +5,7 @@ import { ArrayCell } from './ArrayCell'
 import { AssigneeCell } from './AssigneeCell'
 import { BaseCell } from './BaseCell'
 import { DateCell } from './DateCell'
+import { SelectCell } from './SelectCell'
 import type { InteractiveCellProps } from './types'
 import { DateTimeCell } from './DateTimeCell'
 
@@ -47,6 +48,9 @@ export function CellFactory(props: CellFactoryProps) {
 
     case 'user':
       return <AssigneeCell {...props} />
+
+    case 'select':
+      return <SelectCell {...props} />
 
     case 'boolean':
       return (

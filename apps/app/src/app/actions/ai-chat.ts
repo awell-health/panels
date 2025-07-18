@@ -284,8 +284,8 @@ When making column changes, respond with this exact JSON structure:
 
 **Operation Types:**
 - **"create"**: Add a new column (requires full column definition). The order is the position of the column in the view. Always add the column at the end of the view.
-- **"update"**: Modify existing column (requires column.id + changed properties)
-- **"delete"**: Remove column (only requires id and viewType)
+- **"update"**: Modify existing column (requires column.id, column.name and changed properties)
+- **"delete"**: Remove column (only requires id, viewType and column.name)
 
 **Guidelines:**
 - Only include columns that need to be changed

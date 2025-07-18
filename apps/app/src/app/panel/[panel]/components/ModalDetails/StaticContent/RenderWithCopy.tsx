@@ -7,7 +7,7 @@ export const RenderWithCopy: FC<{
 }> = ({ children, text }) => {
   const [isCopied, setIsCopied] = useState(false)
 
-  if (!children) return null
+  if (!text) return children
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
@@ -16,9 +16,11 @@ export const RenderWithCopy: FC<{
     }, 1000)
   }, [isCopied])
 
+  const iconBaseClasses = 'absolute -right-1.75 bottom-0.75 w-3 h-3'
+
   return (
-    <div
-      className="flex items-center cursor-pointer group"
+    <span
+      className="cursor-pointer group pr-2 relative"
       onClick={() => {
         navigator.clipboard.writeText(text ?? '')
         setIsCopied(true)
@@ -27,9 +29,11 @@ export const RenderWithCopy: FC<{
     >
       {children}
       {!isCopied && (
-        <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-100 ml-1" />
+        <Copy
+          className={`${iconBaseClasses} opacity-0 group-hover:opacity-100 transition-opacity duration-100`}
+        />
       )}
-      {isCopied && <Check className="w-3 h-3 text-green-600 ml-1" />}
-    </div>
+      {isCopied && <Check className={`${iconBaseClasses} text-green-600`} />}
+    </span>
   )
 }

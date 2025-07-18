@@ -25,6 +25,7 @@ export const mapBackendPanelToFrontend = (
     metadata: {
       filters: backendPanel.metadata?.filters || [],
       sort: backendPanel.metadata?.sort || undefined,
+      viewType: backendPanel.metadata?.viewType || 'patient',
     },
   }
 }

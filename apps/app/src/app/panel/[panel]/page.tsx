@@ -4,11 +4,10 @@ import PanelFooter from '@/app/panel/[panel]/components/PanelFooter'
 import PanelNavigation from '@/app/panel/[panel]/components/PanelNavigation'
 import PanelToolbar from '@/app/panel/[panel]/components/PanelToolbar'
 import { VirtualizedTable } from '@/app/panel/[panel]/components/VirtualizedTable'
-import { useDrawer } from '@/contexts/DrawerContext'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
-import { useMedplumStore } from '@/hooks/use-medplum-store'
+import { useColumnOperations } from '@/hooks/use-column-operations'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import {
   useReactiveColumns,
   useReactivePanel,
@@ -20,9 +19,9 @@ import { arrayMove } from '@/lib/utils'
 import type {
   Column,
   ColumnChangesResponse,
-  ViewType,
   Filter,
   Sort,
+  ViewType,
 } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Loader2 } from 'lucide-react'
@@ -30,11 +29,9 @@ import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { AddIngestionModal } from './components/AddIngestionModal'
 import { ModalDetails } from './components/ModalDetails'
-
-interface SortConfig {
-  key: string
-  direction: 'asc' | 'desc'
-}
+import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import { useMedplum } from '@/contexts/MedplumClientProvider'
 
 export default function WorklistPage() {
   const params = useParams()
@@ -49,14 +46,34 @@ export default function WorklistPage() {
 
   const [selectedRows] = useState<string[]>([])
   const { user } = useAuthentication()
+  const { toggleTaskOwner } = useMedplum()
+
   const {
-    patients,
-    tasks,
-    toggleTaskOwner,
-    isLoading: isMedplumLoading,
-  } = useMedplumStore()
-  const { updatePanel, updateColumn, deleteColumn, applyColumnChanges } =
-    useReactivePanelStore()
+    data: progressiveData,
+    isLoading: isProgressiveLoading,
+    isLoadingMore,
+    hasMore,
+    error: progressiveError,
+    loadMore,
+    refresh,
+    dataAfter,
+  } = useProgressiveMedplumData(
+    currentView === 'patient' ? 'Patient' : 'Task',
+    {
+      pageSize: 100,
+      maxRecords: 50000,
+      panelId,
+    },
+  )
+
+  const patients =
+    currentView === 'patient' ? (progressiveData as WorklistPatient[]) : []
+  const tasks =
+    currentView === 'task' ? (progressiveData as WorklistTask[]) : []
+
+  const { updatePanel } = useReactivePanelStore()
+  const { updateColumn, deleteColumn, applyColumnChanges, reorderColumns } =
+    useColumnOperations()
   const {
     panel,
     isLoading: isPanelLoading,
@@ -64,17 +81,22 @@ export default function WorklistPage() {
   } = useReactivePanel(panelId)
   const { columns: allColumns, isLoading: isColumnsLoading } =
     useReactiveColumns(panelId)
-  const { views, isLoading: isViewsLoading } = useReactiveViews(panelId)
-  const { openDrawer } = useDrawer()
+  const { isLoading: isViewsLoading } = useReactiveViews(panelId)
+
+  // Create column visibility context for panel
+  const columnVisibilityContext = useColumnVisibility(panelId)
 
   const router = useRouter()
 
   // Get columns for current view type using tag-based filtering
-  const columns = allColumns.filter((col) =>
+  const allColumnsForViewType = allColumns.filter((col) =>
     currentView === 'patient'
       ? col.tags?.includes('panels:patients')
       : col.tags?.includes('panels:tasks'),
   )
+
+  // Get only visible columns using column visibility context
+  const visibleColumns = columnVisibilityContext.getVisibleColumns()
 
   // Set table data based on current view
   const tableData = currentView === 'patient' ? patients : tasks
@@ -82,7 +104,6 @@ export default function WorklistPage() {
     // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
     useSearch(tableData)
 
-  // Set filters from panel
   useEffect(() => {
     if (panel) {
       setTableFilters(panel.metadata.filters)
@@ -154,7 +175,7 @@ export default function WorklistPage() {
     }
 
     try {
-      await updateColumn?.(panel.id, updates.id, updates)
+      await updateColumn(panel.id, updates.id, updates)
     } catch (error) {
       console.error('Failed to update column:', error)
     }
@@ -165,8 +186,12 @@ export default function WorklistPage() {
       return
     }
 
+    // Find the column name for better toast messages
+    const column = allColumns.find((col) => col.id === columnId)
+    const columnName = column?.name
+
     try {
-      await deleteColumn?.(panel.id, columnId)
+      await deleteColumn(panel.id, columnId, columnName)
     } catch (error) {
       console.error('Failed to delete column:', error)
     }
@@ -189,28 +214,31 @@ export default function WorklistPage() {
     }
   }
 
-  const onFiltersChange = (filters: Filter[]) => {
-    setTableFilters(filters)
+  const onFiltersChange = async (filters: Filter[]) => {
+    if (!panel) return
+
+    try {
+      await updatePanel?.(panel.id, {
+        metadata: {
+          ...panel.metadata,
+          filters,
+        },
+      })
+    } catch (error) {
+      console.error('Failed to update panel filters:', error)
+    }
   }
 
   // Centralized row click handler
   const handleRowClick = useCallback(
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
-      if (currentView === 'task') {
-        setSelectedItem(row as WorklistPatient | WorklistTask)
-      } else if (currentView === 'patient') {
-        setSelectedItem(row as WorklistPatient | WorklistTask)
-        // openDrawer(
-        //   <PatientContext patient={row as WorklistPatient} />,
-        //   `${row.name} - Patient Details`,
-        // )
-      }
+      setSelectedItem(row as WorklistPatient | WorklistTask)
     },
-    [currentView],
+    [],
   )
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here
+  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the visible columns that matter here
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event
@@ -219,39 +247,26 @@ export default function WorklistPage() {
       }
 
       // Find the active column's index and the over column's index
-      const oldIndex = columns.findIndex((col) => col.id === active.id)
-      const newIndex = columns.findIndex((col) => col.id === over.id)
+      const oldIndex = visibleColumns.findIndex((col) => col.id === active.id)
+      const newIndex = visibleColumns.findIndex((col) => col.id === over.id)
 
       if (oldIndex === -1 || newIndex === -1) {
         return
       }
 
       // Reorder the columns
-      const reorderedColumns = arrayMove(columns, oldIndex, newIndex)
+      const reorderedColumns = arrayMove(visibleColumns, oldIndex, newIndex)
 
-      // Update column order in each column's display properties
-      const columnsWithOrder = reorderedColumns.map((col, index) => ({
-        ...col,
-        properties: {
-          ...col.properties,
-          display: {
-            ...col.properties?.display,
-            order: index,
-          },
-        },
-      }))
-
-      await Promise.all(
-        columnsWithOrder.map(async (column) => {
-          try {
-            await onColumnUpdate(column)
-          } catch (error) {
-            console.error('Failed to update column order:', error)
-          }
-        }),
-      )
+      // Use the dedicated reorder method which shows only one toast
+      if (panel) {
+        try {
+          await reorderColumns(panel.id, reorderedColumns)
+        } catch (error) {
+          console.error('Failed to reorder columns:', error)
+        }
+      }
     },
-    [columns],
+    [visibleColumns],
   )
 
   const isLoading =
@@ -275,6 +290,7 @@ export default function WorklistPage() {
                 selectedViewId={undefined}
                 currentViewType={currentView}
                 onPanelTitleChange={onPanelTitleChange}
+                currentFilters={tableFilters}
               />
             )}
           </div>
@@ -286,35 +302,26 @@ export default function WorklistPage() {
               onSearchModeChange={setSearchMode}
               currentView={currentView}
               setCurrentView={updatePanelViewType}
-              columns={columns.map((col) => ({
-                ...col,
-                visible: col.properties?.display?.visible !== false,
-              }))}
+              columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
-              onColumnVisibilityChange={(columnId, visible) =>
-                onColumnUpdate({
-                  id: columnId,
-                  properties: { display: { visible } },
-                })
-              }
             />
           </div>
           <div className="content-area">
             <div className="table-scroll-container">
               <VirtualizedTable
-                isLoading={isMedplumLoading}
+                isLoading={isProgressiveLoading}
                 selectedRows={selectedRows}
                 toggleSelectAll={() => {}}
-                columns={columns}
+                columns={visibleColumns}
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
                 handlePDFClick={() => {}}
                 handleTaskClick={() => {}}
                 handleRowHover={() => {}}
                 toggleSelectRow={() => {}}
-                handleAssigneeClick={(taskId: string) =>
-                  toggleTaskOwner(taskId)
-                }
+                handleAssigneeClick={async (taskId: string) => {
+                  await toggleTaskOwner(taskId)
+                }}
                 currentView={currentView}
                 currentUserName={user?.name}
                 onColumnUpdate={onColumnUpdate}
@@ -324,6 +331,9 @@ export default function WorklistPage() {
                 initialSort={panel.metadata.sort || null}
                 onRowClick={handleRowClick}
                 handleDragEnd={handleDragEnd}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+                isLoadingMore={isLoadingMore}
               />
               {isAddingIngestionSource && (
                 <AddIngestionModal
@@ -337,16 +347,31 @@ export default function WorklistPage() {
           </div>
           {selectedItem && (
             <ModalDetails
-              row={selectedItem}
+              patient={
+                selectedItem.resourceType === 'Patient'
+                  ? (selectedItem as WorklistPatient)
+                  : undefined
+              }
+              task={
+                selectedItem.resourceType === 'Task'
+                  ? (selectedItem as WorklistTask)
+                  : undefined
+              }
               onClose={() => setSelectedItem(null)}
             />
           )}
           <div className="footer-area">
             <PanelFooter
-              columnsCounter={columns.length}
+              columnsCounter={visibleColumns.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}
+              dataAfter={dataAfter}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              isLoadingMore={isLoadingMore}
+              onRefresh={refresh}
+              isLoading={isProgressiveLoading}
             />
           </div>
         </>

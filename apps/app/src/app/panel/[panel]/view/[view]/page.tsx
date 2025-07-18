@@ -1,12 +1,13 @@
 'use client'
-import { PatientContext } from '@/app/panel/[panel]/components/PatientContext'
-import { TaskDetails } from '@/app/panel/[panel]/components/TaskDetails'
-import { VirtualizedTable } from '@/app/panel/[panel]/components/VirtualizedTable'
 import PanelFooter from '@/app/panel/[panel]/components/PanelFooter'
+import { VirtualizedTable } from '@/app/panel/[panel]/components/VirtualizedTable'
 import { useDrawer } from '@/contexts/DrawerContext'
+import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
+import { useColumnOperations } from '@/hooks/use-column-operations'
+import { useColumnVisibility } from '@/hooks/use-column-visibility'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
+import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
 import {
   useReactiveColumns,
   useReactivePanel,
@@ -17,22 +18,16 @@ import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
 import type { Column, ColumnChangesResponse, Filter, Sort } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import ModalDetails from '../../components/ModalDetails/ModalDetails'
 import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
-import { useAuthentication } from '@/hooks/use-authentication'
-import ModalDetails from '../../components/ModalDetails/ModalDetails'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 
 export default function WorklistViewPage() {
-  const {
-    patients,
-    tasks,
-    toggleTaskOwner,
-    isLoading: isMedplumLoading,
-  } = useMedplumStore()
-  const { updateView, updateColumn, applyColumnChanges } =
-    useReactivePanelStore()
+  const { updateView } = useReactivePanelStore()
+  const { updateColumn, applyColumnChanges } = useColumnOperations()
   const { openDrawer } = useDrawer()
   const params = useParams()
   const panelId = params.panel as string
@@ -53,6 +48,38 @@ export default function WorklistViewPage() {
     useReactiveColumns(panelId)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
 
+  const { toggleTaskOwner } = useMedplumStore()
+  const {
+    data: progressiveData,
+    isLoading: isProgressiveLoading,
+    isLoadingMore,
+    hasMore,
+    error: progressiveError,
+    loadMore,
+    refresh,
+    dataAfter,
+  } = useProgressiveMedplumData(
+    view?.metadata.viewType === 'patient' ? 'Patient' : 'Task',
+    {
+      pageSize: 100,
+      maxRecords: 50000,
+      panelId,
+    },
+  )
+
+  // Get the appropriate data based on view type
+  const patients =
+    view?.metadata.viewType === 'patient'
+      ? (progressiveData as WorklistPatient[])
+      : []
+  const tasks =
+    view?.metadata.viewType === 'task'
+      ? (progressiveData as WorklistTask[])
+      : []
+
+  // Create column visibility context for view
+  const columnVisibilityContext = useColumnVisibility(panelId, viewId)
+
   const searchData = view?.metadata.viewType === 'patient' ? patients : tasks
   const { searchTerm, setSearchTerm, searchMode, setSearchMode, filteredData } =
     // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
@@ -63,14 +90,14 @@ export default function WorklistViewPage() {
   >(null)
 
   // Get columns using new filtering approach
-  const columns = allColumns.filter((col) =>
+  const allColumnsForViewType = allColumns.filter((col) =>
     view?.metadata.viewType === 'patient'
       ? col.tags?.includes('panels:patients')
       : col.tags?.includes('panels:tasks'),
   )
-  const visibleColumns = (view?.visibleColumns
-    .map((col) => columns.find((c) => c.id === col))
-    .filter((col) => col !== undefined) ?? []) as Column[]
+
+  // Get only visible columns using column visibility context
+  const visibleColumns = columnVisibilityContext.getVisibleColumns()
 
   const tableData = filteredData ?? []
 
@@ -109,7 +136,7 @@ export default function WorklistViewPage() {
 
     try {
       // Update the column in the panel
-      await updateColumn?.(panelId, updates.id, updates)
+      await updateColumn(panelId, updates.id, updates)
     } catch (error) {
       console.error('Failed to update column:', error)
     }
@@ -183,7 +210,7 @@ export default function WorklistViewPage() {
     patients,
     tasks,
     panel,
-    columns,
+    columns: allColumnsForViewType,
     currentViewId: viewId,
     onColumnChanges: handleColumnChanges,
   })
@@ -209,16 +236,9 @@ export default function WorklistViewPage() {
   const handleRowClick = useCallback(
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
-      if (view?.metadata.viewType === 'task') {
-        setSelectedItem(row as WorklistPatient | WorklistTask)
-      } else if (view?.metadata.viewType === 'patient') {
-        openDrawer(
-          <PatientContext patient={row as WorklistPatient} />,
-          `${row.name} - Patient Details`,
-        )
-      }
+      setSelectedItem(row as WorklistPatient | WorklistTask)
     },
-    [view?.metadata.viewType, openDrawer],
+    [],
   )
 
   const onViewTitleChange = async (newTitle: string) => {
@@ -247,31 +267,6 @@ export default function WorklistViewPage() {
       })
     } catch (error) {
       console.error('Failed to update view type:', error)
-    }
-  }
-
-  const onColumnVisibilityChange = async (
-    columnId: string,
-    visible: boolean,
-  ) => {
-    if (!view) return
-
-    try {
-      if (visible) {
-        // Add column to visibleColumns if not already there
-        if (!view.visibleColumns.includes(columnId)) {
-          await updateView?.(panelId, viewId, {
-            visibleColumns: [...view.visibleColumns, columnId],
-          })
-        }
-      } else {
-        // Remove column from visibleColumns
-        await updateView?.(panelId, viewId, {
-          visibleColumns: view.visibleColumns.filter((id) => id !== columnId),
-        })
-      }
-    } catch (error) {
-      console.error('Failed to update view column visibility:', error)
     }
   }
 
@@ -304,19 +299,15 @@ export default function WorklistViewPage() {
               onSearchModeChange={setSearchMode}
               currentView={view?.metadata.viewType}
               setCurrentView={onViewTypeChange}
-              columns={columns.map((col) => ({
-                ...col,
-                visible: view.visibleColumns.includes(col.id),
-              }))}
+              columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
-              onColumnVisibilityChange={onColumnVisibilityChange}
               isViewPage={true}
             />
           </div>
           <div className="content-area">
             <div className="table-scroll-container">
               <VirtualizedTable
-                isLoading={isMedplumLoading}
+                isLoading={isProgressiveLoading}
                 selectedRows={[]}
                 toggleSelectAll={() => {}}
                 columns={visibleColumns}
@@ -327,9 +318,9 @@ export default function WorklistViewPage() {
                 handleTaskClick={() => {}}
                 handleRowHover={() => {}}
                 toggleSelectRow={() => {}}
-                handleAssigneeClick={(taskId: string) =>
-                  toggleTaskOwner(taskId)
-                }
+                handleAssigneeClick={async (taskId: string) => {
+                  await toggleTaskOwner(taskId)
+                }}
                 currentView={view?.metadata.viewType ?? 'patient'}
                 currentUserName={user?.name}
                 onColumnUpdate={onColumnUpdate}
@@ -338,21 +329,39 @@ export default function WorklistViewPage() {
                 initialSort={view?.metadata.sort || null}
                 onRowClick={handleRowClick}
                 handleDragEnd={handleDragEnd}
+                hasMore={hasMore}
+                onLoadMore={loadMore}
+                isLoadingMore={isLoadingMore}
               />
             </div>
           </div>
           {selectedItem && (
             <ModalDetails
-              row={selectedItem}
+              patient={
+                selectedItem.resourceType === 'Patient'
+                  ? (selectedItem as WorklistPatient)
+                  : undefined
+              }
+              task={
+                selectedItem.resourceType === 'Task'
+                  ? (selectedItem as WorklistTask)
+                  : undefined
+              }
               onClose={() => setSelectedItem(null)}
             />
           )}
           <div className="footer-area">
             <PanelFooter
-              columnsCounter={columns.length}
+              columnsCounter={visibleColumns.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}
+              dataAfter={dataAfter}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              isLoadingMore={isLoadingMore}
+              onRefresh={refresh}
+              isLoading={isProgressiveLoading}
             />
           </div>
         </>

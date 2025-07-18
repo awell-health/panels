@@ -1,9 +1,9 @@
 'use client'
 
+import { cn } from '@/lib/utils'
+import type { Column, Sort } from '@/types/panel'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Column, Sort } from '@/types/panel'
-import { cn } from '@/lib/utils'
 import {
   Calendar,
   GripVertical,
@@ -12,9 +12,8 @@ import {
   Text,
   ToggleLeft,
 } from 'lucide-react'
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState } from 'react'
 import { ColumnMenu } from '../ColumnMenu'
-import { useStickyGridContext } from './StickyContext'
 
 interface SortableHeaderColumnProps {
   column: Column

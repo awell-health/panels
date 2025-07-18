@@ -1,6 +1,6 @@
 'use client'
 
-import { getRuntimeConfig } from '@/lib/config'
+import { getRuntimeConfig, type RuntimeConfig } from '@/lib/config'
 import { useStytchMember, useStytchOrganization } from '@stytch/nextjs/b2b'
 import type {
   Member as StytchMember,
@@ -12,23 +12,34 @@ import {
   createContext,
   useContext,
   useEffect,
-  useState,
   useMemo,
+  useState,
 } from 'react'
 
 export class AuthenticationStore {
   private user: StytchMember | null = null
   private organization: StytchOrganization | null = null
   private environment: string | undefined = undefined
+  private adminRole: string
 
   constructor(
     user: StytchMember | null,
     organization: StytchOrganization | null,
     environment: string | undefined,
+    adminRole: string,
   ) {
     this.user = user
     this.organization = organization
     this.environment = environment
+    this.adminRole = adminRole
+  }
+
+  isAdmin = () => {
+    return this.user?.roles.map((role) => role.role_id).includes(this.adminRole)
+  }
+
+  getRoles = () => {
+    return this.user?.roles
   }
 
   getUser = () => {
@@ -124,25 +135,30 @@ export function AuthenticationStoreProvider({
 }: { children: ReactNode }) {
   const { organization } = useStytchOrganization()
   const { member } = useStytchMember()
-  const [config, setConfig] = useState<{ environment?: string }>({})
+  const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | undefined>(
+    undefined,
+  )
 
-  // Fetch config once
   useEffect(() => {
     const fetchConfig = async () => {
-      const runtimeConfig = await getRuntimeConfig()
-      setConfig({ environment: runtimeConfig.environment })
+      const config = await getRuntimeConfig()
+      setRuntimeConfig(config)
     }
     fetchConfig()
   }, [])
 
-  // Create store instance with useMemo to prevent unnecessary recreations
   const storeInstance = useMemo(() => {
-    if (!member || !organization || !config.environment) {
+    if (!member || !organization || !runtimeConfig) {
       return undefined
     }
 
-    return new AuthenticationStore(member, organization, config.environment)
-  }, [member, organization, config.environment])
+    return new AuthenticationStore(
+      member,
+      organization,
+      runtimeConfig.environment,
+      runtimeConfig.adminRole,
+    )
+  }, [member, organization, runtimeConfig])
 
   if (!storeInstance) {
     return (
@@ -181,6 +197,8 @@ export function useAuthentication() {
   const currentUserId = store.getUserId()
   const currentName = store.getName()
   const currentEmail = store.getEmail()
+  const currentRoles = store.getRoles()
+  const currentIsAdmin = store.isAdmin()
 
   // Use useMemo to create a stable object that only changes when the underlying data changes
   const authData = useMemo(
@@ -195,6 +213,8 @@ export function useAuthentication() {
       userId: currentUserId,
       name: currentName,
       email: currentEmail,
+      isAdmin: currentIsAdmin,
+      roles: currentRoles,
     }),
     [
       currentUser,
@@ -207,6 +227,8 @@ export function useAuthentication() {
       currentUserId,
       currentName,
       currentEmail,
+      currentIsAdmin,
+      currentRoles,
     ],
   )
 

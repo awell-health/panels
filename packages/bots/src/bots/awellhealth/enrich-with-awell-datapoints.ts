@@ -258,8 +258,11 @@ async function updateTaskWithExtensions(
       `Adding ${nonJsonExtensions.length} non-JSON data point extensions to task`,
     )
     task.extension.push(...nonJsonExtensions)
+
     await medplum.updateResource(task)
-    console.log('Successfully updated task with non-JSON data point extensions')
+    console.log(
+      'Successfully updated task with non-JSON data point extensions and note',
+    )
   } catch (error) {
     console.log(
       'ERROR: Error updating task with data point extensions:',

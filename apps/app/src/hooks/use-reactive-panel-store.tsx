@@ -344,7 +344,13 @@ export class ReactivePanelStore {
       }
 
       // Then sync with backend API
-      await this.storage.updateColumn(panelId, columnId, updates)
+      const updatedColumn = await this.storage.updateColumn(
+        panelId,
+        columnId,
+        updates,
+      )
+
+      this.reactiveStore?.setColumn(updatedColumn)
 
       this.setSaveState(operationId, 'saved')
     } catch (error) {

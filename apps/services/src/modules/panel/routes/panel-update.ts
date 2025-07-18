@@ -42,7 +42,12 @@ export const panelUpdate = async (app: FastifyInstance) => {
 
       if (name) panel.name = name
       if (description !== undefined) panel.description = description
-      if (metadata !== undefined) panel.metadata = metadata
+      // Only overwrite the explicitly provided metadata
+      // This is important as there is no guarantee that the frontend provides all
+      // metadata fields.
+      // Frontend can still erase metadata fields by explicitly setting them to undefined.
+      if (metadata !== undefined)
+        panel.metadata = { ...panel.metadata, ...metadata }
 
       await request.store.em.persistAndFlush(panel)
 

@@ -12,7 +12,7 @@ import {
   useReactiveView,
 } from '@/hooks/use-reactive-data'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
-import type { Panel, View } from '@/types/panel'
+import type { Panel, View, Filter } from '@/types/panel'
 import {
   LayoutGrid,
   Plus,
@@ -21,6 +21,9 @@ import {
   CheckSquare,
   Copy,
   FileText,
+  Edit2Icon,
+  EditIcon,
+  Edit3Icon,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -29,6 +32,7 @@ interface PanelNavigationProps {
   panel: Panel
   selectedViewId?: string
   currentViewType?: 'patient' | 'task'
+  currentFilters?: Filter[]
   onPanelTitleChange?: (newTitle: string) => void
   onViewTitleChange?: (newTitle: string) => void
 }
@@ -39,6 +43,7 @@ export default function PanelNavigation({
   panel,
   selectedViewId,
   currentViewType,
+  currentFilters,
   onPanelTitleChange,
   onViewTitleChange,
 }: PanelNavigationProps) {
@@ -158,6 +163,16 @@ export default function PanelNavigation({
           const patientColumns = columns.filter((col) =>
             col.tags?.includes('panels:patients'),
           )
+
+          // Create columnVisibility with all columns visible
+          const columnVisibility = patientColumns.reduce(
+            (acc, col) => {
+              acc[col.id] = true
+              return acc
+            },
+            {} as Record<string, boolean>,
+          )
+
           newView = await addView(panel.id, {
             name: 'New Patient View',
             panelId: panel.id,
@@ -167,6 +182,7 @@ export default function PanelNavigation({
             metadata: {
               filters: [],
               viewType: 'patient',
+              columnVisibility,
             },
           })
           break
@@ -176,6 +192,16 @@ export default function PanelNavigation({
           const taskColumns = columns.filter((col) =>
             col.tags?.includes('panels:tasks'),
           )
+
+          // Create columnVisibility with all columns visible
+          const columnVisibility = taskColumns.reduce(
+            (acc, col) => {
+              acc[col.id] = true
+              return acc
+            },
+            {} as Record<string, boolean>,
+          )
+
           newView = await addView(panel.id, {
             name: 'New Task View',
             panelId: panel.id,
@@ -185,28 +211,45 @@ export default function PanelNavigation({
             metadata: {
               filters: [],
               viewType: 'task',
+              columnVisibility,
             },
           })
           break
         }
         case 'from-panel': {
-          // Create view from current panel - use panel filters and current view type
+          // Create view from current panel - use current applied filters and current view type
           const viewType = currentViewType || 'patient'
           const relevantColumns = columns.filter((col) =>
             viewType === 'patient'
               ? col.tags?.includes('panels:patients')
               : col.tags?.includes('panels:tasks'),
           )
+
+          // Only include visible columns from the panel
+          const visibleColumns = relevantColumns
+            .filter((col) => col.properties?.display?.visible !== false)
+            .map((col) => col.id)
+
+          // Create columnVisibility metadata based on panel's current visibility
+          const columnVisibility = relevantColumns.reduce(
+            (acc, col) => {
+              acc[col.id] = col.properties?.display?.visible !== false
+              return acc
+            },
+            {} as Record<string, boolean>,
+          )
+
           newView = await addView(panel.id, {
             name: `${panel.name} View`,
             panelId: panel.id,
-            visibleColumns: relevantColumns.map((col) => col.id),
+            visibleColumns,
             createdAt: new Date(),
             isPublished: false,
             metadata: {
-              filters: panel.metadata.filters || [],
+              filters: currentFilters || panel.metadata.filters || [],
               sort: panel.metadata.sort || undefined,
               viewType: viewType,
+              columnVisibility,
             },
           })
           break
@@ -214,6 +257,25 @@ export default function PanelNavigation({
         case 'copy-view': {
           // Copy current view
           if (!currentView) return
+
+          // Ensure columnVisibility exists, create it if needed for backward compatibility
+          let columnVisibility = currentView.metadata.columnVisibility
+          if (!columnVisibility) {
+            const viewType = currentView.metadata.viewType
+            const relevantColumns = columns.filter((col) =>
+              viewType === 'patient'
+                ? col.tags?.includes('panels:patients')
+                : col.tags?.includes('panels:tasks'),
+            )
+            columnVisibility = relevantColumns.reduce(
+              (acc, col) => {
+                acc[col.id] = currentView.visibleColumns.includes(col.id)
+                return acc
+              },
+              {} as Record<string, boolean>,
+            )
+          }
+
           newView = await addView(panel.id, {
             name: `${currentView.name} (copy)`,
             panelId: panel.id,
@@ -222,6 +284,7 @@ export default function PanelNavigation({
             isPublished: false,
             metadata: {
               ...currentView.metadata,
+              columnVisibility,
             },
           })
           break
@@ -286,6 +349,15 @@ export default function PanelNavigation({
     return options.filter((option) => option.available)
   }
 
+  const tabClassesBase =
+    'h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap'
+  const tabClassesEdit = 'bg-slate-50 border-blue-300 [&>div>input]:border-b'
+  const tabClassesSelected =
+    'bg-white border-gray-400 [&>div>span]:font-semibold'
+  const tabClassesNotSelected = 'bg-gray-100 hover:bg-gray-100 border-gray-200'
+  const tabClassesInput =
+    'bg-transparent border-b border-blue-300 focus:outline-none focus:ring-0 p-0 pb-0.5 text-xs'
+
   return (
     <>
       <div className="bg-gray-50 relative pt-4">
@@ -320,13 +392,13 @@ export default function PanelNavigation({
             >
               <div
                 className={`
-                  h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
+                  ${tabClassesBase}
                   ${
                     editingPanel
-                      ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                      ? tabClassesEdit
                       : !selectedViewId
-                        ? 'bg-white border-blue-200'
-                        : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                        ? tabClassesSelected
+                        : tabClassesNotSelected
                   }
                 `}
               >
@@ -349,7 +421,7 @@ export default function PanelNavigation({
                           setEditingPanel(false)
                         }
                       }}
-                      className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-xs"
+                      className={tabClassesInput}
                     />
                     {panelTitle.trim() !== panel.name && (
                       <span
@@ -420,13 +492,13 @@ export default function PanelNavigation({
               >
                 <div
                   className={`
-                    h-9 px-4 relative z-10 flex items-center rounded-t-md border-l border-t border-r whitespace-nowrap
+                    ${tabClassesBase}
                     ${
                       editingViewId === view.id
-                        ? 'bg-slate-50 border-blue-200' // Highlight when editing
+                        ? tabClassesEdit
                         : view.id === selectedViewId
-                          ? 'bg-white border-gray-200'
-                          : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                          ? tabClassesSelected
+                          : tabClassesNotSelected
                     }
                   `}
                 >
@@ -454,8 +526,11 @@ export default function PanelNavigation({
                             setEditingViewId(null)
                           }
                         }}
-                        className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 text-xs"
+                        className={tabClassesInput}
                       />
+                      <span className="-ml-2">
+                        <Edit3Icon className="h-3 w-3 text-blue-500" />
+                      </span>
                       {(viewTitles[view.id] || '').trim() !==
                         (view.name || '') && (
                         <span

@@ -9,6 +9,9 @@ import { Loader2 } from 'lucide-react'
 import { AuthenticationStoreProvider } from '@/hooks/use-authentication'
 import { useEffect, useState } from 'react'
 import { getStytchClient } from '@/lib/stytch-client'
+import { ToastProvider } from '@/contexts/ToastContext'
+import { ToastContainer } from '@/components/ToastContainer'
+import { CaptureWidget } from '@/components/CaptureWidget'
 import type {
   StytchB2BUIClient,
   StytchProjectConfiguration,
@@ -69,7 +72,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           <AuthenticationStoreProvider>
             <MedplumClientProvider>
               <ReactivePanelStoreProvider>
-                {children}
+                <ToastProvider>
+                  {children}
+                  <ToastContainer position="bottom-center" />
+                  <CaptureWidget />
+                </ToastProvider>
               </ReactivePanelStoreProvider>
             </MedplumClientProvider>
           </AuthenticationStoreProvider>

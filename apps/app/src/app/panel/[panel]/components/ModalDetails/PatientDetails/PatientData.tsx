@@ -1,8 +1,8 @@
 import type { FC } from 'react'
-import type { WorklistPatient } from '../../../../../../hooks/use-medplum-store'
+import type { WorklistPatient } from '@/lib/fhir-to-table-data'
 import ExpandableCard from '../StaticContent/ExpandableCard'
 import CardRowItem from '../StaticContent/CardRowItem'
-import { startCase } from 'lodash'
+import { divide, startCase } from 'lodash'
 import StaticContent from '../StaticContent'
 
 interface PatientDataProps {
@@ -20,7 +20,7 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
         </div>
       </ExpandableCard>
       {patient?.address && patient?.address.length > 0 && (
-        <ExpandableCard title="Adress" defaultExpanded={true}>
+        <ExpandableCard title="Address" defaultExpanded={true}>
           <div className="space-y-2 text-sm mt-3">
             {patient?.address?.map(
               (address: { system: string; value: string }, index: number) => (
@@ -30,11 +30,12 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
                   className="mb-2 border-b border-gray-200 pb-2"
                 >
                   {Object.keys(address).map((key) => (
-                    <CardRowItem
-                      key={key}
-                      label={startCase(key)}
-                      value={address[key as keyof typeof address] ?? '-'}
-                    />
+                    <div className="flex justify-between" key={key}>
+                      <span className="text-gray-600">{startCase(key)}</span>
+                      <span className="text-gray-900 font-normal max-w-[60%]">
+                        {address[key as keyof typeof address] ?? '-'}
+                      </span>
+                    </div>
                   ))}
                 </div>
               ),
@@ -46,10 +47,12 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
         <ExpandableCard title="Patient telecom" defaultExpanded={true}>
           <div className="space-y-2 text-sm mt-3">
             {patient?.telecom?.map(
-              (telecom: { system: string; value: string }) => (
+              (telecom: { system: string; value: string; use?: string }) => (
                 <CardRowItem
-                  key={telecom.value}
-                  label={telecom.system}
+                  key={telecom.system + telecom.value + telecom.use}
+                  label={
+                    telecom.system + (telecom.use ? ` [${telecom.use}]` : '')
+                  }
                   value={telecom.value}
                 />
               ),
@@ -61,9 +64,12 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
         <ExpandableCard title="Identifiers" defaultExpanded={true}>
           <div className="space-y-2 text-sm mt-3">
             {patient?.identifier.map(
-              (identifier: { system: string; value: string }) => (
+              (
+                identifier: { system: string; value: string },
+                index: number,
+              ) => (
                 <CardRowItem
-                  key={identifier.value}
+                  key={`${identifier.value}-${index}`}
                   label={identifier.system}
                   value={identifier.value}
                 />
@@ -72,7 +78,7 @@ const PatientData: FC<PatientDataProps> = ({ patient }) => {
           </div>
         </ExpandableCard>
       )}
-      <StaticContent patient={patient} />
+      {patient.extension && <StaticContent patient={patient} />}
     </div>
   )
 }
