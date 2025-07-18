@@ -1,4 +1,6 @@
-const defaultCards = [
+import type { FHIRCard } from '../FhirExpandableCard'
+
+const defaultCards: FHIRCard[] = [
   {
     name: 'Patient Details & Demographics',
     fields: [
@@ -39,7 +41,6 @@ const defaultCards = [
         resourceType: 'Patient',
       },
     ],
-    resourceType: 'Patient',
   },
   {
     name: 'Basic Task Information',
@@ -81,7 +82,6 @@ const defaultCards = [
         resourceType: 'Task',
       },
     ],
-    resourceType: 'Task',
   },
 ]
 

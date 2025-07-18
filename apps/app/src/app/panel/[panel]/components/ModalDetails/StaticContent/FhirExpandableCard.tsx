@@ -8,17 +8,18 @@ import type {
 import type { FC } from 'react'
 import type { Observation } from '@medplum/fhirtypes'
 
+export interface FHIRCard {
+  name: string
+  fields: {
+    label: string
+    key: string
+    fhirPath: string
+    resourceType: string
+  }[]
+}
 interface Props {
   searchQuery: string
-  card: {
-    name: string
-    fields: {
-      label: string
-      key: string
-      fhirPath: string
-      resourceType?: string
-    }[]
-  }
+  card: FHIRCard
   expanded: boolean
   resources: {
     Task?: WorklistTask

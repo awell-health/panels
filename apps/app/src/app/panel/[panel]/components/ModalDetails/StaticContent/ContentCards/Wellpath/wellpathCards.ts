@@ -1,4 +1,6 @@
-export const wellpathCards = [
+import type { FHIRCard } from '../../FhirExpandableCard'
+
+export const wellpathCards: FHIRCard[] = [
   {
     name: 'Patient demographics',
     fields: [
@@ -130,6 +132,7 @@ export const wellpathCards = [
       {
         label: 'Provider name',
         key: 'provider_name',
+        resourceType: 'Patient',
         fhirPath:
           "extension.where(url = 'https://awellhealth.com/fhir/StructureDefinition/awell-data-points')" +
           ".extension.where(url = 'provider_name').valueString",

@@ -1,4 +1,6 @@
-export const waypointCards = [
+import type { FHIRCard } from '../../FhirExpandableCard'
+
+export const waypointCards: FHIRCard[] = [
   {
     name: 'Patient demographics',
     fields: [

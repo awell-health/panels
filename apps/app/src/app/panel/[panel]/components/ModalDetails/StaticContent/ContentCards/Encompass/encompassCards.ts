@@ -1,4 +1,6 @@
-const encompassCards = [
+import type { FHIRCard } from '../../FhirExpandableCard'
+
+const encompassCards: FHIRCard[] = [
   {
     name: 'Patient Demographics',
     fields: [
@@ -57,7 +59,12 @@ const encompassCards = [
         resourceType: 'Patient',
         fhirPath: "telecom.where(system='email').value",
       },
-      { label: 'Street', key: 'street', fhirPath: 'address.line.first()' },
+      {
+        label: 'Street',
+        key: 'street',
+        fhirPath: 'address.line.first()',
+        resourceType: 'Patient',
+      },
       {
         label: 'City',
         key: 'city',
@@ -95,7 +102,6 @@ const encompassCards = [
 
   {
     name: 'Discharge & Hospital Stay Summary',
-    resourceType: 'Task',
     fields: [
       {
         label: 'Admit date',
@@ -128,6 +134,7 @@ const encompassCards = [
       {
         label: 'Facility',
         key: 'facility',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='facility').valueString",
       },
