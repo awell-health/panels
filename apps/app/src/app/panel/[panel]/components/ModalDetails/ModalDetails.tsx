@@ -7,6 +7,7 @@ import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
+import type { Identifier } from '@medplum/fhirtypes'
 
 interface ModalDetailsProps {
   patient?: WorklistPatient
@@ -64,10 +65,6 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
     }
   }, [tasks])
 
-  // Get patient name and DOB for header
-  const patientName = currentPatient?.name || ''
-  const dateOfBirth = currentPatient?.birthDate || ''
-
   const handleDeleteRequest = async () => {
     if (!currentPatient) return
 
@@ -116,14 +113,23 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
     }
   }, [onClose])
 
+  // Get patient name and DOB for header
+  const patientName = currentPatient?.name || ''
+  const dateOfBirth = currentPatient?.birthDate || ''
+  const mrn = currentPatient?.identifier?.find(
+    (identifier: Identifier) =>
+      identifier.system === 'https://www.encompasshealth.com',
+  )?.value
+  const gender = currentPatient?.gender || ''
+
   return (
-    <dialog className="modal modal-open">
+    <dialog className="modal modal-open text-xs">
       <div
         className="modal-box max-w-[95vw] min-h-[70vh] max-h-[80vh] p-0 flex flex-col"
         ref={modalRef}
       >
         <div className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2 text-sm text-gray-700 pl-4">
+          <div className="flex items-center gap-2 text-gray-700 pl-4">
             <User className="h-5 w-5" />
             {!currentPatient ? (
               <span className="font-medium text-red-600">
@@ -140,21 +146,37 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
             ) : (
               <span className="font-medium">{patientName}</span>
             )}
-            {currentPatient && dateOfBirth && (
+            {currentPatient && (
               <>
-                <span>·</span>
-                <span>DOB {dateOfBirth}</span>
+                {dateOfBirth && (
+                  <>
+                    <span>·</span>
+                    <span>DOB {dateOfBirth}</span>
+                  </>
+                )}
+                {mrn && (
+                  <>
+                    <span>·</span>
+                    <span>MRN {mrn}</span>
+                  </>
+                )}
+                {gender && (
+                  <>
+                    <span>·</span>
+                    <span>Gender {gender}</span>
+                  </>
+                )}
+                {currentPatient && !selectedTask && isAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteRequest}
+                    className="btn btn-outline btn-error btn-xs ml-2"
+                  >
+                    <Trash2Icon className="w-4 h-4" />
+                    Delete Patient & Tasks
+                  </button>
+                )}
               </>
-            )}
-            {currentPatient && !selectedTask && isAdmin && (
-              <button
-                type="button"
-                onClick={handleDeleteRequest}
-                className="btn btn-outline btn-error btn-xs ml-2"
-              >
-                <Trash2Icon className="w-4 h-4" />
-                Delete Patient & Tasks
-              </button>
             )}
           </div>
           <div className="flex items-center gap-2">

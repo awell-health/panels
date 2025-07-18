@@ -1,6 +1,6 @@
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import type { WorklistTask } from '@/lib/fhir-to-table-data'
-import { Loader2 } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 import NotesTimeline, { type TimelineDatItem } from '../NotesTimeline'
 
@@ -81,18 +81,18 @@ const TaskComment = ({ task }: TaskCommentProps) => {
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           placeholder="Add a comment..."
-          className="w-full p-3 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-2 border border-gray-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
           rows={3}
         />
         <button
           type="button"
           onClick={handleSubmitComment}
           disabled={!newComment.trim() || isSubmitting}
-          className="w-full bg-blue-500 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
+          className="w-full bg-blue-500 text-white py-2 rounded-md text-xs hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
         >
           {isSubmitting ? (
             <span className="flex items-center gap-1 w-full justify-center">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LoaderCircle className="h-4 w-4 animate-spin" />
               Saving...
             </span>
           ) : (

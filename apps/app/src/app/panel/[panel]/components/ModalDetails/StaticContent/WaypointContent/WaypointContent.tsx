@@ -10,6 +10,7 @@ import { getCardSummary, getExtensionValue } from '../utils'
 import { useEffect, useState } from 'react'
 import type { Composition, Observation } from '@medplum/fhirtypes'
 import HighlightText from '../HighlightContent'
+import RenderValue from '../RenderValue'
 
 const WaypointContent: React.FC<{
   task: WorklistTask
@@ -18,7 +19,7 @@ const WaypointContent: React.FC<{
 }> = ({ task, searchQuery, expanded }) => {
   const { patient } = task
 
-  const { getPatientObservations } = useMedplumStore()
+  const { getPatientObservations, getPatientCompositions } = useMedplumStore()
 
   const showPatientDemographics = searchQuery
     ? patient?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,6 +41,14 @@ const WaypointContent: React.FC<{
     fetchObservations()
   }, [patient, getPatientObservations])
 
+  useEffect(() => {
+    const fetchCompositions = async () => {
+      const compositions = await getPatientCompositions(patient?.id ?? '')
+      setCompositions(compositions)
+    }
+    fetchCompositions()
+  }, [patient, getPatientCompositions])
+
   const ckdStage = observations.find(
     (observation) => observation.code?.text === 'CKD Stage',
   )
@@ -54,7 +63,7 @@ const WaypointContent: React.FC<{
           defaultExpanded={expanded}
           summary={`${patient?.name}, ${patient?.birthDate}${dialysisProvider ? `, ${dialysisProvider}` : ''}`}
         >
-          <div className="space-y-2 text-sm mt-3">
+          <div className="space-y-2 mt-3">
             <CardRowItem
               label="Full name"
               value={get(patient, 'name')}
@@ -127,6 +136,21 @@ const WaypointContent: React.FC<{
           </div>
         </ExpandableCard>
       ))}
+
+      {compositions.map((composition) =>
+        composition.section?.map((section) => (
+          <ExpandableCard
+            key={`${composition.id}-${section.id}-${section.title}`}
+            title={`${composition.title} - ${section.title}`}
+            defaultExpanded={expanded}
+          >
+            <RenderValue
+              value={section.text?.div ?? ''}
+              searchQuery={searchQuery}
+            />
+          </ExpandableCard>
+        )),
+      )}
     </>
   )
 }

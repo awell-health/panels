@@ -53,7 +53,7 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
 
     const renderKeyValue = (key: string, value: string) => {
       return (
-        <div>
+        <div key={key}>
           <strong>
             <RenderWithCopy text={key}>
               <HighlightText text={key} searchQuery={searchQuery} />
@@ -87,6 +87,45 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
     )
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  const renderTable = (list: any[]) => {
+    if (list.length === 0) {
+      return '-'
+    }
+
+    const columns = Object.keys(list[0])
+
+    return (
+      <div className="overflow-x-auto w-full max-h-[500px] overflow-y-auto">
+        <table className="table table-xs table-pin-rows table-zebra">
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column} className="text-xs">
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((item, index) => (
+              <tr key={`${item.id}-${index}`}>
+                {columns.map((column) => (
+                  <td key={column}>
+                    <RenderValue
+                      value={item[column]}
+                      searchQuery={searchQuery}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
   if (value === '[object Object]') {
     return 'unknown'
   }
@@ -107,6 +146,11 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
   if (isJSON(value as string)) {
     const jsonValue = JSON.parse(value as string)
     const jsonValueKeys = Object.keys(jsonValue)
+
+    // is array after parsing json
+    if (Array.isArray(jsonValue)) {
+      return renderTable(jsonValue)
+    }
 
     if (jsonValueKeys.length === 0) {
       return <RenderValue value={jsonValue} searchQuery={searchQuery} />
@@ -133,7 +177,7 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
 
     return (
       <div
-        className="text-sm "
+        className="text-xs"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
         dangerouslySetInnerHTML={{
           __html: htmlContent,

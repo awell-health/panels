@@ -1,6 +1,5 @@
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
-import { Loader2, Search } from 'lucide-react'
-import { Fragment, useState, useEffect } from 'react'
+import { Fragment, useState } from 'react'
 import { RenderWithCopy } from './RenderWithCopy'
 import ExpandableCard from './ExpandableCard'
 import WellpathContent from './WellpathContent/WellpathContent'
@@ -10,7 +9,6 @@ import EncompassContent from './EncompassContent/EncompassContent'
 import RenderValue from './RenderValue'
 import SearchInput from './SearchInput'
 import WaypointContent from './WaypointContent'
-import { take } from 'lodash'
 
 interface StaticContentProps {
   task?: WorklistTask
