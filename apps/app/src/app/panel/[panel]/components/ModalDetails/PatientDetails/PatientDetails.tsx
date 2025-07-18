@@ -1,7 +1,6 @@
 import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
 import { ChevronRightIcon } from 'lucide-react'
 import TaskStatusBadge from '../TaskDetails/TaskStatusBadge'
-import PatientData from './PatientData'
 import PatientConnectorsSection from '../TaskDetails/PatientConnectorsSection'
 
 import NotesTimeline, { type TimelineDatItem } from '../NotesTimeline'
@@ -59,7 +58,7 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
         <div
           key={view}
           className={`flex-1  overflow-y-auto p-2 border-r border-gray-200 ${
-            view === 'content' ? 'w-[40%]' : 'w-[30%]'
+            view === 'content' ? 'w-[36%]' : 'w-[32%]'
           }`}
         >
           <div className="h-full p-2">

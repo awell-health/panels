@@ -71,20 +71,33 @@ const FhirExpandableCard: FC<Props> = ({
     )
   }
 
-  const containString = card.fields.some((field) => {
-    const isInLabels = field.label
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
+  if (searchQuery) {
+    const containString = card.fields.some((field) => {
+      const isInLabels = field.label
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
 
-    const resourceItem = resources[field.resourceType as keyof typeof resources]
+      const resourceItem =
+        resources[field.resourceType as keyof typeof resources]
 
-    const isInValue = getFieldResourceValue(resourceItem, field.fhirPath)
-      ?.toLowerCase()
-      .includes(searchQuery.toLowerCase())
-    return isInLabels || isInValue
+      const isInValue = getFieldResourceValue(resourceItem, field.fhirPath)
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase())
+      return isInLabels || isInValue
+    })
+
+    if (!containString) {
+      return <></>
+    }
+  }
+
+  const isEmptyBox = card.fields.every((field) => {
+    const resourceType = field.resourceType
+    const rowResource = resources[resourceType as keyof typeof resources]
+    return !rowResource
   })
 
-  if (!containString) {
+  if (isEmptyBox) {
     return <></>
   }
 

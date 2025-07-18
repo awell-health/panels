@@ -53,8 +53,6 @@ const ContentCards: React.FC<Props> = ({
       contentCards = [...defaultCards]
   }
 
-  console.log(organizationSlug)
-
   const { getPatientObservations, getPatientCompositions } = useMedplumStore()
   // const [observations, setObservations] = useState<Observation[]>([])
   const [compositions, setCompositions] = useState<Composition[]>([])

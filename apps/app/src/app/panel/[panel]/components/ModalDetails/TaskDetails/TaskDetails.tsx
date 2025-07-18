@@ -19,7 +19,7 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
         <div
           key={view}
           className={`overflow-y-auto p-2 border-r border-gray-200 ${
-            view === 'content' ? 'w-[40%]' : 'w-[30%]'
+            view === 'content' ? 'w-[36%]' : 'w-[32%]'
           }`}
         >
           <div className="h-full">
