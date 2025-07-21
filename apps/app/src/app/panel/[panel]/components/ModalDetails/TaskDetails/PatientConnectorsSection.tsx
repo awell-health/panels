@@ -44,26 +44,22 @@ const PatientConnectorsSection = ({
   }, [patient])
 
   return (
-    <div className="bg-gray-50 p-3 rounded">
-      <div className="space-y-2">
-        {connectors.length > 0 ? (
-          connectors.map((connector, index) => (
-            <a
-              key={`patient-connector-${connector.code}-${index}`}
-              href={connector.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full bg-blue-400 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-500 transition-colors duration-200 text-left block"
-            >
-              Open patient record in {connector.name}
-            </a>
-          ))
-        ) : (
-          <p className="text-xs text-gray-500">
-            No patient connectors available
-          </p>
-        )}
-      </div>
+    <div className="space-y-2 pb-4">
+      {connectors.length > 0 ? (
+        connectors.map((connector, index) => (
+          <a
+            key={`patient-connector-${connector.code}-${index}`}
+            href={connector.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full bg-blue-400 text-white p-2 rounded-md text-xs font-medium hover:bg-blue-500 transition-colors duration-200 text-left block"
+          >
+            Open patient record in {connector.name}
+          </a>
+        ))
+      ) : (
+        <p className="text-xs text-gray-500">No patient connectors available</p>
+      )}
     </div>
   )
 }

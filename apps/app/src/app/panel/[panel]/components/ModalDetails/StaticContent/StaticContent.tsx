@@ -2,13 +2,11 @@ import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { Fragment, useState } from 'react'
 import { RenderWithCopy } from './RenderWithCopy'
 import ExpandableCard from './ExpandableCard'
-import WellpathContent from './WellpathContent/WellpathContent'
 import HighlightText from './HighlightContent'
 import { useAuthentication } from '../../../../../../hooks/use-authentication'
-import EncompassContent from './EncompassContent/EncompassContent'
 import RenderValue from './RenderValue'
 import SearchInput from './SearchInput'
-import WaypointContent from './WaypointContent'
+import ContentCards from './ContentCards/ContentCards'
 
 interface StaticContentProps {
   task?: WorklistTask
@@ -25,6 +23,8 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
   const [expandAll, setExpandAll] = useState({
     wellpath: true,
     encompass: true,
+    waypoint: true,
+    default: true,
     extension: false,
   })
 
@@ -68,7 +68,7 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
               summary={`Show ${item?.extension?.length} items`}
             >
               <div className="flex flex-col gap-2">
-                <div className="text-sm text-gray-700 space-y-2 mt-3">
+                <div className="text-gray-700 space-y-2 mt-3">
                   {item?.extension?.map(
                     (
                       ext: { url: string; valueString: string },
@@ -96,30 +96,6 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
       )
     }
   }
-  const DevData = () => (
-    <>
-      {task && (
-        <>
-          <WellpathContent
-            task={task}
-            searchQuery={searchQuery}
-            expanded={expandAll.wellpath}
-          />
-          <EncompassContent
-            task={task}
-            searchQuery={searchQuery}
-            expanded={expandAll.encompass}
-          />
-          <WaypointContent
-            task={task}
-            searchQuery={searchQuery}
-            expanded={expandAll.encompass}
-          />
-        </>
-      )}
-    </>
-  )
-
   const extension = task?.extension ?? patient?.extension ?? []
 
   const handleExpandAll = () => {
@@ -127,12 +103,16 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
       setExpandAll({
         wellpath: false,
         encompass: false,
+        waypoint: false,
+        default: false,
         extension: false,
       })
     } else {
       setExpandAll({
         wellpath: true,
         encompass: true,
+        waypoint: true,
+        default: true,
         extension: true,
       })
     }
@@ -153,33 +133,12 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
       </SearchInput>
 
       <div className="space-y-3">
-        {task && (
-          <>
-            {organizationSlug === 'wellpath' && (
-              <WellpathContent
-                task={task}
-                searchQuery={searchQuery}
-                expanded={expandAll.wellpath}
-              />
-            )}
-            {organizationSlug === 'encompass-health' && (
-              <EncompassContent
-                task={task}
-                searchQuery={searchQuery}
-                expanded={expandAll.encompass}
-              />
-            )}
-            {organizationSlug === 'waypoint' && (
-              <WaypointContent
-                task={task}
-                searchQuery={searchQuery}
-                expanded={expandAll.encompass}
-              />
-            )}
-
-            {organizationSlug === 'awell-dev' && <DevData />}
-          </>
-        )}
+        <ContentCards
+          task={task}
+          patient={task?.patient ?? patient}
+          searchQuery={searchQuery}
+          expanded={expandAll.encompass}
+        />
         {renderExtensionData(extension)}
       </div>
     </div>
