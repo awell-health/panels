@@ -6,7 +6,7 @@ import {
 } from '@/app/actions/ai-chat'
 import AIConversationDrawer from '@/components/AIConversationDrawer'
 import { useDrawer } from '@/contexts/DrawerContext'
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { logger } from '@/lib/logger'
 import type { Column, ColumnChangesResponse, Panel } from '@/types/panel'
 import { useCallback, useEffect, useMemo } from 'react'

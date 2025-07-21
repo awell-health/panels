@@ -1,4 +1,4 @@
-import type { WorklistPatient } from '@/hooks/use-medplum-store'
+import type { WorklistPatient } from '@/lib/fhir-to-table-data'
 import { useEffect, useState } from 'react'
 
 interface PatientConnectorsSectionProps {

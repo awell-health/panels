@@ -13,6 +13,7 @@ import {
 import type { StorageAdapter } from '@/lib/storage/types'
 import { useAuthentication } from './use-authentication'
 import { logger } from '../lib/logger'
+import { Loader2 } from 'lucide-react'
 
 export class ReactivePanelStore {
   private storage: StorageAdapter | null = null
@@ -613,7 +614,10 @@ export function ReactivePanelStoreProvider({
   if (!store || !isInitialized) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
+        <Loader2
+          className="h-8 w-8 text-blue-500 animate-spin mb-2"
+          aria-label="Setting up connections for Panels..."
+        />
       </div>
     )
   }

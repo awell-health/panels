@@ -16,8 +16,19 @@ import type {
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type ResourceHandler = (resource: any) => void
 
-// Data store class to handle all Medplum interactions
-export class MedplumStore {
+// Pagination interfaces for progressive loading
+export interface PaginationOptions {
+  pageSize?: number
+  lastUpdated?: string // cursor for pagination
+}
+
+export interface PaginatedResult<T> {
+  data: T[]
+  hasMore: boolean
+  nextCursor?: string
+  totalCount?: number // Total count from FHIR bundle
+}
+export class MedplumStoreClient {
   private client: MedplumClient
   private socketsBaseUrl: string
   private initialized = false
@@ -123,6 +134,8 @@ export class MedplumStore {
         } else {
           //console.log("Trying to handle resource", resourceType)
           // Call all handlers for this resource type
+          console.log('Bundle received', resourceType)
+
           const handlers = this.resourceHandlers.get(resourceType)
           if (handlers) {
             for (const handler of handlers) {
@@ -198,6 +211,84 @@ export class MedplumStore {
       return (bundle.entry || []).map((entry) => entry.resource as Task)
     } catch (error) {
       console.error('Error fetching tasks:', error)
+      throw error
+    }
+  }
+
+  async getPatientsPaginated(
+    options: PaginationOptions = {},
+  ): Promise<PaginatedResult<Patient>> {
+    try {
+      const pageSize = options.pageSize || 1000
+
+      const searchParams: Record<string, string> = {
+        _count: String(pageSize),
+        _sort: '-_lastUpdated',
+      }
+
+      if (options.lastUpdated) {
+        searchParams._lastUpdated = `lt${options.lastUpdated}`
+      }
+
+      const bundle = await this.client.search('Patient', searchParams)
+
+      const data = (bundle.entry || []).map(
+        (entry) => entry.resource as Patient,
+      )
+      const hasMore = data.length === pageSize
+
+      let nextCursor: string | undefined
+      if (hasMore && data.length > 0) {
+        const lastRecord = data[data.length - 1]
+        nextCursor = lastRecord.meta?.lastUpdated
+      }
+
+      return {
+        data,
+        hasMore,
+        nextCursor,
+        totalCount: bundle.total,
+      }
+    } catch (error) {
+      console.error('Error fetching paginated patients:', error)
+      throw error
+    }
+  }
+
+  async getTasksPaginated(
+    options: PaginationOptions = {},
+  ): Promise<PaginatedResult<Task>> {
+    try {
+      const pageSize = options.pageSize || 1000
+
+      const searchParams: Record<string, string> = {
+        _count: String(pageSize),
+        _sort: '-_lastUpdated',
+      }
+
+      if (options.lastUpdated) {
+        searchParams._lastUpdated = `lt${options.lastUpdated}`
+      }
+
+      const bundle = await this.client.search('Task', searchParams)
+
+      const data = (bundle.entry || []).map((entry) => entry.resource as Task)
+      const hasMore = data.length === pageSize
+
+      let nextCursor: string | undefined
+      if (hasMore && data.length > 0) {
+        const lastRecord = data[data.length - 1]
+        nextCursor = lastRecord.meta?.lastUpdated
+      }
+
+      return {
+        data,
+        hasMore,
+        nextCursor,
+        totalCount: bundle.total,
+      }
+    } catch (error) {
+      console.error('Error fetching paginated tasks:', error)
       throw error
     }
   }
@@ -372,6 +463,55 @@ export class MedplumStore {
       throw error
     }
   }
-}
 
-// Export a singleton instance
+  async getPatientsFromReferences(patientRefs: string[]): Promise<Patient[]> {
+    const uniqueRefs = [...new Set(patientRefs)]
+
+    if (uniqueRefs.length === 0) {
+      return []
+    }
+
+    const bundle: Bundle = {
+      resourceType: 'Bundle',
+      type: 'batch',
+      entry: uniqueRefs.map((ref) => ({
+        request: {
+          method: 'GET',
+          url: ref,
+        },
+      })),
+    }
+    const response = (await this.client.executeBatch(bundle)) as Bundle<Patient>
+    return (response.entry ?? []).map((e) => e.resource as Patient)
+  }
+
+  async getTasksForPatients(patientIDs: string[]): Promise<Task[]> {
+    const uniqueIDs = [...new Set(patientIDs)]
+
+    if (uniqueIDs.length === 0) {
+      return []
+    }
+
+    const bundle: Bundle = {
+      resourceType: 'Bundle',
+      type: 'batch',
+      entry: uniqueIDs.map((id) => ({
+        request: {
+          method: 'GET',
+          url: `Task?patient=Patient/${id}`,
+        },
+      })),
+    }
+    const response = (await this.client.executeBatch(bundle)) as Bundle
+
+    const tasks = (response.entry ?? [])
+      .filter((entry) => entry.resource?.resourceType === 'Bundle')
+      .flatMap((entry) => {
+        const taskBundle = entry.resource as Bundle
+        return (taskBundle.entry ?? [])
+          .map((e) => e.resource as Task)
+          .filter((task) => task !== undefined)
+      })
+    return tasks
+  }
+}

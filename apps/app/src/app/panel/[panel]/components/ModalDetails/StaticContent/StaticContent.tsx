@@ -1,4 +1,4 @@
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { Fragment, useState } from 'react'
 import { RenderWithCopy } from './RenderWithCopy'
 import ExpandableCard from './ExpandableCard'

@@ -1,8 +1,4 @@
-import {
-  useMedplumStore,
-  type WorklistPatient,
-  type WorklistTask,
-} from '@/hooks/use-medplum-store'
+import { useMedplumStore } from '@/hooks/use-medplum-store'
 import FhirExpandableCard from '../FhirExpandableCard'
 import { useEffect, useState } from 'react'
 import type { Composition } from '@medplum/fhirtypes'
@@ -13,6 +9,7 @@ import { useAuthentication } from '../../../../../../../hooks/use-authentication
 import defaultCards from './defaultCards'
 import { waypointCards } from './Waypoint/waypointCards'
 import encompassCards from './Encompass/encompassCards'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 
 interface Props {
   task?: WorklistTask

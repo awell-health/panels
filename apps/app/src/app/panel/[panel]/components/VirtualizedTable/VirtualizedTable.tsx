@@ -69,6 +69,9 @@ interface VirtualizedTableProps {
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   onRowClick: (row: Record<string, any>) => void
   handleDragEnd?: (event: DragEndEvent) => void
+  hasMore?: boolean
+  onLoadMore?: () => void
+  isLoadingMore?: boolean
 }
 
 export function VirtualizedTable({
@@ -93,6 +96,9 @@ export function VirtualizedTable({
   currentUserName,
   onRowClick,
   handleDragEnd,
+  hasMore,
+  onLoadMore,
+  isLoadingMore,
 }: VirtualizedTableProps) {
   // Drag and drop state
   const [activeColumn, setActiveColumn] = useState<Column | null>(null)
@@ -390,6 +396,27 @@ export function VirtualizedTable({
     [handleRowHover],
   )
 
+  // Handle when items are rendered to detect when we're near the end
+  const handleItemsRendered = useCallback(
+    ({ overscanRowStopIndex }: { overscanRowStopIndex: number }) => {
+      if (!onLoadMore || !hasMore || isLoadingMore || isLoading) return
+
+      const totalRows = filteredAndSortedData.length
+      const threshold = 5
+
+      if (overscanRowStopIndex >= totalRows - threshold) {
+        onLoadMore()
+      }
+    },
+    [
+      onLoadMore,
+      hasMore,
+      isLoadingMore,
+      isLoading,
+      filteredAndSortedData.length,
+    ],
+  )
+
   // Prepare data for rows - uses filtered and sorted data
   const rowData = useMemo(
     () => ({
@@ -521,6 +548,7 @@ export function VirtualizedTable({
                     ...rowData,
                   }}
                   innerElementType={CustomInnerElement}
+                  onItemsRendered={handleItemsRendered}
                 >
                   {VirtualizedCell}
                 </VariableSizeGrid>

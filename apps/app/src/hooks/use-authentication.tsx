@@ -165,7 +165,7 @@ export function AuthenticationStoreProvider({
       <div className="flex justify-center items-center h-screen">
         <Loader2
           className="h-8 w-8 text-blue-500 animate-spin mb-2"
-          aria-label="Loading Panel"
+          aria-label="Initializing Panels"
         />
       </div>
     )

@@ -1,9 +1,7 @@
 import { useOptimistic, useTransition } from 'react'
 import { useAuthentication } from '../../../../../../hooks/use-authentication'
-import {
-  useMedplumStore,
-  type WorklistTask,
-} from '../../../../../../hooks/use-medplum-store'
+import { useMedplumStore } from '@/hooks/use-medplum-store'
+import type { WorklistTask } from '@/lib/fhir-to-table-data'
 import { LoaderCircle } from 'lucide-react'
 import { cn } from '../../../../../../lib/utils'
 

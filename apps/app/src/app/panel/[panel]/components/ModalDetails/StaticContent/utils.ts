@@ -1,10 +1,7 @@
 import { take } from 'lodash'
 import { useEffect, useState } from 'react'
 import { isValid, parseISO } from 'date-fns'
-import type {
-  WorklistPatient,
-  WorklistTask,
-} from '../../../../../../hooks/use-medplum-store'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 
 export function calculateAge(dateString: string): number {
   const birthDate = new Date(dateString)

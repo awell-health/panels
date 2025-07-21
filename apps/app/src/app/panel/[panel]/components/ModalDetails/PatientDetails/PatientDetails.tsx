@@ -1,4 +1,4 @@
-import type { WorklistPatient, WorklistTask } from '@/hooks/use-medplum-store'
+import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { ChevronRightIcon } from 'lucide-react'
 import TaskStatusBadge from '../TaskDetails/TaskStatusBadge'
 import PatientConnectorsSection from '../TaskDetails/PatientConnectorsSection'

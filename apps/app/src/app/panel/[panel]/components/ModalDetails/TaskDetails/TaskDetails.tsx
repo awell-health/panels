@@ -1,4 +1,4 @@
-import type { WorklistTask } from '@/hooks/use-medplum-store'
+import type { WorklistTask } from '@/lib/fhir-to-table-data'
 import TaskComments from './TaskComments'
 import FramePanel from '../FramePanel'
 import StaticContent from '../StaticContent'
