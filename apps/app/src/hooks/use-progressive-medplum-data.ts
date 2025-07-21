@@ -46,7 +46,6 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
 
   const isInitialLoadRef = useRef(false)
   const abortControllerRef = useRef<AbortController | null>(null)
-  const isLoadMoreInProgressRef = useRef(false)
   const previousResourceTypeRef = useRef<T>(resourceType)
 
   const {
@@ -219,17 +218,10 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     // Don't load more if Medplum is still loading
     if (isMedplumLoading) return
 
-    if (
-      isLoadingMore ||
-      !hasMore ||
-      !nextCursor ||
-      data.length >= maxRecords ||
-      isLoadMoreInProgressRef.current
-    )
+    if (isLoadingMore || !hasMore || !nextCursor || data.length >= maxRecords)
       return
 
     try {
-      isLoadMoreInProgressRef.current = true
       setIsLoadingMore(true)
       setError(null)
 
@@ -252,7 +244,6 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       )
     } finally {
       setIsLoadingMore(false)
-      isLoadMoreInProgressRef.current = false
     }
   }, [
     isMedplumLoading,

@@ -18,6 +18,7 @@ import type {
   Practitioner,
   Task,
 } from '@medplum/fhirtypes'
+import { Loader2 } from 'lucide-react'
 import {
   createContext,
   useContext,
@@ -380,6 +381,17 @@ export function MedplumClientProvider({
     getTasksPaginated,
     getPatientsFromReferences,
     getTasksForPatients,
+  }
+
+  if (!medplumClientId || !medplumSecret || isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2
+          className="h-8 w-8 text-blue-500 animate-spin mb-2"
+          aria-label="Setting up connections for Panels..."
+        />
+      </div>
+    )
   }
 
   return (
