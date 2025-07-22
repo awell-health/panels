@@ -14,7 +14,7 @@ interface PatientDetailsProps {
 }
 
 const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
-  const VIEWS = ['data', 'content', 'timeline']
+  const VIEWS = ['content', 'tasks', 'timeline']
   const { tasks } = useMedplumStore()
 
   // State for patient-specific tasks
@@ -57,12 +57,12 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
       {VIEWS.map((view) => (
         <div
           key={view}
-          className={`flex-1  overflow-y-auto p-2 border-r border-gray-200 ${
+          className={`flex-1 overflow-y-auto p-2 border-r border-gray-200 ${
             view === 'content' ? 'w-[36%]' : 'w-[32%]'
           }`}
         >
-          <div className="h-full p-2">
-            {view === 'data' && (
+          <div className="h-ful p-2">
+            {view === 'content' && (
               <div>
                 <StaticContent patient={patient} />
                 <div className="mt-4">
@@ -77,7 +77,7 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
                 timelineItems={timelineItems}
               />
             )}
-            {view === 'content' && (
+            {view === 'tasks' && (
               <div>
                 <div className="font-medium text-gray-600 mb-2">
                   Tasks list:

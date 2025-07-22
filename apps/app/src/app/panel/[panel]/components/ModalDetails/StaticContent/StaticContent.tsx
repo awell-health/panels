@@ -14,7 +14,6 @@ interface StaticContentProps {
 }
 
 const StaticContent = ({ task, patient }: StaticContentProps) => {
-  const { organizationSlug } = useAuthentication()
   const getTitle = (url: string) => {
     return url?.split('/').pop()?.toUpperCase()
   }
