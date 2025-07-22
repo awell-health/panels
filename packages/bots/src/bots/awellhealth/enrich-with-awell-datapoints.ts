@@ -38,6 +38,10 @@ const GET_DATA_POINT_DEFINITIONS_QUERY = `
       data_point_definitions {
         id
         title
+        possibleValues {
+          value
+          label
+        }
       }
     }
   }
@@ -58,9 +62,15 @@ const GET_DATA_POINT_QUERY = `
   }
 `
 
+interface PossibleValue {
+  value: string
+  label: string
+}
+
 interface DataPointDefinition {
   id: string
   title: string
+  possibleValues?: PossibleValue[]
 }
 
 interface DataPoint {
@@ -213,12 +223,49 @@ function createDataPointExtensions(
         return null
       }
 
-      return {
-        url: definition.title,
-        valueString: value,
+      // Check if this data point definition has possible values
+      if (definition.possibleValues && definition.possibleValues.length > 0) {
+        // Find the matching possible value to get the label
+        const matchingPossibleValue = definition.possibleValues.find(
+          (pv) => pv.value === value,
+        )
+
+        if (matchingPossibleValue) {
+          // Create two extensions: one for the value and one for the label
+          return [
+            {
+              url: definition.title,
+              valueString: value,
+            },
+            {
+              url: `${definition.title}_label`,
+              valueString: matchingPossibleValue.label,
+            },
+          ]
+        }
+        // Value doesn't match any possible value, just return the value extension
+        console.log(
+          `WARNING: Value "${value}" for data point "${definition.title}" doesn't match any possible values`,
+        )
+        return [
+          {
+            url: definition.title,
+            valueString: value,
+          },
+        ]
       }
+      // No possible values, return single extension
+      return [
+        {
+          url: definition.title,
+          valueString: value,
+        },
+      ]
     })
-    .filter((ext): ext is { url: string; valueString: string } => ext !== null)
+    .filter(
+      (ext): ext is { url: string; valueString: string }[] => ext !== null,
+    )
+    .flat() // Flatten the array of arrays into a single array
 
   console.log(`Created ${extensions.length} valid data point extensions`)
   return [
