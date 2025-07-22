@@ -348,7 +348,12 @@ export class MedplumStoreClient {
     return token
   }
 
-  async addNoteToTask(taskId: string, notes: string): Promise<Task> {
+  async addNoteToTask(
+    taskId: string,
+    notes: string,
+    authorId: string,
+    authorName: string,
+  ): Promise<Task> {
     try {
       const task = await this.client.readResource('Task', taskId)
 
@@ -360,6 +365,10 @@ export class MedplumStoreClient {
           {
             text: notes,
             time: new Date().toISOString(),
+            authorReference: {
+              reference: `Practitioner/${authorId}`,
+            },
+            authorString: authorName,
           },
         ],
       }
