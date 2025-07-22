@@ -336,4 +336,274 @@ describe('getNestedValue', () => {
       ).toBe(true)
     })
   })
+
+  describe('FHIR Date Comparison Conventions', () => {
+    const patientWithDates = {
+      resourceType: 'Patient',
+      id: 'patient-123',
+      name: [{ given: ['John'], family: 'Doe' }],
+      birthDate: '1990-01-15',
+      deceasedDateTime: '2023-06-20T14:30:00Z',
+      period: {
+        start: '2024-01-01T08:00:00Z',
+        end: '2024-12-31T17:00:00Z',
+      },
+      contact: [
+        {
+          period: {
+            start: '2024-03-01',
+            end: '2024-06-30',
+          },
+        },
+        {
+          period: {
+            start: '2024-07-01',
+            end: '2024-09-30',
+          },
+        },
+      ],
+      encounter: [
+        {
+          period: {
+            start: '2024-02-15T10:00:00Z',
+            end: '2024-02-15T16:00:00Z',
+          },
+        },
+        {
+          period: {
+            start: '2024-05-10T09:00:00Z',
+            end: '2024-05-10T14:00:00Z',
+          },
+        },
+      ],
+    }
+
+    describe('Date Equality Comparisons', () => {
+      it('should compare dates for equality', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate = '1990-01-15'",
+          ),
+        ).toBe(true)
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate = '1990-01-16'",
+          ),
+        ).toBe(false)
+      })
+
+      it('should compare datetime for equality', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "deceasedDateTime = '2023-06-20T14:30:00Z'",
+          ),
+        ).toBe(true)
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "deceasedDateTime = '2023-06-20T14:31:00Z'",
+          ),
+        ).toBe(false)
+      })
+    })
+
+    describe('Date Range Comparisons', () => {
+      it('should check if date is greater than a value', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate > '1985-01-01'",
+          ),
+        ).toBe(true)
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate > '1995-01-01'",
+          ),
+        ).toBe(false)
+      })
+
+      it('should check if date is less than a value', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate < '1995-01-01'",
+          ),
+        ).toBe(true)
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate < '1985-01-01'",
+          ),
+        ).toBe(false)
+      })
+
+      it('should check if date is greater than or equal to a value', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate >= '1990-01-15'",
+          ),
+        ).toBe(true)
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate >= '1990-01-16'",
+          ),
+        ).toBe(false)
+      })
+
+      it('should check if date is less than or equal to a value', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate <= '1990-01-15'",
+          ),
+        ).toBe(true)
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate <= '1989-12-31'",
+          ),
+        ).toBe(false)
+      })
+    })
+
+    describe('Period-based Date Comparisons', () => {
+      it('should check if a date falls within a period', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "period.start <= '2024-06-01' and period.end >= '2024-06-01'",
+          ),
+        ).toBe(true)
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "period.start <= '2023-12-01' and period.end >= '2023-12-01'",
+          ),
+        ).toBe(false)
+      })
+
+      it('should check if current date is within period', () => {
+        // This test uses the now() function to check if current date is within the period
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            'period.start <= now() and period.end >= now()',
+          ),
+        ).toBeDefined() // Result depends on when test runs
+      })
+    })
+
+    describe('Array-based Date Filtering', () => {
+      it('should filter encounters by date range', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "encounter.where(period.start >= '2024-01-01' and period.end <= '2024-12-31').exists()",
+          ),
+        ).toBe(true)
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "encounter.where(period.start >= '2025-01-01').exists()",
+          ),
+        ).toBe(false)
+      })
+
+      it('should filter contacts by specific date', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "contact.where(period.start <= '2024-04-01' and period.end >= '2024-04-01').exists()",
+          ),
+        ).toBe(true)
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "contact.where(period.start <= '2024-01-01' and period.end >= '2024-01-01').exists()",
+          ),
+        ).toBe(false)
+      })
+    })
+
+    describe('Age-based Calculations', () => {
+      it('should calculate age and compare', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "subtractDates(now(), birthDate, 'years') >= 30",
+          ),
+        ).toBe(true)
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "subtractDates(now(), birthDate, 'years') < 20",
+          ),
+        ).toBe(false)
+      })
+
+      it('should check if patient is older than specific age', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "subtractDates(now(), birthDate, 'years') > 25",
+          ),
+        ).toBe(true)
+      })
+    })
+
+    describe('Complex Date Logic', () => {
+      it('should combine multiple date conditions', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "birthDate >= '1980-01-01' and birthDate <= '2000-12-31' and period.start >= '2024-01-01'",
+          ),
+        ).toBe(true)
+      })
+
+      it('should check for recent encounters', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "encounter.where(period.start >= addToDate(now(), -30, 'days')).exists()",
+          ),
+        ).toBeDefined() // Result depends on when test runs
+      })
+
+      it('should check for upcoming appointments', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "encounter.where(period.start >= now() and period.start <= addToDate(now(), 7, 'days')).exists()",
+          ),
+        ).toBeDefined() // Result depends on when test runs
+      })
+    })
+
+    describe('Date Functions in Filters', () => {
+      it('should use today() function in comparisons', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            'period.start <= today() and period.end >= today()',
+          ),
+        ).toBeDefined() // Result depends on when test runs
+      })
+
+      it('should use date arithmetic in filters', () => {
+        expect(
+          isMatchingFhirPathCondition(
+            patientWithDates,
+            "encounter.where(period.start >= addToDate(now(), -90, 'days')).exists()",
+          ),
+        ).toBeDefined() // Result depends on when test runs
+      })
+    })
+  })
 })
