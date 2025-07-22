@@ -73,8 +73,6 @@ const ContentCards: React.FC<Props> = ({
     fetchCompositions()
   }, [patient, getPatientCompositions])
 
-  console.log('patient', patient)
-
   return (
     <>
       {organizationSlug === 'awell-dev' && (
