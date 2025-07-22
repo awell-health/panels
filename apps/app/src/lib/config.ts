@@ -17,6 +17,8 @@ export interface RuntimeConfig {
 
 // Get runtime configuration
 export async function getRuntimeConfig(): Promise<RuntimeConfig> {
+  const environment = process.env.ENVIRONMENT || 'development'
+
   // Fallback to environment variables (for server-side or when runtime config is not available)
   return {
     medplumBaseUrl: process.env.MEDPLUM_BASE_URL || 'http://localhost:8103',
@@ -26,7 +28,7 @@ export async function getRuntimeConfig(): Promise<RuntimeConfig> {
     authCookiesAllowedDomain: process.env.AUTH_COOKIES_ALLOWED_DOMAIN,
     storageMode: process.env.APP_STORAGE_MODE || 'local',
     storageApiBaseUrl: process.env.APP_API_BASE_URL || '',
-    environment: process.env.ENVIRONMENT || 'development',
+    environment,
     adminRole: process.env.ADMIN_ROLE || 'admin',
     captureKey: process.env.NEXT_PUBLIC_CAPTURE_KEY,
     captureInternalDomain: process.env.NEXT_PUBLIC_CAPTURE_INTERNAL_DOMAIN,
