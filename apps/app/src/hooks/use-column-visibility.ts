@@ -116,8 +116,18 @@ export function useColumnVisibility(
 
   // Get visible columns
   const getVisibleColumns = useCallback((): Column[] => {
+    if (view) {
+      return (
+        view?.visibleColumns
+          .map((col) => {
+            return contextColumns.find((c) => c.id === col)
+          })
+          .filter((c) => c !== undefined)
+          .filter((c) => getVisibility(c.id)) ?? []
+      )
+    }
     return contextColumns.filter((col) => getVisibility(col.id))
-  }, [contextColumns, getVisibility])
+  }, [contextColumns, getVisibility, view])
 
   // Get all columns for the current context
   const getAllColumns = useCallback((): Column[] => {
