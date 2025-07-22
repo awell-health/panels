@@ -26,30 +26,30 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
     setPatientTasks(filteredTasks)
   }, [tasks, patient.id])
 
-  const notes: WorklistTask['note'] = []
-  const timelineItems: TimelineDatItem[] = []
+  const getTimelineItems = (taskList: WorklistTask[]) => {
+    const notes: WorklistTask['note'] = []
+    const timelineItems: TimelineDatItem[] = []
 
-  // Use patientTasks instead of tasks
-  for (const task of patientTasks) {
-    if (task.note) {
-      notes.push(...task.note)
-    }
+    // Use patientTasks instead of tasks
+    for (const task of taskList) {
+      if (task.note) {
+        notes.push(...task.note)
+      }
 
-    if (task.authoredOn) {
       timelineItems.push({
         type: 'task',
         title: `Task created: ${task.description}`,
-        datetime: task.authoredOn,
+        datetime: task.authoredOn ?? '',
       })
-    }
 
-    if (task.lastModified) {
       timelineItems.push({
         type: 'task',
         title: `Task completed: ${task.description}`,
-        datetime: task.lastModified,
+        datetime: task.lastModified ?? '',
       })
     }
+
+    return { notes, timelineItems }
   }
 
   return (
@@ -73,8 +73,7 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
             {view === 'timeline' && (
               <NotesTimeline
                 patientId={patient.id}
-                notes={notes}
-                timelineItems={timelineItems}
+                {...getTimelineItems(patientTasks)}
               />
             )}
             {view === 'tasks' && (

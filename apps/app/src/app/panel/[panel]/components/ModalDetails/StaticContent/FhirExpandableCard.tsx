@@ -4,6 +4,10 @@ import CardRowItem from './CardRowItem'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import type { FC } from 'react'
 import type { Observation } from '@medplum/fhirtypes'
+import {
+  type FHIRResource,
+  processCard,
+} from './ContentCards/fhir-content-utils'
 
 export interface FHIRCard {
   name: string
@@ -11,7 +15,7 @@ export interface FHIRCard {
     label: string
     key: string
     fhirPath: string
-    resourceType: string
+    resourceType: 'Task' | 'Patient'
   }[]
 }
 interface Props {
@@ -88,6 +92,15 @@ const FhirExpandableCard: FC<Props> = ({
       return <></>
     }
   }
+
+  // const processedCard = processCard(
+  //   card,
+  //   resources.Patient as unknown as FHIRResource,
+  //   resources.Task as unknown as FHIRResource,
+  // )
+
+  // console.log(processedCard)
+  // console.log(resources)
 
   const isEmptyBox = card.fields.every((field) => {
     const resourceType = field.resourceType
