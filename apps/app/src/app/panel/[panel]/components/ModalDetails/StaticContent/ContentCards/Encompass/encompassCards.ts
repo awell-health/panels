@@ -135,7 +135,7 @@ const encompassCards: FHIRCard[] = [
       {
         label: 'Primary DX code',
         key: 'primary_diagnosis_code',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='primary_diagnosis_code').valueString",
       },
@@ -256,14 +256,14 @@ const encompassCards: FHIRCard[] = [
       {
         label: 'Call status',
         key: 'call_status',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='call_status').valueString",
       },
       {
         label: 'Readmission status',
         key: 'readmission_status',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='readmission_status').valueString",
       },
@@ -277,7 +277,7 @@ const encompassCards: FHIRCard[] = [
       {
         label: 'Home‑health engaged',
         key: 'home_health_engaged',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='home_health_engaged').valueString",
       },
@@ -290,98 +290,98 @@ const encompassCards: FHIRCard[] = [
       {
         label: 'Rx pickup status',
         key: 'prescriptions_picked_up',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='prescriptions_picked_up').valueString",
       },
       {
         label: 'Pickup barriers',
         key: 'pickup_barriers',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='pickup_barriers').valueString",
       },
       {
         label: 'Medication note',
         key: 'medication_note',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='medication_note').valueString",
       },
       {
         label: 'Follow‑up scheduled status',
         key: 'followup_scheduled_status',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='followup_scheduled_status').valueString",
       },
       {
         label: 'Follow‑up appointment note',
         key: 'followup_appointment_note',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='followup_appointment_note').valueString",
       },
       {
         label: 'Overall summary',
         key: 'overall_summary',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='overall_summary').valueString",
       },
       {
         label: 'Transition escalation category',
         key: 'transition_escalation_category',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='transition_escalation_category').valueString",
       },
       {
         label: 'Transition escalation explanation',
         key: 'transition_escalation_explanation',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='transition_escalation_explanation').valueString",
       },
       {
         label: 'Initial call review status',
         key: 'initial_call_review_status',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='initial_call_review_status').valueString",
       },
       {
         label: 'Initial call review explanation',
         key: 'initial_call_review_status_explanation',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='initial_call_review_status_explanation').valueString",
       },
       {
         label: 'Experience feedback',
         key: 'experience_feedback',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='experience_note').valueString",
       },
       {
         label: 'Readmission note',
         key: 'readmission_note',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='readmission_note').valueString",
       },
       {
         label: 'Current care location',
         key: 'current_care_location',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='current_care_location').valueString",
       },
       {
         label: 'Overall form summary',
         key: 'test_form_summary',
-        resourceType: 'Patient',
+        resourceType: 'Task',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='test_form_summary').valueString",
       },
