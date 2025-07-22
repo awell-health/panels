@@ -59,9 +59,9 @@ interface UseDateTimeFormatReturn {
   availableDateFormats: typeof DATE_FORMATS
   availableDateTimeFormats: typeof DATE_TIME_FORMATS
 
-  // Formatter function
+  // Formatter functions
   formatDateTime: (date: string | Date | null | undefined) => string
-  formatDateIgnoringTimeZone: (date: string | Date | null | undefined) => string
+  formatDate: (date: string | Date | null | undefined) => string
   // Update functions
   updateDateFormat: (formatKey: DateFormatKey) => Promise<void>
   updateDateTimeFormat: (formatKey: DateTimeFormatKey) => Promise<void>
@@ -83,7 +83,61 @@ const getStoredDateTimeFormat = (): DateTimeFormatKey => {
   return stored && DATE_TIME_FORMATS[stored] ? stored : DEFAULT_DATETIME_FORMAT
 }
 
-// Helper function to detect if a date has time information
+/**
+ * Extracts date components (year, month, day) directly from ISO date strings
+ * in a timezone-agnostic way.
+ *
+ * **CRITICAL**: This function ONLY accepts ISO 8601 date formats:
+ * - Date only: "YYYY-MM-DD" (e.g., "1990-05-15")
+ * - DateTime: "YYYY-MM-DDTHH:mm:ss[.sss]Z" (e.g., "1990-05-15T00:00:00Z")
+ * - DateTime with offset: "YYYY-MM-DDTHH:mm:ss[.sss]±HH:mm" (e.g., "1990-05-15T08:00:00+08:00")
+ *
+ * This ensures that a date like "1990-05-15" always represents May 15th, 1990,
+ * regardless of the user's browser timezone or the timezone offset in the input.
+ *
+ * @param dateString - ISO 8601 formatted date string
+ * @returns Object with year, month (1-12), day components, or null if invalid
+ */
+const extractDateComponents = (
+  dateString: string,
+): { year: number; month: number; day: number } | null => {
+  // Extract YYYY-MM-DD from any ISO format string
+  const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return null
+
+  const year = Number.parseInt(match[1], 10)
+  const month = Number.parseInt(match[2], 10)
+  const day = Number.parseInt(match[3], 10)
+
+  // Basic validation
+  if (
+    year < 1000 ||
+    year > 9999 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return null
+  }
+
+  return { year, month, day }
+}
+
+/**
+ * Detects if an ISO date string contains meaningful time information.
+ *
+ * **CRITICAL**: This function ONLY works with ISO 8601 formatted strings.
+ *
+ * Considers time "meaningful" if:
+ * - Time component exists and is NOT 00:00:00 (midnight)
+ * - Example: "2024-12-31T14:30:00Z" → meaningful time
+ * - Example: "2024-12-31T00:00:00Z" → NOT meaningful (treated as date-only)
+ * - Example: "2024-12-31" → NOT meaningful (no time component)
+ *
+ * @param date - ISO 8601 formatted date string or Date object
+ * @returns true if the date contains meaningful time information
+ */
 const hasTimeInfo = (date: string | Date): boolean => {
   if (typeof date === 'string') {
     // Check if string contains time indicators
@@ -91,22 +145,17 @@ const hasTimeInfo = (date: string | Date): boolean => {
       // ISO format - check if time part exists and is not 00:00:00
       const timePart = date.split('T')[1]
       if (timePart) {
-        const timeWithoutZ = timePart.replace(/[Z+\-]\d{2}:?\d{2}$/, '') // Remove timezone
+        // Remove timezone info (Z, +HH:MM, -HH:MM, +HHMM, -HHMM)
+        const timeWithoutZ = timePart.replace(/Z$|[+-]\d{2}:?\d{2}$/, '')
         return timeWithoutZ !== '00:00:00' && timeWithoutZ !== '00:00'
       }
     }
+    // Date-only strings like "2024-12-31" have no time info
+    return false
+  }
 
-    // Check for other time patterns (space-separated time)
-    const timePatterns = [
-      /\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?$/i, // HH:mm or HH:mm:ss with optional AM/PM
-      /\s\d{1,2}:\d{2}/, // Space followed by time
-    ]
-
-    return timePatterns.some((pattern) => pattern.test(date))
-    // biome-ignore lint/style/noUselessElse: better safe than sorry
-  } else if (date instanceof Date) {
+  if (date instanceof Date) {
     // For Date objects, check if time components are meaningful
-    // If all time components are 0, likely a date-only value
     return (
       date.getHours() !== 0 ||
       date.getMinutes() !== 0 ||
@@ -118,35 +167,123 @@ const hasTimeInfo = (date: string | Date): boolean => {
   return false
 }
 
-// Pure function for formatting dates ignoring timezone - exported for testing
-export const formatDateIgnoringTimeZone = (
+/**
+ * Formats dates in a completely timezone-agnostic way by treating them as calendar dates.
+ *
+ * **CRITICAL**: This function ONLY accepts ISO 8601 date formats:
+ * - "YYYY-MM-DD" (recommended for date-only values like birth dates)
+ * - "YYYY-MM-DDTHH:mm:ss[.sss]Z" (time component ignored)
+ * - "YYYY-MM-DDTHH:mm:ss[.sss]±HH:mm" (time and timezone offset ignored)
+ *
+ * **Use cases**: Birth dates, due dates, event dates - any value that represents
+ * a calendar date rather than a specific moment in time.
+ *
+ * **Timezone behavior**: "1990-05-15" will ALWAYS format as May 15th, 1990,
+ * regardless of user's browser timezone. This prevents the common bug where
+ * birth dates shift by one day depending on timezone.
+ *
+ * @param date - ISO 8601 formatted date string, Date object, or null/undefined
+ * @param dateFormat - Format configuration object
+ * @returns Formatted date string, or original string if parsing fails
+ */
+export const formatDate = (
   date: string | Date | null | undefined,
   dateFormat: DateFormat = DATE_FORMATS.US_DATE,
 ): string => {
   if (!date) return ''
+
   try {
-    let dateObj: Date
-
     if (typeof date === 'string') {
-      // For ISO strings, parse without timezone conversion
-      if (date.includes('T')) {
-        // Remove timezone info and parse as local time
-        const dateWithoutTz = date.replace(/[Z+\-]\d{2}:?\d{2}$/, '')
-        dateObj = parseISO(dateWithoutTz)
-      } else {
-        dateObj = parseISO(`${date}T00:00:00`)
+      // Extract date components directly from ISO string (timezone-agnostic)
+      const components = extractDateComponents(date)
+      if (components) {
+        // Create Date object using local constructor (represents the calendar date)
+        // Month is 0-indexed in Date constructor
+        const calendarDate = new Date(
+          components.year,
+          components.month - 1,
+          components.day,
+        )
+        if (isValid(calendarDate)) {
+          return formatDateFns(calendarDate, dateFormat.pattern)
+        }
       }
-    } else {
-      dateObj = date
-    }
 
-    if (!isValid(dateObj)) {
+      // Fallback for non-ISO strings
+      const parsed = parseISO(date)
+      if (isValid(parsed)) {
+        return formatDateFns(parsed, dateFormat.pattern)
+      }
+
       return String(date)
     }
 
-    return formatDateFns(dateObj, dateFormat.pattern)
+    if (date instanceof Date) {
+      if (isValid(date)) {
+        return formatDateFns(date, dateFormat.pattern)
+      }
+      return String(date)
+    }
+
+    return String(date)
   } catch (error) {
     console.error('Error formatting date:', error)
+    return String(date)
+  }
+}
+
+/**
+ * Formats dates with automatic detection of meaningful time information.
+ *
+ * **CRITICAL**: This function ONLY accepts ISO 8601 date formats:
+ * - "YYYY-MM-DD" → formatted as date-only
+ * - "YYYY-MM-DDTHH:mm:ss[.sss]Z" → formatted as date+time if time ≠ 00:00:00
+ * - "YYYY-MM-DDTHH:mm:ss[.sss]±HH:mm" → formatted as date+time if time ≠ 00:00:00
+ *
+ * **Time detection logic**:
+ * - "2024-12-31T14:30:00Z" → "12/31/2024 2:30 PM" (meaningful time)
+ * - "2024-12-31T00:00:00Z" → "12/31/2024" (midnight = date-only)
+ * - "2024-12-31" → "12/31/2024" (no time component = date-only)
+ *
+ * **Use cases**: Created timestamps, modified timestamps, appointment times -
+ * any value that might be either a date or a specific moment in time.
+ *
+ * @param date - ISO 8601 formatted date string, Date object, or null/undefined
+ * @param dateFormat - Date format configuration object
+ * @param dateTimeFormat - DateTime format configuration object
+ * @returns Formatted date or datetime string, or original string if parsing fails
+ */
+export const formatDateTime = (
+  date: string | Date | null | undefined,
+  dateFormat: DateFormat = DATE_FORMATS.US_DATE,
+  dateTimeFormat: DateTimeFormat = DATE_TIME_FORMATS.US_DATETIME,
+): string => {
+  if (!date) return ''
+
+  try {
+    // Check if this has meaningful time information
+    const hasMeaningfulTime = hasTimeInfo(date)
+
+    if (hasMeaningfulTime) {
+      // Has meaningful time - format as datetime (accepts timezone conversion)
+      if (typeof date === 'string') {
+        const parsedDate = parseISO(date)
+        if (isValid(parsedDate)) {
+          return formatDateFns(parsedDate, dateTimeFormat.pattern)
+        }
+      } else if (date instanceof Date) {
+        if (isValid(date)) {
+          return formatDateFns(date, dateTimeFormat.pattern)
+        }
+      }
+    } else {
+      // No meaningful time - format as date-only (timezone-agnostic)
+      return formatDate(date, dateFormat)
+    }
+
+    return String(date)
+  } catch (error) {
+    console.error('Error formatting date/time:', error)
     return String(date)
   }
 }
@@ -229,46 +366,23 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
     }
   }, [])
 
-  // Format date/time using the appropriate format based on whether time info is present
-  const formatDateTime = useCallback(
+  // Hook-wrapped formatters that use current format settings
+  const formatDateHook = useCallback(
     (date: string | Date | null | undefined): string => {
-      if (!date) return ''
-
-      try {
-        let dateObj: Date
-
-        if (typeof date === 'string') {
-          dateObj = date.includes('T') ? parseISO(date) : new Date(date)
-        } else {
-          dateObj = date
-        }
-
-        if (!isValid(dateObj)) {
-          return String(date)
-        }
-
-        // Determine if this date has time information
-        const hasTime = hasTimeInfo(date)
-
-        // Use appropriate format based on time presence
-        const formatConfig = hasTime
-          ? DATE_TIME_FORMATS[selectedDateTimeFormat]
-          : DATE_FORMATS[selectedDateFormat]
-
-        return formatDateFns(dateObj, formatConfig.pattern)
-      } catch (error) {
-        console.error('Error formatting date:', error)
-        return String(date)
-      }
-    },
-    [selectedDateFormat, selectedDateTimeFormat],
-  )
-
-  const formatDateIgnoringTimeZoneHook = useCallback(
-    (date: string | Date | null | undefined): string => {
-      return formatDateIgnoringTimeZone(date, DATE_FORMATS[selectedDateFormat])
+      return formatDate(date, DATE_FORMATS[selectedDateFormat])
     },
     [selectedDateFormat],
+  )
+
+  const formatDateTimeHook = useCallback(
+    (date: string | Date | null | undefined): string => {
+      return formatDateTime(
+        date,
+        DATE_FORMATS[selectedDateFormat],
+        DATE_TIME_FORMATS[selectedDateTimeFormat],
+      )
+    },
+    [selectedDateFormat, selectedDateTimeFormat],
   )
 
   const updateDateFormat = useCallback(async (formatKey: DateFormatKey) => {
@@ -319,8 +433,8 @@ export function useDateTimeFormat(): UseDateTimeFormatReturn {
     dateTimeFormatConfig: DATE_TIME_FORMATS[selectedDateTimeFormat],
     availableDateFormats: DATE_FORMATS,
     availableDateTimeFormats: DATE_TIME_FORMATS,
-    formatDateTime,
-    formatDateIgnoringTimeZone: formatDateIgnoringTimeZoneHook,
+    formatDateTime: formatDateTimeHook,
+    formatDate: formatDateHook,
     updateDateFormat,
     updateDateTimeFormat,
   }

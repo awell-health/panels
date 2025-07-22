@@ -160,6 +160,7 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
   }
 
   if (value && isISODate(value as string)) {
+    // Use formatDate for birth dates, formatDateTime for everything else
     return formatDateTime(value as string)
   }
 
