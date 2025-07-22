@@ -229,9 +229,14 @@ export function MedplumClientProvider({
       if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      return await medplumClient.addNoteToTask(taskId, note)
+      return await medplumClient.addNoteToTask(
+        taskId,
+        note,
+        practitioner?.id ?? '',
+        name ?? practitioner?.name?.[0]?.text ?? '',
+      )
     },
-    [medplumClient, isLoading],
+    [medplumClient, isLoading, practitioner?.id, name, practitioner?.name],
   )
 
   const getPatientObservations = useCallback(
