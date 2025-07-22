@@ -2,6 +2,7 @@ import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { ChevronRightIcon } from 'lucide-react'
 import TaskStatusBadge from '../TaskDetails/TaskStatusBadge'
 import PatientConnectorsSection from '../TaskDetails/PatientConnectorsSection'
+import { ManualTrackButton } from '@/components/ManualTrackButton'
 
 import NotesTimeline, { type TimelineDatItem } from '../NotesTimeline'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
@@ -78,8 +79,9 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
             )}
             {view === 'tasks' && (
               <div>
-                <div className="font-medium text-gray-600 mb-2">
-                  Tasks list:
+                <div className="flex justify-between items-center mb-2">
+                  <div className="font-medium text-gray-600">Tasks list:</div>
+                  <ManualTrackButton patientId={patient.id} />
                 </div>
                 <div className="flex flex-col gap-2">
                   {patientTasks.map((task) => (
