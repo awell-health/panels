@@ -92,16 +92,14 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
     ...mapNotes(notes ?? []),
   ])
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
-    const filteredTimelineNotes = timelineData.filter(
-      (item) => item.type !== 'note',
-    )
+    setTimelineData((prev) => [
+      ...prev,
+      ...mapNotes(notes ?? []),
+      ...(timelineItems ?? []),
+    ])
+  }, [notes, timelineItems])
 
-    setTimelineData([...filteredTimelineNotes, ...mapNotes(notes ?? [])])
-  }, [notes])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     const fetchTimelineData = async () => {
       if (!patientId) {
@@ -119,12 +117,17 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
         ...mapDetectedIssues(detectedIssues),
       ]
 
-      setTimelineData([...timelineData, ...updatedTimelineData])
+      setTimelineData((prev) => [...prev, ...updatedTimelineData])
       setIsLoading(false)
     }
 
     fetchTimelineData()
-  }, [getPatientObservations, getPatientEncounters, patientId])
+  }, [
+    getPatientObservations,
+    getPatientEncounters,
+    getPatientDetectedIssues,
+    patientId,
+  ])
 
   const getIndicatorColor = (type: string) => {
     switch (type) {
