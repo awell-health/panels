@@ -43,11 +43,13 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
         datetime: task.authoredOn ?? '',
       })
 
-      timelineItems.push({
-        type: 'task',
-        title: `Task completed: ${task.description}`,
-        datetime: task.lastModified ?? '',
-      })
+      if (task.status === 'completed') {
+        timelineItems.push({
+          type: 'task',
+          title: `Task completed: ${task.description}`,
+          datetime: task.lastModified ?? '',
+        })
+      }
     }
 
     return { notes, timelineItems }
