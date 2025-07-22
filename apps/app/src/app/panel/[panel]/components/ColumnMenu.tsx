@@ -5,6 +5,7 @@ import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
 import { ArrowUpDown, Calendar, Hash, Text, ToggleLeft, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { format } from 'date-fns'
 
 type ColumnMenuProps = {
   column: Column
@@ -33,6 +34,16 @@ export function ColumnMenu({
 }: ColumnMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [localFilterValue, setLocalFilterValue] = useState(filterValue)
+  const [localDateFilterValue, setLocalDateFilterValue] = useState(() => {
+    // Handle both '#' and ' - ' delimiters for backward compatibility
+    const delimiter = filterValue.includes('#') ? '#' : ' - '
+    const parts = filterValue.split(delimiter)
+    return {
+      from: parts[0] || '',
+      to: parts[1] || '',
+    }
+  })
+
   const [localColumnKey, setLocalColumnKey] = useState(column.sourceField)
   const [localColumnName, setLocalColumnName] = useState(column.name)
   const [localColumnDescription, setLocalColumnDescription] = useState(
@@ -132,7 +143,16 @@ export function ColumnMenu({
 
   // Apply filter and close menu
   const handleFilterApply = () => {
-    onFilter(localFilterValue)
+    if (column.type === 'date') {
+      const from = localDateFilterValue.from || ''
+      const to = localDateFilterValue.to || ''
+      // Only apply filter if at least one date is provided
+      if (from || to) {
+        onFilter(`${from}#${to}`)
+      }
+    } else {
+      onFilter(localFilterValue)
+    }
     onClose()
   }
 
@@ -150,6 +170,88 @@ export function ColumnMenu({
 
   // Don't unmount the component if the delete confirmation modal is open
   if (!isOpen && !showDeleteConfirm) return null
+
+  const renderFilterInput = () => {
+    let input = (
+      <input
+        type="text"
+        value={localFilterValue}
+        onChange={handleFilterChange}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            handleFilterApply()
+          }
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        placeholder="Filter..."
+      />
+    )
+
+    if (column.type === 'date') {
+      input = (
+        <div className="flex flex-col gap-2 w-full">
+          <div className="flex gap-2 items-center">
+            <label htmlFor="from" className="text-xs text-gray-500 w-10">
+              From
+            </label>
+            <input
+              type="date"
+              name="from"
+              className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              value={localDateFilterValue?.from}
+              onChange={(e) =>
+                setLocalDateFilterValue({
+                  ...localDateFilterValue,
+                  from: e.target.value,
+                })
+              }
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleFilterApply()
+                }
+              }}
+            />
+          </div>
+          <div className="flex gap-2 items-center">
+            <label htmlFor="to" className="text-xs text-gray-500 w-10">
+              To
+            </label>
+            <input
+              type="date"
+              name="to"
+              className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              value={localDateFilterValue?.to}
+              onChange={(e) =>
+                setLocalDateFilterValue({
+                  ...localDateFilterValue,
+                  to: e.target.value,
+                })
+              }
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleFilterApply()
+                }
+              }}
+            />
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex gap-2 items-end">
+        {input}
+        <button
+          type="button"
+          className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600 h-6"
+          onClick={handleFilterApply}
+        >
+          Apply
+        </button>
+      </div>
+    )
+  }
 
   const menuContent = (
     <div
@@ -207,28 +309,7 @@ export function ColumnMenu({
               </button>
             )}
           </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={localFilterValue}
-              onChange={handleFilterChange}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleFilterApply()
-                }
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Filter..."
-            />
-            <button
-              type="button"
-              className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
-              onClick={handleFilterApply}
-            >
-              Apply
-            </button>
-          </div>
+          {renderFilterInput()}
         </div>
 
         {/* Hide Column Option */}

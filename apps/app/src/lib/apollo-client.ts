@@ -16,6 +16,7 @@ export async function createApolloClient() {
   const uri = (() => {
     switch (environment) {
       case 'local':
+      case 'sandbox-encompass':
         return 'http://localhost:8110/graphql'
       case 'development':
         return 'https://api.development.awellhealth.com/orchestration/graphql'
