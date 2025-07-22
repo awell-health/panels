@@ -18,7 +18,7 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
       {VIEWS.map((view) => (
         <div
           key={view}
-          className={`overflow-y-auto p-2 border-r border-gray-200 ${
+          className={`flex-1 overflow-y-auto p-2 border-r border-gray-200 ${
             view === 'content' ? 'w-[36%]' : 'w-[32%]'
           }`}
         >
