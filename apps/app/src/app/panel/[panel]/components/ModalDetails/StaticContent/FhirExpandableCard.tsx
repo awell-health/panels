@@ -11,7 +11,7 @@ export interface FHIRCard {
     label: string
     key: string
     fhirPath: string
-    resourceType: string
+    resourceType: 'Task' | 'Patient'
   }[]
 }
 interface Props {

@@ -15,19 +15,13 @@ const encompassCards: FHIRCard[] = [
         label: 'Name',
         key: 'name',
         resourceType: 'Patient',
-        fhirPath: 'name.first().text',
+        fhirPath: 'name',
       },
       {
         label: 'Date of Birth / Age',
         key: 'date_of_birth_age',
         resourceType: 'Patient',
         fhirPath: 'birthDate',
-      },
-      {
-        label: 'Age',
-        key: 'age',
-        fhirPath: 'NO_DATA',
-        resourceType: 'Patient',
       },
       {
         label: 'Gender',
@@ -168,7 +162,6 @@ const encompassCards: FHIRCard[] = [
       },
     ],
   },
-
   {
     name: 'Care Team & Coordination',
     fields: [
@@ -223,7 +216,6 @@ const encompassCards: FHIRCard[] = [
       },
     ],
   },
-
   {
     name: 'Insurance Information',
     fields: [

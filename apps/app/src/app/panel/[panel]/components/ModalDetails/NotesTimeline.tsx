@@ -93,8 +93,13 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
   ])
 
   useEffect(() => {
+    const filterPreExistingNotes = (prev: TimelineDatItem[]) =>
+      prev.filter((item) => {
+        return item.type !== 'note' && item.type !== 'task'
+      })
+
     setTimelineData((prev) => [
-      ...prev,
+      ...filterPreExistingNotes(prev),
       ...mapNotes(notes ?? []),
       ...(timelineItems ?? []),
     ])
@@ -117,7 +122,9 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
         ...mapDetectedIssues(detectedIssues),
       ]
 
-      setTimelineData((prev) => [...prev, ...updatedTimelineData])
+      setTimelineData((prev) => {
+        return [...prev, ...updatedTimelineData]
+      })
       setIsLoading(false)
     }
 

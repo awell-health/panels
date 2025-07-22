@@ -1,5 +1,5 @@
 import { useMedplumStore } from '@/hooks/use-medplum-store'
-import FhirExpandableCard from '../FhirExpandableCard'
+import FhirExpandableCard, { type FHIRCard } from '../FhirExpandableCard'
 import { useEffect, useState } from 'react'
 import type { Composition } from '@medplum/fhirtypes'
 import ExpandableCard from '../ExpandableCard'
@@ -26,7 +26,16 @@ const ContentCards: React.FC<Props> = ({
 }) => {
   const { organizationSlug } = useAuthentication()
 
-  let contentCards = []
+  const devContentCards = {
+    'encompass-health': [...encompassCards],
+    waypoint: [...waypointCards],
+    wellpath: [...wellpathCards],
+    default: [...defaultCards],
+  }
+  const [selectConfig, setSelectConfig] =
+    useState<keyof typeof devContentCards>('default')
+
+  let contentCards: FHIRCard[] = []
 
   switch (organizationSlug) {
     case 'wellpath':
@@ -39,12 +48,7 @@ const ContentCards: React.FC<Props> = ({
       contentCards = [...waypointCards]
       break
     case 'awell-dev':
-      contentCards = [
-        ...defaultCards,
-        ...wellpathCards,
-        ...encompassCards,
-        ...waypointCards,
-      ]
+      contentCards = [...devContentCards[selectConfig]]
       break
     default:
       contentCards = [...defaultCards]
@@ -71,6 +75,24 @@ const ContentCards: React.FC<Props> = ({
 
   return (
     <>
+      {organizationSlug === 'awell-dev' && (
+        <div className="flex-1 my-4 text-xs p-2 bg-gray-200">
+          <label htmlFor="selectConfig">[awell-dev ONLY]: Select config</label>
+          <select
+            className="select"
+            value={selectConfig}
+            onChange={(e) =>
+              setSelectConfig(e.target.value as keyof typeof devContentCards)
+            }
+          >
+            {Object.keys(devContentCards).map((key) => (
+              <option key={key} value={key}>
+                {key}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       {contentCards.map((card, index) => (
         <FhirExpandableCard
           key={`${card.name}-${index}`}
