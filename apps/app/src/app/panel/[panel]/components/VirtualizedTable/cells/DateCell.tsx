@@ -5,13 +5,13 @@ import { BaseCell } from './BaseCell'
 import type { BaseCellProps } from './types'
 
 export function DateCell(props: BaseCellProps) {
-  const { formatDateIgnoringTimeZone } = useDateTimeFormat()
+  const { formatDate } = useDateTimeFormat()
   const { value } = props
 
   return (
     <BaseCell {...props}>
       {value ? (
-        formatDateIgnoringTimeZone(value as string | Date)
+        formatDate(value as string | Date)
       ) : (
         <span className="text-gray-500">-</span>
       )}

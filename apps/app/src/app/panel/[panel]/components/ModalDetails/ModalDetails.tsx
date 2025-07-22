@@ -7,6 +7,7 @@ import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
+import { useDateTimeFormat } from '@/hooks/use-date-time-format'
 import type { Identifier } from '@medplum/fhirtypes'
 
 interface ModalDetailsProps {
@@ -19,6 +20,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
   const { patients, tasks, deletePatient } = useMedplumStore()
   const { isAdmin } = useAuthentication()
   const { showSuccess, showError } = useToastHelpers()
+  const { formatDate } = useDateTimeFormat()
   const modalRef = useRef<HTMLDivElement>(null)
 
   // Internal state management
@@ -151,7 +153,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
                 {dateOfBirth && (
                   <>
                     <span>·</span>
-                    <span>DOB {dateOfBirth}</span>
+                    <span>DOB {formatDate(dateOfBirth)}</span>
                   </>
                 )}
                 {mrn && (
