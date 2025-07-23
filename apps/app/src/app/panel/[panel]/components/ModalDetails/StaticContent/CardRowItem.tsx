@@ -1,9 +1,9 @@
 import type { FC } from 'react'
 import HighlightText from './HighlightContent'
-import { RenderWithCopy } from './RenderWithCopy'
 import RenderValue from './RenderValue'
 import { hasSearchQuery, isISODate } from './utils'
 import { useDateTimeFormat } from '../../../../../../hooks/use-date-time-format'
+import { RenderWithCopy } from './RenderWithCopy'
 
 interface Props {
   label: string
@@ -47,11 +47,13 @@ const CardRowItem: FC<Props> = ({ label, value, searchQuery = '' }) => {
   const displayValue = getDisplayValue()
 
   return (
-    <div className="flex flex-col gap-1 text-xs">
-      <div className="font-medium text-gray-700">
-        <HighlightText text={label} searchQuery={searchQuery} />
+    <div className="flex justify-between">
+      <div className="text-gray-600 max-w-[32%] break-words">
+        <RenderWithCopy text={label}>
+          <HighlightText text={label} searchQuery={searchQuery} />
+        </RenderWithCopy>
       </div>
-      <div className="text-gray-900">
+      <div className="text-gray-900 max-w-[65%] text-right pr-1.5 break-words">
         <RenderValue value={displayValue} searchQuery={searchQuery} />
       </div>
     </div>

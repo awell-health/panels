@@ -13,8 +13,10 @@ interface Props {
 }
 
 const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
+  const emptyValue = <span>-</span>
+
   if (!value) {
-    return '-'
+    return emptyValue
   }
 
   const { formatDateTime } = useDateTimeFormat()
@@ -48,7 +50,7 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
     const visibleObject = 5
 
     if (keysLength === 0) {
-      return '-'
+      return emptyValue
     }
 
     const renderKeyValue = (key: string, value: string) => {
@@ -90,7 +92,7 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   const renderTable = (list: any[]) => {
     if (list.length === 0) {
-      return '-'
+      return <span className="pr-2">-</span>
     }
 
     const columns = Object.keys(list[0])
@@ -132,7 +134,7 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
 
   if (Array.isArray(value)) {
     if (value.length === 0) {
-      return '-'
+      return emptyValue
     }
 
     return rederArrayValue(value)
@@ -161,7 +163,12 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
 
   if (value && isISODate(value as string)) {
     // Use formatDate for birth dates, formatDateTime for everything else
-    return formatDateTime(value as string)
+    const formattedValue = formatDateTime(value as string)
+    return (
+      <RenderWithCopy text={formattedValue}>
+        <HighlightText text={formattedValue} searchQuery={searchQuery} />
+      </RenderWithCopy>
+    )
   }
 
   const containsHTML = (str: string) => /<[a-z][\s\S]*>/i.test(str)

@@ -16,11 +16,11 @@ export const RenderWithCopy: FC<{
     }, 1000)
   }, [isCopied])
 
-  const iconBaseClasses = 'absolute -right-1.75 bottom-0.75 w-3 h-3'
+  const iconBaseClasses = 'absolute -right-3.5 w-3 h-3'
 
   return (
     <span
-      className="cursor-pointer group pr-2 relative"
+      className="cursor-pointer group relative flex items-center break-words"
       onClick={() => {
         navigator.clipboard.writeText(text ?? '')
         setIsCopied(true)
