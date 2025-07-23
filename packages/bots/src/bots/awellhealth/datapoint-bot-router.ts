@@ -1,5 +1,5 @@
 import type { BotEvent, MedplumClient } from '@medplum/core'
-import type { BundleEntry, Patient } from '@medplum/fhirtypes'
+import type { Patient } from '@medplum/fhirtypes'
 
 // Type definition for observation details
 interface ObservationDetails {

@@ -1,13 +1,12 @@
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type {
-  Task,
-  Patient,
-  HumanName,
-  ContactPoint,
   Address,
-  Identifier,
-  BundleEntry,
   Communication,
+  ContactPoint,
+  HumanName,
+  Identifier,
+  Patient,
+  Task,
 } from '@medplum/fhirtypes'
 
 let GRAPHQL_ENDPOINT = ''
