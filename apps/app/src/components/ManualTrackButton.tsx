@@ -34,30 +34,35 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
   // Show toast error when tracks fail to load
   useEffect(() => {
     if (tracksError) {
-      showError('Failed to load available tracks')
+      showError('Failed to load available tracks', undefined, {
+        duration: 5000,
+        dismissible: false,
+      })
     }
   }, [tracksError, showError])
 
   // Handle track activation
   const handleTrackSelection = async (track: TrackWithPathway) => {
-    try {
-      setIsOptimisticUpdate(true)
-      setIsDropdownOpen(false)
+    setIsOptimisticUpdate(true)
+    setIsDropdownOpen(false)
 
-      const success = await activateTrack(track.id, track.pathwayId)
+    const success = await activateTrack(track.id, track.pathwayId)
 
-      if (success) {
-        showSuccess(`Successfully activated track: ${track.title}`)
-      } else {
-        showError('Failed to activate track')
-      }
-    } catch (error) {
-      showError(
-        `Failed to activate track: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      )
-    } finally {
-      setIsOptimisticUpdate(false)
+    if (success) {
+      showSuccess(`Successfully activated track: ${track.title}`, undefined, {
+        duration: 4000,
+        dismissible: false,
+      })
+    } else {
+      // Use the actual GraphQL error message if available
+      const errorMessage = activationError || 'Failed to activate track'
+      showError(errorMessage, undefined, {
+        duration: 5000,
+        dismissible: false,
+      })
     }
+
+    setIsOptimisticUpdate(false)
   }
 
   // Don't render if no Awell care flow context

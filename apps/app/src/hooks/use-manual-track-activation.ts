@@ -1,4 +1,4 @@
-import { useLazyQuery, useMutation } from '@apollo/client'
+import { useLazyQuery, useMutation, ApolloError } from '@apollo/client'
 import { useMemo, useCallback, useEffect, useState } from 'react'
 import { useMedplumStore } from './use-medplum-store'
 import { extractUniquePathwayIds } from '@/lib/fhir-extensions'
@@ -31,11 +31,41 @@ export interface UseManualTrackActivationResult {
   // Track activation
   activateTrack: (trackId: string, pathwayId: string) => Promise<boolean>
   isActivatingTrack: boolean
-  activationError: Error | null
+  activationError: string | null
 
   // Care flow context
   careFlowIds: string[]
   hasAwellCareFlowContext: boolean
+}
+
+// Helper function to extract error message from ApolloError
+const extractErrorMessage = (error: ApolloError): string => {
+  // Try to get custom message from GraphQL error extensions
+  if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+    const graphQLError = error.graphQLErrors[0]
+
+    // Check for custom message in extensions
+    const data = graphQLError.extensions?.data as
+      | Record<string, unknown>
+      | undefined
+    const customMessage = data?.customMessage
+    if (typeof customMessage === 'string') {
+      return customMessage
+    }
+
+    // Fall back to the standard message
+    if (graphQLError.message) {
+      return graphQLError.message
+    }
+  }
+
+  // Check for network errors
+  if (error.networkError?.message) {
+    return error.networkError.message
+  }
+
+  // Fall back to generic error message or the error's message property
+  return error.message || 'Failed to activate track'
 }
 
 /**
@@ -50,6 +80,10 @@ export function useManualTrackActivation(
   const [allTracks, setAllTracks] = useState<TrackWithPathway[]>([])
   const [isLoadingTracks, setIsLoadingTracks] = useState(false)
   const [tracksError, setTracksError] = useState<Error | null>(null)
+
+  // Local state for track activation
+  const [isActivatingTrack, setIsActivatingTrack] = useState(false)
+  const [activationError, setActivationError] = useState<string | null>(null)
 
   // Get patient tasks and extract care flow IDs
   const patientTasks = useMemo(() => {
@@ -138,11 +172,11 @@ export function useManualTrackActivation(
     }
   }, [careFlowIds, fetchTracks])
 
-  // Mutation for track activation
-  const [
-    addTrackMutation,
-    { loading: isActivatingTrack, error: activationError },
-  ] = useMutation<AddTrackMutation, AddTrackMutationVariables>(ADD_TRACK, {
+  // Mutation for track activation - only get the mutation function
+  const [addTrackMutation] = useMutation<
+    AddTrackMutation,
+    AddTrackMutationVariables
+  >(ADD_TRACK, {
     errorPolicy: 'all',
   })
 
@@ -156,6 +190,9 @@ export function useManualTrackActivation(
   // Track activation function - now requires both track ID and pathway ID
   const activateTrack = useCallback(
     async (trackId: string, pathwayId: string): Promise<boolean> => {
+      setIsActivatingTrack(true)
+      setActivationError(null)
+
       try {
         const input: AddTrackInput = {
           pathway_id: pathwayId,
@@ -166,10 +203,29 @@ export function useManualTrackActivation(
           variables: { input },
         })
 
+        // Check for GraphQL errors in the result
+        if (result.errors && result.errors.length > 0) {
+          const apolloError = new ApolloError({
+            graphQLErrors: result.errors,
+          })
+          const errorMessage = extractErrorMessage(apolloError)
+          setActivationError(errorMessage)
+          setIsActivatingTrack(false)
+          return false
+        }
+
+        setIsActivatingTrack(false)
         return result.data?.addTrack?.success || false
       } catch (error) {
         console.error('Failed to activate track:', error)
-        throw error
+        if (error instanceof ApolloError) {
+          const errorMessage = extractErrorMessage(error)
+          setActivationError(errorMessage)
+        } else {
+          setActivationError('Failed to activate track')
+        }
+        setIsActivatingTrack(false)
+        return false
       }
     },
     [addTrackMutation],
@@ -185,7 +241,7 @@ export function useManualTrackActivation(
     // Track activation
     activateTrack,
     isActivatingTrack,
-    activationError: activationError || null,
+    activationError,
 
     // Care flow context
     careFlowIds,
