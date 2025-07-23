@@ -351,124 +351,64 @@ function convertSexToGender(
   return undefined
 }
 
-async function findFirstPatientFromMedplum(
-  medplum: MedplumClient,
-  awellPatientId: string,
-): Promise<BundleEntry<Patient> | undefined> {
-  try {
-    const searchResult = await medplum.search(
-      'Patient',
-      `identifier=${awellPatientId}`,
-    )
-    if (searchResult.entry?.[0]?.resource?.id) {
-      console.log(
-        'Patient exists in system:',
-        JSON.stringify(
-          {
-            awellPatientId,
-            foundPatientId: searchResult.entry[0].resource.id,
-          },
-          null,
-          2,
-        ),
-      )
-      return searchResult.entry[0]
-    }
-  } catch (error) {
-    console.log(
-      'Patient not found in system, fetching GraphQL data:',
-      JSON.stringify({ awellPatientId }, null, 2),
-    )
-  }
-  return undefined
-}
-
 // Task related functions
 async function findOrCreatePatient(
   medplum: MedplumClient,
   awellPatientId: string,
 ): Promise<string> {
-  const medplumPatient = await findFirstPatientFromMedplum(
-    medplum,
-    awellPatientId,
-  )
-
   const patientProfile = await fetchPatientData(awellPatientId)
-  let newPatient: Patient
 
-  if (medplumPatient) {
-    newPatient = medplumPatient.resource as Patient
-    // Update patient with latest profile data if available
-    if (patientProfile) {
-      const updatedPatient = createFhirPatient(awellPatientId, patientProfile)
-      // Preserve the existing Medplum ID and meta information
-      updatedPatient.id = newPatient.id
-      updatedPatient.meta = newPatient.meta
-
-      try {
-        newPatient = await medplum.updateResource(updatedPatient)
-        console.log(
-          'Patient updated with latest profile data:',
-          JSON.stringify(
-            {
-              originalId: awellPatientId,
-              patientId: newPatient.id,
-              lastUpdated: newPatient.meta?.lastUpdated,
-            },
-            null,
-            2,
-          ),
-        )
-      } catch (error) {
-        console.log(
-          'Error updating patient, using existing data:',
-          JSON.stringify(
-            {
-              error: error instanceof Error ? error.message : 'Unknown error',
-              originalId: awellPatientId,
-              patientId: newPatient.id,
-            },
-            null,
-            2,
-          ),
-        )
-      }
-    }
+  let patientToUpsert: Patient
+  if (patientProfile) {
+    patientToUpsert = createFhirPatient(awellPatientId, patientProfile)
   } else {
-    if (patientProfile) {
-      newPatient = await medplum.upsertResource(
-        createFhirPatient(awellPatientId, patientProfile),
-        `identifier=${awellPatientId}`,
-      )
-    } else {
-      newPatient = await medplum.upsertResource(
+    patientToUpsert = {
+      resourceType: 'Patient',
+      identifier: [
         {
-          resourceType: 'Patient',
-          identifier: [
-            {
-              system: 'https://awellhealth.com/patients',
-              value: awellPatientId,
-            },
-          ],
-          active: true,
+          system: 'https://awellhealth.com/patients',
+          value: awellPatientId,
         },
-        `identifier=${awellPatientId}`,
-      )
+      ],
+      active: true,
     }
-    console.log(
-      'New patient created:',
-      JSON.stringify(
-        {
-          originalId: awellPatientId,
-          newPatientId: newPatient.id,
-        },
-        null,
-        2,
-      ),
-    )
   }
 
-  return newPatient.id || ''
+  // Use upsert with proper search query including system
+  const searchQuery = `Patient?identifier=https://awellhealth.com/patients|${awellPatientId}`
+
+  console.log(
+    'Upserting patient:',
+    JSON.stringify(
+      {
+        awellPatientId,
+        searchQuery,
+        hasProfile: !!patientProfile,
+      },
+      null,
+      2,
+    ),
+  )
+
+  const upsertedPatient = await medplum.upsertResource(
+    patientToUpsert,
+    searchQuery,
+  )
+
+  console.log(
+    'Patient upserted successfully:',
+    JSON.stringify(
+      {
+        originalId: awellPatientId,
+        patientId: upsertedPatient.id,
+        lastUpdated: upsertedPatient.meta?.lastUpdated,
+      },
+      null,
+      2,
+    ),
+  )
+
+  return upsertedPatient.id || ''
 }
 
 // Helper function to create extensions
