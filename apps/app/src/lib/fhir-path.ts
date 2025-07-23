@@ -1,4 +1,5 @@
 // Type definitions for fhirpath
+import type { Bundle } from '@medplum/fhirtypes'
 import fhirpath from 'fhirpath'
 
 /**
@@ -170,7 +171,10 @@ export const getNestedValue = (
     }
     return result.length === 0 ? undefined : result
   } catch (error) {
-    // console.info('Error evaluating FHIRPath:', error)
+    console.info('Error evaluating FHIRPath:', error)
+    console.info('Path:', path)
+    console.info('Object:', obj)
+    console.log('--------------------------------')
     return ''
   }
 }
@@ -191,4 +195,97 @@ export const isMatchingFhirPathCondition = (
     console.error('Error evaluating FHIRPath:', error)
     return true
   }
+}
+
+export const getNestedValueFromBundle = (
+  bundle: Bundle,
+  path: string,
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+): any | any[] => {
+  if (!path || !bundle?.entry) return undefined
+
+  // Handle bundle-level queries (e.g., entry.resource.ofType(Task).extension...)
+  if (path.startsWith('entry.resource.ofType(')) {
+    return evaluateBundleLevelPath(bundle, path)
+  }
+
+  // Handle resource-level queries - try on every resource
+  return evaluateResourceLevelPath(bundle, path)
+}
+
+/**
+ * Handle bundle-level fhirPath queries like entry.resource.ofType(Task).extension.where(...)
+ */
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+function evaluateBundleLevelPath(bundle: Bundle, fhirPath: string): any {
+  // Extract the resource type from ofType(ResourceType)
+  const ofTypeMatch = fhirPath.match(/entry\.resource\.ofType\((\w+)\)(.*)/)
+  if (!ofTypeMatch) {
+    return undefined
+  }
+
+  const [, resourceType, remainingPath] = ofTypeMatch
+
+  // Get all resources of the specified type from the bundle
+  const resources =
+    bundle.entry
+      ?.map((entry) => entry.resource)
+      .filter((resource) => resource?.resourceType === resourceType) || []
+
+  if (resources.length === 0) {
+    return undefined
+  }
+
+  // If no remaining path, return the resources
+  if (!remainingPath) {
+    return resources
+  }
+
+  // Try the remaining path on each matching resource using getNestedValue
+  for (const resource of resources) {
+    try {
+      const result = getNestedValue(
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        resource as Record<string, any>,
+        remainingPath.substring(1),
+      )
+
+      // Return first non-null/non-undefined result
+      if (result !== null && result !== undefined && result !== '') {
+        return result
+      }
+    } catch (error) {
+      // continue
+    }
+  }
+
+  return undefined
+}
+
+/**
+ * Handle resource-level fhirPath queries by trying every entry in bundle
+ */
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+function evaluateResourceLevelPath(bundle: Bundle, fhirPath: string): any {
+  // Try the path on every resource in the bundle using getNestedValue
+  for (const entry of bundle.entry || []) {
+    if (!entry?.resource) continue
+
+    try {
+      const result = getNestedValue(
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        entry.resource as Record<string, any>,
+        fhirPath,
+      )
+
+      // Return first non-null/non-undefined result
+      if (result !== null && result !== undefined && result !== '') {
+        return result
+      }
+    } catch (error) {
+      // continue
+    }
+  }
+
+  return undefined
 }
