@@ -141,6 +141,12 @@ class PanelMedplumDataStore {
     resourceType: 'Patient' | 'Task',
     item: T,
   ): void {
+    // Validate item has required properties
+    if (!item || !item.id) {
+      console.warn('Invalid item provided to setItem:', { resourceType, item })
+      return
+    }
+
     const panelId = 'default'
     const tableName = resourceType === 'Patient' ? PATIENTS_TABLE : TASKS_TABLE
     const itemKey = `${panelId}:${item.id}`
@@ -176,9 +182,11 @@ class PanelMedplumDataStore {
     // Clear existing items for this panel/resource type
     this.clearData(resourceType)
 
-    // Add each item individually
+    // Add each item individually, but skip invalid items
     for (const item of data) {
-      this.setItem(resourceType, item)
+      if (item?.id) {
+        this.setItem(resourceType, item)
+      }
     }
   }
 
@@ -186,9 +194,11 @@ class PanelMedplumDataStore {
     resourceType: 'Patient' | 'Task',
     newData: Patient[] | Task[],
   ): void {
-    // Add new items individually
+    // Add new items individually, but skip invalid items
     for (const item of newData) {
-      this.setItem(resourceType, item)
+      if (item?.id) {
+        this.setItem(resourceType, item)
+      }
     }
   }
 

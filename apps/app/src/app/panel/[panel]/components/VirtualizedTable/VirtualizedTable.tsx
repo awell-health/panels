@@ -148,9 +148,28 @@ export function VirtualizedTable({
           const column = columns.find((c) => c.id === filter.columnId)
           if (column) {
             if (filter.fhirExpressionTemplate) {
+              // For date filters, parse from/to from the value
+              let templateVars: Record<string, string> = {
+                sourceField: column.sourceField || '',
+                value: filter.value,
+              }
+
+              // Parse date range if the filter contains a date range format
+              // This handles both explicit date columns and any filter with date range format
+              if (column.type === 'date') {
+                // Handle both '#' and ' - ' delimiters for backward compatibility
+                const delimiter = filter.value.includes('#') ? '#' : ' - '
+                const [from, to] = filter.value.split(delimiter)
+                templateVars = {
+                  ...templateVars,
+                  from: from?.trim() || '',
+                  to: to?.trim() || '',
+                }
+              }
+
               const fhirPath = template(filter.fhirExpressionTemplate, {
                 interpolate: /{{([\s\S]+?)}}/g,
-              })({ sourceField: column.sourceField, value: filter.value })
+              })(templateVars)
               return isMatchingFhirPathCondition(row, fhirPath)
             }
             return true
@@ -265,16 +284,57 @@ export function VirtualizedTable({
   const handleFilter = useCallback(
     (columnId: string, value: string) => {
       const newFilters = filters.filter((f) => f.columnId !== columnId)
+      const column = columns.find((c) => c.id === columnId)
+
       if (value) {
-        newFilters.push({
-          columnId: columnId,
-          value: value.trim().toLowerCase(),
-          fhirExpressionTemplate: `{{sourceField}}.lower().contains('{{value}}')`,
-        })
+        if (column?.type === 'date') {
+          // For date filters, determine if it's a period object or simple date field
+          const [from, to] = value.split('#')
+          const isSimpleDateField =
+            column.sourceField === 'birthDate' ||
+            column.sourceField?.endsWith('.birthDate') ||
+            !column.sourceField?.includes('period')
+
+          // Create conditional FHIR expression based on available values and field type
+          let fhirExpression = ''
+
+          if (isSimpleDateField) {
+            // Simple date field (like birthDate)
+            if (from?.trim() && to?.trim()) {
+              fhirExpression = `{{sourceField}} >= '{{from}}' and {{sourceField}} <= '{{to}}'`
+            } else if (to?.trim()) {
+              fhirExpression = `{{sourceField}} <= '{{to}}'`
+            } else if (from?.trim()) {
+              fhirExpression = `{{sourceField}} >= '{{from}}'`
+            }
+          } else {
+            // Period object (like admission/discharge periods)
+            if (from?.trim() && to?.trim()) {
+              fhirExpression = `{{sourceField}}.start <= '{{to}}' and {{sourceField}}.end >= '{{from}}'`
+            } else if (to?.trim()) {
+              fhirExpression = `{{sourceField}}.start <= '{{to}}'`
+            } else if (from?.trim()) {
+              fhirExpression = `{{sourceField}}.end >= '{{from}}'`
+            }
+          }
+
+          newFilters.push({
+            columnId: columnId,
+            value: value.trim(), // Don't lowercase dates
+            fhirExpressionTemplate: fhirExpression,
+          })
+        } else {
+          newFilters.push({
+            columnId: columnId,
+            value: value.trim().toLowerCase(),
+            fhirExpressionTemplate: `{{sourceField}}.lower().contains('{{value}}')`,
+          })
+        }
       }
+
       onFiltersChange(newFilters)
     },
-    [filters, onFiltersChange],
+    [filters, onFiltersChange, columns],
   )
 
   // Drag and drop handlers
