@@ -324,6 +324,47 @@ async function findPatientByIdentifiers(
   return undefined
 }
 
+async function upsertPatient(
+  medplum: MedplumClient,
+  awellPatientId: string,
+  profile: PatientProfile,
+): Promise<Patient> {
+  const fhirPatient = createFhirPatient(awellPatientId, profile)
+
+  // Use upsert with Awell patient ID as the search criteria
+  // This will either update existing patient or create new one atomically
+  const searchQuery = `Patient?identifier=https://awellhealth.com/patients|${awellPatientId}`
+
+  console.log(
+    'Upserting patient:',
+    JSON.stringify(
+      {
+        awellPatientId,
+        searchQuery,
+      },
+      null,
+      2,
+    ),
+  )
+
+  const upsertedPatient = await medplum.upsertResource(fhirPatient, searchQuery)
+
+  console.log(
+    'Patient upserted successfully:',
+    JSON.stringify(
+      {
+        awellPatientId,
+        medplumPatientId: upsertedPatient.id,
+        lastUpdated: upsertedPatient.meta?.lastUpdated,
+      },
+      null,
+      2,
+    ),
+  )
+
+  return upsertedPatient
+}
+
 async function handlePatientCreated(
   medplum: MedplumClient,
   payload: PatientWebhookPayload,
@@ -344,44 +385,7 @@ async function handlePatientCreated(
   )
 
   try {
-    // Check if patient already exists
-    const existingPatient = await findPatientByIdentifiers(
-      medplum,
-      awellPatientId,
-      profile,
-    )
-    if (existingPatient) {
-      console.log(
-        'Patient already exists, updating instead:',
-        JSON.stringify(
-          {
-            awellPatientId,
-            existingPatientId: existingPatient.resource?.id,
-          },
-          null,
-          2,
-        ),
-      )
-      // Update the existing patient
-      await handlePatientUpdated(medplum, payload)
-      return
-    }
-
-    const fhirPatient = createFhirPatient(awellPatientId, profile)
-    const createdPatient = await medplum.createResource(fhirPatient)
-
-    console.log(
-      'Patient created successfully:',
-      JSON.stringify(
-        {
-          awellPatientId,
-          medplumPatientId: createdPatient.id,
-          lastUpdated: createdPatient.meta?.lastUpdated,
-        },
-        null,
-        2,
-      ),
-    )
+    await upsertPatient(medplum, awellPatientId, profile)
   } catch (error) {
     console.log(
       'Error creating patient:',
@@ -418,39 +422,7 @@ async function handlePatientUpdated(
   )
 
   try {
-    const existingPatient = await findPatientByIdentifiers(
-      medplum,
-      awellPatientId,
-      profile,
-    )
-    if (!existingPatient?.resource) {
-      console.log(
-        'Patient not found for update, creating new patient:',
-        JSON.stringify({ awellPatientId }, null, 2),
-      )
-      await handlePatientCreated(medplum, payload)
-      return
-    }
-
-    const updatedFhirPatient = createFhirPatient(awellPatientId, profile)
-    // Preserve the existing Medplum ID and meta information
-    updatedFhirPatient.id = existingPatient.resource.id
-    updatedFhirPatient.meta = existingPatient.resource.meta
-
-    const updatedPatient = await medplum.updateResource(updatedFhirPatient)
-
-    console.log(
-      'Patient updated successfully:',
-      JSON.stringify(
-        {
-          awellPatientId,
-          medplumPatientId: updatedPatient.id,
-          lastUpdated: updatedPatient.meta?.lastUpdated,
-        },
-        null,
-        2,
-      ),
-    )
+    await upsertPatient(medplum, awellPatientId, profile)
   } catch (error) {
     console.log(
       'Error updating patient:',
