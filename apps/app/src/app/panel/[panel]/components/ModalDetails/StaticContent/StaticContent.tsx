@@ -1,12 +1,9 @@
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { Fragment, useState } from 'react'
-import { RenderWithCopy } from './RenderWithCopy'
 import ExpandableCard from './ExpandableCard'
-import HighlightText from './HighlightContent'
-import { useAuthentication } from '../../../../../../hooks/use-authentication'
-import RenderValue from './RenderValue'
 import SearchInput from './SearchInput'
 import ContentCards from './ContentCards/ContentCards'
+import CardRowItem from './CardRowItem'
 
 interface StaticContentProps {
   task?: WorklistTask
@@ -38,18 +35,7 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
       }
     }
 
-    return (
-      <div className="flex justify-between">
-        <span className="">
-          <RenderWithCopy text={key}>
-            <HighlightText text={key} searchQuery={searchQuery} />
-          </RenderWithCopy>
-        </span>
-        <span className="text-gray-900 font-normal max-w-[60%]">
-          <RenderValue value={value} searchQuery={searchQuery} />
-        </span>
-      </div>
-    )
+    return <CardRowItem label={key} value={value} searchQuery={searchQuery} />
   }
 
   const renderExtensionData = (
