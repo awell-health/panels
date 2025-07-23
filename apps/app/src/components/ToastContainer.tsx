@@ -37,7 +37,8 @@ export function ToastContainer({
   const visibleToasts = toasts.slice(-maxToasts)
 
   const getPositionStyles = (position: ToastPosition) => {
-    const baseStyles = 'fixed z-50 flex flex-col gap-2 p-4 pointer-events-none'
+    const baseStyles =
+      'fixed z-[9999] flex flex-col gap-2 p-4 pointer-events-none'
 
     switch (position) {
       case 'top-right':

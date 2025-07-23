@@ -19,9 +19,19 @@ export interface AdHocTracksByPathway {
   tracks: Track[]
 }
 
+// Pathway types
+export interface Pathway {
+  status: string
+}
+
+export interface PathwayResponse {
+  pathway: Pathway
+}
+
 // Query types
 export interface GetAdHocTracksQuery {
   adHocTracksByPathway: AdHocTracksByPathway
+  pathway: PathwayResponse
 }
 
 export interface GetAdHocTracksQueryVariables {
