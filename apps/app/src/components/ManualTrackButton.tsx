@@ -43,6 +43,11 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
 
   // Handle track activation
   const handleTrackSelection = async (track: TrackWithPathway) => {
+    // Don't proceed if pathway is not active
+    if (!track.isPathwayActive) {
+      return
+    }
+
     setIsOptimisticUpdate(true)
     setIsDropdownOpen(false)
 
@@ -114,18 +119,32 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
         <div className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
           <div className="p-3">
             <div className="space-y-1">
-              {availableTracks.map((track) => (
-                <button
-                  key={`${track.id}-${track.pathwayId}`}
-                  type="button"
-                  onClick={() => handleTrackSelection(track)}
-                  disabled={isLoading}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors flex items-center gap-2 disabled:opacity-50"
-                >
-                  <Plus className="h-3 w-3 text-gray-500" />
-                  <span>{track.title}</span>
-                </button>
-              ))}
+              {availableTracks.map((track) => {
+                const isTrackDisabled = !track.isPathwayActive || isLoading
+                const trackTooltip = !track.isPathwayActive
+                  ? `Care flow is ${track.pathwayStatus} - track unavailable`
+                  : undefined
+
+                return (
+                  <button
+                    key={`${track.id}-${track.pathwayId}`}
+                    type="button"
+                    onClick={() => handleTrackSelection(track)}
+                    disabled={isTrackDisabled}
+                    title={trackTooltip}
+                    className={`w-full px-3 py-2 text-left text-sm rounded-md transition-colors flex items-center gap-2 ${
+                      isTrackDisabled
+                        ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                        : 'text-gray-700 hover:bg-gray-50 cursor-pointer'
+                    }`}
+                  >
+                    <Plus
+                      className={`h-3 w-3 ${isTrackDisabled ? 'text-gray-300' : 'text-gray-500'}`}
+                    />
+                    <span>{track.title}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>

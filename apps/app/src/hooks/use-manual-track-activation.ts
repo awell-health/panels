@@ -19,6 +19,8 @@ export interface UseManualTrackActivationOptions {
 // Extended track interface that includes pathway information
 export interface TrackWithPathway extends Track {
   pathwayId: string
+  pathwayStatus: string
+  isPathwayActive: boolean
 }
 
 export interface UseManualTrackActivationResult {
@@ -127,11 +129,17 @@ export function useManualTrackActivation(
               variables: { pathway_id: pathwayId },
             })
             const tracks = result.data?.adHocTracksByPathway?.tracks || []
-            // Associate each track with its pathway ID
+            const pathwayStatus =
+              result.data?.pathway?.pathway?.status || 'unknown'
+            const isPathwayActive = pathwayStatus === 'active'
+
+            // Associate each track with its pathway ID and status
             return tracks.map(
               (track: Track): TrackWithPathway => ({
                 ...track,
                 pathwayId,
+                pathwayStatus,
+                isPathwayActive,
               }),
             )
           } catch (error) {

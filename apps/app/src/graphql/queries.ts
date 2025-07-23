@@ -1,7 +1,7 @@
 import { gql } from '@apollo/client'
 
 /**
- * Query to get available ad hoc tracks for a specific pathway
+ * Query to get available ad hoc tracks for a specific pathway and pathway status
  */
 export const GET_AD_HOC_TRACKS = gql`
   query GetAdHocTracks($pathway_id: String!) {
@@ -9,6 +9,11 @@ export const GET_AD_HOC_TRACKS = gql`
       tracks {
         id
         title
+      }
+    }
+    pathway(id: $pathway_id) {
+      pathway {
+        status
       }
     }
   }
