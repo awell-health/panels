@@ -30,7 +30,7 @@ export async function getRuntimeConfig(): Promise<RuntimeConfig> {
     storageApiBaseUrl: process.env.APP_API_BASE_URL || '',
     environment,
     adminRole: process.env.ADMIN_ROLE || 'admin',
-    captureKey: process.env.NEXT_PUBLIC_CAPTURE_KEY,
-    captureInternalDomain: process.env.NEXT_PUBLIC_CAPTURE_INTERNAL_DOMAIN,
+    captureKey: process.env.CAPTURE_KEY,
+    captureInternalDomain: process.env.CAPTURE_INTERNAL_DOMAIN,
   }
 }
