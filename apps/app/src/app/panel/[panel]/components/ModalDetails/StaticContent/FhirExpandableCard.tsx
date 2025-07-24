@@ -7,7 +7,6 @@ import CardRowItem from './CardRowItem'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { useEffect, useState, type FC } from 'react'
 import type { Bundle, Encounter, Observation } from '@medplum/fhirtypes'
-import { extractBundleData } from '@/lib/fhir-data'
 
 export interface FHIRCard {
   name: string
