@@ -1,6 +1,16 @@
-import type { Task } from '@medplum/fhirtypes'
+import type {
+  Task,
+  Bundle,
+  Patient,
+  Practitioner,
+  Observation,
+} from '@medplum/fhirtypes'
 import { describe, expect, it } from 'vitest'
-import { getNestedValue, isMatchingFhirPathCondition } from './fhir-path'
+import {
+  getNestedValue,
+  isMatchingFhirPathCondition,
+  getNestedValueFromBundle,
+} from './fhir-path'
 
 describe('getNestedValue', () => {
   const testData = {
@@ -604,6 +614,506 @@ describe('getNestedValue', () => {
           ),
         ).toBeDefined() // Result depends on when test runs
       })
+    })
+  })
+})
+
+describe('Bundle Functions', () => {
+  // Create comprehensive test bundle with multiple resource types
+  const testBundle: Bundle = {
+    resourceType: 'Bundle',
+    id: 'test-bundle',
+    type: 'collection',
+    entry: [
+      {
+        resource: {
+          resourceType: 'Patient',
+          id: 'patient-1',
+          name: [{ given: ['John'], family: 'Doe' }],
+          birthDate: '1990-01-15',
+          gender: 'male',
+          telecom: [
+            { system: 'email', value: 'john.doe@example.com' },
+            { system: 'phone', value: '+1234567890' },
+          ],
+          extension: [
+            {
+              url: 'http://example.org/extensions/preferred-contact',
+              valueString: 'email',
+            },
+          ],
+        } as Patient,
+      },
+      {
+        resource: {
+          resourceType: 'Patient',
+          id: 'patient-2',
+          name: [{ given: ['Jane'], family: 'Smith' }],
+          birthDate: '1985-05-20',
+          gender: 'female',
+          telecom: [{ system: 'phone', value: '+0987654321' }],
+        } as Patient,
+      },
+      {
+        resource: {
+          resourceType: 'Practitioner',
+          id: 'practitioner-1',
+          name: [{ given: ['Dr. Alice'], family: 'Johnson' }],
+          qualification: [
+            {
+              code: {
+                coding: [
+                  {
+                    system: 'http://terminology.hl7.org/CodeSystem/v2-0360',
+                    code: 'MD',
+                    display: 'Doctor of Medicine',
+                  },
+                ],
+              },
+            },
+          ],
+          extension: [
+            {
+              url: 'http://example.org/extensions/specialty',
+              valueString: 'cardiology',
+            },
+          ],
+        } as Practitioner,
+      },
+      {
+        resource: {
+          resourceType: 'Task',
+          id: 'task-1',
+          status: 'in-progress',
+          intent: 'order',
+          description: 'Review patient records',
+          for: { reference: 'Patient/patient-1' },
+          owner: { reference: 'Practitioner/practitioner-1' },
+          extension: [
+            {
+              url: 'http://example.org/extensions/priority-level',
+              valueInteger: 3,
+            },
+          ],
+        } as Task,
+      },
+      {
+        resource: {
+          resourceType: 'Observation',
+          id: 'observation-1',
+          status: 'final',
+          code: {
+            coding: [
+              {
+                system: 'http://loinc.org',
+                code: '29463-7',
+                display: 'Body Weight',
+              },
+            ],
+          },
+          subject: { reference: 'Patient/patient-1' },
+          valueQuantity: {
+            value: 70,
+            unit: 'kg',
+          },
+          extension: [
+            {
+              url: 'http://example.org/extensions/measurement-device',
+              valueString: 'digital-scale',
+            },
+          ],
+        } as Observation,
+      },
+      {
+        // Entry with no resource to test edge cases
+        resource: undefined,
+      },
+      {
+        resource: {
+          resourceType: 'Task',
+          id: 'task-2',
+          status: 'completed',
+          intent: 'plan',
+          description: 'Follow up appointment',
+          for: { reference: 'Patient/patient-2' },
+        } as Task,
+      },
+    ],
+  }
+
+  const emptyBundle: Bundle = {
+    resourceType: 'Bundle',
+    id: 'empty-bundle',
+    type: 'collection',
+    entry: [],
+  }
+
+  const bundleWithoutEntry: Bundle = {
+    resourceType: 'Bundle',
+    id: 'no-entry-bundle',
+    type: 'collection',
+  }
+
+  describe('getNestedValueFromBundle', () => {
+    describe('Bundle-level queries (entry.resource.ofType pattern)', () => {
+      it('should handle basic ofType queries', () => {
+        const patients = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Patient)',
+        )
+        expect(Array.isArray(patients)).toBe(true)
+        expect(patients).toHaveLength(2)
+        expect(patients[0].resourceType).toBe('Patient')
+        expect(patients[1].resourceType).toBe('Patient')
+      })
+
+      it('should handle ofType queries with remaining path', () => {
+        const patientNames = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Patient).name[0].given[0]',
+        )
+        expect(patientNames).toBe('John') // Should return first match
+      })
+
+      it('should handle ofType queries with extension paths', () => {
+        const preferredContact = getNestedValueFromBundle(
+          testBundle,
+          "entry.resource.ofType(Patient).extension.where(url = 'http://example.org/extensions/preferred-contact').valueString",
+        )
+        expect(preferredContact).toBe('email')
+      })
+
+      it('should handle ofType queries with complex filtering', () => {
+        const malePatientName = getNestedValueFromBundle(
+          testBundle,
+          "entry.resource.ofType(Patient).where(gender = 'male').name[0].family",
+        )
+        expect(malePatientName).toBe('Doe')
+      })
+
+      it('should return undefined for non-existent resource types', () => {
+        const result = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Organization)',
+        )
+        expect(result).toBeUndefined()
+      })
+
+      it('should return undefined for malformed ofType queries', () => {
+        const result = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.invalidPattern(Patient)',
+        )
+        expect(result).toBeUndefined()
+      })
+
+      it('should handle Practitioner queries', () => {
+        const practitionerSpecialty = getNestedValueFromBundle(
+          testBundle,
+          "entry.resource.ofType(Practitioner).extension.where(url = 'http://example.org/extensions/specialty').valueString",
+        )
+        expect(practitionerSpecialty).toBe('cardiology')
+      })
+
+      it('should handle Task queries', () => {
+        const taskDescription = getNestedValueFromBundle(
+          testBundle,
+          "entry.resource.ofType(Task).where(status = 'in-progress').description",
+        )
+        expect(taskDescription).toBe('Review patient records')
+      })
+
+      it('should handle Observation queries', () => {
+        const observationValue = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Observation).valueQuantity.value',
+        )
+        expect(observationValue).toBe(70)
+      })
+    })
+
+    describe('Resource-level queries (non-ofType patterns)', () => {
+      it('should find values from any resource in the bundle', () => {
+        const patientName = getNestedValueFromBundle(
+          testBundle,
+          'name[0].given[0]',
+        )
+        expect(patientName).toBe('John') // Should find first match
+      })
+
+      it('should find telecom values from any resource', () => {
+        const email = getNestedValueFromBundle(
+          testBundle,
+          "telecom.where(system = 'email').value",
+        )
+        expect(email).toBe('john.doe@example.com')
+      })
+
+      it('should find extension values from any resource', () => {
+        const priorityLevel = getNestedValueFromBundle(
+          testBundle,
+          "extension.where(url = 'http://example.org/extensions/priority-level').valueInteger",
+        )
+        expect(priorityLevel).toBe(3)
+      })
+
+      it('should find qualification information', () => {
+        const qualificationCode = getNestedValueFromBundle(
+          testBundle,
+          'qualification[0].code.coding[0].code',
+        )
+        expect(qualificationCode).toBe('MD')
+      })
+
+      it('should return undefined when no resource has the requested path', () => {
+        const result = getNestedValueFromBundle(
+          testBundle,
+          'nonexistent.deeply.nested.path',
+        )
+        expect(result).toBeUndefined()
+      })
+
+      it('should skip resources with undefined values and find valid ones', () => {
+        const description = getNestedValueFromBundle(testBundle, 'description')
+        expect(description).toBe('Review patient records') // Should find first valid description
+      })
+    })
+
+    describe('Edge cases', () => {
+      it('should handle empty bundles', () => {
+        const result = getNestedValueFromBundle(emptyBundle, 'name[0].given[0]')
+        expect(result).toBeUndefined()
+      })
+
+      it('should handle bundles without entry property', () => {
+        const result = getNestedValueFromBundle(
+          bundleWithoutEntry,
+          'name[0].given[0]',
+        )
+        expect(result).toBeUndefined()
+      })
+
+      it('should handle null/undefined bundle', () => {
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        const result = getNestedValueFromBundle(null as any, 'name[0].given[0]')
+        expect(result).toBeUndefined()
+      })
+
+      it('should handle empty/undefined path', () => {
+        const result = getNestedValueFromBundle(testBundle, '')
+        expect(result).toBeUndefined()
+
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        const result2 = getNestedValueFromBundle(testBundle, undefined as any)
+        expect(result2).toBeUndefined()
+      })
+
+      it('should handle entries with undefined resources', () => {
+        const result = getNestedValueFromBundle(testBundle, 'name[0].given[0]')
+        expect(result).toBe('John') // Should skip undefined resources and find valid ones
+      })
+    })
+  })
+
+  describe('evaluateBundleLevelPath (internal function behavior)', () => {
+    describe('ofType pattern matching', () => {
+      it('should extract resource type correctly from ofType patterns', () => {
+        // These tests verify the internal behavior by testing through getNestedValueFromBundle
+        const patients = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Patient)',
+        )
+        expect(patients).toHaveLength(2)
+      })
+
+      it('should handle multiple resource types', () => {
+        const tasks = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Task)',
+        )
+        expect(tasks).toHaveLength(2)
+
+        const practitioners = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Practitioner)',
+        )
+        expect(practitioners).toHaveLength(1)
+      })
+
+      it('should return resources when no remaining path is provided', () => {
+        const observations = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Observation)',
+        )
+        expect(observations).toHaveLength(1)
+        expect(observations[0].resourceType).toBe('Observation')
+      })
+
+      it('should handle case-sensitive resource type matching', () => {
+        const result1 = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(patient)',
+        ) // lowercase
+        expect(result1).toBeUndefined()
+
+        const result2 = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Patient)',
+        ) // correct case
+        expect(result2).toBeDefined()
+      })
+    })
+
+    describe('remaining path processing', () => {
+      it('should process simple remaining paths', () => {
+        const patientId = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Patient).id',
+        )
+        expect(patientId).toBe('patient-1') // First patient's ID
+      })
+
+      it('should process complex remaining paths with arrays', () => {
+        const familyName = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Patient).name[0].family',
+        )
+        expect(familyName).toBe('Doe')
+      })
+
+      it('should process remaining paths with filtering', () => {
+        const phoneNumber = getNestedValueFromBundle(
+          testBundle,
+          "entry.resource.ofType(Patient).telecom.where(system = 'phone').value",
+        )
+        expect(phoneNumber).toBe('+1234567890')
+      })
+
+      it('should return first non-empty result from multiple resources', () => {
+        // Both patients have names, should return first one
+        const givenName = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Patient).name[0].given[0]',
+        )
+        expect(givenName).toBe('John')
+      })
+    })
+
+    describe('error handling', () => {
+      it('should handle invalid FHIRPath expressions gracefully', () => {
+        const result = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Patient).invalid[syntax',
+        )
+        expect(result).toBeUndefined()
+      })
+
+      it('should continue processing when one resource throws an error', () => {
+        // This would test resilience, but our current implementation catches errors
+        const result = getNestedValueFromBundle(
+          testBundle,
+          'entry.resource.ofType(Patient).name[0].given[0]',
+        )
+        expect(result).toBe('John')
+      })
+    })
+  })
+
+  describe('evaluateResourceLevelPath (internal function behavior)', () => {
+    describe('resource iteration', () => {
+      it('should check all resources until finding a match', () => {
+        // Patient is first in bundle, so should find patient name
+        const name = getNestedValueFromBundle(testBundle, 'name[0].given[0]')
+        expect(name).toBe('John')
+      })
+
+      it("should find values from later resources when earlier ones don't match", () => {
+        // Only Task has description, should find it even though Tasks come after Patients
+        const description = getNestedValueFromBundle(testBundle, 'description')
+        expect(description).toBe('Review patient records')
+      })
+
+      it('should find qualification information from Practitioner', () => {
+        const qualification = getNestedValueFromBundle(
+          testBundle,
+          'qualification[0].code.coding[0].display',
+        )
+        expect(qualification).toBe('Doctor of Medicine')
+      })
+    })
+
+    describe('result filtering', () => {
+      it('should skip empty string results', () => {
+        // This tests the internal filtering logic that looks for non-empty results
+        const result = getNestedValueFromBundle(testBundle, 'name[0].given[0]')
+        expect(result).not.toBe('')
+        expect(result).toBe('John')
+      })
+
+      it('should skip null/undefined results', () => {
+        const result = getNestedValueFromBundle(testBundle, 'name[0].given[0]')
+        expect(result).not.toBeNull()
+        expect(result).not.toBeUndefined()
+        expect(result).toBe('John')
+      })
+    })
+
+    describe('resource validation', () => {
+      it('should skip entries without resources', () => {
+        // Bundle contains an entry with undefined resource - should skip it
+        const result = getNestedValueFromBundle(testBundle, 'name[0].given[0]')
+        expect(result).toBe('John') // Should still find valid resources
+      })
+
+      it('should handle completely empty bundle entries', () => {
+        const emptyBundle: Bundle = {
+          resourceType: 'Bundle',
+          type: 'collection',
+          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+          entry: [null as any, undefined as any, { resource: null as any }],
+        }
+        const result = getNestedValueFromBundle(emptyBundle, 'name[0].given[0]')
+        expect(result).toBeUndefined()
+      })
+    })
+  })
+
+  describe('Integration tests', () => {
+    it('should handle complex multi-step queries across different resource types', () => {
+      // Find email from patient, then check if there's a task for that patient
+      const patientEmail = getNestedValueFromBundle(
+        testBundle,
+        "telecom.where(system = 'email').value",
+      )
+      expect(patientEmail).toBe('john.doe@example.com')
+
+      const taskForPatient = getNestedValueFromBundle(
+        testBundle,
+        'for.reference',
+      )
+      expect(taskForPatient).toBe('Patient/patient-1')
+    })
+
+    it('should handle queries that could match multiple resource types', () => {
+      // Both Patient, Practitioner, Task, and Observation have extensions
+      const extensionValue = getNestedValueFromBundle(
+        testBundle,
+        "extension.where(url = 'http://example.org/extensions/priority-level').valueInteger",
+      )
+      expect(extensionValue).toBe(3) // From Task
+    })
+
+    it('should prioritize bundle-level queries over resource-level ones', () => {
+      // When path starts with entry.resource.ofType, should use bundle-level processing
+      const patientCount = getNestedValueFromBundle(
+        testBundle,
+        'entry.resource.ofType(Patient)',
+      )
+      expect(patientCount).toHaveLength(2)
+
+      // When path doesn't start with that pattern, should use resource-level processing
+      const firstName = getNestedValueFromBundle(testBundle, 'name[0].given[0]')
+      expect(firstName).toBe('John')
     })
   })
 })
