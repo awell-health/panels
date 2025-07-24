@@ -1,7 +1,12 @@
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import FhirExpandableCard, { type FHIRCard } from '../FhirExpandableCard'
 import { useEffect, useState } from 'react'
-import type { Composition } from '@medplum/fhirtypes'
+import type {
+  Composition,
+  Encounter,
+  Observation,
+  Resource,
+} from '@medplum/fhirtypes'
 import ExpandableCard from '../ExpandableCard'
 import RenderValue from '../RenderValue'
 import { wellpathCards } from './Wellpath/wellpathCards'
@@ -54,24 +59,61 @@ const ContentCards: React.FC<Props> = ({
       contentCards = [...defaultCards]
   }
 
-  const { getPatientObservations, getPatientCompositions } = useMedplumStore()
-  // const [observations, setObservations] = useState<Observation[]>([])
+  const {
+    getPatientObservations,
+    getPatientCompositions,
+    getPatientEncounters,
+  } = useMedplumStore()
+  const [observations, setObservations] = useState<Observation[]>([])
   const [compositions, setCompositions] = useState<Composition[]>([])
-
+  const [encounters, setEncounters] = useState<Encounter[]>([])
   useEffect(() => {
-    // const fetchObservations = async () => {
-    //   const observations = await getPatientObservations(patient?.id ?? '')
-    //   setObservations(observations)
-    // }
+    const fetchObservations = async () => {
+      const observations = await getPatientObservations(patient?.id ?? '')
+      setObservations(observations)
+    }
+
+    const fetchEncounters = async () => {
+      const encounters = await getPatientEncounters(patient?.id ?? '')
+      setEncounters(encounters)
+    }
 
     const fetchCompositions = async () => {
       const compositions = await getPatientCompositions(patient?.id ?? '')
       setCompositions(compositions)
     }
 
-    // fetchObservations()
+    if (patient?.id) {
+      fetchObservations()
+    }
+
     fetchCompositions()
-  }, [patient, getPatientCompositions])
+    fetchEncounters()
+  }, [
+    patient,
+    getPatientCompositions,
+    getPatientObservations,
+    getPatientEncounters,
+  ])
+
+  const bundle = {
+    resourceType: 'Bundle' as const,
+    type: 'collection' as const,
+    entry: [
+      {
+        resource: patient as unknown as Resource,
+      },
+      {
+        resource: task as unknown as Resource,
+      },
+      {
+        resource: observations as unknown as Resource,
+      },
+      {
+        resource: encounters as unknown as Resource,
+      },
+    ],
+  }
 
   return (
     <>
@@ -99,11 +141,7 @@ const ContentCards: React.FC<Props> = ({
           searchQuery={searchQuery}
           card={card}
           expanded={expanded}
-          resources={{
-            Task: task,
-            Patient: patient,
-            // Observation: observations, // TODO: fix FHIR paths to work with Observation type
-          }}
+          bundle={bundle}
         />
       ))}
       {compositions.map((composition) =>

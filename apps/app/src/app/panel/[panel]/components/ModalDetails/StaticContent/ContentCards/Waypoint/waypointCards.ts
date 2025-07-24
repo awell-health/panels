@@ -1,3 +1,5 @@
+// NO NEED TO PARSE NOW
+
 import type { FHIRCard } from '../../FhirExpandableCard'
 
 export const waypointCards: FHIRCard[] = [
@@ -7,19 +9,16 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Full name',
         key: 'name',
-        resourceType: 'Patient',
         fhirPath: 'name',
       },
       {
         label: 'Date of birth',
         key: 'birthDate',
-        resourceType: 'Patient',
         fhirPath: 'birthDate',
       },
       {
         label: 'Preferred communication',
         key: 'communicationPref',
-        resourceType: 'Patient',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points')" +
           ".extension.where(url='communication_pref').valueString",
@@ -27,19 +26,16 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Email',
         key: 'email',
-        resourceType: 'Patient',
         fhirPath: 'telecom.where(system="email").value',
       },
       {
         label: 'Phone',
         key: 'phone',
-        resourceType: 'Patient',
         fhirPath: "telecom.where(system='phone').value",
       },
       {
         label: 'Dialysis provider',
         key: 'dialysisProvider',
-        resourceType: 'Patient',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points')" +
           ".extension.where(url='organization').valueString",
@@ -53,7 +49,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'eGFR (mL/min)',
         key: 'observation_egfr_ml_min',
-        resourceType: 'Patient',
         fhirPath:
           // 'entry.resource.ofType(Observation)' +
           // ".where(code.coding.code='33914-3')" + // eGFR
@@ -64,7 +59,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Creatinine (mg/dL)',
         key: 'observation_creatinine_mg_dl',
-        resourceType: 'Patient',
         fhirPath:
           // 'entry.resource.ofType(Observation)' +
           // ".where(code.coding.code='2160-0')" + // Creatinine
@@ -75,7 +69,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Sodium (mmol/L)',
         key: 'observation_sodium_mmol_l',
-        resourceType: 'Patient',
         fhirPath:
           // 'entry.resource.ofType(Observation)' +
           // ".where(code.coding.code='2951-2')" + // Sodium
@@ -86,7 +79,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'HbA1c (%)',
         key: 'observation_hba1c_percent',
-        resourceType: 'Patient',
         fhirPath:
           // 'entry.resource.ofType(Observation)' +
           // ".where(code.coding.code='30425-0')" + // HbA1c
@@ -104,7 +96,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Weight (lbs)',
         key: 'observation_weight_lbs',
-        resourceType: 'Patient',
         fhirPath:
           // 'entry.resource.ofType(Observation)' +
           // ".where(code.coding.code='29463-7')" + // Body weight
@@ -115,7 +106,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Systolic BP (mmHg)',
         key: 'observation_sbp_mmHg',
-        resourceType: 'Patient',
         fhirPath:
           // 'entry.resource.ofType(Observation)' +
           // ".where(code.coding.code='8480-6')" + // Systolic
@@ -126,7 +116,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Diastolic BP (mmHg)',
         key: 'observation_dbp_mmHg',
-        resourceType: 'Patient',
         fhirPath:
           // 'entry.resource.ofType(Observation)' +
           // ".where(code.coding.code='8462-4')" + // Diastolic
@@ -144,7 +133,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Encounter ID',
         key: 'encounter_id',
-        resourceType: 'Patient',
         fhirPath:
           // "entry.resource.ofType(Encounter).identifier.where(system='https://waypointhcs.com/encounters>').value" +
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points')" +
@@ -153,7 +141,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Encounter type',
         key: 'encounter_type',
-        resourceType: 'Patient',
         fhirPath:
           // 'entry.resource.ofType(Encounter).type.coding.first().display ∥ ' +
           // 'entry.resource.ofType(Encounter).class.display ∥ ' +
@@ -163,7 +150,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Start date/time',
         key: 'encounter_datetime',
-        resourceType: 'Patient',
         fhirPath:
           // 'entry.resource.ofType(Encounter).period.start ∥ ' +
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points')" +
@@ -172,7 +158,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Registration date/time',
         key: 'registration_dt_tm',
-        resourceType: 'Patient',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points')" +
           ".extension.where(url='registration_dt_tm').valueString",
@@ -180,7 +165,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Discharge disposition',
         key: 'discharge_disposition',
-        resourceType: 'Patient',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points')" +
           ".extension.where(url='discharge_disposition').valueString",
@@ -188,7 +172,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Discharge date',
         key: 'discharge_date',
-        resourceType: 'Patient',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points')" +
           ".extension.where(url='discharge_date').valueString",
@@ -203,7 +186,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'FIN number',
         key: 'fin_number',
-        resourceType: 'Patient',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points')" +
           ".extension.where(url='fin_number').valueString",
@@ -211,7 +193,6 @@ export const waypointCards: FHIRCard[] = [
       {
         label: 'Preferred channel',
         key: 'communication_pref',
-        resourceType: 'Patient',
         fhirPath:
           "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points')" +
           ".extension.where(url='communication_pref').valueString",

@@ -1,9 +1,12 @@
-import { getNestedValue } from '../../../../../../lib/fhir-path'
+import {
+  getNestedValue,
+  getNestedValueFromBundle,
+} from '../../../../../../lib/fhir-path'
 import ExpandableCard from './ExpandableCard'
 import CardRowItem from './CardRowItem'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
-import type { FC } from 'react'
-import type { Observation } from '@medplum/fhirtypes'
+import { useEffect, useState, type FC } from 'react'
+import type { Bundle, Encounter, Observation } from '@medplum/fhirtypes'
 
 export interface FHIRCard {
   name: string
@@ -11,63 +14,42 @@ export interface FHIRCard {
     label: string
     key: string
     fhirPath: string
-    resourceType: 'Task' | 'Patient'
+    resourceType?: 'Task' | 'Patient'
   }[]
 }
 interface Props {
   searchQuery: string
   card: FHIRCard
   expanded: boolean
-  resources: {
-    Task?: WorklistTask
-    Patient?: WorklistPatient
-    // Observation?: Observation[] // fix FHIR paths to work with Observation type
-  }
+  bundle: Bundle
 }
-type ResourceType = WorklistTask | WorklistPatient | Observation[]
+type ResourceType = WorklistTask | WorklistPatient | Observation[] | Encounter
 
 const FhirExpandableCard: FC<Props> = ({
   searchQuery,
   card,
   expanded,
-  resources,
+  bundle,
 }) => {
-  const getFieldResourceValue = (
-    res: ResourceType | undefined,
-    fhirPath: string,
-  ) => {
-    if (!res) {
-      return ''
+  const [cardValues, setCardValues] = useState<{
+    [key: string]: string | string[]
+  }>({})
+
+  useEffect(() => {
+    if (!bundle) {
+      return
     }
 
-    const fieldValue = getNestedValue(res, fhirPath)
+    const initialCardValues: { [key: string]: string | string[] } = {}
 
-    return fieldValue
-  }
+    for (const field of card.fields) {
+      const fieldValue = getNestedValueFromBundle(bundle, field.fhirPath)
 
-  const renderResourceRow = (
-    rowResource: ResourceType | undefined,
-    field: {
-      label: string
-      key: string
-      fhirPath: string
-      resourceType?: string
-    },
-  ) => {
-    if (!rowResource) {
-      return null
+      initialCardValues[field.key] = fieldValue
     }
-    const value = getFieldResourceValue(rowResource, field.fhirPath)
 
-    return (
-      <CardRowItem
-        key={field.key}
-        label={field.label}
-        value={value}
-        searchQuery={searchQuery}
-      />
-    )
-  }
+    setCardValues(initialCardValues)
+  }, [card, bundle])
 
   if (searchQuery) {
     const containString = card.fields.some((field) => {
@@ -75,12 +57,11 @@ const FhirExpandableCard: FC<Props> = ({
         .toLowerCase()
         .includes(searchQuery.toLowerCase())
 
-      const resourceItem =
-        resources[field.resourceType as keyof typeof resources]
-
-      const isInValue = getFieldResourceValue(resourceItem, field.fhirPath)
-        ?.toLowerCase()
+      const isInValue = cardValues[field.key]
+        ?.toString()
+        .toLowerCase()
         .includes(searchQuery.toLowerCase())
+
       return isInLabels || isInValue
     })
 
@@ -89,11 +70,9 @@ const FhirExpandableCard: FC<Props> = ({
     }
   }
 
-  const isEmptyBox = card.fields.every((field) => {
-    const resourceType = field.resourceType
-    const rowResource = resources[resourceType as keyof typeof resources]
-    return !rowResource
-  })
+  const isEmptyBox = Object.values(cardValues).every(
+    (value) => !value || value === '',
+  )
 
   if (isEmptyBox) {
     return <></>
@@ -103,9 +82,16 @@ const FhirExpandableCard: FC<Props> = ({
     <ExpandableCard title={card.name} defaultExpanded={expanded}>
       <div className="space-y-2 mt-3">
         {card.fields.map((field) => {
-          const resourceType = field.resourceType
-          const rowResource = resources[resourceType as keyof typeof resources]
-          return renderResourceRow(rowResource, field)
+          const fieldValue = getNestedValueFromBundle(bundle, field.fhirPath)
+
+          return (
+            <CardRowItem
+              key={field.key}
+              label={field.label}
+              value={fieldValue as string}
+              searchQuery={searchQuery}
+            />
+          )
         })}
       </div>
     </ExpandableCard>
