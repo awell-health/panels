@@ -10,6 +10,7 @@ import {
   getNestedValue,
   isMatchingFhirPathCondition,
   getNestedValueFromBundle,
+  parseDate,
 } from './fhir-path'
 
 describe('getNestedValue', () => {
@@ -304,10 +305,10 @@ describe('getNestedValue', () => {
     it('should perform date arithmetic', async () => {
       expect(
         getNestedValue(testData, 'addSeconds(executionPeriod.start, 1209600)'),
-      ).toEqual(new Date('2024-03-29T10:00:00.000Z'))
+      ).toEqual(parseDate('2024-03-29T10:00:00.000Z'))
       expect(
         getNestedValue(testData, 'addSeconds(executionPeriod.end, -1209600)'),
-      ).toEqual(new Date('2024-03-15T15:30:00.000Z'))
+      ).toEqual(parseDate('2024-03-15T15:30:00.000Z'))
     })
 
     it('should handle date functions', () => {
@@ -333,6 +334,271 @@ describe('getNestedValue', () => {
       }
       const result = getNestedValue(patient, 'subtractDates(now(), birthDate)')
       expect(result).toBeGreaterThan(1000 * 60 * 60 * 24 * 365 * 25)
+    })
+  })
+
+  describe('Date functions', () => {
+    describe('subtractDates function', () => {
+      describe('years calculation', () => {
+        it('should calculate age correctly', () => {
+          const patient = {
+            resourceType: 'Patient',
+            birthDate: '2000-01-01',
+          }
+
+          // Test with a specific date to ensure consistent results
+          const result = getNestedValue(
+            patient,
+            "subtractDates('2025-07-14', birthDate, 'years')",
+          )
+          expect(result).toBe(25) // Should be 25, not 26 (the original bug)
+        })
+
+        it('should calculate age correctly on exact birthday', () => {
+          const patient = {
+            resourceType: 'Patient',
+            birthDate: '2000-01-01',
+          }
+
+          const result = getNestedValue(
+            patient,
+            "subtractDates('2025-01-01', birthDate, 'years')",
+          )
+          expect(result).toBe(25) // Exactly 25 years on birthday
+        })
+
+        it('should calculate age correctly one day before birthday', () => {
+          const patient = {
+            resourceType: 'Patient',
+            birthDate: '2000-01-01',
+          }
+
+          const result = getNestedValue(
+            patient,
+            "subtractDates('2024-12-31', birthDate, 'years')",
+          )
+          expect(result).toBe(24) // Still 24 years, one day before 25th birthday
+        })
+
+        it('should handle leap year births correctly', () => {
+          const patient = {
+            resourceType: 'Patient',
+            birthDate: '2000-02-29', // Leap year birth
+          }
+
+          const result = getNestedValue(
+            patient,
+            "subtractDates('2025-02-28', birthDate, 'years')",
+          )
+          expect(result).toBe(24) // Should be 24, not 25 (one day before birthday in non-leap year)
+        })
+      })
+
+      describe('months calculation', () => {
+        it('should calculate months correctly', () => {
+          const data = {
+            startDate: '2024-01-01',
+            endDate: '2024-06-15',
+          }
+
+          const result = getNestedValue(
+            data,
+            "subtractDates(endDate, startDate, 'months')",
+          )
+          expect(result).toBe(5) // 5 complete months, not 6
+        })
+      })
+
+      describe('days calculation', () => {
+        it('should calculate days correctly', () => {
+          const data = {
+            startDate: '2024-01-01',
+            endDate: '2024-01-08',
+          }
+
+          const result = getNestedValue(
+            data,
+            "subtractDates(endDate, startDate, 'days')",
+          )
+          expect(result).toBe(7) // Exactly 7 days
+        })
+
+        it('should handle the original days off-by-one error', () => {
+          const data = {
+            startDate: '2025-07-14',
+            endDate: '2025-07-15',
+          }
+
+          const result = getNestedValue(
+            data,
+            "subtractDates(endDate, startDate, 'days')",
+          )
+          expect(result).toBe(1) // Should be 1, not 0 or 2
+        })
+      })
+
+      describe('other time units', () => {
+        it('should calculate hours correctly', () => {
+          const data = {
+            startTime: '2024-01-01T10:00:00Z',
+            endTime: '2024-01-01T15:30:00Z',
+          }
+
+          const result = getNestedValue(
+            data,
+            "subtractDates(endTime, startTime, 'hours')",
+          )
+          expect(result).toBe(5) // 5.5 hours = 5 complete hours
+        })
+
+        it('should calculate minutes correctly', () => {
+          const data = {
+            startTime: '2024-01-01T10:00:00Z',
+            endTime: '2024-01-01T10:05:30Z',
+          }
+
+          const result = getNestedValue(
+            data,
+            "subtractDates(endTime, startTime, 'minutes')",
+          )
+          expect(result).toBe(5) // 5.5 minutes = 5 complete minutes
+        })
+
+        it('should calculate seconds correctly', () => {
+          const data = {
+            startTime: '2024-01-01T10:00:00Z',
+            endTime: '2024-01-01T10:00:10Z',
+          }
+
+          const result = getNestedValue(
+            data,
+            "subtractDates(endTime, startTime, 'seconds')",
+          )
+          expect(result).toBe(10) // Exactly 10 seconds
+        })
+      })
+
+      describe('error handling and edge cases', () => {
+        it('should handle invalid date formats gracefully', () => {
+          const data = {
+            invalidDate: 'not-a-date',
+            validDate: '2024-01-01',
+          }
+
+          const result = getNestedValue(
+            data,
+            "subtractDates(validDate, invalidDate, 'years')",
+          )
+          expect(result).toBe(0) // Should return 0 as fallback
+        })
+
+        it('should handle missing unit parameter', () => {
+          const data = {
+            date1: '2024-01-01T10:00:00Z',
+            date2: '2024-01-01T09:00:00Z',
+          }
+
+          const result = getNestedValue(data, 'subtractDates(date1, date2)')
+          expect(result).toBe(3600000) // Should default to milliseconds (1 hour = 3600000ms)
+        })
+
+        it('should handle date-only vs datetime strings correctly', () => {
+          const data = {
+            dateOnly: '2024-01-01',
+            dateTime: '2024-01-02T00:00:00Z',
+          }
+
+          const result = getNestedValue(
+            data,
+            "subtractDates(dateTime, dateOnly, 'days')",
+          )
+          expect(result).toBe(1) // Should be 1 day difference
+        })
+      })
+    })
+
+    describe('addToDate function', () => {
+      it('should add years correctly', () => {
+        const data = {
+          birthDate: '2000-01-01',
+        }
+
+        const result = getNestedValue(data, "addToDate(birthDate, 25, 'years')")
+        expect(result).toEqual(parseDate('2025-01-01'))
+      })
+
+      it('should add months correctly', () => {
+        const data = {
+          startDate: '2024-01-01',
+        }
+
+        const result = getNestedValue(data, "addToDate(startDate, 6, 'months')")
+        expect(result).toEqual(parseDate('2024-07-01'))
+      })
+
+      it('should add days correctly', () => {
+        const data = {
+          startDate: '2024-01-01',
+        }
+
+        const result = getNestedValue(data, "addToDate(startDate, 10, 'days')")
+        expect(result).toEqual(parseDate('2024-01-11'))
+      })
+
+      it('should handle leap years in month addition', () => {
+        const data = {
+          startDate: '2024-01-29', // Leap year
+        }
+
+        const result = getNestedValue(data, "addToDate(startDate, 1, 'months')")
+        expect(result).toEqual(parseDate('2024-02-29')) // Should handle leap year correctly
+      })
+
+      it('should default to days for unknown unit', () => {
+        const data = {
+          startDate: '2024-01-01',
+        }
+
+        const result = getNestedValue(
+          data,
+          "addToDate(startDate, 5, 'unknown')",
+        )
+        expect(result).toEqual(parseDate('2024-01-06')) // Should default to days
+      })
+    })
+
+    describe('date parsing robustness', () => {
+      it('should parse ISO date strings correctly', () => {
+        const data = {
+          isoDate: '2024-01-01',
+          isoDateTime: '2024-01-01T10:30:00Z',
+          isoDateTimeOffset: '2024-01-01T10:30:00+01:00',
+        }
+
+        expect(getNestedValue(data, 'toMilliseconds(isoDate)')).toBeDefined()
+        expect(
+          getNestedValue(data, 'toMilliseconds(isoDateTime)'),
+        ).toBeDefined()
+        expect(
+          getNestedValue(data, 'toMilliseconds(isoDateTimeOffset)'),
+        ).toBeDefined()
+      })
+
+      it('should handle malformed dates gracefully', () => {
+        const data = {
+          malformedDate: '2024-13-45', // Invalid month/day
+          emptyString: '',
+          nonDateString: 'hello world',
+        }
+
+        expect(getNestedValue(data, 'toMilliseconds(malformedDate)')).toBe(
+          '2024-13-45',
+        )
+        expect(getNestedValue(data, 'toMilliseconds(emptyString)')).toBe('')
+        expect(getNestedValue(data, 'toMilliseconds(nonDateString)')).toBe(
+          'hello world',
+        )
+      })
     })
   })
 

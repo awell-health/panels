@@ -1,5 +1,21 @@
 // Type definitions for fhirpath
 import type { Bundle } from '@medplum/fhirtypes'
+import {
+  addSeconds as addSecondsDateFns,
+  addMinutes,
+  addHours,
+  addDays,
+  addMonths,
+  addYears,
+  differenceInSeconds,
+  differenceInMinutes,
+  differenceInHours,
+  differenceInDays,
+  differenceInMonths,
+  differenceInYears,
+  parseISO,
+  isValid,
+} from 'date-fns'
 import fhirpath from 'fhirpath'
 
 /**
@@ -11,13 +27,36 @@ import fhirpath from 'fhirpath'
  * @returns The value at the specified path, or an empty string if not found
  */
 
+/**
+ * Safely parse a date string to a Date object using date-fns
+ * Ensures date-only strings are treated as UTC to match FHIR conventions
+ */
+export const parseDate = (dateStr: string): Date | null => {
+  if (typeof dateStr !== 'string') return null
+
+  try {
+    // For datetime strings, parse as-is
+    if (/^\d{4}-\d{2}-\d{2}T/.test(dateStr)) {
+      const parsed = parseISO(dateStr)
+      return isValid(parsed) ? parsed : null
+    }
+
+    // Fallback: try parseISO for any other ISO-like format
+    const parsed = parseISO(dateStr)
+    return isValid(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
 const addSeconds = {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   fn: (_: any[], input: any, seconds: number) => {
-    if (typeof input === 'string' && /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(input)) {
-      const date = new Date(input)
-      date.setSeconds(date.getSeconds() + seconds)
-      return [date]
+    const dateStr = String(input)
+    const date = parseDate(dateStr)
+
+    if (date && typeof seconds === 'number') {
+      return [addSecondsDateFns(date, seconds)]
     }
     return [input] // fallback
   },
@@ -29,8 +68,10 @@ const addSeconds = {
 const toMilliseconds = {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   fn: (_: any[], input: any) => {
-    if (typeof input === 'string' && /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(input)) {
-      const date = new Date(input)
+    const dateStr = String(input)
+    const date = parseDate(dateStr)
+
+    if (date) {
       return [date.getTime()]
     }
     return [input] // fallback
@@ -46,33 +87,29 @@ const subtractDates = {
     const strDate1 = String(date1)
     const strDate2 = String(date2)
 
-    if (
-      /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(strDate1) &&
-      /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(strDate2)
-    ) {
-      const d1 = new Date(strDate1)
-      const d2 = new Date(strDate2)
-      const diffInMs = d1.getTime() - d2.getTime()
+    const d1 = parseDate(strDate1)
+    const d2 = parseDate(strDate2)
 
+    if (d1 && d2) {
       // Convert to the requested unit and return as integer
       switch (unit?.toLowerCase()) {
         case 'years':
-          // Use 365.25 days per year to account for leap years
-          return [Math.round(diffInMs / (1000 * 60 * 60 * 24 * 365.25))]
+          // Use floor for age calculations - you haven't completed the next year until your birthday
+          return [differenceInYears(d1, d2)]
         case 'months':
-          // Use 30.44 days per month (365.25/12) as average month length
-          return [Math.round(diffInMs / (1000 * 60 * 60 * 24 * 30.44))]
+          // Use floor for month calculations - you haven't completed the next month until the same date
+          return [differenceInMonths(d1, d2)]
         case 'days':
-          return [Math.round(diffInMs / (1000 * 60 * 60 * 24))]
+          return [differenceInDays(d1, d2)]
         case 'hours':
-          return [Math.round(diffInMs / (1000 * 60 * 60))]
+          return [differenceInHours(d1, d2)]
         case 'minutes':
-          return [Math.round(diffInMs / (1000 * 60))]
+          return [differenceInMinutes(d1, d2)]
         case 'seconds':
-          return [Math.round(diffInMs / 1000)]
+          return [differenceInSeconds(d1, d2)]
         default:
           // Default to milliseconds for backward compatibility
-          return [Math.round(diffInMs)]
+          return [d1.getTime() - d2.getTime()]
       }
     }
     return [0] // fallback
@@ -87,47 +124,51 @@ const addToDate = {
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   fn: (_: any[], date: any, quantity: number, unit: string) => {
     const strDate = String(date)
+    const d = parseDate(strDate)
 
-    if (
-      typeof quantity === 'number' &&
-      /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(strDate)
-    ) {
-      const d = new Date(strDate)
-      const currentTime = d.getTime()
-
-      // Convert quantity to milliseconds based on the unit
-      let millisecondsToAdd = 0
+    if (d && typeof quantity === 'number') {
+      // Use date-fns functions for precise date arithmetic
+      // All operations are done on UTC dates and return UTC dates
+      let result: Date
       switch (unit?.toLowerCase()) {
         case 'years':
-          // Use 365.25 days per year to account for leap years
-          millisecondsToAdd = quantity * 365.25 * 24 * 60 * 60 * 1000
+          result = addYears(d, quantity)
           break
         case 'months':
-          // Use 30.44 days per month (365.25/12) as average month length
-          millisecondsToAdd = quantity * 30.44 * 24 * 60 * 60 * 1000
+          result = addMonths(d, quantity)
           break
         case 'days':
-          millisecondsToAdd = quantity * 24 * 60 * 60 * 1000
+          result = addDays(d, quantity)
           break
         case 'hours':
-          millisecondsToAdd = quantity * 60 * 60 * 1000
+          result = addHours(d, quantity)
           break
         case 'minutes':
-          millisecondsToAdd = quantity * 60 * 1000
+          result = addMinutes(d, quantity)
           break
         case 'seconds':
-          millisecondsToAdd = quantity * 1000
+          result = addSecondsDateFns(d, quantity)
           break
         default:
           // Default to days if unit is not recognized
-          millisecondsToAdd = quantity * 24 * 60 * 60 * 1000
+          result = addDays(d, quantity)
           break
       }
 
-      // Add milliseconds using setTime for predictable behavior
-      d.setTime(currentTime + millisecondsToAdd)
+      // Ensure result is a proper UTC date by creating a new Date with UTC components
+      const utcResult = new Date(
+        Date.UTC(
+          result.getUTCFullYear(),
+          result.getUTCMonth(),
+          result.getUTCDate(),
+          result.getUTCHours(),
+          result.getUTCMinutes(),
+          result.getUTCSeconds(),
+          result.getUTCMilliseconds(),
+        ),
+      )
 
-      return [d]
+      return [utcResult]
     }
     return [date] // fallback
   },
