@@ -9,9 +9,15 @@ interface Props {
   label: string
   value: string | undefined
   searchQuery?: string
+  fhirPath?: string
 }
 
-const CardRowItem: FC<Props> = ({ label, value, searchQuery = '' }) => {
+const CardRowItem: FC<Props> = ({
+  label,
+  value,
+  searchQuery = '',
+  fhirPath,
+}) => {
   const { formatDate, formatDateTime } = useDateTimeFormat()
 
   if (searchQuery) {
@@ -49,7 +55,7 @@ const CardRowItem: FC<Props> = ({ label, value, searchQuery = '' }) => {
   return (
     <div className="flex justify-between">
       <div className="text-gray-600 max-w-[32%] break-words">
-        <RenderWithCopy text={label}>
+        <RenderWithCopy text={fhirPath ?? label}>
           <HighlightText text={label} searchQuery={searchQuery} />
         </RenderWithCopy>
       </div>

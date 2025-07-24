@@ -87,6 +87,7 @@ const FhirExpandableCard: FC<Props> = ({
           return (
             <CardRowItem
               key={field.key}
+              fhirPath={field.fhirPath}
               label={field.label}
               value={fieldValue as string}
               searchQuery={searchQuery}

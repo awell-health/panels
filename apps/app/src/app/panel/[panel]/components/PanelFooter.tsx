@@ -1,6 +1,8 @@
 'use client'
 
 import { StorageStatusIndicator } from '@/components/StorageStatusIndicator'
+import { EditableJsonModal } from '@/components/EditableJsonModal'
+import type { Panel } from '@/types/panel'
 import {
   History,
   Home,
@@ -8,7 +10,10 @@ import {
   RotateCcw,
   RefreshCw,
   Plus,
+  Cog,
 } from 'lucide-react'
+import { useState } from 'react'
+import type { FHIRCard } from './ModalDetails/StaticContent/FhirExpandableCard'
 
 interface PanelFooterProps {
   columnsCounter: number
@@ -21,6 +26,8 @@ interface PanelFooterProps {
   isLoadingMore?: boolean
   onRefresh?: () => void
   isLoading?: boolean
+  panel?: Panel
+  onCardsConfigurationChange?: (cardsConfiguration: FHIRCard[]) => Promise<void>
 }
 
 export default function PanelFooter({
@@ -34,7 +41,25 @@ export default function PanelFooter({
   isLoadingMore,
   onRefresh,
   isLoading,
+  panel,
+  onCardsConfigurationChange,
 }: PanelFooterProps) {
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
+
+  const handleConfigSave = async (newConfigData: object) => {
+    const typedNewData = newConfigData as FHIRCard[]
+
+    // Save configuration to panel metadata
+    if (panel && onCardsConfigurationChange) {
+      try {
+        await onCardsConfigurationChange(typedNewData)
+      } catch (error) {
+        console.error('❌ Failed to save configuration to panel:', error)
+        throw error
+      }
+    }
+  }
+
   return (
     <div className="border-t border-gray-200 p-2 flex items-center justify-between bg-white">
       <div className="flex items-center space-x-3">
@@ -127,6 +152,17 @@ export default function PanelFooter({
           <RotateCcw className="h-3 w-3" />
         </button>
 
+        <button
+          type="button"
+          className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-700 hover:text-gray-800"
+          onClick={() => {
+            setIsConfigModalOpen(true)
+          }}
+          title="Configuration"
+        >
+          <Cog className="h-3 w-3" />
+        </button>
+
         {/* AI Assistant Button */}
         <button
           disabled={true}
@@ -140,6 +176,15 @@ export default function PanelFooter({
         {/* Storage Status Indicator */}
         <StorageStatusIndicator />
       </div>
+
+      {/* Configuration Modal */}
+      <EditableJsonModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        title="Panel Configuration"
+        initialData={panel?.metadata?.cardsConfiguration as FHIRCard[]}
+        onSave={handleConfigSave}
+      />
     </div>
   )
 }

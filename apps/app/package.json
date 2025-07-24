@@ -36,6 +36,7 @@
     "langsmith": "^0.3.36",
     "lodash": "^4.17.21",
     "lucide-react": "^0.511.0",
+    "markdown-to-jsx": "^7.7.12",
     "next": "15.3.3",
     "next-auth": "5.0.0-beta.25",
     "openai": "^4.103.0",

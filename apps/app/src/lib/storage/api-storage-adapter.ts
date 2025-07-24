@@ -101,14 +101,30 @@ export class APIStorageAdapter implements StorageAdapter {
     try {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
-      // Simple panel update - no column synchronization
-      const backendPanelInfo = {
-        ...mapFrontendPanelToBackend(updates as Panel, this.config),
+      // Build the panel info with only the fields that are being updated
+      // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+      const backendPanelInfo: any = {
         id: id,
+        tenantId: this.config.tenantId,
+        userId: this.config.userId,
+      }
+
+      // Only include fields that are actually being updated
+      if (updates.name !== undefined) {
+        backendPanelInfo.name = updates.name
+      }
+      if (updates.description !== undefined) {
+        backendPanelInfo.description = updates.description
+      }
+      if (updates.metadata !== undefined) {
+        backendPanelInfo.metadata = updates.metadata
       }
 
       const updatedPanel = await panelsAPI.update(backendPanelInfo)
-      return mapBackendPanelToFrontend(updatedPanel)
+
+      const frontendPanel = mapBackendPanelToFrontend(updatedPanel)
+
+      return frontendPanel
     } catch (error) {
       logger.error({ error, id }, `Failed to update panel ${id} via API`)
       throw new Error(
