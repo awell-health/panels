@@ -15,6 +15,8 @@ import defaultCards from './defaultCards'
 import { waypointCards } from './Waypoint/waypointCards'
 import encompassCards from './Encompass/encompassCards'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import { useReactivePanel } from '../../../../../../../hooks/use-reactive-data'
+import { useParams } from 'next/navigation'
 
 interface Props {
   task?: WorklistTask
@@ -30,6 +32,9 @@ const ContentCards: React.FC<Props> = ({
   expanded,
 }) => {
   const { organizationSlug } = useAuthentication()
+  const params = useParams()
+  const panelId = params.panel as string
+  const { panel } = useReactivePanel(panelId)
 
   const devContentCards = {
     'encompass-health': [...encompassCards],
@@ -37,27 +42,33 @@ const ContentCards: React.FC<Props> = ({
     wellpath: [...wellpathCards],
     default: [...defaultCards],
   }
+
   const [selectConfig, setSelectConfig] =
     useState<keyof typeof devContentCards>('default')
 
-  let contentCards: FHIRCard[] = []
+  let defaultContentCards: FHIRCard[] = []
 
   switch (organizationSlug) {
     case 'wellpath':
-      contentCards = [...wellpathCards]
+      defaultContentCards = [...wellpathCards]
       break
     case 'encompass-health':
-      contentCards = [...encompassCards]
+      defaultContentCards = [...encompassCards]
       break
     case 'waypoint':
-      contentCards = [...waypointCards]
+      defaultContentCards = [...waypointCards]
       break
     case 'awell-dev':
-      contentCards = [...devContentCards[selectConfig]]
+      defaultContentCards = [...devContentCards[selectConfig]]
       break
     default:
-      contentCards = [...defaultCards]
+      defaultContentCards = [...defaultCards]
   }
+
+  console.log('defaultContentCards', panel)
+
+  const contentCards =
+    (panel?.metadata?.cardsConfiguration as FHIRCard[]) ?? defaultContentCards
 
   const {
     getPatientObservations,
@@ -118,22 +129,35 @@ const ContentCards: React.FC<Props> = ({
   return (
     <>
       {organizationSlug === 'awell-dev' && (
-        <div className="flex-1 my-4 text-xs p-2 bg-gray-200">
-          <label htmlFor="selectConfig">[awell-dev ONLY]: Select config</label>
-          <select
-            className="select"
-            value={selectConfig}
-            onChange={(e) =>
-              setSelectConfig(e.target.value as keyof typeof devContentCards)
-            }
-          >
-            {Object.keys(devContentCards).map((key) => (
-              <option key={key} value={key}>
-                {key}
-              </option>
-            ))}
-          </select>
-        </div>
+        <>
+          {panel?.metadata?.cardsConfiguration && (
+            <div className="text-xs p-2 bg-gray-200">
+              Loaded from panel configuration
+            </div>
+          )}
+          {!panel?.metadata?.cardsConfiguration && (
+            <div className="flex-1 my-4 text-xs p-2 bg-gray-200">
+              <label htmlFor="selectConfig">
+                [awell-dev ONLY]: Select config
+              </label>
+              <select
+                className="select"
+                value={selectConfig}
+                onChange={(e) =>
+                  setSelectConfig(
+                    e.target.value as keyof typeof devContentCards,
+                  )
+                }
+              >
+                {Object.keys(devContentCards).map((key) => (
+                  <option key={key} value={key}>
+                    {key}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </>
       )}
       {contentCards.map((card, index) => (
         <FhirExpandableCard

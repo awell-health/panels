@@ -1,0 +1,132 @@
+[
+  {
+    "name": "Patient demographics",
+    "fields": [
+      {
+        "label": "Full name",
+        "key": "name",
+        "fhirPath": "name"
+      },
+      {
+        "label": "Date of birth",
+        "key": "birthDate",
+        "fhirPath": "birthDate"
+      },
+      {
+        "label": "Preferred communication",
+        "key": "communicationPref",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='communication_pref').valueString"
+      },
+      {
+        "label": "Email",
+        "key": "email",
+        "fhirPath": "telecom.where(system=\"email\").value"
+      },
+      {
+        "label": "Phone",
+        "key": "phone",
+        "fhirPath": "telecom.where(system='phone').value"
+      },
+      {
+        "label": "Dialysis provider",
+        "key": "dialysisProvider",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='organization').valueString"
+      }
+    ]
+  },
+  {
+    "name": "Kidney function & metabolic panel",
+    "fields": [
+      {
+        "label": "eGFR (mL/min)",
+        "key": "observation_egfr_ml_min",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='observation_egfr_ml_min').valueString"
+      },
+      {
+        "label": "Creatinine (mg/dL)",
+        "key": "observation_creatinine_mg_dl",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='observation_creatinine_mg_dl').valueString"
+      },
+      {
+        "label": "Sodium (mmol/L)",
+        "key": "observation_sodium_mmol_l",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='observation_sodium_mmol_l').valueString"
+      },
+      {
+        "label": "HbA1c (%)",
+        "key": "observation_hba1c_percent",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='observation_hba1c_percent').valueString"
+      }
+    ]
+  },
+  {
+    "name": "Vital signs",
+    "fields": [
+      {
+        "label": "Weight (lbs)",
+        "key": "observation_weight_lbs",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='observation_weight_lbs').valueString"
+      },
+      {
+        "label": "Systolic BP (mmHg)",
+        "key": "observation_sbp_mmHg",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='observation_sbp_mmHg').valueString"
+      },
+      {
+        "label": "Diastolic BP (mmHg)",
+        "key": "observation_dbp_mmHg",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='observation_dbp_mmHg').valueString"
+      }
+    ]
+  },
+  {
+    "name": "Current encounter",
+    "fields": [
+      {
+        "label": "Encounter ID",
+        "key": "encounter_id",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='encounter_id').valueString"
+      },
+      {
+        "label": "Encounter type",
+        "key": "encounter_type",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='encounter_type').valueString"
+      },
+      {
+        "label": "Start date/time",
+        "key": "encounter_datetime",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='encounter_datetime').valueString"
+      },
+      {
+        "label": "Registration date/time",
+        "key": "registration_dt_tm",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='registration_dt_tm').valueString"
+      },
+      {
+        "label": "Discharge disposition",
+        "key": "discharge_disposition",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='discharge_disposition').valueString"
+      },
+      {
+        "label": "Discharge date",
+        "key": "discharge_date",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='discharge_date').valueString"
+      }
+    ]
+  },
+  {
+    "name": "Administrative & billing",
+    "fields": [
+      {
+        "label": "FIN number",
+        "key": "fin_number",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='fin_number').valueString"
+      },
+      {
+        "label": "Preferred channel",
+        "key": "communication_pref",
+        "fhirPath": "extension.where(url='https://awellhealth.com/fhir/StructureDefinition/awell-data-points').extension.where(url='communication_pref').valueString"
+      }
+    ]
+  }
+]

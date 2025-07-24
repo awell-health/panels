@@ -32,6 +32,7 @@ import { ModalDetails } from './components/ModalDetails'
 import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
+import type { FHIRCard } from './components/ModalDetails/StaticContent/FhirExpandableCard'
 
 export default function WorklistPage() {
   const params = useParams()
@@ -229,6 +230,23 @@ export default function WorklistPage() {
     }
   }
 
+  const onCardsConfigurationChange = async (cardsConfiguration: FHIRCard[]) => {
+    if (!panel) {
+      return
+    }
+
+    try {
+      await updatePanel(panel.id, {
+        metadata: {
+          ...panel.metadata,
+          cardsConfiguration,
+        },
+      })
+    } catch (error) {
+      console.error('Failed to update panel cards configuration:', error)
+    }
+  }
+
   // Centralized row click handler
   const handleRowClick = useCallback(
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
@@ -372,6 +390,8 @@ export default function WorklistPage() {
               isLoadingMore={isLoadingMore}
               onRefresh={refresh}
               isLoading={isProgressiveLoading}
+              panel={panel}
+              onCardsConfigurationChange={onCardsConfigurationChange}
             />
           </div>
         </>

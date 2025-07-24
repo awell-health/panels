@@ -24,6 +24,7 @@ import ModalDetails from '../../components/ModalDetails/ModalDetails'
 import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import type { FHIRCard } from '../../components/ModalDetails/StaticContent/FhirExpandableCard'
 
 export default function WorklistViewPage() {
   const { updateView } = useReactivePanelStore()
@@ -47,6 +48,7 @@ export default function WorklistViewPage() {
   const { columns: allColumns, isLoading: isColumnsLoading } =
     useReactiveColumns(panelId)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
+  const { updatePanel } = useReactivePanelStore()
 
   const { toggleTaskOwner } = useMedplumStore()
   const {
@@ -270,6 +272,15 @@ export default function WorklistViewPage() {
     }
   }
 
+  const onCardsConfigurationChange = async (cardsConfiguration: FHIRCard[]) => {
+    if (!panel) {
+      return
+    }
+    await updatePanel?.(panelId, {
+      metadata: { ...panel.metadata, cardsConfiguration },
+    })
+  }
+
   const isLoading =
     isPanelLoading || isViewLoading || isColumnsLoading || !panel || !view
 
@@ -362,6 +373,8 @@ export default function WorklistViewPage() {
               isLoadingMore={isLoadingMore}
               onRefresh={refresh}
               isLoading={isProgressiveLoading}
+              panel={panel}
+              onCardsConfigurationChange={onCardsConfigurationChange}
             />
           </div>
         </>

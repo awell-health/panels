@@ -17,17 +17,22 @@ import type { View as ViewBackend } from '@panels/types/views'
 export const mapBackendPanelToFrontend = (
   backendPanel: PanelResponse | CreatePanelResponse,
 ): Panel => {
-  return {
+  const frontendPanel = {
     id: backendPanel.id.toString(),
     name: backendPanel.name,
     description: backendPanel.description ?? undefined,
     createdAt: new Date(backendPanel.createdAt),
     metadata: {
+      // Preserve ALL metadata fields from backend
+      ...backendPanel.metadata,
+      // Ensure required fields have defaults
       filters: backendPanel.metadata?.filters || [],
       sort: backendPanel.metadata?.sort || undefined,
       viewType: backendPanel.metadata?.viewType || 'patient',
     },
   }
+
+  return frontendPanel
 }
 
 export const mapBackendViewToFrontend = (

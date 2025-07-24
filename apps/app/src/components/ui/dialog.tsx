@@ -7,9 +7,15 @@ interface DialogProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   children?: React.ReactNode
+  className?: string
 }
 
-const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
+const Dialog = ({
+  open,
+  onOpenChange,
+  children,
+  className = '',
+}: DialogProps) => {
   return (
     <dialog
       className={cn('modal', open && 'modal-open')}
@@ -25,7 +31,10 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
       }}
     >
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: it's a modal */}
-      <div className="modal-box p-0" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={cn('modal-box p-0', className)}
+        onClick={(e) => e.stopPropagation()}
+      >
         {children}
       </div>
     </dialog>
