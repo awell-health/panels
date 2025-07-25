@@ -182,7 +182,7 @@ export default function PanelFooter({
         isOpen={isConfigModalOpen}
         onClose={() => setIsConfigModalOpen(false)}
         title="Panel Configuration"
-        initialData={panel?.metadata?.cardsConfiguration as FHIRCard[]}
+        panel={panel}
         onSave={handleConfigSave}
       />
     </div>

@@ -1,6 +1,4 @@
-import type { FHIRCard } from '../FhirExpandableCard'
-
-const defaultCards: FHIRCard[] = [
+export default [
   {
     name: 'Patient Details & Demographics',
     fields: [
@@ -84,5 +82,3 @@ const defaultCards: FHIRCard[] = [
     ],
   },
 ]
-
-export default defaultCards
