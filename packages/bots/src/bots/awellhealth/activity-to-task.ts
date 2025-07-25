@@ -374,7 +374,7 @@ async function findOrCreatePatient(
   }
 
   // Use upsert with proper search query including system
-  const searchQuery = `Patient?identifier=https://awellhealth.com/patients|${awellPatientId}`
+  const searchQuery = `identifier=https://awellhealth.com/patients|${awellPatientId}`
 
   console.log(
     'Upserting patient:',

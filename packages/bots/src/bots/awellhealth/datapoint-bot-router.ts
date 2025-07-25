@@ -265,13 +265,50 @@ interface DataPointRouterPayload {
   pathway_id: string
 }
 
-// Create or find patient
-async function upsertPatient(
+// Find existing patient or create new one
+async function findOrCreatePatient(
   medplum: MedplumClient,
   patientId: string,
   patientIdentifiers: Array<{ system: string; value: string }>,
 ): Promise<string> {
-  // Create patient resource with all identifiers
+  // Search for existing patient
+  const searchQuery = `identifier=https://awellhealth.com/patients|${patientId}`
+
+  console.log(
+    'Searching for existing patient:',
+    JSON.stringify(
+      {
+        patientId,
+        searchQuery,
+      },
+      null,
+      2,
+    ),
+  )
+
+  const existingPatients = await medplum.searchResources('Patient', searchQuery)
+
+  if (existingPatients.length > 0) {
+    const existingPatient = existingPatients[0]
+    if (!existingPatient?.id) {
+      throw new Error('Found patient but missing ID')
+    }
+    console.log(
+      'Found existing patient, returning without changes:',
+      JSON.stringify(
+        {
+          originalId: patientId,
+          existingPatientId: existingPatient.id,
+          lastUpdated: existingPatient.meta?.lastUpdated,
+        },
+        null,
+        2,
+      ),
+    )
+    return existingPatient.id
+  }
+
+  // Create patient resource with all identifiers only if patient doesn't exist
   const identifiers = [
     {
       system: 'https://awellhealth.com/patients',
@@ -283,21 +320,17 @@ async function upsertPatient(
     })),
   ]
 
-  const patientToUpsert: Patient = {
+  const newPatient: Patient = {
     resourceType: 'Patient',
     identifier: identifiers,
     active: true,
   }
 
-  // Use upsert with proper search query including system
-  const searchQuery = `Patient?identifier=https://awellhealth.com/patients|${patientId}`
-
   console.log(
-    'Upserting patient:',
+    'Creating new patient:',
     JSON.stringify(
       {
         patientId,
-        searchQuery,
         identifiersCount: identifiers.length,
       },
       null,
@@ -305,25 +338,22 @@ async function upsertPatient(
     ),
   )
 
-  const upsertedPatient = await medplum.upsertResource(
-    patientToUpsert,
-    searchQuery,
-  )
+  const createdPatient = await medplum.createResource(newPatient)
 
   console.log(
-    'Patient upserted successfully:',
+    'Patient created successfully:',
     JSON.stringify(
       {
         originalId: patientId,
-        patientId: upsertedPatient.id,
-        lastUpdated: upsertedPatient.meta?.lastUpdated,
+        createdPatientId: createdPatient.id,
+        lastUpdated: createdPatient.meta?.lastUpdated,
       },
       null,
       2,
     ),
   )
 
-  return upsertedPatient.id || ''
+  return createdPatient.id || ''
 }
 
 export async function handler(
@@ -365,7 +395,7 @@ export async function handler(
     }
 
     // Find or create patient
-    const patientId = await upsertPatient(
+    const patientId = await findOrCreatePatient(
       medplum,
       patient_id,
       pathway?.patient_identifiers || [],
