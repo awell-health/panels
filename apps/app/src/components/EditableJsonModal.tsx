@@ -35,13 +35,9 @@ export function EditableJsonModal({
 }: EditableJsonModalProps) {
   const { organizationSlug } = useAuthentication()
 
-  const [preloadConfiguration, setPreloadConfiguration] = useState(
-    organizationSlug ?? 'default',
-  )
-
   const defaultContentCards: FHIRCard[] =
     (panel?.metadata?.cardsConfiguration as FHIRCard[]) ??
-    getCardConfigs(preloadConfiguration)
+    getCardConfigs(organizationSlug ?? 'default')
 
   const [jsonString, setJsonString] = useState(() => {
     try {
@@ -50,10 +46,6 @@ export function EditableJsonModal({
       return '[]'
     }
   })
-
-  useEffect(() => {
-    setJsonString(JSON.stringify(getCardConfigs(preloadConfiguration), null, 2))
-  }, [preloadConfiguration])
 
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -434,30 +426,7 @@ Each card should follow this structure:
           )}
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {organizationSlug === 'awell-dev' && (
-              <>
-                <label
-                  htmlFor="preload-configuration"
-                  className="text-gray-600"
-                >
-                  Preload
-                </label>
-                <select
-                  id="preload-configuration"
-                  className="w-full select select-xs"
-                  onChange={(e) => setPreloadConfiguration(e.target.value)}
-                >
-                  <option value="default">Default</option>
-                  <option value="encompass-health">Encompass Health</option>
-                  <option value="wellpath">Wellpath</option>
-                  <option value="waypoint">Waypoint</option>
-                </select>
-              </>
-            )}
-          </div>
-
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
           <div className="flex items-center gap-2">
             <button
               type="button"
