@@ -1,6 +1,4 @@
-import type { FHIRCard } from '../../FhirExpandableCard'
-
-const encompassFHIR: FHIRCard[] = [
+export default [
   {
     name: 'Patient Demographics',
     fields: [
@@ -337,5 +335,3 @@ const encompassFHIR: FHIRCard[] = [
     ],
   },
 ]
-
-export default encompassFHIR

@@ -9,14 +9,11 @@ import type {
 } from '@medplum/fhirtypes'
 import ExpandableCard from '../ExpandableCard'
 import RenderValue from '../RenderValue'
-import { wellpathCards } from './Wellpath/wellpathCards'
 import { useAuthentication } from '../../../../../../../hooks/use-authentication'
-import defaultCards from './defaultCards'
-import { waypointCards } from './Waypoint/waypointCards'
-import encompassCards from './Encompass/encompassCards'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { useReactivePanel } from '../../../../../../../hooks/use-reactive-data'
 import { useParams } from 'next/navigation'
+import { getCardConfigs } from '../../../../../../../utils/static/CardConfigs'
 
 interface Props {
   task?: WorklistTask
@@ -36,39 +33,9 @@ const ContentCards: React.FC<Props> = ({
   const panelId = params.panel as string
   const { panel } = useReactivePanel(panelId)
 
-  const devContentCards = {
-    'encompass-health': [...encompassCards],
-    waypoint: [...waypointCards],
-    wellpath: [...wellpathCards],
-    default: [...defaultCards],
-  }
-
-  const [selectConfig, setSelectConfig] =
-    useState<keyof typeof devContentCards>('default')
-
-  let defaultContentCards: FHIRCard[] = []
-
-  switch (organizationSlug) {
-    case 'wellpath':
-      defaultContentCards = [...wellpathCards]
-      break
-    case 'encompass-health':
-      defaultContentCards = [...encompassCards]
-      break
-    case 'waypoint':
-      defaultContentCards = [...waypointCards]
-      break
-    case 'awell-dev':
-      defaultContentCards = [...devContentCards[selectConfig]]
-      break
-    default:
-      defaultContentCards = [...defaultCards]
-  }
-
-  console.log('defaultContentCards', panel)
-
   const contentCards =
-    (panel?.metadata?.cardsConfiguration as FHIRCard[]) ?? defaultContentCards
+    (panel?.metadata?.cardsConfiguration as FHIRCard[]) ??
+    getCardConfigs(organizationSlug ?? 'default')
 
   const {
     getPatientObservations,
@@ -128,37 +95,6 @@ const ContentCards: React.FC<Props> = ({
 
   return (
     <>
-      {organizationSlug === 'awell-dev' && (
-        <>
-          {panel?.metadata?.cardsConfiguration && (
-            <div className="text-xs p-2 bg-gray-200">
-              Loaded from panel configuration
-            </div>
-          )}
-          {!panel?.metadata?.cardsConfiguration && (
-            <div className="flex-1 my-4 text-xs p-2 bg-gray-200">
-              <label htmlFor="selectConfig">
-                [awell-dev ONLY]: Select config
-              </label>
-              <select
-                className="select"
-                value={selectConfig}
-                onChange={(e) =>
-                  setSelectConfig(
-                    e.target.value as keyof typeof devContentCards,
-                  )
-                }
-              >
-                {Object.keys(devContentCards).map((key) => (
-                  <option key={key} value={key}>
-                    {key}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </>
-      )}
       {contentCards.map((card, index) => (
         <FhirExpandableCard
           key={`${card.name}-${index}`}

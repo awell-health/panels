@@ -10,6 +10,12 @@ import {
 import { Check, Copy, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { AIAssistantChat } from './AIAssistantChat'
 import { chatWithAI } from '@/app/actions/ai-chat'
+import { cn } from '@/lib/utils'
+
+import type { Panel } from '@/types/panel'
+import { useAuthentication } from '../hooks/use-authentication'
+import type { FHIRCard } from '../app/panel/[panel]/components/ModalDetails/StaticContent/FhirExpandableCard'
+import { getCardConfigs } from '@/utils/static/CardConfigs'
 
 interface EditableJsonModalProps {
   isOpen: boolean
@@ -17,20 +23,27 @@ interface EditableJsonModalProps {
   title?: string
   initialData?: object | string
   onSave?: (data: object) => void
+  panel?: Panel
 }
 
 export function EditableJsonModal({
   isOpen,
   onClose,
   title = 'Edit JSON Configuration',
-  initialData = [],
   onSave,
+  panel,
 }: EditableJsonModalProps) {
+  const { organizationSlug } = useAuthentication()
+
+  const defaultContentCards: FHIRCard[] =
+    (panel?.metadata?.cardsConfiguration as FHIRCard[]) ??
+    getCardConfigs(organizationSlug ?? 'default')
+
   const [jsonString, setJsonString] = useState(() => {
     try {
-      return JSON.stringify(initialData, null, 2)
+      return JSON.stringify(defaultContentCards, null, 2)
     } catch {
-      return '{}'
+      return '[]'
     }
   })
   const [error, setError] = useState<string | null>(null)
@@ -245,16 +258,16 @@ Each card should follow this structure:
       onOpenChange={(open) => !open && onClose()}
       className="max-w-[80vw] max-h-[90vh]"
     >
-      <DialogContent className="flex flex-col p-0 m-0 w-[80vw] h-[80vh]">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200">
+      <DialogContent className="flex flex-col p-0 m-0 w-[80vw] h-[80vh] text-xs">
+        <DialogHeader className="p-3 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-semibold text-gray-900">
+            <DialogTitle className="font-medium text-gray-900 text-sm">
               {title}
             </DialogTitle>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full p-1 hover:bg-gray-100"
+              className="rounded-md p-1 hover:bg-gray-100 transition-colors cursor-pointer"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -265,33 +278,39 @@ Each card should follow this structure:
         <div className="flex-1 flex overflow-hidden">
           {/* Left Column - JSON Editor */}
           <div className="w-2/3 flex flex-col overflow-hidden border-r border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-200">
+            <div className="p-3 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">
+                <p className="text-gray-600">
                   Edit the JSON configuration below. Make sure the JSON is valid
                   before saving.
                 </p>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleFormat}
-                    className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className={cn(
+                      'flex items-center px-3 py-1 rounded-md border transition-colors cursor-pointer',
+                      'text-gray-600 border-gray-200 hover:bg-gray-50',
+                    )}
                   >
                     Format
                   </button>
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center"
+                    className={cn(
+                      'flex items-center gap-1 px-3 py-1 rounded-md border transition-colors cursor-pointer',
+                      'text-gray-600 border-gray-200 hover:bg-gray-50',
+                    )}
                   >
                     {copied ? (
                       <>
-                        <Check className="h-3 w-3 mr-1 text-green-500" />
+                        <Check className="h-4 w-4 text-green-500" />
                         Copied
                       </>
                     ) : (
                       <>
-                        <Copy className="h-3 w-3 mr-1" />
+                        <Copy className="h-4 w-4" />
                         Copy
                       </>
                     )}
@@ -300,32 +319,33 @@ Each card should follow this structure:
               </div>
               {error && (
                 <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-sm text-red-600">
+                  <p className="text-red-600">
                     <strong>JSON Error:</strong> {error}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="flex-1 overflow-hidden px-6 py-4">
+            <div className="flex-1 overflow-hidden p-3">
               <textarea
                 value={jsonString}
                 onChange={handleJsonChange}
-                className={`w-full h-full font-mono text-sm border rounded-md p-4 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={cn(
+                  'w-full h-full font-mono border rounded-md p-4 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
                   error
-                    ? 'border-red-300 bg-red-50'
-                    : 'border-gray-300 bg-white'
-                }`}
+                    ? 'border-red-200 bg-red-50'
+                    : 'border-gray-200 bg-white',
+                )}
                 placeholder="Enter JSON here..."
                 spellCheck={false}
               />
             </div>
 
-            <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
+            <div className="p-3 border-t border-gray-100 bg-gray-50">
               <button
                 type="button"
                 onClick={() => setShowExample(!showExample)}
-                className="flex items-center text-sm text-gray-600 hover:text-gray-800 focus:outline-none"
+                className="flex items-center text-gray-600 hover:text-gray-900 focus:outline-none transition-colors cursor-pointer"
               >
                 {showExample ? (
                   <ChevronDown className="h-4 w-4 mr-1" />
@@ -337,14 +357,14 @@ Each card should follow this structure:
 
               {showExample && (
                 <div className="mt-3 p-3 bg-white border border-gray-200 rounded-md">
-                  <p className="text-xs text-gray-600 mb-2">
+                  <p className="text-gray-600 mb-2">
                     Expected structure: Array of cards with name and fields
                     properties
                   </p>
-                  <pre className="text-xs font-mono text-gray-700 overflow-x-auto bg-gray-50 p-2 rounded border max-h-32 overflow-y-auto">
+                  <pre className="font-mono text-gray-900 overflow-x-auto bg-gray-50 p-2 rounded border max-h-32 overflow-y-auto">
                     {exampleJson}
                   </pre>
-                  <div className="mt-2 text-xs text-gray-500">
+                  <div className="mt-2 text-gray-600">
                     <p>
                       <strong>Required properties:</strong>
                     </p>
@@ -389,17 +409,15 @@ Each card should follow this structure:
             <div className="w-1/3 flex flex-col bg-gray-50">
               <div className="px-4 py-3 border-b border-gray-200 bg-white">
                 <div className="flex items-center">
-                  <Check className="h-4 w-4 mr-2 text-gray-400" />
-                  <h3 className="text-sm font-medium text-gray-500">
-                    AI Assistant
-                  </h3>
+                  <Check className="h-4 w-4 mr-2 text-gray-500" />
+                  <h3 className="font-medium text-gray-600">AI Assistant</h3>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-gray-600 mt-1">
                   Chat functionality not available
                 </p>
               </div>
               <div className="flex-1 flex items-center justify-center p-8">
-                <p className="text-sm text-gray-400 text-center">
+                <p className="text-gray-600 text-center">
                   To enable AI assistance, provide an onSendChatMessage handler
                 </p>
               </div>
@@ -407,11 +425,14 @@ Each card should follow this structure:
           )}
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+            className={cn(
+              'flex items-center px-4 py-2 rounded-md border transition-colors cursor-pointer',
+              'text-gray-600 border-gray-200 hover:bg-gray-50',
+            )}
           >
             Cancel
           </button>
@@ -419,7 +440,12 @@ Each card should follow this structure:
             type="button"
             onClick={handleSave}
             disabled={!!error}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 hover:border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            className={cn(
+              'flex items-center px-4 py-2 rounded-md border transition-colors cursor-pointer text-xs',
+              !error
+                ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-800'
+                : 'text-gray-600 border-0 opacity-50 cursor-not-allowed',
+            )}
           >
             Save Changes
           </button>

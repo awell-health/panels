@@ -1,8 +1,4 @@
-// NO NEED TO PARSE NOW
-
-import type { FHIRCard } from '../../FhirExpandableCard'
-
-export const waypointCards: FHIRCard[] = [
+export default [
   {
     name: 'Patient demographics',
     fields: [

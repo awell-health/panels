@@ -1,6 +1,4 @@
-import type { FHIRCard } from '../../FhirExpandableCard'
-
-export const wellpathCards: FHIRCard[] = [
+export default [
   {
     name: 'Patient demographics',
     fields: [

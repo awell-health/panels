@@ -45,7 +45,7 @@ function ChatInput({
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="Ask about JSON structure..."
-          className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           disabled={disabled}
         />
         <button
@@ -164,11 +164,11 @@ What specific question do you have about your FHIR card configuration?`
   }
 
   return (
-    <div className={`flex flex-col bg-gray-50 ${className}`}>
-      <div className="px-4 py-3 border-b border-gray-200 bg-white">
+    <div className={`flex flex-col bg-gray-50 text-xs ${className}`}>
+      <div className="p-3 border-b border-gray-200 bg-white">
         <div className="flex items-center">
           <MessageSquare className="h-4 w-4 mr-2 text-blue-600" />
-          <h3 className="text-sm font-medium text-gray-900">AI Assistant</h3>
+          <h3 className="font-medium text-gray-900">AI Assistant</h3>
         </div>
         <p className="text-xs text-gray-500 mt-1">
           Ask for help with your JSON configuration
@@ -177,14 +177,14 @@ What specific question do you have about your FHIR card configuration?`
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {isInitialLoading && (
-          <div className="text-center text-gray-500 text-sm py-8">
+          <div className="text-center text-gray-500 py-8">
             <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-400 animate-pulse" />
             <p>Loading AI Assistant...</p>
           </div>
         )}
 
         {!isInitialLoading && messages.length === 0 && (
-          <div className="text-center text-gray-500 text-sm py-8">
+          <div className="text-center text-gray-500 py-8">
             <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-400" />
             <p>Start a conversation</p>
             <p className="text-xs mt-1">
@@ -201,7 +201,7 @@ What specific question do you have about your FHIR card configuration?`
             }`}
           >
             <div
-              className={`max-w-[90%] rounded-lg px-3 py-2 text-sm break-words ${
+              className={`max-w-[90%] rounded-lg p-2 break-words ${
                 message.role === 'user'
                   ? 'bg-blue-600 text-white'
                   : 'bg-white border border-gray-200 text-gray-900'
@@ -239,7 +239,7 @@ What specific question do you have about your FHIR card configuration?`
                   <button
                     type="button"
                     onClick={() => handleRetryMessage(message.id)}
-                    className="ml-2 p-1 text-xs text-red-600 hover:text-red-800 focus:outline-none"
+                    className="ml-2 p-1 text-red-600 hover:text-red-800 focus:outline-none"
                     title="Retry message"
                   >
                     <RotateCcw className="h-3 w-3" />
