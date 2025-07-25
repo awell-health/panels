@@ -33,6 +33,7 @@ export interface ColumnProperties {
     format?: string
     visible?: boolean
     order?: number
+    lock?: boolean
   }
 }
 

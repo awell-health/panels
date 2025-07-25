@@ -264,6 +264,18 @@ export default function WorklistPage() {
         return
       }
 
+      // Find the active and over columns
+      const activeColumn = visibleColumns.find((col) => col.id === active.id)
+      const overColumn = visibleColumns.find((col) => col.id === over.id)
+
+      // Prevent reordering if either column is locked
+      if (
+        activeColumn?.properties?.display?.lock ||
+        overColumn?.properties?.display?.lock
+      ) {
+        return
+      }
+
       // Find the active column's index and the over column's index
       const oldIndex = visibleColumns.findIndex((col) => col.id === active.id)
       const newIndex = visibleColumns.findIndex((col) => col.id === over.id)

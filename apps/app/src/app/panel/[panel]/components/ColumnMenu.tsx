@@ -9,6 +9,7 @@ import { format } from 'date-fns'
 
 type ColumnMenuProps = {
   column: Column
+  allColumns?: Column[] // Add access to all columns for order calculation
   isOpen: boolean
   onClose: () => void
   position: { top: number; left: number }
@@ -22,6 +23,7 @@ type ColumnMenuProps = {
 
 export function ColumnMenu({
   column,
+  allColumns = [],
   isOpen,
   onClose,
   position,
@@ -346,6 +348,72 @@ export function ColumnMenu({
           </button>
         </div>
 
+        {/* Lock Column Option */}
+        <div className="px-3 py-2 border-b border-gray-100">
+          <button
+            type="button"
+            className="flex items-center w-full px-0 py-1 text-xs font-normal text-left hover:bg-gray-50 rounded"
+            onClick={() => {
+              const isCurrentlyLocked =
+                column.properties?.display?.lock ?? false
+
+              let newOrder = column.properties?.display?.order
+
+              // If we're locking the column, assign it an order after all existing locked columns
+              if (!isCurrentlyLocked) {
+                const lockedColumns = allColumns.filter(
+                  (col) => col.properties?.display?.lock,
+                )
+                if (lockedColumns.length > 0) {
+                  const maxLockedOrder = Math.max(
+                    ...lockedColumns.map(
+                      (col) => col.properties?.display?.order ?? 0,
+                    ),
+                  )
+                  newOrder = maxLockedOrder + 1
+                } else {
+                  // First locked column gets order 0
+                  newOrder = 0
+                }
+              }
+
+              onColumnUpdate?.({
+                id: column.id,
+                properties: {
+                  ...column.properties,
+                  display: {
+                    ...column.properties?.display,
+                    lock: !isCurrentlyLocked,
+                    order: newOrder,
+                  },
+                },
+              })
+              onClose()
+            }}
+          >
+            <svg
+              className="h-3.5 w-3.5 mr-2 text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-label="Lock Column"
+            >
+              <title>Lock Column</title>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d={
+                  column.properties?.display?.lock
+                    ? 'M17 11H7C5.89543 11 5 11.8954 5 13V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V13C19 11.8954 18.1046 11 17 11ZM17 11V7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7V11'
+                    : 'M17 11H7C5.89543 11 5 11.8954 5 13V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V13C19 11.8954 18.1046 11 17 11ZM17 11V7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7M15 11V7C15 5.89543 14.1046 5 13 5H11C9.89543 5 9 5.89543 9 7V11'
+                }
+              />
+            </svg>
+            {column.properties?.display?.lock ? 'Unlock Column' : 'Lock Column'}
+          </button>
+        </div>
+
         {/* Column Properties */}
         <div className="px-3 py-2 border-b border-gray-100">
           <div className="space-y-2">
@@ -464,10 +532,22 @@ export function ColumnMenu({
             {onColumnDelete && (
               <button
                 type="button"
-                className="w-full px-2 py-1 text-xs text-white bg-red-500 rounded hover:bg-red-600"
+                className={`w-full px-2 py-1 text-xs rounded ${
+                  column.properties?.display?.lock
+                    ? 'text-gray-400 bg-gray-200 cursor-not-allowed'
+                    : 'text-white bg-red-500 hover:bg-red-600'
+                }`}
                 onClick={() => {
-                  setShowDeleteConfirm(true)
+                  if (!column.properties?.display?.lock) {
+                    setShowDeleteConfirm(true)
+                  }
                 }}
+                disabled={column.properties?.display?.lock}
+                title={
+                  column.properties?.display?.lock
+                    ? 'Cannot delete locked column. Unlock it first.'
+                    : 'Delete Column'
+                }
               >
                 Delete Column
               </button>
