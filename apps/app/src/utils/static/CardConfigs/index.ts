@@ -16,7 +16,11 @@ export const getCardConfigs = (organizationSlug: string) => {
 
   for (const key of cardKeys) {
     if (organizationSlug.includes(key)) {
-      return cardConfigs[key as keyof typeof cardConfigs] ?? cardConfigs.default
+      const findKey = cardKeys.find((k) => organizationSlug.includes(k))
+
+      return (
+        cardConfigs[findKey as keyof typeof cardConfigs] ?? cardConfigs.default
+      )
     }
   }
   return (
