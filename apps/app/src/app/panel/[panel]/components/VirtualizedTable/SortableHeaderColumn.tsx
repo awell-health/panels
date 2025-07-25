@@ -8,15 +8,18 @@ import {
   Calendar,
   GripVertical,
   Hash,
+  Lock,
   MoreVertical,
   Text,
   ToggleLeft,
+  Unlock,
 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { ColumnMenu } from '../ColumnMenu'
 
 interface SortableHeaderColumnProps {
   column: Column
+  allColumns: Column[]
   index: number
   style: React.CSSProperties
   sortConfig?: Sort | null
@@ -29,6 +32,7 @@ interface SortableHeaderColumnProps {
 
 export function SortableHeaderColumn({
   column,
+  allColumns,
   index,
   style,
   sortConfig,
@@ -40,6 +44,7 @@ export function SortableHeaderColumn({
 }: SortableHeaderColumnProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
+  const [isLockHovered, setIsLockHovered] = useState(false)
   const headerRef = useRef<HTMLDivElement>(null)
 
   const {
@@ -144,18 +149,48 @@ export function SortableHeaderColumn({
       )}
 
       <div className="flex items-center justify-between w-full h-full">
-        {/* Drag handle */}
-        <button
-          type="button"
-          className={cn(
-            'flex items-center cursor-grab hover:bg-gray-100 rounded px-1 -ml-1 mr-1 border-0 bg-transparent',
-            isDragging && 'cursor-grabbing bg-gray-100',
-          )}
-          {...listeners}
-          aria-label="Drag to reorder column"
-        >
-          <GripVertical className="h-3 w-3 text-gray-400" />
-        </button>
+        {/* Drag handle or Lock icon */}
+        {column.properties?.display?.lock ? (
+          <button
+            type="button"
+            className="flex items-center rounded px-1 -ml-1 mr-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors"
+            title="Click to unlock"
+            onMouseEnter={() => setIsLockHovered(true)}
+            onMouseLeave={() => setIsLockHovered(false)}
+            onClick={(e) => {
+              e.stopPropagation()
+              onColumnUpdate({
+                id: column.id,
+                properties: {
+                  ...column.properties,
+                  display: {
+                    ...column.properties?.display,
+                    lock: false,
+                  },
+                },
+              })
+            }}
+          >
+            {isLockHovered ? (
+              <Unlock className="h-3 w-3" />
+            ) : (
+              <Lock className="h-3 w-3" />
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={cn(
+              'flex items-center cursor-grab hover:bg-gray-100 rounded px-1 -ml-1 mr-1 border-0 bg-transparent',
+              isDragging && 'cursor-grabbing bg-gray-100',
+            )}
+            {...listeners}
+            aria-label="Drag to reorder column"
+            title="Drag to reorder column"
+          >
+            <GripVertical className="h-3 w-3 text-gray-400" />
+          </button>
+        )}
 
         {/* Column content - clickable for sorting */}
         <button
@@ -218,6 +253,7 @@ export function SortableHeaderColumn({
       {/* Column menu */}
       <ColumnMenu
         column={enhancedColumn}
+        allColumns={allColumns}
         isOpen={isMenuOpen && !isDragging}
         onClose={() => setIsMenuOpen(false)}
         position={menuPosition}

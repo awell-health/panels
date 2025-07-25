@@ -109,10 +109,43 @@ export function VirtualizedTable({
   // Grid ref for resetting cached dimensions
   const gridRef = useRef<VariableSizeGrid>(null)
 
+  // Track scroll state for horizontal scroll detection
+  const [isScrolling, setIsScrolling] = useState(false)
+  const [lastScrollLeft, setLastScrollLeft] = useState(0)
+
+  // Handle scroll events to detect horizontal scrolling
+  const handleScroll = useCallback(
+    ({ scrollLeft, scrollTop }: { scrollLeft: number; scrollTop: number }) => {
+      // Check if horizontal scroll position changed
+      if (scrollLeft !== lastScrollLeft) {
+        console.log(visibleColumns)
+        if (!isScrolling) {
+          console.log('scroll started')
+          setIsScrolling(true)
+        }
+        setLastScrollLeft(scrollLeft)
+
+        // Reset scrolling state after a delay
+        setTimeout(() => {
+          setIsScrolling(false)
+        }, 150)
+      }
+    },
+    [lastScrollLeft, isScrolling],
+  )
+
   // Sort columns by order if needed
   const visibleColumns = useMemo(() => {
     if (orderColumnMode === 'auto') {
       return columns.sort((a: Column, b: Column) => {
+        const isLockedA = a.properties?.display?.lock ?? false
+        const isLockedB = b.properties?.display?.lock ?? false
+
+        // If one is locked and the other isn't, locked comes first
+        if (isLockedA && !isLockedB) return -1
+        if (!isLockedA && isLockedB) return 1
+
+        // If both have same lock status, sort by order
         const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
         const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
         return orderA - orderB
@@ -527,6 +560,7 @@ export function VirtualizedTable({
           toggleSelectAll={toggleSelectAll}
           tableDataLength={filteredAndSortedData.length}
           getColumnWidth={getColumnWidth}
+          allColumns={columns}
         />
         <div style={{ paddingTop: HEADER_HEIGHT }}>{children}</div>
       </div>
@@ -537,6 +571,7 @@ export function VirtualizedTable({
     toggleSelectAll,
     filteredAndSortedData.length,
     getColumnWidth,
+    columns,
   ])
 
   // Context value for sticky grid
@@ -609,6 +644,7 @@ export function VirtualizedTable({
                   }}
                   innerElementType={CustomInnerElement}
                   onItemsRendered={handleItemsRendered}
+                  onScroll={handleScroll}
                 >
                   {VirtualizedCell}
                 </VariableSizeGrid>

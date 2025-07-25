@@ -170,6 +170,20 @@ export default function WorklistViewPage() {
         return
       }
 
+      // Find the active and over columns
+      const activeColumn = allColumnsForViewType.find(
+        (col) => col.id === active.id,
+      )
+      const overColumn = allColumnsForViewType.find((col) => col.id === over.id)
+
+      // Prevent reordering if either column is locked
+      if (
+        activeColumn?.properties?.display?.lock ||
+        overColumn?.properties?.display?.lock
+      ) {
+        return
+      }
+
       // Find the active column's index and the over column's index
       const oldIndex = view.visibleColumns.findIndex((col) => col === active.id)
       const newIndex = view.visibleColumns.findIndex((col) => col === over.id)
@@ -194,7 +208,7 @@ export default function WorklistViewPage() {
         console.error('Failed to reorder columns:', error)
       }
     },
-    [view],
+    [view, allColumnsForViewType],
   )
 
   const handleColumnChanges = async (columnChanges: ColumnChangesResponse) => {

@@ -31,6 +31,7 @@ export const ColumnPropertiesSchema = z.object({
       format: z.string().optional(),
       visible: z.boolean().optional(),
       order: z.number().int().nonnegative().optional(),
+      lock: z.boolean().optional(),
     })
     .optional(),
 })

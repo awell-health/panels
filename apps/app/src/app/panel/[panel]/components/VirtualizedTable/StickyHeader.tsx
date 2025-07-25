@@ -14,6 +14,7 @@ interface StickyHeaderProps {
   toggleSelectAll: () => void
   tableDataLength: number
   getColumnWidth: (columnIndex: number) => number
+  allColumns: Column[]
 }
 
 export function StickyHeader({
@@ -21,6 +22,7 @@ export function StickyHeader({
   toggleSelectAll,
   tableDataLength,
   getColumnWidth,
+  allColumns,
 }: StickyHeaderProps) {
   const {
     columns,
@@ -81,6 +83,7 @@ export function StickyHeader({
           >
             <SortableHeaderColumn
               column={column}
+              allColumns={allColumns}
               index={index}
               style={{
                 position: 'relative',
