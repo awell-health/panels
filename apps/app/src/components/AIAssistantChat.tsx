@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Send, MessageSquare, RotateCcw } from 'lucide-react'
+import { Send, MessageSquare, RotateCcw, Copy, Check } from 'lucide-react'
 import Markdown from 'react-markdown'
 import { useAIConversation } from '@/hooks/use-ai-conversation'
 import { chatWithAI } from '../app/actions/ai-chat'
+import { isValidElement, type ReactNode } from 'react'
 
 interface AIAssistantChatProps {
   currentJson: string
@@ -219,7 +220,66 @@ What specific question do you have about your FHIR card configuration?`
                     {message.content}
                   </p>
                 ) : (
-                  <Markdown>{message.content}</Markdown>
+                  <Markdown
+                    components={{
+                      pre: ({ children }) => {
+                        const text =
+                          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+                          (children as any)?.props?.children ||
+                          children?.toString() ||
+                          ''
+                        const [isCopied, setIsCopied] = useState(false)
+
+                        const handleCopy = () => {
+                          navigator.clipboard.writeText(text)
+                          setIsCopied(true)
+                          setTimeout(() => setIsCopied(false), 2000)
+                        }
+
+                        return (
+                          <div className="group">
+                            <pre className="overflow-x-auto bg-gray-100 p-2 rounded border border-gray-200 overflow-y-auto mt-2 relative group">
+                              {children}
+                            </pre>
+                            <div className="flex justify-end items-center mt-1">
+                              <button
+                                type="button"
+                                className="flex justify-end text-xs text-gray-500 cursor-pointer hover:text-gray-700 opacity-0 transition-opacity duration-200 group-hover:opacity-100 gap-1"
+                                tabIndex={0}
+                                onClick={() => {
+                                  handleCopy()
+                                }}
+                              >
+                                {isCopied ? (
+                                  <>
+                                    <Check className="h-3 w-3 text-green-500" />
+                                    Copied
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-3 w-3 text-gray-500" />
+                                    Copy
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      },
+                      code: ({ children }) => (
+                        <code className="font-mono text-gray-900 bg-gray-100 relative">
+                          {children}
+                        </code>
+                      ),
+                      ul: ({ children }) => (
+                        <ul className="list-disc list-inside ml-1 space-y-1">
+                          {children}
+                        </ul>
+                      ),
+                    }}
+                  >
+                    {message.content}
+                  </Markdown>
                 )}
               </div>
 
