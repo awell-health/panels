@@ -248,7 +248,7 @@ async function upsertPatient(
 
   // Use upsert with Awell patient ID as the search criteria
   // This will either update existing patient or create new one atomically
-  const searchQuery = `Patient?identifier=https://awellhealth.com/patients|${awellPatientId}`
+  const searchQuery = `identifier=https://awellhealth.com/patients|${awellPatientId}`
 
   console.log(
     'Upserting patient:',
