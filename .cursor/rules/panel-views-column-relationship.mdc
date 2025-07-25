@@ -1,0 +1,80 @@
+---
+description: For any task that relates to filtering of data in panels or views, or more broadly changing the configuration of columns in panels and views.
+alwaysApply: false
+---
+# Panel, Views, and Columns Relationship
+
+## Overview
+Panels and views have different relationships with their columns. Understanding this distinction is critical when working with the UI and data management logic.
+
+## Panel-Column Relationship
+
+### Master Column Definition
+- **Panels define a master list of columns** that serves as the authoritative source
+- This master list contains ALL columns that can be displayed in:
+  - The panel itself
+  - Any view derived from that panel
+
+### Panel Column Visibility
+- Panels can hide columns using the `display.visible` property
+- **Important**: Setting `display.visible = false` only affects visibility in the panel itself
+- Hidden columns in a panel can still be visible in derived views
+
+### Panel Column Filters
+- Panels can configure filters at the column level
+- **Critical**: Panel-level filters are ALWAYS applied when data is loaded, regardless of column visibility
+- These filters apply to:
+  - The panel itself (even if the column is hidden)
+  - All derived views (even if the column is not included in the view)
+
+## View-Column Relationship
+
+### Column Selection
+- Views specify which columns to display by **referencing column IDs** from the panel's master list
+- Views do not define their own columns - they select from the panel's available columns
+
+### View Column States
+- **No "hidden" state exists for view columns**
+- Columns are either:
+  - **Included**: Referenced by ID and displayed in the view
+  - **Not included**: Not referenced and not displayed in the view
+
+### View Column Filters
+- Views can define **additional filters** per column
+- These filters are applied **on top of** panel-level filters (additive)
+- **Automatic cleanup**: When a column is removed from a view, any filters defined on that column in the view are automatically removed
+
+## Key Differences Summary
+
+| Aspect | Panel | View |
+|--------|-------|------|
+| Column Definition | Defines master list | References panel columns by ID |
+| Visibility Control | `display.visible` property | Include/exclude by ID reference |
+| Hidden State | Can hide columns while keeping them available | No hidden state - include or exclude only |
+| Filter Scope | Always applied (global to panel + views) | Additional filters on top of panel filters |
+| Filter Persistence | Persists regardless of visibility | Automatically removed when column excluded |
+
+## Common Mistakes to Avoid
+
+1. **Don't confuse panel visibility with view inclusion**
+   - Panel: `display.visible = false` hides but keeps column available
+   - View: Column must be explicitly included by ID reference
+
+2. **Don't assume hidden panel columns are filtered out**
+   - Panel filters apply even for hidden columns
+   - Data loading logic must respect panel filters regardless of visibility
+
+3. **Don't try to "hide" columns in views**
+   - Views don't have a hide mechanism
+   - Remove the column ID reference instead
+
+4. **Don't forget filter inheritance**
+   - View filters are additional, not replacement
+   - Panel filters + view filters are both applied
+
+## Implementation Notes
+
+- When implementing column visibility logic, check whether you're working with a panel or view context
+- For data loading, always apply panel-level filters first, then view-level filters
+- When modifying view columns, ensure proper cleanup of associated view-level filters
+- UI components should handle the different visibility models appropriately
