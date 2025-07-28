@@ -499,8 +499,42 @@ async function createOrUpdateTask(
     console.log('No existing tasks found, will create new one')
   }
 
-  // Set task status based on activity status
-  const taskStatus = activity.status === 'done' ? 'completed' : 'requested'
+  // Set task status based on activity status and event type
+  let taskStatus: Task['status']
+  let statusReason:
+    | { coding: Array<{ system: string; code: string; display: string }> }
+    | undefined
+
+  if (activity.status === 'done') {
+    taskStatus = 'completed'
+  } else if (activity.status === 'canceled') {
+    // Handle cancelled activities (care flow was stopped)
+    taskStatus = 'cancelled'
+    statusReason = {
+      coding: [
+        {
+          system: 'https://awellhealth.com/fhir/CodeSystem/task-status-reason',
+          code: 'care-flow-stopped',
+          display: 'The associated care flow has been stopped',
+        },
+      ],
+    }
+  } else if (eventData.event_type === 'activity.deleted') {
+    // Handle deleted activities (care flow was deleted)
+    taskStatus = 'cancelled'
+    statusReason = {
+      coding: [
+        {
+          system: 'https://awellhealth.com/fhir/CodeSystem/task-status-reason',
+          code: 'care-flow-deleted',
+          display: 'The associated care flow has been deleted',
+        },
+      ],
+    }
+  } else {
+    taskStatus = 'requested'
+  }
+
   const taskDescription =
     activity.action_component?.title ?? activity.object?.name
 
@@ -531,6 +565,11 @@ async function createOrUpdateTask(
     extension: createTaskExtensions(activity, pathway, eventData),
   }
 
+  // Add status reason if provided
+  if (statusReason) {
+    task.statusReason = statusReason
+  }
+
   try {
     if (existingTasks.length > 0) {
       console.log(`Updating ${existingTasks.length} existing tasks`)
@@ -548,8 +587,10 @@ async function createOrUpdateTask(
               {
                 taskId: resultTask.id,
                 status: resultTask.status,
+                statusReason: resultTask.statusReason?.coding?.[0]?.code,
                 lastUpdated: resultTask.meta?.lastUpdated,
                 activityStatus: activity.status,
+                eventType: eventData.event_type,
               },
               null,
               2,
@@ -568,9 +609,12 @@ async function createOrUpdateTask(
       JSON.stringify(
         {
           taskId: resultTask.id,
+          status: resultTask.status,
+          statusReason: resultTask.statusReason?.coding?.[0]?.code,
           activityId: activity.id,
           patientId: patientId,
           pathwayId: pathway?.id || 'Unknown',
+          eventType: eventData.event_type,
         },
         null,
         2,
@@ -584,6 +628,8 @@ async function createOrUpdateTask(
         {
           error: error instanceof Error ? error.message : 'Unknown error',
           activityId: activity.id,
+          activityStatus: activity.status,
+          eventType: eventData.event_type,
           stakeholderId: activity.indirect_object?.id,
         },
         null,
@@ -727,21 +773,47 @@ export async function handler(
       pathway,
       event.input,
     )
-    await createEnrichmentCommunication(
-      medplum,
-      activity,
-      patientId,
-      pathway,
-      taskId,
-      event.input,
-    )
+
+    // Only create enrichment communication for active tasks
+    // Cancelled or deleted activities should not trigger enrichment
+    if (
+      activity.status !== 'canceled' &&
+      event.input.event_type !== 'activity.deleted'
+    ) {
+      await createEnrichmentCommunication(
+        medplum,
+        activity,
+        patientId,
+        pathway,
+        taskId,
+        event.input,
+      )
+    } else {
+      console.log(
+        'Skipping enrichment communication for cancelled/deleted activity:',
+        JSON.stringify(
+          {
+            activityId: activity.id,
+            activityStatus: activity.status,
+            eventType: event.input.event_type,
+          },
+          null,
+          2,
+        ),
+      )
+    }
 
     console.log(
       'Bot finished processing activity:',
       JSON.stringify(
         {
           activityId: activity.id,
+          activityStatus: activity.status,
+          eventType: event.input.event_type,
           taskCreated: activity.indirect_object?.type === 'stakeholder',
+          enrichmentTriggered:
+            activity.status !== 'canceled' &&
+            event.input.event_type !== 'activity.deleted',
         },
         null,
         2,
