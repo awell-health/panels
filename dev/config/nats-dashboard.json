@@ -1,0 +1,7 @@
+{
+  "server": {
+    "name": "NATS Dashboard",
+    "url": "http://localhost:8222/proxy/"
+  },
+  "hideServerInput": true
+}

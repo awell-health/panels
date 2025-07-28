@@ -40,7 +40,9 @@
     "clean": {
       "cache": false
     },
-    "//#run:infra:root": {},
+    "//#run:infra:root": {
+      "cache": false
+    },
     "migration:apply": {
       "cache": false
     },

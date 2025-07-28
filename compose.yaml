@@ -4,23 +4,30 @@ services:
     container_name: wl-postgres
     restart: always
     environment:
-      - POSTGRES_USER=medplum
-      - POSTGRES_PASSWORD=medplum
+      - POSTGRES_USER=${POSTGRES_ADMIN_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_ADMIN_PASSWORD:-postgres}
+      - MEDPLUM_DB_USER=${MEDPLUM_DB_USER:-medplum}
+      - MEDPLUM_DB_PASSWORD=${MEDPLUM_DB_PASSWORD:-medplum}
+      - MEDPLUM_DB_NAME=${MEDPLUM_DB_NAME:-medplum}
+      - N8N_DB_USER=${N8N_DB_USER:-n8n}
+      - N8N_DB_PASSWORD=${N8N_DB_PASSWORD:-n8n}
+      - N8N_DB_NAME=${N8N_DB_NAME:-n8n}
     command:
       # We use command line args instead of a postgres.conf to avoid additional setup out of the box
-      - 'postgres'
-      - '-c'
-      - 'listen_addresses=*'
-      - '-c'
-      - 'statement_timeout=60000'
-      - '-c'
-      - 'default_transaction_isolation=REPEATABLE READ'
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+      - "-c"
+      - "statement_timeout=60000"
+      - "-c"
+      - "default_transaction_isolation=REPEATABLE READ"
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - ./dev/datastore/postgres/data:/var/lib/postgresql/data
+      - ./dev/config/init-data.sh:/docker-entrypoint-initdb.d/init-data.sh
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U medplum']
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,11 +40,11 @@ services:
     restart: always
     command: redis-server --requirepass medplum --dir /data
     ports:
-      - '6379:6379'
+      - "6379:6379"
     volumes:
       - ./dev/datastore/redis/data:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', 'medplum', 'ping']
+      test: ["CMD", "redis-cli", "-a", "medplum", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,7 +61,7 @@ services:
       wl-redis:
         condition: service_healthy
     ports:
-      - '8103:8103'
+      - "8103:8103"
     volumes:
       # Conditionally define a volume for a `medplum.config.json` if one is specified by the MEDPLUM_CONFIG_PATH env var
       - ${MEDPLUM_CONFIG_PATH:-./dev/config/medplum.config.json}:/usr/src/medplum/packages/server/medplum.config.json
@@ -70,43 +77,43 @@ services:
       "
     environment:
       MEDPLUM_PORT: 8103
-      MEDPLUM_BASE_URL: 'http://localhost:8103/'
-      MEDPLUM_APP_BASE_URL: 'http://localhost:3000/'
-      MEDPLUM_STORAGE_BASE_URL: 'http://localhost:8103/storage/'
-      MEDPLUM_DATABASE_HOST: 'wl-postgres'
+      MEDPLUM_BASE_URL: "http://localhost:8103/"
+      MEDPLUM_APP_BASE_URL: "http://localhost:3000/"
+      MEDPLUM_STORAGE_BASE_URL: "http://localhost:8103/storage/"
+      MEDPLUM_DATABASE_HOST: "wl-postgres"
       MEDPLUM_DATABASE_PORT: 5432
-      MEDPLUM_DATABASE_DBNAME: 'medplum'
-      MEDPLUM_DATABASE_USERNAME: 'medplum'
-      MEDPLUM_DATABASE_PASSWORD: 'medplum'
-      MEDPLUM_REDIS_HOST: 'wl-redis'
+      MEDPLUM_DATABASE_DBNAME: "${MEDPLUM_DB_NAME:-medplum}"
+      MEDPLUM_DATABASE_USERNAME: "${MEDPLUM_DB_USER:-medplum}"
+      MEDPLUM_DATABASE_PASSWORD: "${MEDPLUM_DB_PASSWORD:-medplum}"
+      MEDPLUM_REDIS_HOST: "wl-redis"
       MEDPLUM_REDIS_PORT: 6379
-      MEDPLUM_REDIS_PASSWORD: 'medplum'
-      MEDPLUM_SUPER_ADMIN: 'true'
-      MEDPLUM_BINARY_STORAGE: 'file:./binary/'
-      MEDPLUM_RECAPTCHA_SITE_KEY: '6LfHdsYdAAAAAC0uLnnRrDrhcXnziiUwKd8VtLNq'
-      MEDPLUM_RECAPTCHA_SECRET_KEY: '6LfHdsYdAAAAAH9dN154jbJ3zpQife3xaiTvPChL'
-      MEDPLUM_ADMIN_CLIENT_ID: '2a4b77f2-4d4e-43c6-9b01-330eb5ca772f'
-      MEDPLUM_MAX_JSON_SIZE: '1mb'
-      MEDPLUM_MAX_BATCH_SIZE: '50mb'
-      MEDPLUM_VM_CONTEXT_BOTS_ENABLED: 'true'
-      MEDPLUM_DEFAULT_BOT_RUNTIME_VERSION: 'vmcontext'
-      MEDPLUM_ALLOWED_ORIGINS: '*'
-      MEDPLUM_INTROSPECTION_ENABLED: 'true'
+      MEDPLUM_REDIS_PASSWORD: "medplum"
+      MEDPLUM_SUPER_ADMIN: "true"
+      MEDPLUM_BINARY_STORAGE: "file:./binary/"
+      MEDPLUM_RECAPTCHA_SITE_KEY: "6LfHdsYdAAAAAC0uLnnRrDrhcXnziiUwKd8VtLNq"
+      MEDPLUM_RECAPTCHA_SECRET_KEY: "6LfHdsYdAAAAAH9dN154jbJ3zpQife3xaiTvPChL"
+      MEDPLUM_ADMIN_CLIENT_ID: "2a4b77f2-4d4e-43c6-9b01-330eb5ca772f"
+      MEDPLUM_MAX_JSON_SIZE: "1mb"
+      MEDPLUM_MAX_BATCH_SIZE: "50mb"
+      MEDPLUM_VM_CONTEXT_BOTS_ENABLED: "true"
+      MEDPLUM_DEFAULT_BOT_RUNTIME_VERSION: "vmcontext"
+      MEDPLUM_ALLOWED_ORIGINS: "*"
+      MEDPLUM_INTROSPECTION_ENABLED: "true"
       MEDPLUM_SHUTDOWN_TIMEOUT_MILLISECONDS: 30000
-      MEDPLUM_INITIAL_ADMIN_EMAIL: 'admin@medplum.com'
-      MEDPLUM_INITIAL_ADMIN_PASSWORD: 'admin123'
-      MEDPLUM_INITIAL_ADMIN_FIRST_NAME: 'Admin'
-      MEDPLUM_INITIAL_ADMIN_LAST_NAME: 'User'
-      MEDPLUM_INITIAL_ADMIN_PROJECT_NAME: 'Default Project'
-      DEFAULT_PROJECT_FEATURES: 'bots, cron'
+      MEDPLUM_INITIAL_ADMIN_EMAIL: "${MEDPLUM_INITIAL_ADMIN_EMAIL}"
+      MEDPLUM_INITIAL_ADMIN_PASSWORD: "${MEDPLUM_INITIAL_ADMIN_PASSWORD}"
+      MEDPLUM_INITIAL_ADMIN_FIRST_NAME: "${MEDPLUM_INITIAL_ADMIN_FIRST_NAME}"
+      MEDPLUM_INITIAL_ADMIN_LAST_NAME: "${MEDPLUM_INITIAL_ADMIN_LAST_NAME}"
+      MEDPLUM_INITIAL_ADMIN_PROJECT_NAME: "${MEDPLUM_INITIAL_ADMIN_PROJECT_NAME}"
+      DEFAULT_PROJECT_FEATURES: "${DEFAULT_PROJECT_FEATURES}"
 
     healthcheck:
       test:
         # We use Node's fetch for healthcheck because this image doesn't have a curl or wget installed
         [
-          'CMD',
-          'node',
-          '-e',
+          "CMD",
+          "node",
+          "-e",
           'fetch("http://localhost:8103/healthcheck").then(r => r.json()).then(console.log).catch(() => { process.exit(1); })',
         ]
       interval: 30s
@@ -125,9 +132,9 @@ services:
     environment:
       - MEDPLUM_BASE_URL=http://localhost:8103
     ports:
-      - '3003:3000'
+      - "3003:3000"
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3000']
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -140,13 +147,67 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - PGWEB_DATABASE_URL=postgres://medplum:medplum@wl-postgres:5432/medplum?sslmode=disable
+      - PGWEB_DATABASE_URL=postgres://${POSTGRES_ADMIN_USER:-postgres}:${POSTGRES_ADMIN_PASSWORD:-postgres}@wl-postgres:5432/postgres?sslmode=disable
     healthcheck:
       test: ["CMD", "nc", "-vz", "127.0.0.1", "8081"]
       interval: 5s
     depends_on:
       wl-postgres:
         condition: service_healthy
+    networks:
+      - wl-network
+
+  wl-nats-1:
+    image: nats:latest
+    container_name: wl-nats-1
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - ./dev/datastore/nats/data:/data
+    command:
+      - "--name=nats1"
+      - "--cluster_name=c1"
+      # - "--cluster=nats://wl-nats-1:6222"
+      # - "--routes=nats-route://wl-nats-1:6222,nats-route://wl-nats-2:6222,nats-route://wl-nats-3:6222"
+      - "--http_port=8222"
+      - "--js"
+      - "--sd=/data"
+    networks:
+      - wl-network
+
+  wl-nats-dashboard:
+    image: mdawar/nats-dashboard
+    environment:
+      REVERSE_PROXY_UPSTREAM: "wl-nats-1:8222"
+    volumes:
+      - ./dev/config/nats-dashboard.json:/srv/config.json
+    ports:
+      - "8000:80"
+    networks:
+      - wl-network
+
+  wl-n8n:
+    image: n8nio/n8n:latest
+    container_name: wl-n8n
+    ports:
+      - "5679:5678"
+    volumes:
+      - ./dev/config/n8n:/app/config
+    restart: unless-stopped
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin123
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=wl-postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${N8N_DB_NAME:-n8n}
+      - DB_POSTGRESDB_USER=${N8N_DB_USER:-n8n}
+      - DB_POSTGRESDB_PASSWORD=${N8N_DB_PASSWORD:-n8n}
+      - NODE_FUNCTION_ALLOW_EXTERNAL=axios,qs
+      - DOMAIN_NAME=localhost
+      - GENERIC_TIMEZONE=Europe/Berlin
     networks:
       - wl-network
 
@@ -158,8 +219,11 @@ services:
       - wl-postgres
       - wl-redis
       - wl-pgweb
+      - wl-nats-1
+      - wl-nats-dashboard
+      - wl-n8n
     container_name: wl-wait-for-dependencies
-    command: wl-medplum-server:8103 wl-postgres:5432 wl-redis:6379 wl-medplum-app:3000 wl-pgweb:8081
+    command: wl-medplum-server:8103 wl-postgres:5432 wl-redis:6379 wl-medplum-app:3000 wl-pgweb:8081 wl-nats-1:4222 wl-nats-dashboard:80 wl-n8n:5678
     networks:
       - wl-network
 

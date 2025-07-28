@@ -14,39 +14,15 @@ const ENV_TEMPLATES = {
   services: {
     // Backend services configuration
     NODE_ENV: 'development',
-    PORT: '3001',
+    APPLICATION_NAME: 'Awell Panels Services',
+    APPLICATION_PORT: '3001',
+    CLOSE_GRACE_DELAY: '1000',
 
-    // Database configuration (from compose)
-    DATABASE_HOST: 'localhost',
-    DATABASE_PORT: '5432',
-    DATABASE_NAME: 'medplum',
-    DATABASE_USER: 'medplum',
-    DATABASE_PASSWORD: 'medplum',
-    DATABASE_URL: 'postgresql://medplum:medplum@localhost:5432/medplum',
+    // Database configuration (constructed from root .env)
+    DBSQL_URL: 'postgres://medplum:medplum@localhost:5432/medplum',
 
-    // Redis configuration (from compose)
-    REDIS_HOST: 'localhost',
-    REDIS_PORT: '6379',
-    REDIS_PASSWORD: 'medplum',
-    REDIS_URL: 'redis://:medplum@localhost:6379',
-
-    // Medplum integration (from compose)
-    MEDPLUM_BASE_URL: 'http://localhost:8103',
-    MEDPLUM_CLIENT_ID: '2a4b77f2-4d4e-43c6-9b01-330eb5ca772f',
-
-    // JWT and security
-    JWT_SECRET: 'your-super-secret-jwt-key-change-in-production',
-
-    // Multi-tenant settings
-    DEFAULT_TENANT_ID: 'tenant-dev',
-    DEFAULT_USER_ID: 'user-dev',
-
-    // API Configuration
-    API_BASE_URL: 'http://localhost:3001',
-    CORS_ORIGINS: 'http://localhost:3000,http://localhost:3003',
-
-    // Logging
-    LOG_LEVEL: 'debug',
+    // Cache configuration (from compose)
+    CACHE_URI: 'redis://:medplum@localhost:6379/0',
   },
 
   app: {
@@ -69,34 +45,15 @@ const ENV_TEMPLATES = {
   test: {
     // Testing environment
     NODE_ENV: 'test',
+    APPLICATION_NAME: 'Awell Panels Services Test',
+    APPLICATION_PORT: '3001',
+    CLOSE_GRACE_DELAY: '1000',
 
     // Test database (separate from dev)
-    DATABASE_HOST: 'localhost',
-    DATABASE_PORT: '5432',
-    DATABASE_NAME: 'medplum_test',
-    DATABASE_USER: 'medplum',
-    DATABASE_PASSWORD: 'medplum',
-    DATABASE_URL: 'postgresql://medplum:medplum@localhost:5432/medplum_test',
+    DBSQL_URL: 'postgres://medplum:medplum@localhost:5432/medplum_test',
 
-    // Test Redis
-    REDIS_HOST: 'localhost',
-    REDIS_PORT: '6379',
-    REDIS_PASSWORD: 'medplum',
-    REDIS_URL: 'redis://:medplum@localhost:6379/1',
-
-    // Test API
-    API_BASE_URL: 'http://localhost:3001',
-    MEDPLUM_BASE_URL: 'http://localhost:8103',
-
-    // Test secrets (not sensitive for testing)
-    JWT_SECRET: 'test-jwt-secret',
-    NEXTAUTH_SECRET: 'test-nextauth-secret',
-
-    // Test tenant
-    DEFAULT_TENANT_ID: 'tenant-test',
-    DEFAULT_USER_ID: 'user-test',
-
-    LOG_LEVEL: 'warn',
+    // Test Cache
+    CACHE_URI: 'redis://:medplum@localhost:6379/1',
   },
 }
 
@@ -105,12 +62,10 @@ const ENV_OVERRIDES = {
   production: {
     services: {
       NODE_ENV: 'production',
-      LOG_LEVEL: 'info',
-      CORS_ORIGINS: 'https://your-production-domain.com',
-      API_BASE_URL: 'https://api.your-production-domain.com',
-      // Database and Redis would typically be external services in production
-      DATABASE_URL: 'postgresql://user:password@prod-db-host:5432/prod_db',
-      REDIS_URL: 'redis://:password@prod-redis-host:6379',
+      APPLICATION_NAME: 'Awell Panels Services Production',
+      // Database and Cache would typically be external services in production
+      DBSQL_URL: 'postgres://user:password@prod-db-host:5432/prod_db',
+      CACHE_URI: 'redis://:password@prod-redis-host:6379/0',
     },
     app: {
       NODE_ENV: 'production',
@@ -126,9 +81,7 @@ const ENV_OVERRIDES = {
   staging: {
     services: {
       NODE_ENV: 'staging',
-      LOG_LEVEL: 'info',
-      API_BASE_URL: 'https://staging-api.your-domain.com',
-      CORS_ORIGINS: 'https://staging.your-domain.com',
+      APPLICATION_NAME: 'Awell Panels Services Staging',
     },
     app: {
       NODE_ENV: 'staging',
@@ -151,31 +104,49 @@ function parseComposeFile() {
   }
 }
 
-function extractServiceConfig(compose) {
-  const config = {}
+function parseRootEnvFile() {
+  const envPath = resolve(rootDir, '.env')
 
-  // Extract PostgreSQL config
-  const pgService = compose.services?.['wl-postgres']
-  if (pgService) {
-    const pgEnv = pgService.environment || []
+  if (!existsSync(envPath)) {
+    console.log('ℹ️  No root .env file found, using defaults')
+    return {}
+  }
 
-    for (const env of pgEnv) {
-      if (typeof env === 'string') {
-        const [key, value] = env.split('=')
-        if (key === 'POSTGRES_USER') config.DATABASE_USER = value
-        if (key === 'POSTGRES_PASSWORD') config.DATABASE_PASSWORD = value
+  try {
+    const envContent = readFileSync(envPath, 'utf8')
+    const envVars = {}
+
+    for (const line of envContent.split('\n')) {
+      const trimmed = line.trim()
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=')
+        if (key && valueParts.length > 0) {
+          envVars[key] = valueParts.join('=')
+        }
       }
     }
 
-    // Extract port from ports mapping
-    const ports = pgService.ports
-    if (ports?.[0]) {
-      const port = ports[0].split(':')[0]
-      config.DATABASE_PORT = port
-    }
+    return envVars
+  } catch (error) {
+    console.error('❌ Error reading root .env file:', error.message)
+    return {}
   }
+}
 
-  // Extract Redis config
+function constructDatabaseUrl(envVars) {
+  const user = envVars.MEDPLUM_DB_USER || 'medplum'
+  const password = envVars.MEDPLUM_DB_PASSWORD || 'medplum'
+  const host = 'localhost'
+  const port = '5432'
+  const database = 'medplum'
+
+  return `postgres://${user}:${password}@${host}:${port}/${database}`
+}
+
+function extractServiceConfig(compose) {
+  const config = {}
+
+  // Extract Redis config for cache URI
   const redisService = compose.services?.['wl-redis']
   if (redisService) {
     // Extract password from command
@@ -183,34 +154,8 @@ function extractServiceConfig(compose) {
     if (command?.includes('--requirepass')) {
       const commandStr = Array.isArray(command) ? command.join(' ') : command
       const match = commandStr.match(/--requirepass\s+(\S+)/)
-      if (match) config.REDIS_PASSWORD = match[1]
-    }
-
-    // Extract port
-    const ports = redisService.ports
-    if (ports?.[0]) {
-      const port = ports[0].split(':')[0]
-      config.REDIS_PORT = port
-    }
-  }
-
-  // Extract Medplum config
-  const medplumService = compose.services?.['wl-medplum-server']
-  if (medplumService) {
-    const ports = medplumService.ports
-    if (ports?.[0]) {
-      const port = ports[0].split(':')[0]
-      config.MEDPLUM_PORT = port
-      config.MEDPLUM_BASE_URL = `http://localhost:${port}`
-    }
-
-    // Extract environment variables
-    const environment = medplumService.environment
-    if (environment) {
-      for (const [key, value] of Object.entries(environment)) {
-        if (key === 'MEDPLUM_ADMIN_CLIENT_ID') {
-          config.MEDPLUM_CLIENT_ID = value
-        }
+      if (match) {
+        config.CACHE_URI = `redis://:${match[1]}@localhost:6379/0`
       }
     }
   }
@@ -221,11 +166,9 @@ function extractServiceConfig(compose) {
 function generateEnvContent(template, overrides = {}) {
   const config = { ...template, ...overrides }
 
-  return (
-    Object.entries(config)
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n') + '\n'
-  )
+  return `${Object.entries(config)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n')}\n`
 }
 
 function writeEnvFile(filePath, content, backup = true) {
@@ -254,20 +197,44 @@ function main() {
 
   console.log(`🚀 Generating .env files for environment: ${environment}\n`)
 
+  // Parse root .env file to get database credentials
+  const rootEnvVars = parseRootEnvFile()
+
   // Parse compose file to extract dynamic configuration
   const compose = parseComposeFile()
   const serviceConfig = extractServiceConfig(compose)
 
-  console.log('📊 Extracted from compose.yaml:')
-  for (const [key, value] of Object.entries(serviceConfig)) {
-    console.log(`   ${key}=${value}`)
-  }
+  // Construct database URL from root .env credentials
+  const dbUrl = constructDatabaseUrl(rootEnvVars)
+
+  console.log('📊 Database configuration:')
+  console.log(`   MEDPLUM_DB_USER=${rootEnvVars.MEDPLUM_DB_USER || 'medplum'}`)
+  console.log(`   DBSQL_URL=${dbUrl.replace(/:([^:@]+)@/, ':***@')}`)
   console.log()
 
-  // Get base templates
-  let servicesTemplate = { ...ENV_TEMPLATES.services, ...serviceConfig }
+  if (Object.keys(serviceConfig).length > 0) {
+    console.log('📊 Extracted from compose.yaml:')
+    for (const [key, value] of Object.entries(serviceConfig)) {
+      console.log(`   ${key}=${value}`)
+    }
+    console.log()
+  }
+
+  // Get base templates with constructed database URL
+  let servicesTemplate = {
+    ...ENV_TEMPLATES.services,
+    ...serviceConfig,
+    DBSQL_URL: dbUrl,
+  }
   let appTemplate = { ...ENV_TEMPLATES.app }
-  const testTemplate = { ...ENV_TEMPLATES.test, ...serviceConfig }
+  const testTemplate = {
+    ...ENV_TEMPLATES.test,
+    ...serviceConfig,
+    DBSQL_URL: constructDatabaseUrl(rootEnvVars).replace(
+      '/medplum',
+      '/medplum_test',
+    ),
+  }
 
   // Apply environment-specific overrides
   if (ENV_OVERRIDES[environment]) {
@@ -320,11 +287,16 @@ function main() {
 
   console.log('\n🎉 Environment file generation complete!')
   console.log('\n📚 Next steps:')
-  console.log('1. Review the generated .env files')
-  console.log('2. Update any production secrets/URLs')
-  console.log('3. Add .env files to your .gitignore (keep .example files)')
-  console.log('4. Run `pnpm run:infra` to start infrastructure')
-  console.log('5. Run `pnpm dev` to start development')
+  console.log(
+    '1. Create a root .env file with database credentials (MEDPLUM_DB_USER, MEDPLUM_DB_PASSWORD, etc.)',
+  )
+  console.log('2. Review the generated services .env file')
+  console.log(
+    '3. Update any production secrets/URLs for production environment',
+  )
+  console.log('4. Add .env files to your .gitignore (keep .example files)')
+  console.log('5. Run `docker compose up -d` to start infrastructure')
+  console.log('6. Run `pnpm dev` to start development')
 }
 
 // Run the script
