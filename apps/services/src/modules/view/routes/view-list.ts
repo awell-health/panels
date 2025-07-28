@@ -25,7 +25,7 @@ export const viewList = async (app: FastifyInstance) => {
     method: 'GET',
     schema: {
       description: 'List views for user/tenant with optional filtering',
-      tags: ['view'],
+      tags: ['views'],
       querystring: querystringSchema,
       response: {
         200: ViewsResponseSchema,

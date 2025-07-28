@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const DataSourceInfoSchema = z.object({
   type: z.enum(['database', 'api', 'file', 'custom']),
-  config: z.record(z.any()),
+  config: z.record(z.string(), z.any()),
   tenantId: z.string(),
   userId: z.string(),
 })
@@ -10,7 +10,7 @@ export const DataSourceInfoSchema = z.object({
 export const DataSourceResponseSchema = z.object({
   id: z.number(),
   type: z.enum(['database', 'api', 'file', 'custom']),
-  config: z.record(z.any()),
+  config: z.record(z.string(), z.any()),
   lastSync: z.date(),
 })
 
@@ -19,7 +19,7 @@ export const DataSourcesResponseSchema = z.array(DataSourceResponseSchema)
 export const DataSourceSyncResponseSchema = z.object({
   id: z.number(),
   type: z.enum(['database', 'api', 'file', 'custom']),
-  config: z.record(z.any()),
+  config: z.record(z.string(), z.any()),
   lastSync: z.date(),
   syncStatus: z.enum(['success', 'error']),
   message: z.string().optional(),

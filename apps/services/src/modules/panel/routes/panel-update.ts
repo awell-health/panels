@@ -18,7 +18,7 @@ export const panelUpdate = async (app: FastifyInstance) => {
     method: 'PUT',
     schema: {
       description: 'Update a panel',
-      tags: ['panel'],
+      tags: ['panels'],
       params: IdParamSchema,
       body: PanelInfoSchema,
       response: {

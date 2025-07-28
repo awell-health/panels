@@ -22,7 +22,7 @@ export const ViewNotificationsQuerySchema = z.object({
   tenantId: z.string(),
   userId: z.string(),
   isRead: z.boolean().optional(),
-  notificationType: z.nativeEnum(NotificationImpact).optional(),
+  notificationType: z.enum(NotificationImpact).optional(),
   since: z.string().optional(), // ISO date string
   limit: z.coerce.number().min(1).max(100).default(50),
   offset: z.coerce.number().min(0).default(0),

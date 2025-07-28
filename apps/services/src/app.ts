@@ -54,5 +54,9 @@ export async function createApp(
     ignorePattern: /^.*(?:test|spec|entity).*(?:js|ts)$/,
   })
 
+  await app.register(import('@scalar/fastify-api-reference'), {
+    routePrefix: '/reference',
+  })
+
   return app
 }

@@ -34,7 +34,7 @@ export const columnUpdate = async (app: FastifyInstance) => {
     method: 'PUT',
     schema: {
       description: 'Update a column (base or calculated)',
-      tags: ['panel', 'column'],
+      tags: ['panels', 'columns'],
       params: paramsSchema,
       body: ColumnInfoSchema,
       response: {

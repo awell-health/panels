@@ -41,7 +41,7 @@ export const ColumnBaseCreateSchema = z.object({
   sourceField: z.string(),
   dataSourceId: z.number(),
   properties: ColumnPropertiesSchema,
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   tenantId: z.string(),
   userId: z.string(),
   tags: z.array(z.string()).optional(),
@@ -54,7 +54,7 @@ export const ColumnBaseCreateResponseSchema = z.object({
   sourceField: z.string(),
   tags: z.array(z.string()).optional(),
   properties: ColumnPropertiesSchema,
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 })
 
 // Types
@@ -71,7 +71,7 @@ export const ColumnCalculatedCreateSchema = z.object({
   formula: z.string(),
   dependencies: z.array(z.string()),
   properties: ColumnPropertiesSchema,
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   tenantId: z.string(),
   userId: z.string(),
   tags: z.array(z.string()).optional(),
@@ -84,7 +84,7 @@ export const ColumnCalculatedCreateResponseSchema = z.object({
   formula: z.string(),
   dependencies: z.array(z.string()),
   properties: ColumnPropertiesSchema,
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   tags: z.array(z.string()).optional(),
 })
 
@@ -102,7 +102,7 @@ export const ColumnBaseSchema = z.object({
   type: z.enum(SupportedColumnTypes),
   sourceField: z.string(),
   properties: ColumnPropertiesSchema,
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   columnType: z.literal('base'),
   tags: z.array(z.string()).optional(),
 })
@@ -114,7 +114,7 @@ export const ColumnCalculatedSchema = z.object({
   formula: z.string(),
   dependencies: z.array(z.string()),
   properties: ColumnPropertiesSchema,
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   columnType: z.literal('calculated'),
   tags: z.array(z.string()).optional(),
 })
@@ -130,7 +130,7 @@ export const ColumnInfoSchema = z.object({
   name: z.string().optional(),
   type: z.enum(SupportedColumnTypes).optional(),
   properties: ColumnPropertiesSchema.optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   // For calculated columns
   formula: z.string().optional(),
   dependencies: z.array(z.string()).optional(),
@@ -146,7 +146,7 @@ export const ColumnInfoResponseSchema = z.object({
   name: z.string(),
   type: z.enum(SupportedColumnTypes),
   properties: ColumnPropertiesSchema,
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   // For calculated columns
   formula: z.string().optional(),
   dependencies: z.array(z.string()).optional(),

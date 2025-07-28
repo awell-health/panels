@@ -21,7 +21,7 @@ export const viewGet = async (app: FastifyInstance) => {
     method: 'GET',
     schema: {
       description: 'Get a specific view by ID',
-      tags: ['view'],
+      tags: ['views'],
       params: IdParamSchema,
       querystring: querystringSchema,
       response: {

@@ -14,7 +14,7 @@ export const PanelChangesQuerySchema = z.object({
   tenantId: z.string(),
   userId: z.string(),
   panelId: z.string().optional(),
-  changeType: z.nativeEnum(ChangeType).optional(),
+  changeType: z.enum(ChangeType).optional(),
   since: z.string().optional(), // ISO date string
   limit: z.coerce.number().min(1).max(100).default(50),
   offset: z.coerce.number().min(0).default(0),
@@ -23,12 +23,12 @@ export const PanelChangesQuerySchema = z.object({
 export const PanelChangeResponseSchema = z.object({
   id: z.number(),
   panelId: z.number(),
-  changeType: z.nativeEnum(ChangeType),
+  changeType: z.enum(ChangeType),
   description: z.string(),
   changedBy: z.string(),
   changedAt: z.date(),
-  oldValues: z.record(z.any()).optional(),
-  newValues: z.record(z.any()).optional(),
+  oldValues: z.record(z.string(), z.any()).optional(),
+  newValues: z.record(z.string(), z.any()).optional(),
   affectedColumn: z.string().optional(),
 })
 

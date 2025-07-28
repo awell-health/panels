@@ -18,7 +18,7 @@ export const datasourceCreate = async (app: FastifyInstance) => {
     method: 'POST',
     schema: {
       description: 'Create a new data source for a panel',
-      tags: ['panel', 'datasource'],
+      tags: ['panels', 'datasources'],
       params: IdParamSchema,
       body: DataSourceInfoSchema,
       response: {

@@ -299,9 +299,12 @@ importers:
       '@panels/types':
         specifier: workspace:^
         version: link:../../packages/types
+      '@scalar/fastify-api-reference':
+        specifier: ^1.32.10
+        version: 1.32.10
       '@t3-oss/env-core':
         specifier: ^0.13.8
-        version: 0.13.8(typescript@5.8.3)(zod@3.25.67)
+        version: 0.13.8(typescript@5.8.3)(zod@4.0.10)
       arecibo:
         specifier: ^4.0.3
         version: 4.0.3
@@ -319,7 +322,7 @@ importers:
         version: 5.0.1
       fastify-type-provider-zod:
         specifier: ^5.0.2
-        version: 5.0.2(@fastify/swagger@9.5.1)(fastify@5.4.0)(zod@3.25.67)
+        version: 5.0.2(@fastify/swagger@9.5.1)(fastify@5.4.0)(zod@4.0.10)
       figlet:
         specifier: ^1.8.2
         version: 1.8.2
@@ -333,11 +336,11 @@ importers:
         specifier: ^5.1.4
         version: 5.1.4(typescript@5.8.3)(vite@7.0.6(@types/node@22.15.29)(jiti@2.5.1)(lightningcss@1.30.1)(tsx@4.20.3)(yaml@2.8.0))
       zod:
-        specifier: ^3.25.67
-        version: 3.25.67
+        specifier: ^4.0.10
+        version: 4.0.10
       zod-to-json-schema:
         specifier: ^3.24.6
-        version: 3.24.6(zod@3.25.67)
+        version: 3.24.6(zod@4.0.10)
     devDependencies:
       '@biomejs/biome':
         specifier: 1.9.4
@@ -431,8 +434,8 @@ importers:
   packages/types:
     dependencies:
       zod:
-        specifier: ^3.25.67
-        version: 3.25.67
+        specifier: ^4.0.10
+        version: 4.0.10
     devDependencies:
       npm-run-all:
         specifier: ^4.1.5
@@ -2121,6 +2124,26 @@ packages:
   '@rushstack/ts-command-line@4.23.7':
     resolution: {integrity: sha512-Gr9cB7DGe6uz5vq2wdr89WbVDKz0UeuFEn5H2CfWDe7JvjFFaiV15gi6mqDBTbHhHCWS7w8mF1h3BnIfUndqdA==}
 
+  '@scalar/core@0.3.10':
+    resolution: {integrity: sha512-WKLaZk5zj65CbS0Ox0BMZ1GX9gFrVdwgV/cdRjT2Av8H5CizOSirXk4PwdsU8V8Q4gAltVy9cnt6yKc2ZnRY+w==}
+    engines: {node: '>=20'}
+
+  '@scalar/fastify-api-reference@1.32.10':
+    resolution: {integrity: sha512-6qjnha9ul3mhKSwXl6Ijx1LCxdqF5sjNiyE5OEj5Q2QKP+/71NbsmOZJEd+9auBskc4Vd2HSiByrMNIMoatdsg==}
+    engines: {node: '>=20'}
+
+  '@scalar/openapi-parser@0.18.2':
+    resolution: {integrity: sha512-Mb0rRgnn8QgrwcsOcZY3g4uDr49cSuYcmh87oT7gDuV9IPFg5Wc71fjXNx0HdTRy5k21ugS/lDSl8sL+YBudOw==}
+    engines: {node: '>=20'}
+
+  '@scalar/openapi-types@0.3.6':
+    resolution: {integrity: sha512-hkLIgDIQxSgZNYCqNkty2p/V8hjeMf711uT8IKIjNw8oaT/cjT1HC/3V0FVhJ6x2eaufir+WXt5Zqv/iVk5pyQ==}
+    engines: {node: '>=20'}
+
+  '@scalar/types@0.2.10':
+    resolution: {integrity: sha512-ZlOzYoYzzGRnMr6RufAnjksv94MyL4s4HElg9mdo9gQXPch24lNiE0pE0k6vxdB+ncgbGWZ1T6qCC/lJXMLL1Q==}
+    engines: {node: '>=20'}
+
   '@shikijs/core@2.5.0':
     resolution: {integrity: sha512-uu/8RExTKtavlpH7XqnVYBrfBkUc20ngXiX9NSrBhOVZYv/7XQRKUyhtkeflY5QsxC0GbJThCerruZfsUaSldg==}
 
@@ -3761,6 +3784,9 @@ packages:
     resolution: {integrity: sha512-KH6p+Z8AKPXnmA7+Iz2Lh8ARCMr+8WNPVludm1LGkZoD2MjY6LVnRMtTKhkdzI+jr0RzQWXKzKyBJm1zoHEL4Q==}
     engines: {node: '>=0.10.0'}
 
+  fastify-plugin@4.5.1:
+    resolution: {integrity: sha512-stRHYGeuqpEZTL1Ef0Ovr2ltazUT9g844X5z/zEBFLG8RYlpDiOCIG+ATvYEp+/zmc7sN29mcIMp8gvYplYPIQ==}
+
   fastify-plugin@5.0.1:
     resolution: {integrity: sha512-HCxs+YnRaWzCl+cWRYFnHmeRFyR5GVnJTAaCJQiYzQSDwK9MgJdyAsuL3nh0EWRCYMgQ5MeziymvmAhUHYHDUQ==}
 
@@ -3948,6 +3974,9 @@ packages:
     resolution: {integrity: sha512-ICsMM1Wk8xSGMowkOmPrzo2Fgmfo4bMHLNX6ytHjajRJUqvHOw/TFapQ+QG75c3X/tTDDhOSRPGC52dDbNM8FQ==}
     engines: {node: '>=16'}
     hasBin: true
+
+  github-slugger@2.0.0:
+    resolution: {integrity: sha512-IaOQ9puYtjrkq7Y0Ygl9KDZnrf/aiUJYUpVf89y8kyaxbRG7Y1SrX/jaumrv81vc61+kiMempujsM3Yw7w5qcw==}
 
   glob-parent@5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
@@ -4535,6 +4564,10 @@ packages:
     resolution: {integrity: sha512-POQXvpdL69+CluYsillJ7SUhKvytYjW9vG/GKpnf+xP8UWgYEM/RaMzHHofbALDiKbbP1W8UEYmgGl39WkPZsg==}
     engines: {'0': node >= 0.2.0}
 
+  jsonpointer@5.0.1:
+    resolution: {integrity: sha512-p/nXbhSEcu3pZRdkW1OfJhpsVtW1gd4Wa1fnQc9YLiTfAjn0312eMKimbdIQzuZl9aa9xUGaRlP9T/CJE/ditQ==}
+    engines: {node: '>=0.10.0'}
+
   just-diff-apply@5.5.0:
     resolution: {integrity: sha512-OYTthRfSh55WOItVqwpefPtNt2VdKsq5AnAK6apdtR6yCH8pr0CmSr710J0Mf+WdQy7K/OzMy7K2MgAfdQURDw==}
 
@@ -4611,6 +4644,10 @@ packages:
 
   layout-base@2.0.1:
     resolution: {integrity: sha512-dp3s92+uNI1hWIpPGH3jK2kxE2lMjdXdr+DH8ynZHpd6PUlH6x6cbuXnoMmiNumznqaNO31xu9e79F0uuZ0JFg==}
+
+  leven@4.0.0:
+    resolution: {integrity: sha512-puehA3YKku3osqPlNuzGDUHq8WpwXupUg1V6NXdV38G+gr+gkBwFC8g1b/+YcIvp8gnqVIus+eJCH/eGsRmJNw==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   light-my-request@6.6.0:
     resolution: {integrity: sha512-CHYbu8RtboSIoVsHZ6Ye4cj4Aw/yg2oAFimlF7mNvfDV192LR7nDiKtSIfCuLT7KokPSTn/9kfVLm5OGN0A28A==}
@@ -6981,8 +7018,14 @@ packages:
     peerDependencies:
       zod: ^3.24.1
 
+  zod@3.24.1:
+    resolution: {integrity: sha512-muH7gBL9sI1nciMZV67X5fTKKBLtwpZ5VBp1vsOQzj1MhrBZ4wlVCm3gedKZWLp0Oyel8sIGfeiz54Su+OVT+A==}
+
   zod@3.25.67:
     resolution: {integrity: sha512-idA2YXwpCdqUSKRCACDE6ItZD9TZzy3OZMtpfLoh6oPR47lipysRrJfjzMqFxQ3uJuUPyUeWe1r9vLH33xO/Qw==}
+
+  zod@4.0.10:
+    resolution: {integrity: sha512-3vB+UU3/VmLL2lvwcY/4RV2i9z/YU0DTV/tDuYjrwmx5WeJ7hwy+rGEEx8glHp6Yxw7ibRbKSaIFBgReRPe5KA==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -8598,6 +8641,37 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
+  '@scalar/core@0.3.10':
+    dependencies:
+      '@scalar/types': 0.2.10
+
+  '@scalar/fastify-api-reference@1.32.10':
+    dependencies:
+      '@scalar/core': 0.3.10
+      '@scalar/openapi-parser': 0.18.2
+      '@scalar/openapi-types': 0.3.6
+      fastify-plugin: 4.5.1
+      github-slugger: 2.0.0
+
+  '@scalar/openapi-parser@0.18.2':
+    dependencies:
+      ajv: 8.17.1
+      ajv-draft-04: 1.0.0(ajv@8.17.1)
+      ajv-formats: 3.0.1(ajv@8.17.1)
+      jsonpointer: 5.0.1
+      leven: 4.0.0
+      yaml: 2.8.0
+
+  '@scalar/openapi-types@0.3.6':
+    dependencies:
+      zod: 3.24.1
+
+  '@scalar/types@0.2.10':
+    dependencies:
+      '@scalar/openapi-types': 0.3.6
+      nanoid: 5.1.5
+      zod: 3.24.1
+
   '@shikijs/core@2.5.0':
     dependencies:
       '@shikijs/engine-javascript': 2.5.0
@@ -8692,10 +8766,10 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@t3-oss/env-core@0.13.8(typescript@5.8.3)(zod@3.25.67)':
+  '@t3-oss/env-core@0.13.8(typescript@5.8.3)(zod@4.0.10)':
     optionalDependencies:
       typescript: 5.8.3
-      zod: 3.25.67
+      zod: 4.0.10
 
   '@tailwindcss/node@4.1.11':
     dependencies:
@@ -9280,6 +9354,10 @@ snapshots:
   ajv-draft-04@1.0.0(ajv@8.13.0):
     optionalDependencies:
       ajv: 8.13.0
+
+  ajv-draft-04@1.0.0(ajv@8.17.1):
+    optionalDependencies:
+      ajv: 8.17.1
 
   ajv-formats@3.0.1(ajv@8.13.0):
     optionalDependencies:
@@ -10444,16 +10522,18 @@ snapshots:
     dependencies:
       reusify: 1.1.0
 
+  fastify-plugin@4.5.1: {}
+
   fastify-plugin@5.0.1: {}
 
   fastify-tsconfig@3.0.0: {}
 
-  fastify-type-provider-zod@5.0.2(@fastify/swagger@9.5.1)(fastify@5.4.0)(zod@3.25.67):
+  fastify-type-provider-zod@5.0.2(@fastify/swagger@9.5.1)(fastify@5.4.0)(zod@4.0.10):
     dependencies:
       '@fastify/error': 4.2.0
       '@fastify/swagger': 9.5.1
       fastify: 5.4.0
-      zod: 3.25.67
+      zod: 4.0.10
 
   fastify@5.4.0:
     dependencies:
@@ -10678,6 +10758,8 @@ snapshots:
       dargs: 8.1.0
       meow: 12.1.1
       split2: 4.2.0
+
+  github-slugger@2.0.0: {}
 
   glob-parent@5.1.2:
     dependencies:
@@ -11317,6 +11399,8 @@ snapshots:
 
   jsonparse@1.3.1: {}
 
+  jsonpointer@5.0.1: {}
+
   just-diff-apply@5.5.0: {}
 
   just-diff@6.0.2: {}
@@ -11385,6 +11469,8 @@ snapshots:
   layout-base@1.0.2: {}
 
   layout-base@2.0.1: {}
+
+  leven@4.0.0: {}
 
   light-my-request@6.6.0:
     dependencies:
@@ -14002,10 +14088,15 @@ snapshots:
 
   zen-observable@0.8.15: {}
 
-  zod-to-json-schema@3.24.6(zod@3.25.67):
+  zod-to-json-schema@3.24.6(zod@4.0.10):
     dependencies:
-      zod: 3.25.67
+      zod: 4.0.10
 
-  zod@3.25.67: {}
+  zod@3.24.1: {}
+
+  zod@3.25.67:
+    optional: true
+
+  zod@4.0.10: {}
 
   zwitch@2.0.4: {}

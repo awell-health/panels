@@ -25,7 +25,7 @@ export const datasourceList = async (app: FastifyInstance) => {
     method: 'GET',
     schema: {
       description: 'List all data sources for a panel',
-      tags: ['panel', 'datasource'],
+      tags: ['panels', 'datasources'],
       params: IdParamSchema,
       querystring: querystringSchema,
       response: {

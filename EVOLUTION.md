@@ -1,13 +1,14 @@
-# Healthcare Data Hub – Detailed Architecture Document (Enriched)
+# Healthcare Data Hub – Detailed Architecture (vNext)
 
 ## 0. Goals
 
 - Ingest heterogeneous healthcare data and persist raw payloads.
 - Transform raw payloads into valid FHIR resources and store them in **Medplum**.
-- Allow low-code/no-code creation of data workflows (“agents”/“bots”) via **n8n**.
-- Provide a cohesive backend façade (single API) abstracting all moving parts.
-- Support multiple deployment modes (self-hosted, SaaS) without mandatory paid services.
-- Offer **full observability and auditability**: inspect workflow state, locks, per-record before/after transformation.
+- Allow low-code/no-code workflows via **n8n**; enable per-tenant customization.
+- Provide a cohesive **Backend Facade** (single API) abstracting all moving parts.
+- Preserve auditability: per-record before/after (JSON Patch) and run introspection.
+- Maintain evented control/status via **JetStream** while exposing REST APIs to the UI.
+- Support self-hosted and SaaS modes without mandatory paid services.
 
 ---
 
@@ -15,13 +16,13 @@
 
 | Component | Responsibility |
 |----------|----------------|
-| Backend Facade Service | Public API (REST) for templates, workflows, data, mapping, monitoring, audit. Orchestrates n8n, Postgres, Medplum, NATS. |
-| n8n Instance | Executes workflow templates (ingestion, transformation, client-specific logic). |
-| Postgres | Stores raw collected payloads (`collector_records`), template/workflow metadata, mapping rules, audit logs, transformation results. |
-| NATS JetStream | Event bus for ingestion events and transformation tasks. |
-| Medplum | FHIR storage & validation. |
-| Transformation Service (optional) | Universal mapping/validation (Hybrid mode). |
-| Monitoring Stack | Logs/metrics/traces (Loki/Prometheus/OpenTelemetry). |
+| **Backend Facade** | Public REST API (templates, workflows, rules, records, audit, controls, events). Publishes control msgs and consumes status from JetStream. |
+| **n8n Instance** | Executes ingestion, transformation (n8n-only or client-specific steps in hybrid), and utility workflows. |
+| **Postgres** | Stores raw payloads (`collector_records`), templates, rules, workflow runs, audit results. |
+| **NATS JetStream** | Events bus: `events.*` (ingestion), `status.*` (workflow/transformation status), `control.*` (commands from Facade). |
+| **Medplum** | FHIR validation and storage. |
+| **Transformation Service (optional)** | Universal mapping/validation + optional delegation to client-specific n8n workflows (hybrid mode). |
+| **Monitoring Stack** | Logs/metrics/traces (Loki/Prometheus/OpenTelemetry). |
 
 ---
 
@@ -48,8 +49,9 @@ raw_payload (jsonb)
 ingested_at (timestamptz)
 processing_status (enum: pending|in_progress|succeeded|failed)
 last_error (text)
-lock_owner (text nullable)     -- actor/service holding processing lock
+lock_owner (text nullable)     -- actor/service
 lock_acquired_at (timestamptz)
+last_seen_at (timestamptz)     -- heartbeat for stale detection
 ```
 
 ### 2.3 `mapping_rules`
@@ -58,33 +60,34 @@ id (uuid PK)
 tenant_id (uuid)
 scope (enum: global|client_specific)
 rule_name (text)
-rule_definition (jsonb)        -- DSL or prompt spec
+rule_definition (jsonb)        -- DSL or AI prompt-based spec
+prompt_metadata (jsonb)        -- model id, prompt version (for HITL provenance)
 version (int)
 active (bool)
 created_at / updated_at
 ```
 
-### 2.4 `transformation_results`
+### 2.4 `transformation_results`  (audit-focused by default)
 ```
 id (uuid PK)
 collector_record_id (uuid FK)
 tenant_id (uuid)
 applied_rule_ids (uuid[])
-intermediate_json (jsonb)      -- optional snapshot before final assembly
-fhir_resource_type (text)
-fhir_resource_json (jsonb)
 validation_status (enum: valid|invalid)
 validation_errors (jsonb)
-json_patch (jsonb)             -- RFC6902 diff raw_payload -> fhir_resource_json
+json_patch (jsonb)             -- RFC6902 diff raw_payload -> FHIR representation
+medplum_id (text)              -- FHIR canonical id
 posted_to_medplum_at (timestamptz)
-medplum_id (text)
 created_at
+-- OPTIONAL (config: AUDIT_STORE_FULL_FHIR=true)
+fhir_resource_type (text)
+fhir_resource_json (jsonb)
 ```
 
-### 2.5 `workflow_runs` (for execution introspection)
+### 2.5 `workflow_runs`
 ```
 id (uuid PK)
-workflow_id (text or uuid from n8n)
+workflow_id (text|uuid from n8n)
 template_id (uuid FK)
 tenant_id (uuid)
 status (enum: running|succeeded|failed|canceled)
@@ -94,41 +97,40 @@ output_context (jsonb)
 error_message (text)
 ```
 
+**Indexes & Constraints**
+- `collector_records(status, tenant_id)` for queue scans.
+- Unique: `transformation_results(collector_record_id)` (idempotency).
+- Partition `collector_records` by month/tenant for scale.
+
 ---
 
-## 3. Template Management (Improved)
+## 3. Template Management (DB-backed)
 
-### 3.1 Rationale & Implications
-- **Database-backed** templates remove Git operational overhead; easier backup/restore.
-- Versioning inside Postgres enables strict transactional guarantees.
-- Limitation: large binaries (e.g., attachments) should be externalized (object storage) to keep table lean.
+**Rationale & Implications**
+- No runtime Git dependency; transactional versioning; simple rollback.
+- Large binaries should live in object storage (store pointer in `metadata_json`).
 
-### 3.2 Storage / Activation
-- Only one active version per `name`.
-- Activation triggers deployment to n8n; failure rolls back status.
-- Deprecated templates remain for audit; cannot be reactivated (must clone to new version).
-
-### 3.3 APIs
+**APIs**
 ```
 GET  /api/templates?type=&tag=
 GET  /api/templates/{id}
-POST /api/templates                   # create draft
-PUT  /api/templates/{id}              # new version (draft)
+POST /api/templates                   # create draft (version=1)
+PUT  /api/templates/{id}              # create new version (draft)
 PUT  /api/templates/{id}/activate
 DELETE /api/templates/{id}            # mark deprecated
 ```
+
+On activation the Facade deploys/updates the workflow in n8n; rollback if deployment fails.
 
 ---
 
 ## 4. Ingestion Flow
 
-1. External source → n8n ingestion workflow or backend endpoint.
-2. Workflow inserts record into `collector_records` (`pending`) and emits `record.created` to NATS.
-3. Transformation processor (service or workflow) picks up pending records.
+1. External source → **n8n ingestion workflow** (webhook/file/SFTP/etc.) or Facade endpoint.
+2. Workflow inserts row into `collector_records` (`pending`) and emits `events.record.created` to JetStream.
+3. Transformation (service or n8n general workflow) processes pending records.
 
-**Considerations:**  
-- Backpressure handled by limiting consumer concurrency.  
-- Large payloads can be truncated or offloaded to object storage with pointer stored in `raw_payload`.
+**Backpressure**: consumer concurrency limits; optional queue depth autoscaling.
 
 ---
 
@@ -136,54 +138,78 @@ DELETE /api/templates/{id}            # mark deprecated
 
 ### 5.1 Hybrid Approach (Recommended)
 
-**Flow:**  
-Service consumes `record.created` → locks row (`lock_owner`) → applies global mapping rules → optionally invokes client-specific n8n workflow → builds FHIR resource → validates via Medplum → computes JSON Patch → persists `transformation_results` → posts to Medplum → updates statuses and releases lock.
+**Intent:** Separate **universal** logic from **client-specific** customization.
 
-**Implications:**  
-- Clear separation of deterministic vs. customizable logic.  
-- Easier to unit test core mapping functions.  
-- Additional deployment unit (service) increases operational overhead.
+**Flow:**
+1. Transformation Service consumes `events.record.created`, locks record (advisory lock + columns), updates `in_progress`, sets heartbeat.
+2. Applies **global** deterministic mapping (DSL) and guardrails.
+3. **Optional delegation** to client-specific n8n workflow **only if**:
+   - `delegation_enabled` (tenant/integration scope) **and**
+   - an active client workflow is registered.
+   - Guardrails: `delegation_timeout_ms`, `max_payload_kb`, retries.
+4. Assemble FHIR JSON, run Medplum `$validate`.
+5. POST to Medplum (capture `medplum_id`); retries use PUT for idempotency.
+6. Persist **audit row** in `transformation_results` (IDs + `json_patch` + validation).
+7. Set record to `succeeded` or `failed` (with `last_error`), release lock, emit `status.transformation.{recordId}`.
+
+**Why delegate?** To allow per-tenant logic without redeploying the service; platform still enforces validation and posting.
 
 ### 5.2 n8n-Only Approach
 
-**Flow:**  
-General transformation workflow polls for `pending` records → updates status to `in_progress` (simulated lock) → applies general logic (script nodes) → optionally calls client-specific workflow → validates → persists results → posts to Medplum.
+**Flow:**
+- A **General Transformation Workflow** polls `collector_records` for `pending`, simulates locking, applies general rules, optionally calls a **Client-Specific Workflow**, validates, posts to Medplum, writes the audit row, updates status.
 
-**Implications:**  
-- Simplest stack; all visual.  
-- Concurrency control less robust (DB-level locking must be manually scripted).  
-- Complex general workflow may become hard to maintain.
+**Trade-offs:**
+- Simpler deployment, fully visual.
+- Harder concurrency control and backpressure; complex workflows may become unwieldy.
 
-### 5.3 Selection Guidelines
-| Criterion | Hybrid | n8n-Only |
-|-----------|--------|---------|
-| Performance / Scaling | High (service tuned) | Medium |
-| Simplicity | Medium | High |
-| Advanced Debug / Testing | High | Lower |
-| Non-dev Customization | Medium | High |
+### 5.3 Mode Selection
+
+- `MODE=hybrid` (default) for scale and testability.
+- `MODE=n8n_only` for minimal footprint or early PoCs.
 
 ---
 
-## 6. Mapping Rules & AI Integration
+## 6. AI-Assisted Mapping (HITL)
 
-### 6.1 Execution Order
-1. Static DSL mapping (deterministic).
-2. AI prompt fills gaps.
-3. Post-processor enforces whitelist of allowed FHIR fields.
-4. Validator (Medplum) ensures conformance.
+### 6.1 Pipeline
+1. **Detection Agent** → candidate FHIR resource types + confidence.
+2. **Draft-Mapping Agent** → proposed field-level mapping (JSON DSL).
+3. **Human Review UI** → accept/edit/reject rows; preview with sample data.
+4. **Activation** → store as `mapping_rules` new version; production runs use deterministic executor (no LLM).
 
-### 6.2 Implications
-- AI output variability requires deterministic sanitization; failing to validate is logged but never silently accepted.
-- Storing `applied_rule_ids` and `json_patch` enables full forensic reconstruction.
+### 6.2 APIs
+```
+POST /api/mapping/suggest
+  body: { raw_payload: {...}, tenant_id }
+  resp: { candidates: [{resourceType, confidence}], draft_mapping: [...] }
+
+POST /api/mapping/validate-draft
+  body: { resourceType, draft_mapping:[...], sample_payload:{...} }
+  resp: { validation_status, validation_errors }
+
+POST /api/mapping-rules            # create draft (with prompt_metadata)
+PUT  /api/mapping-rules/{id}/activate
+```
+
+**Provenance**
+- Store exact prompt, model ID, and parameters in `mapping_rules.prompt_metadata`.
+
+**Guardrails**
+- Whitelist post-processor; validator gate before activation; latency timeout with static fallback.
 
 ---
 
 ## 7. Backend Facade Service
 
 ### 7.1 Responsibilities
-Unified interface for: template/rule lifecycle, record introspection, workflow control, transformation audit, metrics, auth.
+- REST APIs for templates, rules, records, runs, locks, audit.
+- **JetStream bridge**: publish `control.*` commands; consume `status.*` topics.
+- n8n orchestration (create/update/activate workflows).
+- Medplum validation & read-through when needed.
+- AuthN/AuthZ, audit logging.
 
-### 7.2 REST API Surface (Expanded)
+### 7.2 REST API Surface
 
 #### Templates
 ```
@@ -195,11 +221,11 @@ PUT    /api/templates/{id}/activate
 DELETE /api/templates/{id}
 ```
 
-#### Workflows (instantiated)
+#### Workflows & Runs
 ```
 POST   /api/workflows/deploy                 # {template_id, tenant_id, params}
 GET    /api/workflows/{id}/status
-GET    /api/workflows/{id}/runs              # list recent runs
+GET    /api/workflows/{id}/runs
 GET    /api/workflow-runs/{run_id}
 POST   /api/workflow-runs/{run_id}/cancel
 POST   /api/workflows/{id}/pause
@@ -208,112 +234,175 @@ POST   /api/workflows/{id}/resume
 
 #### Locks / Runtime Control
 ```
-GET    /api/locks?tenant_id=&record_id=      # view active locks
-DELETE /api/locks/{record_id}                # force release (admin) – warns about duplication risk
+GET    /api/locks?tenant_id=&record_id=
+DELETE /api/locks/{record_id}                # admin only; risk of duplicates explained
 ```
 
-#### Mapping Rules
+#### Mapping Rules & AI (HITL)
 ```
 GET    /api/mapping-rules?tenant_id=
 POST   /api/mapping-rules
 PUT    /api/mapping-rules/{id}/activate
 GET    /api/mapping-rules/{id}
+
+POST   /api/mapping/suggest
+POST   /api/mapping/validate-draft
 ```
 
 #### Records & Transformation
 ```
-GET    /api/records?status=pending|failed
-GET    /api/records/{id}                     # raw payload + status
-POST   /api/records/{id}/retry               # reset status to pending (if failed)
+GET    /api/records?status=pending|failed|in_progress
+GET    /api/records/{id}
+POST   /api/records/{id}/retry
 ```
 
 #### Transformation Audit (Before/After)
 ```
 GET    /api/transformations?record_id=
-GET    /api/transformations/{id}             # includes raw_payload, fhir_resource_json, json_patch, applied_rule_ids
-GET    /api/transformations/{id}/diff        # returns json_patch only
+GET    /api/transformations/{id}             # includes raw_payload ref, medplum_id, json_patch, validation
+GET    /api/transformations/{id}/diff        # JSON Patch only
+GET    /api/transformations/{id}/fhir        # proxy fetch from Medplum (read-through)
 ```
-*`json_patch` uses RFC 6902 operations, enabling UI diff rendering.*
 
-#### Metrics / Logs
+#### Control (publish to JetStream)
+```
+POST   /api/controls/records/{id}/reprocess
+POST   /api/controls/workflows/{id}/pause
+POST   /api/controls/workflows/{id}/resume
+POST   /api/controls/templates/{id}/deploy
+```
+
+#### Events (Status fan-in to UI)
+```
+GET    /api/events/stream   # SSE: relays status.* to browser (tenant-scoped)
+```
+
+#### Metrics / Logs / Health
 ```
 GET    /api/metrics/summary
 GET    /api/logs?record_id=&run_id=
-```
-
-#### Health
-```
 GET    /api/health
 ```
-
-### 7.3 Considerations
-- Forcing lock release (`DELETE /api/locks/{record_id}`) risks duplicate FHIR posts; recommended only after verifying no active processing.
-- Workflow pause/resume maps to n8n’s internal activation flag; cancellation creates a compensating entry in `workflow_runs`.
 
 ---
 
 ## 8. Security
 
-- **AuthN**: OIDC (Keycloak); JWT includes `tenant_id` claim.
-- **AuthZ**: RBAC + ownership checks; `admin` can force lock release.
-- **Audit**: Each mutating endpoint inserts audit row (old/new snapshot).
-- **Data Minimization**: `raw_payload` access restricted to roles with PHI clearance; transformation endpoints can redact sensitive fields if configured.
+- OIDC JWT with `tenant_id` claim; RBAC on endpoints.
+- Postgres Row-Level Security per `tenant_id`.
+- Secret management via Kubernetes Secrets/Vault; redaction in logs.
+- Immutable audit sink for compliance (append-only object storage).
 
 ---
 
 ## 9. Monitoring & Observability
 
-- Locks age dashboard: highlight locks older than threshold.
-- Transformation success rate per tenant.
-- Average `pending` queue age.
-- Diff size distribution (large diffs may indicate mapping instability).
+- Structured logs with `trace_id`, `record_id`, `run_id`.
+- Metrics: success/failure counters, queue depth, lock age, validation errors.
+- Tracing via OpenTelemetry; pass context through Facade → n8n → Service.
+- Dashboards: transformation latency, backlog age, stale locks, Medplum error rates.
 
 ---
 
-## 10. Failure & Recovery
+## 10. Failure & Recovery (Normative)
 
-| Scenario | Handling |
-|----------|---------|
-| Stale Lock (service crashed) | Cron job scans `collector_records` where `lock_owner` stale > timeout → releases lock; raises alert. |
-| Double Processing Post Lock-Force | `transformation_results` has unique constraint on `(collector_record_id)`; second attempt fails fast. |
-| AI Model Failure | Fallback to static DSL only; mark partial result; record flagged for manual review. |
-| Medplum outage | Exponential retry; if threshold exceeded mark failed; operator retries later. |
+- **Advisory locks** + stale lock sweeper (Cron) revert stuck `in_progress` to `pending`.
+- Unique constraint on `transformation_results.collector_record_id` ensures idempotency.
+- Circuit breaker for Medplum (retry w/ exponential backoff).
+- Graceful shutdown hooks release locks/heartbeat.
 
 ---
 
 ## 11. Deployment
 
-### 11.1 Kubernetes Resources
-- `Deployment`: backend, transformation service.
-- `StatefulSet`: Postgres.
-- `Deployment`: n8n, NATS JetStream.
-- `CronJob`: stale-lock cleaner.
-- `HPA`: scale transformation service on queue depth.
-
-### 11.2 Modes
-- **Hybrid**: enable transformation service; general workflow light.
-- **n8n-Only**: disable service; general workflow handles everything; lock cleaner adjusts logic.
+- Kubernetes Deployments: Facade, Transformation Service, n8n, NATS JetStream.
+- StatefulSet: Postgres (HA options as needed).
+- HPA scales Transformation Service by queue depth; optionally scale n8n workers.
+- CronJob: stale-lock cleaner; reconciliation job for template vs. n8n drift.
 
 ---
 
 ## 12. Operational Playbook
 
-1. **Add Integration** → Deploy ingestion template.
-2. **Define Mapping** → Create rule(s), activate.
-3. **Observe** → Check metrics; resolve failures.
-4. **Audit** → Use `/api/transformations/{id}` to show before/after for compliance.
-5. **Scale** → Increase replicas when pending backlog > threshold.
+1. Add integration → deploy ingestion template.
+2. Create mapping → validate draft with sample → activate.
+3. Monitor dashboards; fix failures; retry via API.
+4. Use audit endpoints for before/after and compliance exports.
+5. Use control endpoints to pause/resume or reprocess as needed.
 
 ---
 
-## 13. Future Enhancements
+## 13. JetStream Subjects & Retention (Appendix)
 
-- UI “Diff Viewer” consuming `json_patch`.
-- Rule simulation endpoint (`POST /api/simulate-transformation`) without persisting.
-- Pluggable AI model registry.
+**Events**
+- `events.record.created`
+
+**Status (emitted by n8n / Service)**
+- `status.workflow.{workflowId}`
+- `status.transformation.{recordId}`
+
+**Control (published by Facade)**
+- `control.record.reprocess`
+- `control.workflow.pause`
+- `control.workflow.resume`
+- `control.template.deploy`
+
+**Retention**
+- `events.*` → 7d time-based.
+- `status.*` → 24–48h.
+- `control.*` → short retention with **durable** consumers (Facade uses `facade-status`).
 
 ---
 
-## 14. Summary
+## 14. Diagram (Mermaid)
 
-This enriched design delivers a cohesive façade with strong audit, flexible transformation strategies, explicit workflow/lock control, and full before/after traceability—forming a robust foundation for implementation and AI-assisted development.
+```mermaid
+graph LR
+    %% Ingestion
+    ExternalSource -->|HTTP / File| n8nIngest[n8n Ingestion Workflow]
+    n8nIngest -->|insert raw| Postgres[(Postgres\ncollector_records)]
+    n8nIngest -->|events.record.created| NATS[(NATS JetStream)]
+
+    %% Transformation (hybrid)
+    NATS --> TransformerSvc[Transformation Service]
+    TransformerSvc -->|SELECT pending + lock| Postgres
+    TransformerSvc -- optional --> n8nClient[n8n Client-Specific WF]
+    TransformerSvc -->|$validate & POST| Medplum[Medplum FHIR]
+    TransformerSvc -->|audit row (json_patch + ids)| Postgres
+    TransformerSvc -->|status.transformation.*| NATS
+
+    %% Backend façade
+    UserUI[UI / Dev Clients] --> Backend[Facade API]
+    Backend -->|REST| n8nCore[n8n REST]
+    Backend -->|SQL| Postgres
+    Backend -->|REST| Medplum
+    Backend -->|control.* (publish)| NATS
+    NATS -->|status.* (subscribe)| Backend
+
+    %% Monitoring
+    Prom[Prometheus / Grafana]
+    Backend --metrics--> Prom
+    TransformerSvc --metrics--> Prom
+    n8nCore --metrics--> Prom
+```
+
+---
+
+## 15. Modes & Config Flags
+
+```
+MODE = hybrid | n8n_only
+DELEGATION_ENABLED = true|false                # per-tenant override supported
+DELEGATION_TIMEOUT_MS = 15000
+AUDIT_STORE_FULL_FHIR = false
+AI_ALLOWED = true|false
+AI_MODEL_ID = <model>
+AI_TIMEOUT_MS = 10000
+EVENTS_SSE_ENABLED = true
+```
+
+---
+
+## 16. Summary
+
+This version keeps the **Facade⇄JetStream** integration for control and live status, narrows transformation persistence to **audit-first**, defines **optional delegation** in hybrid mode, and adds a practical **AI-assisted mapping (HITL)** pipeline and APIs. It provides a coherent, versioned foundation suitable for implementation and AI-assisted code generation.

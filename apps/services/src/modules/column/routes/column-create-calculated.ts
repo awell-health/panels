@@ -18,7 +18,7 @@ export const columnCreateCalculated = async (app: FastifyInstance) => {
     method: 'POST',
     schema: {
       description: 'Create a new calculated column for a panel',
-      tags: ['panel', 'column'],
+      tags: ['panels', 'columns'],
       params: IdParamSchema,
       body: ColumnCalculatedCreateSchema,
       response: {

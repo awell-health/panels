@@ -66,6 +66,7 @@
     "@mikro-orm/reflection": "^6.4.16",
     "@mikro-orm/seeder": "^6.4.16",
     "@panels/types": "workspace:^",
+    "@scalar/fastify-api-reference": "^1.32.10",
     "@t3-oss/env-core": "^0.13.8",
     "arecibo": "^4.0.3",
     "close-with-grace": "^2.2.0",
@@ -77,7 +78,7 @@
     "nanoid": "^5.1.5",
     "ts-node": "^10.9.2",
     "vite-tsconfig-paths": "^5.1.4",
-    "zod": "^3.25.67",
+    "zod": "^4.0.10",
     "zod-to-json-schema": "^3.24.6"
   },
   "mikro-orm": {

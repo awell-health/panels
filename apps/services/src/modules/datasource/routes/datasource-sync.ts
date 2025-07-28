@@ -32,7 +32,7 @@ export const datasourceSync = async (app: FastifyInstance) => {
     method: 'POST',
     schema: {
       description: 'Sync a data source',
-      tags: ['panel', 'datasource'],
+      tags: ['panels', 'datasources'],
       params: paramsSchema,
       body: bodySchema,
       response: {

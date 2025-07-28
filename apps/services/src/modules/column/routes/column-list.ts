@@ -33,7 +33,7 @@ export const columnList = async (app: FastifyInstance) => {
     method: 'GET',
     schema: {
       description: 'List all columns for a panel, optionally filtered by tags',
-      tags: ['panel', 'column'],
+      tags: ['panels', 'columns'],
       params: IdParamSchema,
       querystring: querystringSchema,
       response: {

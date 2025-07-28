@@ -27,7 +27,7 @@ export const columnDelete = async (app: FastifyInstance) => {
     method: 'DELETE',
     schema: {
       description: 'Delete a column (base or calculated) from a panel',
-      tags: ['panel', 'column'],
+      tags: ['panels', 'columns'],
       params: paramsSchema,
       querystring: querystringSchema,
       response: {

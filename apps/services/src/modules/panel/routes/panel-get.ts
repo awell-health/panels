@@ -17,7 +17,7 @@ export const panelGet = async (app: FastifyInstance) => {
     method: 'GET',
     schema: {
       description: 'Get a panel by ID',
-      tags: ['panel'],
+      tags: ['panels'],
       params: IdParamSchema,
       querystring: z.object({
         tenantId: z.string(),

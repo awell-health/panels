@@ -22,7 +22,7 @@ export const viewDelete = async (app: FastifyInstance) => {
     method: 'DELETE',
     schema: {
       description: 'Delete a view (only owner can delete)',
-      tags: ['view'],
+      tags: ['views'],
       params: IdParamSchema,
       querystring: querystringSchema,
       response: {

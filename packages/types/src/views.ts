@@ -9,7 +9,7 @@ export type SortDirection = (typeof SortDirection)[keyof typeof SortDirection]
 export const ViewSortSchema = z.object({
   id: z.number(),
   columnName: z.string(), // ViewSort entity uses columnName
-  direction: z.nativeEnum(SortDirection),
+  direction: z.enum(SortDirection),
   order: z.number(),
 })
 
@@ -23,7 +23,7 @@ export const ViewSchema = z.object({
   isPublished: z.boolean(),
   publishedAt: z.date().nullable().optional(),
   visibleColumns: z.array(z.string()),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
   sort: z.array(ViewSortSchema),
@@ -34,7 +34,7 @@ export const ViewCreateSchema = z.object({
   name: z.string(),
   panelId: z.number(),
   visibleColumns: z.array(z.string()),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   tenantId: z.string(),
   ownerUserId: z.string(),
 })
@@ -43,7 +43,7 @@ export const ViewCreateSchema = z.object({
 export const ViewUpdateSchema = z.object({
   name: z.string().optional(),
   visibleColumns: z.array(z.string()).optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   tenantId: z.string(),
   ownerUserId: z.string(),
 })
@@ -62,7 +62,7 @@ export const ViewSortsUpdateSchema = z.object({
   sorts: z.array(
     z.object({
       columnName: z.string(),
-      direction: z.nativeEnum(SortDirection),
+      direction: z.enum(SortDirection),
       order: z.number(),
     }),
   ),

@@ -28,7 +28,7 @@ export const datasourceUpdate = async (app: FastifyInstance) => {
     method: 'PUT',
     schema: {
       description: 'Update a data source',
-      tags: ['panel', 'datasource'],
+      tags: ['panels', 'datasources'],
       params: paramsSchema,
       body: DataSourceInfoSchema,
       response: {

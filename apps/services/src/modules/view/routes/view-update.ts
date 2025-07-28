@@ -18,7 +18,7 @@ export const viewUpdate = async (app: FastifyInstance) => {
     method: 'PUT',
     schema: {
       description: 'Update a view (only owner can update)',
-      tags: ['view'],
+      tags: ['views'],
       params: IdParamSchema,
       body: ViewUpdateSchema,
       response: {

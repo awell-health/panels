@@ -1,7 +1,11 @@
 import fastifySwagger from '@fastify/swagger'
 import fastifySwaggerUI from '@fastify/swagger-ui'
 import fp from 'fastify-plugin'
-import { jsonSchemaTransform } from 'fastify-type-provider-zod'
+import {
+  jsonSchemaTransform,
+  jsonSchemaTransformObject,
+} from 'fastify-type-provider-zod'
+import pkg from '../../package.json' with { type: 'json' }
 
 export default fp(
   async (fastify) => {
@@ -9,17 +13,13 @@ export default fp(
       openapi: {
         info: {
           title: 'Awell Panels Server API',
-          description: 'Create and manage worklist panels',
-          version: '0.2.0',
+          description: pkg.description,
+          version: pkg.version,
         },
-        servers: [
-          {
-            url: 'http://localhost',
-          },
-        ],
-        tags: [{ name: 'Panels', description: 'Manage panels' }],
+        tags: [{ name: 'panels', description: 'Manage panels' }],
       },
       transform: jsonSchemaTransform,
+      transformObject: jsonSchemaTransformObject,
     })
 
     fastify.register(fastifySwaggerUI, {

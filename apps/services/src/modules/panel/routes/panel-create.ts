@@ -16,7 +16,7 @@ export const panelCreate = async (app: FastifyInstance) => {
     method: 'POST',
     schema: {
       description: 'Create a new panel',
-      tags: ['panel'],
+      tags: ['panels'],
       body: PanelInfoSchema,
       response: {
         201: CreatePanelResponseSchema,

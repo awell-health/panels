@@ -29,7 +29,7 @@ export const viewSorts = async (app: FastifyInstance) => {
     method: 'GET',
     schema: {
       description: 'Get sorts for a view',
-      tags: ['view', 'configuration'],
+      tags: ['views'],
       params: IdParamSchema,
       querystring: querystringSchema,
       response: {
@@ -76,7 +76,7 @@ export const viewSorts = async (app: FastifyInstance) => {
     method: 'PUT',
     schema: {
       description: 'Update sorts for a view (only owner can update)',
-      tags: ['view', 'configuration'],
+      tags: ['views'],
       params: IdParamSchema,
       body: ViewSortsUpdateSchema,
       response: {

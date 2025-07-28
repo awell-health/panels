@@ -18,7 +18,7 @@ export const panelDelete = async (app: FastifyInstance) => {
     method: 'DELETE',
     schema: {
       description: 'Delete a panel',
-      tags: ['panel'],
+      tags: ['panels'],
       params: IdParamSchema,
       response: {
         204: OperationResultSchema,

@@ -18,7 +18,7 @@ export const columnCreateBase = async (app: FastifyInstance) => {
     method: 'POST',
     schema: {
       description: 'Create a new base column for a panel',
-      tags: ['panel', 'column'],
+      tags: ['panels', 'columns'],
       params: IdParamSchema,
       body: ColumnBaseCreateSchema,
       response: {

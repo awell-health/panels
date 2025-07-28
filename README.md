@@ -2,10 +2,31 @@
 
 This project provides a comprehensive Panel Management System for healthcare applications, featuring dynamic data visualization, multi-tenant architecture, and configurable data sources.
 
+## 🚀 Proof of Concept (POC)
+
+This branch introduces a **Proof of Concept** for a comprehensive **Healthcare Data Hub** architecture. The POC demonstrates:
+
+- **Healthcare Data Ingestion**: Heterogeneous data collection and raw payload persistence
+- **FHIR Transformation**: Automated conversion of raw data into valid FHIR resources via Medplum
+- **Low-Code Workflows**: Visual workflow creation and execution through n8n
+- **Unified API Facade**: Single backend interface abstracting all components
+- **Multi-Deployment Support**: Self-hosted and SaaS deployment modes without mandatory paid services
+- **Full Observability**: Complete audit trail with before/after transformation states
+
+**Core Components:**
+- **Backend Facade Service**: Orchestrates n8n, PostgreSQL, Medplum, and NATS
+- **n8n Workflows**: Executes ingestion, transformation, and client-specific logic
+- **PostgreSQL**: Stores raw payloads, workflow metadata, mapping rules, and audit logs
+- **NATS JetStream**: Event bus for ingestion events and transformation tasks
+- **Medplum**: FHIR storage and validation
+
+> 📋 **For comprehensive architecture details, design decisions, and implementation roadmap, see [EVOLUTION.md](EVOLUTION.md)** - This document outlines the complete healthcare data hub architecture and serves as the foundation for future system development.
+
 ## <a name='TableofContents'></a>Table of Contents
 
 <!-- vscode-markdown-toc -->
 - [Panels Project](#panels-project)
+  - [🚀 Proof of Concept (POC)](#-proof-of-concept-poc)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Architecture](#architecture)
@@ -16,15 +37,19 @@ This project provides a comprehensive Panel Management System for healthcare app
     - [Frontend (App)](#frontend-app)
     - [Documentation](#documentation)
     - [Infrastructure](#infrastructure)
+      - [🔄 **New in the POC: Enhanced Database Configuration**](#-new-in-the-poc-enhanced-database-configuration)
   - [Prerequisites](#prerequisites)
   - [Project Structure](#project-structure)
+      - [🔄 **New in the POC: Enhanced Configuration Files**](#-new-in-the-poc-enhanced-configuration-files)
   - [API Modules](#api-modules)
     - [Panel Management](#panel-management)
     - [Data Source Management](#data-source-management)
     - [Column Management](#column-management)
     - [View Management](#view-management)
   - [Getting Started](#getting-started)
+      - [🔄 **Updated for the POC: Enhanced Environment Setup**](#-updated-for-the-poc-enhanced-environment-setup)
   - [Database Setup](#database-setup)
+      - [🔄 **New in the POC: Automated Database Initialization**](#-new-in-the-poc-automated-database-initialization)
   - [API Testing](#api-testing)
   - [Unit Testing](#unit-testing)
     - [Frontend API Testing](#frontend-api-testing)
@@ -37,11 +62,13 @@ This project provides a comprehensive Panel Management System for healthcare app
   - [Available Scripts](#available-scripts)
     - [Development \& Build](#development--build)
     - [Environment Setup](#environment-setup)
+      - [🔄 **New in the POC: Enhanced Environment Management**](#-new-in-the-poc-enhanced-environment-management)
     - [Infrastructure](#infrastructure-1)
     - [Code Quality](#code-quality)
     - [Testing](#testing)
     - [Documentation](#documentation-1)
   - [Infrastructure](#infrastructure-2)
+      - [🔄 **Updated for the POC: Enhanced Infrastructure Services**](#-updated-for-the-poc-enhanced-infrastructure-services)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -118,6 +145,12 @@ The Panels system allows organizations to:
 - **Development**: Docker Compose for infrastructure
 - **Build System**: Turbo with TypeScript 5.8.3
 
+#### 🔄 **New in the POC: Enhanced Database Configuration**
+- **Centralized Credentials**: Root `.env` file manages all database credentials
+- **Automated Initialization**: PostgreSQL setup with proper schema ownership
+- **Multi-Database Support**: Separate databases for Medplum and n8n services
+- **Permission Management**: PostgreSQL 15+ compatible schema permissions
+
 ## <a name='Prerequisites'></a>Prerequisites
 
 - Node.js >= 22
@@ -154,10 +187,23 @@ The Panels system allows organizations to:
 │   └── types/                  # Shared TypeScript types
 ├── dev/                        # Development configuration
 │   ├── config/                 # Configuration files
-│   ├── scripts/               # Development scripts (env generation)
+│   │   └── init-data.sh       # 🔄 Enhanced database initialization script
+│   ├── scripts/               # Development scripts
+│   │   └── generate-env.js    # 🔄 Enhanced environment generation
 │   └── datastore/             # Local database storage
-└── compose.yaml               # Docker Compose configuration
+├── compose.yaml               # 🔄 Updated Docker Compose configuration
+├── .env.example              # 🔄 New root environment template
+└── EVOLUTION.md              # 📋 POC architecture evolution document
 ```
+
+#### 🔄 **New in the POC: Enhanced Configuration Files**
+
+**Key Configuration Updates:**
+- **`compose.yaml`**: Added environment variable support for database credentials
+- **`dev/config/init-data.sh`**: Enhanced PostgreSQL initialization with schema ownership
+- **`dev/scripts/generate-env.js`**: Improved environment generation with database URL construction
+- **`.env.example`**: New root environment template for centralized credential management
+- **`EVOLUTION.md`**: Comprehensive architecture evolution document
 
 ## <a name='APIModules'></a>API Modules
 
@@ -229,6 +275,35 @@ The Panels system allows organizations to:
      ```
    - **Database UI**: http://localhost:8081 - pgweb interface for PostgreSQL
 
+#### 🔄 **Updated for the POC: Enhanced Environment Setup**
+
+**New Workflow with Centralized Configuration:**
+
+1. **Create Root Environment File**
+   ```bash
+   # Create .env file in project root with database credentials
+   cp .env.example .env
+   # Edit .env with your database credentials
+   ```
+
+2. **Generate Services Configuration**
+   ```bash
+   # Automatically generates services .env with correct DBSQL_URL
+   pnpm generate:env:force
+   ```
+
+3. **Start Infrastructure with Proper Database Setup**
+   ```bash
+   # PostgreSQL will automatically create databases and users
+   docker compose up -d
+   ```
+
+**Key Improvements:**
+- ✅ **Single Source of Truth**: All database credentials in root `.env`
+- ✅ **Automatic Database Creation**: PostgreSQL creates medplum and n8n databases
+- ✅ **Proper Permissions**: Schema ownership prevents permission errors
+- ✅ **Seamless Integration**: Services automatically use correct database URLs
+
 ## <a name='DatabaseSetup'></a>Database Setup
 
 The services use MikroORM for database management:
@@ -243,6 +318,38 @@ pnpm --filter @panels/services migration:apply
 # Reset database with fresh schema
 pnpm --filter @panels/services schema:fresh
 ```
+
+#### 🔄 **New in the POC: Automated Database Initialization**
+
+**Enhanced Database Setup Process:**
+
+1. **Automatic Database Creation**
+   ```bash
+   # PostgreSQL automatically creates databases and users on first startup
+   docker compose up -d wl-postgres
+   ```
+
+2. **Database Configuration**
+   ```bash
+   # Medplum database: medplum user with full schema ownership
+   # N8N database: n8n user with full schema ownership
+   # Both databases created with proper PostgreSQL 15+ permissions
+   ```
+
+3. **Environment-Based Configuration**
+   ```bash
+   # Root .env file controls all database credentials
+   MEDPLUM_DB_USER=myuser
+   MEDPLUM_DB_PASSWORD=mypass
+   N8N_DB_USER=n8nuser
+   N8N_DB_PASSWORD=n8npass
+   ```
+
+**Benefits:**
+- 🚀 **Zero Manual Setup**: Databases created automatically
+- 🔒 **Secure Permissions**: Proper schema ownership prevents permission errors
+- 🔄 **Environment Flexibility**: Easy credential management across environments
+- 📊 **Multi-Service Support**: Separate databases for different services
 
 ## <a name='APITesting'></a>API Testing
 
@@ -381,6 +488,12 @@ This enables seamless switching between development, testing, and production env
 - `pnpm generate:env:prod`: Generate production .env files
 - `pnpm generate:env:staging`: Generate staging .env files
 
+#### 🔄 **New in the POC: Enhanced Environment Management**
+- `pnpm generate:env:force`: Force regenerate all .env files (overwrites existing)
+- **Root `.env` Integration**: Automatically reads database credentials from root `.env`
+- **Database URL Construction**: Builds correct `DBSQL_URL` for services from root credentials
+- **Multi-Environment Support**: Generates separate configs for dev/staging/prod
+
 ### <a name='Infrastructure-1'></a>Infrastructure
 - `pnpm run:infra`: Start infrastructure services
 - `pnpm run:infra:stop`: Stop infrastructure services
@@ -415,6 +528,24 @@ The project uses Docker Compose to manage the following services:
 
 - **pgweb**: Database management UI
   - Port: 8081
+
+#### 🔄 **Updated for the POC: Enhanced Infrastructure Services**
+
+**New Database Configuration:**
+- **Multi-Database Setup**: Separate databases for Medplum and n8n services
+- **Automated Initialization**: PostgreSQL creates databases and users on first startup
+- **Environment Variables**: All database credentials configurable via root `.env` file
+- **Schema Ownership**: Proper PostgreSQL 15+ permissions prevent access errors
+
+**Database Services:**
+- **Medplum Database**: `medplum` user with full schema ownership
+- **N8N Database**: `n8n` user with full schema ownership  
+- **Admin Access**: `postgres` user for database administration
+
+**Configuration Files:**
+- `compose.yaml`: Updated with environment variable support
+- `dev/config/init-data.sh`: Enhanced database initialization script
+- `dev/scripts/generate-env.js`: Improved environment generation with database URL construction
 
 ## <a name='Contributing'></a>Contributing
 

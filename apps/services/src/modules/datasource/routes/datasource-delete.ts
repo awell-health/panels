@@ -32,7 +32,7 @@ export const datasourceDelete = async (app: FastifyInstance) => {
     method: 'DELETE',
     schema: {
       description: 'Delete a data source',
-      tags: ['panel', 'datasource'],
+      tags: ['panels', 'datasources'],
       params: paramsSchema,
       body: bodySchema,
       response: {

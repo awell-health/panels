@@ -1,3 +1,4 @@
+import { ErrorSchema } from '@panels/types'
 import { type PanelsResponse, PanelsResponseSchema } from '@panels/types/panels'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
@@ -18,10 +19,11 @@ export const panelList = async (app: FastifyInstance) => {
     method: 'GET',
     schema: {
       description: 'List all panels for a user',
-      tags: ['panel'],
+      tags: ['panels'],
       querystring: querystringSchema,
       response: {
         200: PanelsResponseSchema,
+        404: ErrorSchema,
       },
     },
     url: '/panels',

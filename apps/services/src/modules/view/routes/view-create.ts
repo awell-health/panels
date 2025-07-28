@@ -19,7 +19,7 @@ export const viewCreate = async (app: FastifyInstance) => {
     method: 'POST',
     schema: {
       description: 'Create a new view for a panel',
-      tags: ['view'],
+      tags: ['views'],
       body: ViewCreateSchema,
       response: {
         201: ViewSchema,
