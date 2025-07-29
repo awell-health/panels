@@ -78,7 +78,7 @@
     "nanoid": "^5.1.5",
     "ts-node": "^10.9.2",
     "vite-tsconfig-paths": "^5.1.4",
-    "zod": "^4.0.10",
+    "zod": "^4.0.13",
     "zod-to-json-schema": "^3.24.6"
   },
   "mikro-orm": {

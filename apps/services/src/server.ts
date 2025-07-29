@@ -13,7 +13,7 @@ closeWithGrace(
       app.log.error(err)
     }
 
-    app.log.info(`[${signal}] Gracefully closing the server instance.`)
+    app.log.info(`[${signal}] Gracefully closing the server instance`)
 
     await app.close()
   },
@@ -27,7 +27,7 @@ app.listen(
       process.exit(1)
     }
     app.log.info(
-      `${app.configuration.APPLICATION_NAME} started listening on: ${app.configuration.APPLICATION_PORT}.`,
+      `${app.configuration.APPLICATION_NAME} started listening on: ${app.configuration.APPLICATION_PORT}`,
     )
     console.log(app.printRoutes())
     figlet('Awell Panels', { font: 'Ghost' }, (err, result) =>

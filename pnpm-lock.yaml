@@ -304,7 +304,7 @@ importers:
         version: 1.32.10
       '@t3-oss/env-core':
         specifier: ^0.13.8
-        version: 0.13.8(typescript@5.8.3)(zod@4.0.10)
+        version: 0.13.8(typescript@5.8.3)(zod@4.0.13)
       arecibo:
         specifier: ^4.0.3
         version: 4.0.3
@@ -322,7 +322,7 @@ importers:
         version: 5.0.1
       fastify-type-provider-zod:
         specifier: ^5.0.2
-        version: 5.0.2(@fastify/swagger@9.5.1)(fastify@5.4.0)(zod@4.0.10)
+        version: 5.0.2(@fastify/swagger@9.5.1)(fastify@5.4.0)(zod@4.0.13)
       figlet:
         specifier: ^1.8.2
         version: 1.8.2
@@ -336,11 +336,11 @@ importers:
         specifier: ^5.1.4
         version: 5.1.4(typescript@5.8.3)(vite@7.0.6(@types/node@22.15.29)(jiti@2.5.1)(lightningcss@1.30.1)(tsx@4.20.3)(yaml@2.8.0))
       zod:
-        specifier: ^4.0.10
-        version: 4.0.10
+        specifier: ^4.0.13
+        version: 4.0.13
       zod-to-json-schema:
         specifier: ^3.24.6
-        version: 3.24.6(zod@4.0.10)
+        version: 3.24.6(zod@4.0.13)
     devDependencies:
       '@biomejs/biome':
         specifier: 1.9.4
@@ -434,8 +434,8 @@ importers:
   packages/types:
     dependencies:
       zod:
-        specifier: ^4.0.10
-        version: 4.0.10
+        specifier: ^4.0.13
+        version: 4.0.13
     devDependencies:
       npm-run-all:
         specifier: ^4.1.5
@@ -7024,8 +7024,8 @@ packages:
   zod@3.25.67:
     resolution: {integrity: sha512-idA2YXwpCdqUSKRCACDE6ItZD9TZzy3OZMtpfLoh6oPR47lipysRrJfjzMqFxQ3uJuUPyUeWe1r9vLH33xO/Qw==}
 
-  zod@4.0.10:
-    resolution: {integrity: sha512-3vB+UU3/VmLL2lvwcY/4RV2i9z/YU0DTV/tDuYjrwmx5WeJ7hwy+rGEEx8glHp6Yxw7ibRbKSaIFBgReRPe5KA==}
+  zod@4.0.13:
+    resolution: {integrity: sha512-jv+zRxuZQxTrFHzxZ46ezL2FtnE+M4HIJHJEwLsZ7UjrXHltdG6HrxvqM0twoVCWxJiYf8WqKjAcjztegpkB+Q==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -8766,10 +8766,10 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@t3-oss/env-core@0.13.8(typescript@5.8.3)(zod@4.0.10)':
+  '@t3-oss/env-core@0.13.8(typescript@5.8.3)(zod@4.0.13)':
     optionalDependencies:
       typescript: 5.8.3
-      zod: 4.0.10
+      zod: 4.0.13
 
   '@tailwindcss/node@4.1.11':
     dependencies:
@@ -10528,12 +10528,12 @@ snapshots:
 
   fastify-tsconfig@3.0.0: {}
 
-  fastify-type-provider-zod@5.0.2(@fastify/swagger@9.5.1)(fastify@5.4.0)(zod@4.0.10):
+  fastify-type-provider-zod@5.0.2(@fastify/swagger@9.5.1)(fastify@5.4.0)(zod@4.0.13):
     dependencies:
       '@fastify/error': 4.2.0
       '@fastify/swagger': 9.5.1
       fastify: 5.4.0
-      zod: 4.0.10
+      zod: 4.0.13
 
   fastify@5.4.0:
     dependencies:
@@ -14088,15 +14088,15 @@ snapshots:
 
   zen-observable@0.8.15: {}
 
-  zod-to-json-schema@3.24.6(zod@4.0.10):
+  zod-to-json-schema@3.24.6(zod@4.0.13):
     dependencies:
-      zod: 4.0.10
+      zod: 4.0.13
 
   zod@3.24.1: {}
 
   zod@3.25.67:
     optional: true
 
-  zod@4.0.10: {}
+  zod@4.0.13: {}
 
   zwitch@2.0.4: {}
