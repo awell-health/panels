@@ -1,6 +1,6 @@
 import { Loader2, Search } from 'lucide-react'
 import { type FC, useState, useEffect, type ChangeEvent } from 'react'
-import { useDebounce } from './utils'
+import { useDebounce } from '../../../../../../hooks/use-debounce'
 
 interface Props {
   searchQuery: string
