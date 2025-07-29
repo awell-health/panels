@@ -9,6 +9,7 @@ import { useAuthentication } from '@/hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import { useDateTimeFormat } from '@/hooks/use-date-time-format'
 import type { Identifier } from '@medplum/fhirtypes'
+import { Dialog, DialogContent } from '../../../../../components/ui/dialog'
 
 interface ModalDetailsProps {
   patient?: WorklistPatient
@@ -125,91 +126,90 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
   const gender = currentPatient?.gender || ''
 
   return (
-    <dialog className="modal modal-open text-xs">
-      <div
-        className="modal-box max-w-[95vw] min-h-[70vh] max-h-[80vh] p-0 flex flex-col"
-        ref={modalRef}
-      >
-        <div className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2 text-gray-700 pl-4">
-            <User className="h-5 w-5" />
-            {!currentPatient ? (
-              <span className="font-medium text-red-600">
-                Error loading patient
-              </span>
-            ) : selectedTask ? (
-              <button
-                type="button"
-                className="hover:underline text-medium text-blue-600 cursor-pointer"
-                onClick={() => setSelectedTask(null)}
-              >
-                {patientName}
-              </button>
-            ) : (
-              <span className="font-medium">{patientName}</span>
-            )}
-            {currentPatient && (
-              <>
-                {dateOfBirth && (
-                  <>
-                    <span>·</span>
-                    <span>DOB {formatDate(dateOfBirth)}</span>
-                  </>
-                )}
-                {mrn && (
-                  <>
-                    <span>·</span>
-                    <span>MRN {mrn}</span>
-                  </>
-                )}
-                {gender && (
-                  <>
-                    <span>·</span>
-                    <span>Gender {gender}</span>
-                  </>
-                )}
-                {currentPatient && !selectedTask && isAdmin && (
-                  <button
-                    type="button"
-                    onClick={handleDeleteRequest}
-                    className="btn btn-outline btn-error btn-xs ml-2"
-                  >
-                    <Trash2Icon className="w-4 h-4" />
-                    Delete Patient & Tasks
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={onClose} className="h-8 w-8 p-0" type="button">
-              <X className="h-6 w-6 cursor-pointer hover:text-gray-800" />
-            </button>
-          </div>
-        </div>
-        <div className="flex flex-1 overflow-hidden">
+    <Dialog
+      open={true}
+      onOpenChange={onClose}
+      className="max-w-[90vw] max-h-[90vh]"
+    >
+      <div className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0 text-xs">
+        <div className="flex items-center gap-2 text-gray-700 pl-4">
+          <User className="h-5 w-5" />
           {!currentPatient ? (
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="text-center">
-                <div className="text-red-500 text-lg font-medium mb-2">
-                  Unable to Load Patient
-                </div>
-                <div className="text-gray-600 text-sm max-w-md">
-                  Patient data could not be loaded. Please try again later.
-                </div>
-              </div>
-            </div>
+            <span className="font-medium text-red-600">
+              Error loading patient
+            </span>
           ) : selectedTask ? (
-            <TaskDetails task={selectedTask} />
+            <button
+              type="button"
+              className="hover:underline text-medium text-blue-600 cursor-pointer"
+              onClick={() => setSelectedTask(null)}
+            >
+              {patientName}
+            </button>
           ) : (
-            <PatientDetails
-              patient={currentPatient}
-              setSelectedTask={setSelectedTask}
-            />
+            <span className="font-medium">{patientName}</span>
+          )}
+          {currentPatient && (
+            <>
+              {dateOfBirth && (
+                <>
+                  <span>·</span>
+                  <span>DOB {formatDate(dateOfBirth)}</span>
+                </>
+              )}
+              {mrn && (
+                <>
+                  <span>·</span>
+                  <span>MRN {mrn}</span>
+                </>
+              )}
+              {gender && (
+                <>
+                  <span>·</span>
+                  <span>Gender {gender}</span>
+                </>
+              )}
+              {currentPatient && !selectedTask && isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleDeleteRequest}
+                  className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md border border-red-300 text-red-700 hover:bg-red-50 ml-2"
+                >
+                  <Trash2Icon className="w-4 h-4" />
+                  Delete Patient & Tasks
+                </button>
+              )}
+            </>
           )}
         </div>
+        <div className="flex items-center gap-2">
+          <button onClick={onClose} className="h-8 w-8 p-0" type="button">
+            <X className="h-6 w-6 cursor-pointer hover:text-gray-800" />
+          </button>
+        </div>
       </div>
-    </dialog>
+      <div className="flex h-[calc(100%-48px)]">
+        {!currentPatient ? (
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="text-center">
+              <div className="text-red-500 text-lg font-medium mb-2">
+                Unable to Load Patient
+              </div>
+              <div className="text-gray-600 text-sm max-w-md">
+                Patient data could not be loaded. Please try again later.
+              </div>
+            </div>
+          </div>
+        ) : selectedTask ? (
+          <TaskDetails task={selectedTask} />
+        ) : (
+          <PatientDetails
+            patient={currentPatient}
+            setSelectedTask={setSelectedTask}
+          />
+        )}
+      </div>
+    </Dialog>
   )
 }
 

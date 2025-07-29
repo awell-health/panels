@@ -257,9 +257,9 @@ Each card should follow this structure:
     <Dialog
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
-      className="max-w-[80vw] max-h-[90vh]"
+      className="max-w-[90vw] max-h-[90vh]"
     >
-      <DialogContent className="flex flex-col p-0 m-0 w-[80vw] h-[80vh] text-xs">
+      <DialogContent className="flex flex-col p-0 m-0 text-xs">
         <DialogHeader className="p-3 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <DialogTitle className="font-medium text-gray-900 text-sm">
@@ -300,7 +300,7 @@ Each card should follow this structure:
                     type="button"
                     onClick={handleCopy}
                     className={cn(
-                      'flex items-center gap-1 px-3 py-1 rounded-md border transition-colors cursor-pointer',
+                      'flex items-center gap-1 px-3 py-1 rounded-md border transition-colors cursor-pointer h-full',
                       'text-gray-600 border-gray-200 hover:bg-gray-50',
                     )}
                   >
@@ -426,7 +426,7 @@ Each card should follow this structure:
           )}
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+        <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
           <div className="flex items-center gap-2">
             <button
               type="button"

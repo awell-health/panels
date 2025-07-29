@@ -87,7 +87,7 @@ export function AssigneeCell(props: InteractiveCellProps) {
         ) : (
           <button
             type="button"
-            className="btn btn-outline btn-sm text-xs h-6 px-2 text-blue-500 hover:text-blue-600 border-blue-200 flex items-center gap-1"
+            className="inline-flex items-center gap-1 px-2 h-6 text-xs font-medium rounded-md border border-blue-200 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation()
               handleClick()

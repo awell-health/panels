@@ -16,11 +16,11 @@ export default function Drawer({
   children,
 }: RightDrawerProps) {
   return (
-    <div className="drawer-side">
+    <div className="fixed inset-y-0 right-0 z-50 w-96 bg-white shadow-xl">
       <label
         htmlFor="my-drawer-4"
         aria-label="close sidebar"
-        className="drawer-overlay"
+        className="fixed inset-0 bg-black bg-opacity-50"
       />
       {children}
     </div>

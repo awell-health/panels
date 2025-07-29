@@ -19,9 +19,9 @@ export function SelectCell(props: SelectCellProps) {
         isTaskStatus(String(value)) ? (
           <TaskStatusBadge status={String(value).toLowerCase()} />
         ) : (
-          <div className="badge badge-soft badge-xs text-white bg-gray-400">
+          <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-400 text-white">
             {String(value)}
-          </div>
+          </span>
         )
       ) : (
         <span className="text-gray-500">-</span>

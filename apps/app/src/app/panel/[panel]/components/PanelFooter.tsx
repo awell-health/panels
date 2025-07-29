@@ -65,7 +65,7 @@ export default function PanelFooter({
       <div className="flex items-center space-x-3">
         <button
           type="button"
-          className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-700"
+          className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
           onClick={navigateToHome}
         >
           <Home className="mr-1 h-3 w-3" />
@@ -75,14 +75,14 @@ export default function PanelFooter({
         {/* Moved columns and rows buttons here */}
         <button
           type="button"
-          className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-700"
+          className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
         >
           {`${columnsCounter} columns`}
         </button>
         <div className="flex items-center space-x-2">
           <button
             type="button"
-            className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-700"
+            className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
           >
             {`${rowsCounter} rows`}
           </button>
@@ -91,7 +91,7 @@ export default function PanelFooter({
           {onRefresh && (
             <button
               type="button"
-              className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-600 hover:text-gray-800"
+              className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-600 rounded-md bg-transparent hover:text-gray-800 hover:bg-gray-100"
               onClick={onRefresh}
               disabled={isLoading}
               title="Refresh data"
@@ -106,7 +106,7 @@ export default function PanelFooter({
           {hasMore && onLoadMore && (
             <button
               type="button"
-              className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-600 hover:text-gray-800"
+              className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-600 rounded-md bg-transparent hover:text-gray-800 hover:bg-gray-100"
               onClick={onLoadMore}
               disabled={isLoadingMore || isLoading}
             >
@@ -140,21 +140,21 @@ export default function PanelFooter({
         <button
           disabled={true}
           type="button"
-          className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-700"
+          className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100 disabled:opacity-50"
         >
           <History className="mr-1 h-3 w-3" /> View table history
         </button>
         <button
           disabled={true}
           type="button"
-          className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-700"
+          className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100 disabled:opacity-50"
         >
           <RotateCcw className="h-3 w-3" />
         </button>
 
         <button
           type="button"
-          className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-700 hover:text-gray-800"
+          className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:text-gray-800 hover:bg-gray-100"
           onClick={() => {
             setIsConfigModalOpen(true)
           }}
@@ -167,7 +167,7 @@ export default function PanelFooter({
         <button
           disabled={true}
           type="button"
-          className={`btn text-xs font-normal h-8 px-2 flex items-center justify-center ${isAISidebarOpen ? 'bg-blue-500 text-white' : 'text-gray-700'}`}
+          className={`inline-flex items-center justify-center px-2 h-8 text-xs font-normal rounded-md disabled:opacity-50 ${isAISidebarOpen ? 'bg-blue-500 text-white' : 'bg-transparent text-gray-700 hover:bg-gray-100'}`}
           title="AI Assistant"
         >
           <MessageSquare className="h-3 w-3" />

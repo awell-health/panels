@@ -33,7 +33,7 @@ export default function RightDrawer({
           <h2 className="text-xs font-normal text-gray-700">{title}</h2>
           <button
             type="button"
-            className="btn btn-ghost btn-sm btn-circle text-xs font-normal text-gray-700 hover:bg-gray-100"
+            className="inline-flex items-center justify-center w-8 h-8 text-xs font-normal text-gray-700 rounded-full bg-transparent hover:bg-gray-100"
             onClick={onClose}
             aria-label="Close drawer"
           >
@@ -42,8 +42,8 @@ export default function RightDrawer({
         </div>
 
         {/* Scrollable Content Area - Both horizontal and vertical scrolling */}
-        <div className="flex-1 overflow-auto p-4 text-xs font-normal text-gray-700">
-          <div className="drawer-content">
+        <div className="flex-1 overflow-auto text-xs font-normal text-gray-700">
+          <div className="bg-white h-full overflow-auto p-4">
             {content && <content.component {...content.props} />}
           </div>
         </div>
