@@ -1,21 +1,24 @@
-# Healthcare Data Hub - Services Implementation Plan (Comprehensive vNext)
+# Healthcare Data Hub - Services Implementation Plan (Multi-Resource vNext)
 
 ## Overview
-This plan transforms the current basic services module into the comprehensive Healthcare Data Hub architecture described in EVOLUTION.md (Comprehensive vNext). Following an external-to-internal approach: start with API interfaces (with fake implementations), then build internals, finally connect real implementations.
+This plan transforms the current basic services module into the comprehensive Healthcare Data Hub architecture described in EVOLUTION.md (Multi-Resource vNext). Following an external-to-internal approach: start with API interfaces (with fake implementations), then build internals, finally connect real implementations.
 
-**Key Changes from Previous Versions:**
-- **Immutable Versioning System**: WorkflowTemplate, Mapping, ValidationRule all support versioning with activation/rollback
-- **Version Pinning**: WorkflowRun and TransformationResult record exact versions used for reproducibility
-- **LogicalName Concept**: Stable identifiers across versions (logicalName for templates, ruleName for mappings/validation)
-- **Graph Drift Detection**: graphChecksum field for WorkflowTemplate to detect n8n drift
-- **Enhanced Audit Fields**: templateId, templateVersion, validationRuleVersionIds, modelId, modelParams in TransformationResult
-- **Comprehensive JetStream Schemas**: Detailed message formats with aw.v1.* schemas
-- **Enhanced API Endpoints**: Version filtering, activation controls, reprocess with pinning
-- **mapping-dsl v1**: Complete DSL specification for human-readable, deterministic FHIR mapping authoring
-- **AI-Assisted Mapping Pipeline**: Classifier → Draft-Mapper → HITL Review → Production with detailed prompts
-- **HITL Review Interface**: Live FHIR preview, DSL editor, validation panel, confidence heat-maps
-- **Advanced Mapping APIs**: Preview, compilation, validation, critic evaluation endpoints
-- **Safety & Evaluation**: Metrics, gates, rollback policies for AI-generated mappings
+**Key Architectural Changes from Previous Versions:**
+- **🎯 Multi-Resource Transformation**: Single RawData can produce multiple FHIR resources with composite idempotency
+- **🔑 Composite Idempotency**: TransformationResult uses (tenantId, rawDataId, producedKey) for exactly-once semantics per resource
+- **📋 producedKey Concept**: Deterministic resource identity (e.g., `Observation|Patient/123|LOINC:8480-6|2025-01-01`)
+- **📊 Enhanced Audit APIs**: Transformation endpoints return arrays to handle multiple resources per record
+- **🏷️ Immutable Versioning System**: WorkflowTemplate, Mapping, ValidationRule all support versioning with activation/rollback
+- **📌 Version Pinning**: WorkflowRun and TransformationResult record exact versions used for reproducibility
+- **🔄 LogicalName Concept**: Stable identifiers across versions (logicalName for templates, ruleName for mappings/validation)
+- **🔍 Graph Drift Detection**: graphChecksum field for WorkflowTemplate to detect n8n drift
+- **📡 Comprehensive JetStream Schemas**: Detailed message formats with aw.v1.* schemas including composite idempotency
+- **🎛️ Enhanced API Endpoints**: Version filtering, activation controls, reprocess with pinning
+- **🤖 mapping-dsl v1**: Complete DSL specification for human-readable, deterministic FHIR mapping authoring
+- **🧠 AI-Assisted Mapping Pipeline**: Classifier → Draft-Mapper → HITL Review → Production with detailed prompts
+- **🖥️ HITL Review Interface**: Live FHIR preview, DSL editor, validation panel, confidence heat-maps
+- **⚙️ Advanced Mapping APIs**: Preview, compilation, validation, critic evaluation endpoints
+- **🛡️ Safety & Evaluation**: Metrics, gates, rollback policies for AI-generated mappings
 
 ---
 
@@ -111,11 +114,18 @@ This plan transforms the current basic services module into the comprehensive He
   - [ ] `GET /api/raw-data/{id}` - get raw data details (mock record + payload)
   - [ ] `POST /api/raw-data/{id}/retry` - retry failed record (fake retry)
 
-- [ ] **1.5.2** Transformation audit endpoints with version tracking (fake data)  
-  - [ ] `GET /api/transformations` - list transformations with version info (mock results)
-  - [ ] `GET /api/transformations/{id}` - get transformation details with applied versions (mock before/after)
+- [ ] **1.5.2** Multi-resource transformation audit endpoints with composite idempotency (fake data)
+  - [ ] `GET /api/transformations?rawDataId={uuid}` - **list multiple results** per rawDataId (mock array of resources)
+  - [ ] `GET /api/transformations/{id}` - get single transformation result with producedKey (mock result with composite identity)
   - [ ] `GET /api/transformations/{id}/diff` - get JSON patch diff (mock patch)
   - [ ] `GET /api/transformations/{id}/fhir` - get FHIR resource via read-through (mock FHIR)
+
+- [ ] **1.5.3** producedKey generation logic for FHIR resources (fake implementation)
+  - [ ] Observation producedKey: `Observation|Patient/{patientId}|LOINC:{code}|{effectiveDateTime}`
+  - [ ] Patient producedKey: `Patient|MRN:{mrn}`
+  - [ ] Encounter producedKey: `Encounter|Patient/{patientId}|{startDateTime}`
+  - [ ] Condition producedKey: `Condition|Patient/{patientId}|ICD10:{icd10}|{onsetDate}`
+  - [ ] Fallback producedKey: `{resourceType}|sha256({canonical_json_without_ids})`
 
 ### Stage 1.6: Source & Validation APIs (Fake Implementation)
 - [ ] **1.6.1** Source definition endpoints with versioning (fake data)
@@ -150,7 +160,7 @@ This plan transforms the current basic services module into the comprehensive He
   - [ ] RawData schemas (rawPayload, processingStatus, lock fields)
   - [ ] Mapping schemas (ruleName, version, ruleDefinition, promptMetadata)
   - [ ] ValidationRule schemas (ruleName, version, phase, ruleDefinition)
-  - [ ] Transformation schemas (templateId, templateVersion, appliedMappingIds, validationRuleVersionIds, jsonPatch)
+  - [ ] Multi-resource transformation schemas (templateId, templateVersion, appliedMappingIds, validationRuleVersionIds, jsonPatch, **producedKey**)
   - [ ] Control schemas (version pinning, lock info, commands)
   - [ ] Event schemas (JetStream envelope with aw.v1.* schemas, subject payloads)
 
@@ -217,11 +227,12 @@ This plan transforms the current basic services module into the comprehensive He
   - [ ] Phase: preMap|postMapPreValidate|postValidatePrePublish
   - [ ] Unique constraints: (tenantId, ruleName, version), at most one active per (tenantId, ruleName)
 
-- [ ] **2.1.7** Create TransformationResult entity (audit-focused with version tracking)
-  - [ ] Core fields: id, rawDataId, tenantId, appliedMappingIds, validationStatus, validationErrors, jsonPatch, medplumId, postedToMedplumAt, createdAt
+- [ ] **2.1.7** Create TransformationResult entity (multi-resource with composite idempotency)
+  - [ ] Core fields: id, rawDataId, tenantId, **producedKey**, appliedMappingIds, validationStatus, validationErrors, jsonPatch, medplumId, postedToMedplumAt, createdAt
   - [ ] Version pinning: templateId, templateVersion, validationRuleVersionIds, modelId, modelParams
   - [ ] Optional (AUDIT_STORE_FULL_FHIR=true): fhirResourceType, fhirResourceJson
-  - [ ] Unique constraint on rawDataId (idempotency)
+  - [ ] **Composite unique constraint**: (tenantId, rawDataId, producedKey) for exactly-once semantics per resource
+  - [ ] **producedKey**: Deterministic resource identity for idempotency and reprocessing
 
 - [ ] **2.1.8** Create WorkflowTemplate entity (versioned)
   - [ ] Fields: id, logicalName, name, version, status, type, definitionJson, metadataJson, graphChecksum, createdAt, updatedAt
@@ -416,18 +427,20 @@ This plan transforms the current basic services module into the comprehensive He
     - [ ] Per-tenant AI_ALLOWED switch
     - [ ] Fallback to static rules on AI failure
 
-### Stage 4.4: Transformation Pipeline with Audit
-- [ ] **4.4.1** Core transformation logic (hybrid mode)
-  - [ ] Raw payload processing
+### Stage 4.4: Multi-Resource Transformation Pipeline with Composite Audit
+- [ ] **4.4.1** Core multi-resource transformation logic (hybrid mode)
+  - [ ] Raw payload processing (single RawData input)
   - [ ] Mapping application with version tracking
-  - [ ] FHIR resource assembly
-  - [ ] Validation integration with Medplum
+  - [ ] **Multi-resource FHIR assembly** (one RawData → multiple FHIR resources)
+  - [ ] producedKey generation for each resource using deterministic recipes
+  - [ ] Validation integration with Medplum per resource
 
-- [ ] **4.4.2** Audit and traceability with version pinning
-  - [ ] JSON patch generation (RFC 6902)
-  - [ ] TransformationResult persistence with full version tracking
-  - [ ] Applied mapping IDs and validation rule version IDs tracking
-  - [ ] ExecutionEvent logging
+- [ ] **4.4.2** Composite idempotency and audit with version pinning
+  - [ ] **Composite key upserts**: (tenantId, rawDataId, producedKey) for TransformationResult
+  - [ ] JSON patch generation (RFC 6902) per resource
+  - [ ] **Multiple TransformationResult rows** per RawData with different producedKeys
+  - [ ] Applied mapping IDs and validation rule version IDs tracking per resource
+  - [ ] ExecutionEvent logging for record-level state machine
 
 ### Stage 4.5: Control System Implementation
 - [ ] **4.5.1** Real lock management
@@ -692,7 +705,7 @@ This plan transforms the current basic services module into the comprehensive He
 
 ## Progress Tracking
 
-**Current Stage:** Not Started (Plan Recreated with Comprehensive AI Integration)
+**Current Stage:** Not Started (Plan Recreated with Multi-Resource Architecture)
 **Next Action:** Begin Stage 1.1.1 - Create new module directories structure
 
 ---
@@ -709,6 +722,18 @@ This plan transforms the current basic services module into the comprehensive He
 - **Reprocess with Pinning**: Support for reprocessing with specific version pins for debugging/rollback
 - **Tenant Isolation**: Strict tenant scoping across all entities and API endpoints
 - **Audit Trail**: Complete before/after traceability with JSON Patch, ExecutionEvent, and version tracking
+
+### Multi-Resource Transformation Architecture
+- **🎯 One-to-Many Mapping**: Single RawData record can produce multiple FHIR resources (Patient + Observation + Encounter)
+- **🔑 Composite Idempotency**: TransformationResult uses (tenantId, rawDataId, producedKey) for exactly-once semantics per resource
+- **📋 producedKey Recipes**: Deterministic resource identity patterns for different FHIR types
+  - Observation: `Observation|Patient/{patientId}|LOINC:{code}|{effectiveDateTime}`
+  - Patient: `Patient|MRN:{mrn}`
+  - Encounter: `Encounter|Patient/{patientId}|{startDateTime}`
+  - Fallback: `{resourceType}|sha256({canonical_json_without_ids})`
+- **📊 Array-Based Audit APIs**: `/api/transformations?rawDataId=uuid` returns arrays to handle multiple results
+- **🔄 Record vs Resource Granularity**: JetStream status reflects record-level state; API enumerates per-resource results
+- **⚡ Idempotent Upserts**: Database composite uniqueness + JetStream Nats-Msg-Id guarantee exactly-once delivery
 
 ### AI-Assisted Mapping (HITL) System
 - **mapping-dsl v1**: Human-readable, deterministic DSL for FHIR mapping authoring with complete JSON Schema

@@ -1,5 +1,8 @@
 # Healthcare Data Hub – Detailed Architecture (Naming-Aligned vNext)
 
+## Narrative Overview (60 seconds)
+As data arrives, an IngestionWorkflow persists it as RawData and emits an event. A transformer (service or workflow) locks the record, applies approved Mappings (and optional tenant-specific steps), validates the result with Medplum, writes the FHIR resource, and records a minimal audit (JSON Patch + IDs). The Backend Facade doesn’t transform data; it coordinates templates and workflows, publishes control commands, versions and activations, and streams live status to the UI. AI assists humans in authoring Mappings; production runs stay deterministic.
+
 ## 0. Goals
 
 - Ingest heterogeneous healthcare data and persist raw payloads.
@@ -217,10 +220,116 @@ detailsJson (jsonb)
 
 **Indexes & Constraints**
 - `"RawData"(processingStatus, tenantId)` for queue scans.
-- Unique: `"TransformationResult"(rawDataId)` (idempotency).
+- Unique (idempotency): `"TransformationResult"("tenantId","rawDataId","producedKey")`.
 - Partition `"RawData"` by month/tenant for scale.
 
 ---
+
+
+
+## 2.2 Ontology & Cardinality
+
+### A. Core Concepts (concise definitions)
+- **Tenant** – logical isolation boundary (RBAC, data, config).
+- **SourceDefinition** – config describing an incoming feed (type/schema/auth/rate limit); versioned.
+- **WorkflowTemplate** – versioned definition (n8n export + metadata) for one of: `ingestion|transformation|utility`.
+- **Workflow** – a deployment pinned to a specific `WorkflowTemplate.version`, scoped to a `tenantId`, typed by `kind`: `Ingestion | Agent | TransformationGeneral | TransformationClient | Utility`.
+- **DataFlow** *(derived concept)* – a **Workflow(kind=Ingestion)** bound to a **SourceDefinition** for a tenant (i.e., an operational ingestion pipeline).
+- **WorkflowRun** – an execution of a Workflow; captures start/finish, status, version pins.
+- **RawData** – immutable (content), tenant-scoped raw payload captured by a DataFlow.
+- **CandidateResource** – staged, partially/fully mapped resource derived from a RawData; mutable until approved.
+- **MappingSuggestion** – AI-proposed `mapping-dsl v1` and/or resourceType candidates for a RawData.
+- **HumanReviewEvent** – reviewer actions (`accept|reject|edit`) on a MappingSuggestion.
+- **Mapping** – **versioned** approved mapping spec (compiled from mapping-dsl v1) used in production.
+- **ValidationRule** – **versioned** declarative rules; active set is applied during transforms.
+- **AgentWorkflow** – a Workflow(kind=Agent) containing AI steps (Classifier, Draft-Mapper, Critic).
+- **TransformationWorkflow (General)** – a Workflow(kind=TransformationGeneral) that performs mapping/validation/write (n8n-only mode).
+- **TransformationWorkflow (ClientSpecific)** – tenant-specific Workflow used by the **Transformation Service** in hybrid mode.
+- **TransformationResult** – per-resource audit record for a produced FHIR resource (JSON Patch, Medplum id, pins).
+- **ExecutionEvent** – append-only timeline of state transitions (received/mapped/validated/posted/etc.).
+- **FHIR Resource (Medplum)** – authoritative Patient/Observation/etc. plus Provenance/AuditEvent.
+
+### B. Cardinality Map (who relates to whom)
+Notation: `A —x..y→ B` means **one A** relates to **x..y B**.
+
+#### Tenancy & Configuration
+1) **Tenant —1..N→ SourceDefinition**  
+2) **WorkflowTemplate —1..N→ Workflow** (deployments across tenants or environments)  
+3) **Tenant —1..N→ Workflow** (each deployment is tenant-scoped)  
+4) **SourceDefinition —0..N→ Workflow(kind=Ingestion)** *(binding creates a DataFlow)*  
+5) **Workflow(kind=Ingestion) —1→ SourceDefinition** *(by config reference)*
+
+#### Execution & Runs
+6) **Workflow —1..N→ WorkflowRun**  
+7) **WorkflowRun —0..N→ ExecutionEvent**  
+8) **WorkflowRun —0..N→ TransformationResult** *(results produced during the run; recommended field `workflowRunId` in `TransformationResult`)*
+
+#### Ingestion
+9) **DataFlow —1..N→ RawData** *(over time)*  
+10) **RawData —1→ Tenant**  
+11) **RawData —1→ SourceDefinition**  
+12) **RawData —0..N→ CandidateResource** *(one raw row may yield multiple FHIR resources)*
+
+#### AI Authoring / HITL
+13) **RawData —0..N→ MappingSuggestion** *(Classifier and Draft-Mapper proposals, possibly multiple iterations)*  
+14) **MappingSuggestion —0..N→ HumanReviewEvent**  
+15) **HumanReviewEvent(accept/edit) —1→ Mapping (new version)** *(promotion path)*
+
+#### Deterministic Production Specs
+16) **Tenant —1..N→ Mapping** *(versioned; one active per `(tenantId, ruleName)`)*  
+17) **Tenant —1..N→ ValidationRule** *(versioned; one active per `(tenantId, ruleName)`)*  
+18) **TransformationResult —1..N→ Mapping** *(M:N via `appliedMappingIds`)*  
+19) **TransformationResult —0..N→ ValidationRule** *(M:N via version pins)*
+
+#### Transformation & Publish
+20) **RawData —0..N→ TransformationResult**  
+21) **TransformationResult —1→ FHIR Resource (Medplum)** *(one row per produced resource; bundles split into rows)*  
+22) **TransformationResult —1→ Tenant**
+
+> **Idempotency note:** For (20), use composite uniqueness on `("tenantId","rawDataId","producedKey")` to allow multiple resources per raw record while staying idempotent (see Section 11 and Appendix B).
+
+### C. Relationship Cheatsheet (quick bullets)
+- **SourceDefinition ↔ DataFlow:** one Source can drive **many** ingestion Workflows (schedules/variants/tenants).  
+- **DataFlow → RawData:** each run appends new RawData rows.  
+- **RawData → CandidateResource:** one raw can produce **many** candidate resources (staging).  
+- **RawData → MappingSuggestion:** **many** proposals and re-tries are allowed.  
+- **Suggestion → Review:** **many** review events per suggestion (iterative edits).  
+- **Review(accept) → Mapping:** each accept/edit yields a **new Mapping version**; only one active per ruleName.  
+- **Transformation (hybrid or n8n-only) → TransformationResult:** one **row per produced FHIR resource**.  
+- **TransformationResult → Medplum:** exactly one posted resource per row with Provenance.  
+- **Workflow/Template ↔ Runs:** Templates spawn Workflows; Workflows spawn many Runs; Runs pin versions.  
+- **ValidationRule/Mapping ↔ Results:** results record exactly which versions were applied.
+
+### D. ER-style Text Diagram
+```
+Tenant 1───N SourceDefinition
+Tenant 1───N WorkflowTemplate
+WorkflowTemplate 1───N Workflow
+Workflow 1───N WorkflowRun
+SourceDefinition 1───N Workflow(kind=Ingestion)   # DataFlows
+Workflow(kind=Ingestion) 1───N RawData
+
+RawData 1───N CandidateResource
+RawData 1───N MappingSuggestion
+MappingSuggestion 1───N HumanReviewEvent
+
+Tenant 1───N Mapping (versioned; one active per ruleName)
+Tenant 1───N ValidationRule (versioned; one active per ruleName)
+WorkflowRun 1───N ExecutionEvent
+WorkflowRun 1───N TransformationResult
+
+RawData 1───N TransformationResult        # per produced FHIR resource
+TransformationResult 1───1 FHIR_Resource  # in Medplum
+TransformationResult N───N Mapping        # via appliedMappingIds
+TransformationResult N───N ValidationRule # via version pins
+```
+
+### E. Idempotency & Reprocessing (impact on relationships)
+- Prefer **composite idempotency** on `TransformationResult`: `unique(tenantId, rawDataId, producedKey)`.
+- Reprocessing **upserts** the same `(tenantId, rawDataId, producedKey)` row, refreshing the audit fields while preserving lineage (`workflowRunId` + `ExecutionEvent`).
+- See **Section 11** for runtime rules and **Appendix B** for `producedKey` recipes.
+
+
 
 ## 3. Workflow Archetypes, Tags & Reconciliation
 
@@ -589,13 +698,21 @@ GET   /api/raw-data/{id}
 POST  /api/raw-data/{id}/retry
 ```
 
-### 8.5 Transformation Audit (Before/After)
+## 8.5 Transformation Audit (Before/After)
+
+- A `rawDataId` can yield **multiple** results. Endpoints return lists:
+
 ```
-GET   /api/transformations?rawDataId=
-GET   /api/transformations/{id}                 # rawData ref, medplumId, jsonPatch, validation
+GET   /api/transformations?rawDataId=<uuid>
+  # Returns: [ { id, rawDataId, workflowRunId, producedKey, fhirResourceType,
+  #             medplumId, jsonPatch, validationStatus, createdAt, ... }, ... ]
+
+GET   /api/transformations/{id}                 # one result row
 GET   /api/transformations/{id}/diff            # JSON Patch only
 GET   /api/transformations/{id}/fhir            # read-through to Medplum
 ```
+
+- `producedKey` identifies the logical resource for idempotency and reprocessing.
 
 ### 8.6 Control (publish to JetStream)
 ```
@@ -645,11 +762,23 @@ POST  /api/validation/run                       # dry-run with payload sample
 
 ### Intent & Behavior
 - **Purpose:** Ensure forward progress and safe retries under partial failures.
-- **Behavior:** Advisory locks with heartbeat; stale-lock sweeper resets to `pending`; idempotency guard on `"TransformationResult"(rawDataId)`; circuit breakers around Medplum.
+- **Behavior:** Advisory locks with heartbeat; stale-lock sweeper resets to `pending`; composite idempotency on `("tenantId","rawDataId","producedKey")`; circuit breakers around Medplum.
 - **Key decisions:** DLQ or DB “deadLetter” events; retry backoff schedules; operator controls for pause/resume and reprocess.
 - **Operator impact:** Clear runbooks per alert; bulk reprocess APIs; guardrails for forced lock release.
 
 ---
+### Idempotency 
+
+- Writers (Transformation Service or TransformationWorkflow) **upsert** `TransformationResult` on the **composite key**:
+  - `(tenantId, rawDataId, producedKey)`
+- `producedKey` is a **deterministic identity** for the resource, e.g.:
+  - Observation: `Observation|Patient/{patientId}|LOINC:{code}|{effectiveDateTime}`
+  - Patient: `Patient|MRN:{mrn}`
+  - Encounter: `Encounter|Patient/{patientId}|{startDateTime}`
+  - If no clear business key exists, use a **stable hash** of the normalized FHIR body (excluding server-assigned IDs).
+- JetStream dedupe (`Nats-Msg-Id`) + DB composite uniqueness guarantee **exactly-once** semantics per produced resource, even under retries.
+
+
 
 ## 12. Deployment
 
@@ -885,10 +1014,11 @@ _Bulk selector_
 
 **DLQ:** Mirror to `dlq.*` or write `"ExecutionEvent"` with `eventType="deadLetter"` when retries exhaust.
 
-### 13.10 Idempotency & Ordering
+### 13.10 Idempotency & Ordering 
 
-- Use `Nats-Msg-Id` and DB uniqueness on `"TransformationResult"(rawDataId)`.  
-- No cross-subject ordering guarantees; ignore stale states using a simple precedence model.
+- **Message-level**: `Nats-Msg-Id` on publish to dedupe redeliveries.
+- **Write-level**: DB **composite uniqueness** on `("tenantId","rawDataId","producedKey")` for `TransformationResult`.
+- **Ordering**: Cross-subject ordering is not guaranteed; ignore stale status updates using precedence.
 
 ### 13.11 Security
 
@@ -909,6 +1039,8 @@ _Bulk selector_
 | `control.workflowTemplate.deploy`   | `aw.v1.ControlWorkflowTemplateDeploy` | `workflowTemplateId, version, targetTenantId, params, kind, tags`                                                               |
 
 ---
+
+> **Note on record vs resource granularity:** A single `rawDataId` may yield **multiple** `TransformationResult` rows (one per produced FHIR resource). The `status.transformation.{rawDataId}` subject reflects the **record-level** state machine; use the audit API to enumerate per-resource results.
 
 ## 14. Diagram (Mermaid)
 
@@ -946,6 +1078,44 @@ graph LR
     TransformerSvc --metrics--> Prom
     n8nCore --metrics--> Prom
 ```
+
+
+### 14.2 Ontology & Cardinality (ER Mermaid)
+
+```mermaid
+erDiagram
+    %% Tenancy & configuration
+    Tenant ||--o{ SourceDefinition : "1..N"
+    Tenant ||--o{ Workflow : "1..N"
+    WorkflowTemplate ||--o{ Workflow : "1..N"
+
+    %% Runs & events
+    Workflow ||--o{ WorkflowRun : "1..N"
+    WorkflowRun ||--o{ ExecutionEvent : "0..N"
+    WorkflowRun ||--o{ TransformationResult : "0..N"
+
+    %% Ingestion bindings
+    SourceDefinition ||--o{ Workflow : "0..N (as Ingestion)"
+    Workflow ||--o{ RawData : "1..N (if Ingestion)"
+
+    %% Staging & AI authoring
+    RawData ||--o{ CandidateResource : "0..N"
+    RawData ||--o{ MappingSuggestion : "0..N"
+    MappingSuggestion ||--o{ HumanReviewEvent : "0..N"
+
+    %% Versioned specs
+    Tenant ||--o{ Mapping : "1..N (versioned)"
+    Tenant ||--o{ ValidationRule : "1..N (versioned)"
+
+    %% Transformation outputs
+    RawData ||--o{ TransformationResult : "0..N"
+    TransformationResult ||--|| FHIRResource : "1"
+    TransformationResult }o--o{ Mapping : "M:N applied"
+    TransformationResult }o--o{ ValidationRule : "M:N pinned"
+```
+> Cardinalities reflect the composite idempotency on `TransformationResult(tenantId, rawDataId, producedKey)` allowing multiple resources per `RawData` while staying idempotent.
+
+
 
 ---
 
@@ -1004,7 +1174,7 @@ POST /api/workflows/deploy
   "templateId": "…",
   "templateVersion": 5,
   "tenantId": "…",
-  "kind": "Ingestion|Agent|TransformationGeneral|TransformationClient",
+  "kind": "Ingestion|Agent|TransformationGeneral|TransformationClient|Utility",
   "tags": ["aw:kind=…", "aw:env=prod"],
   "params": {…}
 }
@@ -1120,5 +1290,18 @@ POST /api/controls/raw-data/{id}/reprocess
 
 ---
 
-## Narrative Overview (60 seconds)
-As data arrives, an IngestionWorkflow persists it as RawData and emits an event. A transformer (service or workflow) locks the record, applies approved Mappings (and optional tenant-specific steps), validates the result with Medplum, writes the FHIR resource, and records a minimal audit (JSON Patch + IDs). The Backend Facade doesn’t transform data; it coordinates templates and workflows, publishes control commands, versions and activations, and streams live status to the UI. AI assists humans in authoring Mappings; production runs stay deterministic.
+## Appendix B — `producedKey` Recipes
+
+- **Observation (LOINC)**  
+  `Observation|Patient/${patientId}|LOINC:${loincCode}|${effectiveDateTime}`
+
+- **Condition (ICD-10)**  
+  `Condition|Patient/${patientId}|ICD10:${icd10}|${onsetDate}`
+
+- **Patient (MRN)**  
+  `Patient|MRN:${mrn}`
+
+- **Fallback (hash)**  
+  `Observation|sha256(${canonical_json_without_ids})`
+
+> Use the **most stable external identity available**. Keep formatting canonical (uppercase code systems, ISO timestamps).

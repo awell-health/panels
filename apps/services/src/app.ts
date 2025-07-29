@@ -31,7 +31,7 @@ export async function createApp(
   app.setSerializerCompiler(serializerCompiler)
 
   await app.register(arecibo, {
-    message: 'Awell Panels services health check.',
+    message: 'Awell Panels services health check',
     logLevel: 'info',
     readinessURL: '/healthz',
     livenessURL: '/liveness',
