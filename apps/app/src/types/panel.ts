@@ -34,6 +34,7 @@ export type Column = {
       format?: string
       visible?: boolean
       order?: number
+      locked?: boolean
     }
   }
   metadata?: {

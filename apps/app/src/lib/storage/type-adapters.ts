@@ -83,9 +83,7 @@ export const mapBackendColumnToFrontend = (
     type: backendColumn.type,
     sourceField: backendColumn.sourceField,
     tags: backendColumn.tags,
-    properties: {
-      display: backendColumn.properties?.display,
-    },
+    properties: backendColumn.properties || {},
     metadata: {
       description: backendColumn.metadata?.description || undefined,
     },

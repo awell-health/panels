@@ -76,6 +76,8 @@ export function VirtualizedCell({
         className={cn(
           'border-r border-b border-gray-200 flex items-center justify-center cursor-pointer',
           isHovered ? 'bg-gray-50' : 'bg-white',
+          // Selection column is always considered "locked" as it's always first
+          'locked',
         )}
         onClick={(e) => {
           e.stopPropagation()
@@ -117,13 +119,15 @@ export function VirtualizedCell({
   if (!row) return null
 
   const isHovered = hoveredRowIndex === dataRowIndex
+  const isLocked = column.properties.display?.locked === true
 
   return (
     <div
       style={style}
       className={cn(
-        'border-r border-b border-gray-200 cursor-pointer',
+        'border-r border-b border-gray-200 cursor-pointer flex items-center px-3',
         isHovered ? 'bg-gray-50' : 'bg-white',
+        isLocked && 'locked',
       )}
       onClick={() => onRowClick(row)}
       onMouseEnter={() => onRowHover(dataRowIndex, true, null)}

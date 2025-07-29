@@ -340,7 +340,18 @@ export class ReactivePanelStore {
     try {
       // ✅ OPTIMISTIC UPDATE: Update reactive store first for immediate UI feedback
       if (originalColumn) {
-        const optimisticColumn = { ...originalColumn, ...updates }
+        const optimisticColumn = {
+          ...originalColumn,
+          ...updates,
+          properties: {
+            ...originalColumn.properties,
+            ...updates.properties,
+            display: {
+              ...originalColumn.properties.display,
+              ...updates.properties?.display,
+            },
+          },
+        }
         this.reactiveStore?.setColumn(optimisticColumn)
       }
 

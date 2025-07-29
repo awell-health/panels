@@ -203,7 +203,18 @@ export class ReactiveStore {
     const currentColumnData = this.deserializeColumn(
       currentColumn as Record<string, string | number | boolean>,
     )
-    const updatedColumn = { ...currentColumnData, ...updates }
+    const updatedColumn = {
+      ...currentColumnData,
+      ...updates,
+      properties: {
+        ...currentColumnData.properties,
+        ...updates.properties,
+        display: {
+          ...currentColumnData.properties.display,
+          ...updates.properties?.display,
+        },
+      },
+    }
     this.setColumn(updatedColumn)
   }
 

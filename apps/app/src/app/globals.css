@@ -90,6 +90,7 @@
   height: 100%;
   width: 100%;
   overflow: hidden;
+  position: relative;
 }
 
 .worklist-table {
@@ -194,3 +195,4 @@ body {
 .drawer-content pre::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+

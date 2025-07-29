@@ -2,13 +2,23 @@
 
 import type { Column, Sort } from '@/types/panel'
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
-import { ArrowUpDown, Calendar, Hash, Text, ToggleLeft, X } from 'lucide-react'
+import {
+  ArrowUpDown,
+  Calendar,
+  Hash,
+  Lock,
+  Text,
+  ToggleLeft,
+  Unlock,
+  X,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { format } from 'date-fns'
 
 type ColumnMenuProps = {
   column: Column
+  allColumns: Column[]
   isOpen: boolean
   onClose: () => void
   position: { top: number; left: number }
@@ -22,6 +32,7 @@ type ColumnMenuProps = {
 
 export function ColumnMenu({
   column,
+  allColumns,
   isOpen,
   onClose,
   position,
@@ -51,6 +62,53 @@ export function ColumnMenu({
   )
   const [localColumnType, setLocalColumnType] = useState(column.type)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  // Helper function to calculate order when locking a column
+  const calculateLockOrder = (): number => {
+    const lockedColumns = allColumns.filter(
+      (col) => col.properties.display?.locked && col.id !== column.id,
+    )
+
+    if (lockedColumns.length === 0) {
+      // First locked column gets order 0
+      return 0
+    }
+
+    // Get the highest order among locked columns and add 1
+    const maxLockedOrder = Math.max(
+      ...lockedColumns.map((col) => col.properties.display?.order ?? 0),
+    )
+    return maxLockedOrder + 1
+  }
+
+  // Helper function to calculate order when unlocking a column
+  const calculateUnlockOrder = (): number => {
+    const lockedColumns = allColumns.filter(
+      (col) => col.properties.display?.locked && col.id !== column.id,
+    )
+    const unlockedColumns = allColumns.filter(
+      (col) => !col.properties.display?.locked && col.id !== column.id,
+    )
+
+    // If no locked columns, place at beginning of unlocked columns
+    if (lockedColumns.length === 0) {
+      if (unlockedColumns.length === 0) return 0
+      const minUnlockedOrder = Math.min(
+        ...unlockedColumns.map(
+          (col) => col.properties.display?.order ?? Number.MAX_SAFE_INTEGER,
+        ),
+      )
+      return Math.max(0, minUnlockedOrder)
+    }
+
+    // Place after all locked columns
+    const maxLockedOrder = Math.max(
+      ...lockedColumns.map((col) => col.properties.display?.order ?? 0),
+    )
+
+    // Find the first available spot after locked columns
+    return maxLockedOrder + 100 // Leave space for future locked columns
+  }
 
   // Update local values when props change
   useEffect(() => {
@@ -343,6 +401,43 @@ export function ColumnMenu({
               />
             </svg>
             Hide Column
+          </button>
+        </div>
+
+        {/* Lock Column Option */}
+        <div className="px-3 py-2 border-b border-gray-100">
+          <button
+            type="button"
+            className="flex items-center w-full px-0 py-1 text-xs font-normal text-left hover:bg-gray-50 rounded"
+            onClick={() => {
+              const isCurrentlyLocked =
+                column.properties.display?.locked ?? false
+
+              // Calculate new order for locked/unlocked columns
+              const newOrder = !isCurrentlyLocked
+                ? calculateLockOrder()
+                : calculateUnlockOrder()
+
+              onColumnUpdate?.({
+                id: column.id,
+                properties: {
+                  display: {
+                    locked: !isCurrentlyLocked,
+                    order: newOrder,
+                  },
+                },
+              })
+              onClose()
+            }}
+          >
+            {column.properties.display?.locked ? (
+              <Unlock className="h-3.5 w-3.5 mr-2 text-gray-500" />
+            ) : (
+              <Lock className="h-3.5 w-3.5 mr-2 text-gray-500" />
+            )}
+            {column.properties.display?.locked
+              ? 'Unlock Column'
+              : 'Lock Column'}
           </button>
         </div>
 

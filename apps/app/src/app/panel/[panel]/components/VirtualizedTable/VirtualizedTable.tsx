@@ -109,10 +109,18 @@ export function VirtualizedTable({
   // Grid ref for resetting cached dimensions
   const gridRef = useRef<VariableSizeGrid>(null)
 
-  // Sort columns by order if needed
+  // Sort columns by lock status first, then by order
   const visibleColumns = useMemo(() => {
     if (orderColumnMode === 'auto') {
       return columns.sort((a: Column, b: Column) => {
+        const aLocked = a.properties?.display?.locked ?? false
+        const bLocked = b.properties?.display?.locked ?? false
+
+        // Locked columns always come first
+        if (aLocked && !bLocked) return -1
+        if (!aLocked && bLocked) return 1
+
+        // Within same lock status, sort by order
         const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
         const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
         return orderA - orderB
@@ -477,6 +485,45 @@ export function VirtualizedTable({
     ],
   )
 
+  // Track previous scroll position to determine direction
+  const prevScrollRef = useRef({ scrollLeft: 0, scrollTop: 0 })
+
+  // Handle scroll events for both horizontal and vertical scrolling
+  const handleScroll = useCallback(
+    ({ scrollLeft, scrollTop }: { scrollLeft: number; scrollTop: number }) => {
+      const prevScroll = prevScrollRef.current
+
+      // Determine scroll direction
+      let scrollDirection: 'horizontal' | 'vertical' | 'both' | 'none' = 'none'
+
+      const horizontalChanged = scrollLeft !== prevScroll.scrollLeft
+      const verticalChanged = scrollTop !== prevScroll.scrollTop
+
+      if (horizontalChanged && verticalChanged) {
+        scrollDirection = 'both'
+      } else if (horizontalChanged) {
+        scrollDirection = 'horizontal'
+      } else if (verticalChanged) {
+        scrollDirection = 'vertical'
+      }
+
+      console.log('Table scroll detected:', {
+        scrollLeft,
+        scrollTop,
+        scrollDirection,
+        scrollDelta: {
+          horizontal: scrollLeft - prevScroll.scrollLeft,
+          vertical: scrollTop - prevScroll.scrollTop,
+        },
+        timestamp: new Date().toISOString(),
+      })
+
+      // Update previous scroll position
+      prevScrollRef.current = { scrollLeft, scrollTop }
+    },
+    [],
+  )
+
   // Prepare data for rows - uses filtered and sorted data
   const rowData = useMemo(
     () => ({
@@ -609,6 +656,7 @@ export function VirtualizedTable({
                   }}
                   innerElementType={CustomInnerElement}
                   onItemsRendered={handleItemsRendered}
+                  onScroll={handleScroll}
                 >
                   {VirtualizedCell}
                 </VariableSizeGrid>

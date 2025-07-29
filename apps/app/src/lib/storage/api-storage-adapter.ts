@@ -271,23 +271,26 @@ export class APIStorageAdapter implements StorageAdapter {
     try {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
-      // Direct API call without complex logic
-      const updatedColumn = await panelsAPI.columns.update(
-        {
-          id: columnId,
-          name: updates.name,
-          type: updates.type,
-          sourceField: updates.sourceField,
-          properties: updates.properties,
-          metadata: updates.metadata,
-          tags: updates.tags,
-          tenantId: this.config.tenantId,
-          userId: this.config.userId,
-        },
-        { id: panelId },
-      )
+      const payload = {
+        id: columnId,
+        name: updates.name,
+        type: updates.type,
+        sourceField: updates.sourceField,
+        properties: updates.properties,
+        metadata: updates.metadata,
+        tags: updates.tags,
+        tenantId: this.config.tenantId,
+        userId: this.config.userId,
+      }
 
-      return mapBackendColumnToFrontend(updatedColumn, panelId)
+      // Direct API call without complex logic
+      const updatedColumn = await panelsAPI.columns.update(payload, {
+        id: panelId,
+      })
+
+      const mappedColumn = mapBackendColumnToFrontend(updatedColumn, panelId)
+
+      return mappedColumn
     } catch (error) {
       logger.error(
         { error, columnId, panelId },

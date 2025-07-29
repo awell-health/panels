@@ -8,6 +8,7 @@ import {
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import type { Column } from '@/types/panel'
+import { cn } from '@/lib/utils'
 
 interface StickyHeaderProps {
   selectedRows: string[]
@@ -53,7 +54,7 @@ export function StickyHeader({
     >
       {/* Selection column header */}
       <div
-        className="bg-white border-r border-gray-200 flex items-center justify-center shrink-0"
+        className="bg-white border-r border-gray-200 flex items-center justify-center shrink-0 locked"
         style={{ width: SELECTION_COLUMN_WIDTH }}
       >
         <input
@@ -73,29 +74,37 @@ export function StickyHeader({
         items={columns.map((col) => col.id)}
         strategy={horizontalListSortingStrategy}
       >
-        {columns.map((column, index) => (
-          <div
-            key={column.id}
-            style={{ width: getColumnWidth(index + 1) }}
-            className="border-r border-b border-gray-200"
-          >
-            <SortableHeaderColumn
-              column={column}
-              index={index}
-              style={{
-                position: 'relative',
-                width: '100%',
-                height: HEADER_HEIGHT,
-              }}
-              sortConfig={sortConfig}
-              onSort={() => onSort?.(column.id)}
-              filterValue={getFilterValue(column)}
-              onFilter={(value: string) => onFilter?.(column.id, value)}
-              onColumnUpdate={onColumnUpdate || (() => {})}
-              onColumnDelete={onColumnDelete}
-            />
-          </div>
-        ))}
+        {columns.map((column, index) => {
+          const isLocked = column.properties.display?.locked === true
+
+          return (
+            <div
+              key={column.id}
+              style={{ width: getColumnWidth(index + 1) }}
+              className={cn(
+                'border-r border-b border-gray-200',
+                isLocked && 'locked',
+              )}
+            >
+              <SortableHeaderColumn
+                column={column}
+                allColumns={columns}
+                index={index}
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: HEADER_HEIGHT,
+                }}
+                sortConfig={sortConfig}
+                onSort={() => onSort?.(column.id)}
+                filterValue={getFilterValue(column)}
+                onFilter={(value: string) => onFilter?.(column.id, value)}
+                onColumnUpdate={onColumnUpdate || (() => {})}
+                onColumnDelete={onColumnDelete}
+              />
+            </div>
+          )
+        })}
       </SortableContext>
     </div>
   )

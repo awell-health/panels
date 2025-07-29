@@ -8,6 +8,7 @@ import {
   Calendar,
   GripVertical,
   Hash,
+  Lock,
   MoreVertical,
   Text,
   ToggleLeft,
@@ -17,6 +18,7 @@ import { ColumnMenu } from '../ColumnMenu'
 
 interface SortableHeaderColumnProps {
   column: Column
+  allColumns: Column[]
   index: number
   style: React.CSSProperties
   sortConfig?: Sort | null
@@ -29,6 +31,7 @@ interface SortableHeaderColumnProps {
 
 export function SortableHeaderColumn({
   column,
+  allColumns,
   index,
   style,
   sortConfig,
@@ -42,6 +45,8 @@ export function SortableHeaderColumn({
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const headerRef = useRef<HTMLDivElement>(null)
 
+  const isLocked = column.properties.display?.locked ?? false
+
   const {
     attributes,
     listeners,
@@ -52,6 +57,7 @@ export function SortableHeaderColumn({
     isOver,
   } = useSortable({
     id: column.id,
+    disabled: isLocked,
   })
 
   const sortableStyle: React.CSSProperties = {
@@ -62,8 +68,13 @@ export function SortableHeaderColumn({
     zIndex: isDragging ? 1000 : 1,
   }
 
-  // Get the appropriate icon based on column type
+  // Get the appropriate icon based on column type or lock status
   const getTypeIcon = () => {
+    // If column is locked, always show lock icon
+    if (isLocked) {
+      return <Lock className="h-3.5 w-3.5 mr-1.5 text-amber-600" />
+    }
+
     switch (column.type) {
       case 'date':
       case 'datetime':
@@ -148,13 +159,27 @@ export function SortableHeaderColumn({
         <button
           type="button"
           className={cn(
-            'flex items-center cursor-grab hover:bg-gray-100 rounded px-1 -ml-1 mr-1 border-0 bg-transparent',
-            isDragging && 'cursor-grabbing bg-gray-100',
+            'flex items-center rounded px-1 -ml-1 mr-1 border-0 bg-transparent',
+            isLocked
+              ? 'cursor-not-allowed opacity-50'
+              : 'cursor-grab hover:bg-gray-100',
+            isDragging && !isLocked && 'cursor-grabbing bg-gray-100',
           )}
-          {...listeners}
-          aria-label="Drag to reorder column"
+          {...(isLocked ? {} : listeners)}
+          disabled={isLocked}
+          aria-label={isLocked ? 'Column is locked' : 'Drag to reorder column'}
+          title={
+            isLocked
+              ? 'This column is locked and cannot be moved'
+              : 'Drag to reorder column'
+          }
         >
-          <GripVertical className="h-3 w-3 text-gray-400" />
+          <GripVertical
+            className={cn(
+              'h-3 w-3',
+              isLocked ? 'text-gray-300' : 'text-gray-400',
+            )}
+          />
         </button>
 
         {/* Column content - clickable for sorting */}
@@ -218,6 +243,7 @@ export function SortableHeaderColumn({
       {/* Column menu */}
       <ColumnMenu
         column={enhancedColumn}
+        allColumns={allColumns}
         isOpen={isMenuOpen && !isDragging}
         onClose={() => setIsMenuOpen(false)}
         position={menuPosition}
