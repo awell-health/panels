@@ -287,17 +287,246 @@ Steps:
 
 ### Intent & Behavior
 - **Purpose:** Accelerate mapping authoring with AI suggestions while keeping production deterministic.
-- **Behavior:** Detection **AgentWorkflow** proposes resource types; Draft-Mapping **AgentWorkflow** proposes field mapping; reviewer edits/approves; Facade promotes to a versioned Mapping; production uses compiled mapping.
-- **Key decisions:** Store prompt/model metadata; validate drafts via Medplum; support rollback of mapping versions.
-- **Operator impact:** Rate-limit external AI calls; support on-prem models as policy needs.
+- **Behavior:** A **Classifier** and a **Draft-Mapper** (both AgentWorkflows) propose resource types and a field-level mapping in `mapping-dsl v1`. A human reviews/edits, then the Facade promotes an approved draft to a versioned **Mapping** used by production transforms.
+- **Key decisions:** AI is used only in authoring (unless an AgentWorkflow is explicitly part of a tenant’s production path). All production writes are driven by **approved Mapping versions** and **ValidationRule**s.
+- **Operator impact:** Per-tenant `AI_ALLOWED` switch; model versioning (`promptMetadata`); rate-limits; audit for suggestions and reviewer actions.
 
-**APIs**
+---
+
+### 7.1 Pipeline Stages
+1. **Resource Type Classifier (AgentWorkflow A)**  
+   **Input:** redacted `RawData` sample, `SourceDefinition` hints, optional prior examples.  
+   **Output:** candidates `{ resourceType, confidence, rationale }[]` into `MappingSuggestion`.
+2. **Draft-Mapper (AgentWorkflow B)**  
+   **Input:** raw sample + chosen `resourceType` + FHIR structure summary + examples.  
+   **Output:** `MappingSuggestion.suggestedMapping` (YAML **mapping-dsl v1**), with `_meta.confidence` and per-field confidences.
+3. **Validation**  
+   Facade `POST /api/mapping/validate-draft`: runs local **ValidationRule**s and Medplum `$validate`. Failures are attached to the suggestion.
+4. **HITL Review**  
+   Reviewer edits the DSL and approves/rejects. On approval, Facade creates **Mapping v{n+1}** and (optionally) activates it.
+5. **Production**  
+   Production transformations use **approved Mapping** versions only.
+
+---
+
+### 7.2 Data Artifacts
+- **MappingSuggestion**  
+  - `suggestedResourceType: string`  
+  - `suggestedMapping: mapping-dsl v1 (YAML, stored internally as JSON)`  
+  - `modelId, promptVersion, createdAt`
+- **HumanReviewEvent**: `accept | reject | edit` with notes
+- **Mapping**: versioned, deterministic, executable
+
+---
+
+### 7.3 `mapping-dsl v1` (Authoring DSL)
+
+**Design goals:** human-readable, machine-checkable, deterministic, FHIR-aware.
+
+**Helpers (authoring contract)**
+- `map(path: string)` → any
+- `toNumber(x: any)` → number
+- `parseDate(x: string, fmt: "iso" | "epoch" | "custom:<pattern>")` → ISO string
+- `hash(x: any)` → string
+- `concat(...args: any[])` → string
+- `if(cond: boolean, a: any, b: any)` → any
+- `lookup(table: string, key: string)` → string | number (from versioned tables)
+- `default(value: any, expr: any)` → any (fallback without failing execution)
+
+**Determinism rules**
+- Expressions are pure (no network I/O at execution).
+- Fail on unknown helpers or unresolved `map()` **unless** wrapped in `default(...)`.
+- Validate the final FHIR JSON with Medplum `$validate` before publish.
+
+**Example (Observation from CSV)**
+```yaml
+# mapping-dsl v1
+resourceType: Observation
+id: "${hash(map('rowId'))}"
+status: "final"
+subject.reference: "Patient/${map('patientId')}"
+code.coding[0]:
+  system: "http://loinc.org"
+  code: "${map('loincCode')}"
+valueQuantity:
+  value: "${toNumber(map('value'))}"
+  unit: "${map('unit')}"
+  system: "http://unitsofmeasure.org"
+  code: "${map('unitCode')}"
+effectiveDateTime: "${parseDate(map('timestamp'), 'iso')}"
+_meta:
+  confidence: 0.82
+  fields:
+    valueQuantity.value: 0.91
+    code.coding[0].code: 0.88
+  notes: "Derived from columns value/unit; loincCode taken from source"
 ```
-POST /api/mapping/suggest
-POST /api/mapping/validate-draft
-POST /api/mappings               # create draft (with promptMetadata)
-PUT  /api/mappings/{id}/activate
+
+> See **Appendix A** for the JSON Schema and full rules.
+
+---
+
+### 7.4 Prompt Specs (Classifier, Draft-Mapper, Critic)
+
+#### A) Classifier Prompt (AgentWorkflow A)
+**System**
 ```
+You are a FHIR R4 expert. Given raw healthcare data and source hints,
+return 1–3 candidate FHIR resource types with confidence and a short rationale.
+Choose only valid FHIR R4 types. Output STRICT JSON:
+{"candidates":[{"resourceType":"<Type>","confidence":0.0-1.0,"rationale":"<short>"}]}
+No prose outside JSON. If unsure, include "Observation" or "DocumentReference" with low confidence.
+```
+**User (variables in {{ }})**
+```
+SourceDefinition: {{json sourceDefinition}}
+Sample RawData (redacted): {{json rawData}}
+Known mapping examples (optional): {{json examples}}
+Constraints: Prefer Patient-linked clinical data; avoid administrative-only resources.
+```
+**Good Output (example)**
+```json
+{"candidates":[
+  {"resourceType":"Observation","confidence":0.86,"rationale":"vitals-like fields value/unit/timestamp"},
+  {"resourceType":"Condition","confidence":0.34,"rationale":"diagnosis-like text present"}
+]}
+```
+
+#### B) Draft-Mapper Prompt (AgentWorkflow B)
+**System**
+```
+You generate a mapping-dsl v1 that converts raw data into a valid FHIR R4 {{resourceType}}.
+Use ONLY fields that exist in the official StructureDefinition.
+Output STRICT YAML of mapping-dsl v1. No prose.
+Include _meta.confidence (0..1) and per-field confidences.
+If a required field cannot be populated, set a safe literal and add a note in _meta.notes.
+Do not invent code systems. If uncertain, leave code/system empty and add a note.
+```
+**User**
+```
+Target resourceType: {{resourceType}}
+FHIR StructureDefinition summary: {{json structureSummary}}
+Sample RawData (redacted): {{json rawData}}
+Style examples (optional): {{yaml examples}}
+Required fields policy: minimize empty required fields; prefer explicit literals over omissions.
+```
+**Good Output (excerpt)**
+```yaml
+resourceType: Observation
+status: "final"
+subject.reference: "Patient/${map('patientId')}"
+effectiveDateTime: "${parseDate(map('ts'),'iso')}"
+valueQuantity:
+  value: "${toNumber(map('systolic'))}"
+  unit: "mmHg"
+  system: "http://unitsofmeasure.org"
+  code: "mm[Hg]"
+_meta:
+  confidence: 0.81
+  fields:
+    valueQuantity.value: 0.88
+    subject.reference: 0.73
+  notes: "units inferred; code defaulted"
+```
+
+#### C) Critic/Validator Prompt (optional AgentWorkflow C)
+**System**
+```
+You are a strict validator. Given mapping-dsl v1, StructureDefinition, and sample raw data:
+1) Check that referenced FHIR paths exist for {{resourceType}}.
+2) Evaluate helper usage and expression syntax.
+3) Simulate execution with the sample; report missing inputs or type mismatches.
+Return STRICT JSON: {"valid":true|false,"errors":[...],"warnings":[...]}
+No prose.
+```
+**User**
+```
+resourceType: {{resourceType}}
+mapping-dsl v1 (YAML): {{yaml suggestedMapping}}
+StructureDefinition summary: {{json structureSummary}}
+Sample RawData: {{json rawData}}
+```
+**Good Output (example)**
+```json
+{"valid":false,"errors":["valueQuantity.value: toNumber received 'abc'"],"warnings":["code.coding[0].code is empty"]}
+```
+
+---
+
+### 7.5 Prompt Inputs (concrete examples)
+
+**RawData (CSV row as JSON)**
+```json
+{
+  "rowId": "r-123",
+  "patientId": "p-789",
+  "value": "120",
+  "unit": "mmHg",
+  "unitCode": "mm[Hg]",
+  "timestamp": "2025-07-21T09:30:00Z",
+  "loincCode": "8480-6"
+}
+```
+
+**SourceDefinition**
+```json
+{
+  "logicalName": "ehr_csv_vitals",
+  "type": "s3",
+  "schemaHint": {"format":"csv","columns":["patientId","timestamp","value","unit","loincCode"]},
+  "dedupeStrategy": {"key":"rowId"},
+  "version": 3,
+  "status": "active"
+}
+```
+
+**StructureDefinition Summary (trimmed)**
+```json
+{
+  "resourceType": "Observation",
+  "required": ["status","code","subject","effective[x]","value[x]"],
+  "paths": ["status","code.coding[].system","code.coding[].code","subject.reference","effectiveDateTime","valueQuantity.value","valueQuantity.unit","valueQuantity.system","valueQuantity.code"]
+}
+```
+
+---
+
+### 7.6 HITL Review UI (authoring)
+
+**Layout**
+- **Left:** RawData viewer (original + redacted toggle).
+- **Center:** Live FHIR preview rendered from the current DSL (executor-in-browser).
+- **Right:** DSL editor with validation panel (Critic errors/warnings, ValidationRule failures, Medplum `$validate` result).
+
+**Widgets**
+- Field confidence heat-map overlay.
+- Inline suggestions for missing required fields.
+- Before/After diff; on approval, persisted as **TransformationResult** `jsonPatch`.
+
+**Actions**
+- **Accept** → `POST /api/mappings` (draft) → `PUT /api/mappings/{id}/activate` (optional auto-activate).
+- **Edit** → update DSL, re-validate.
+- **Reject** → `POST /api/human-review-events` with `action=reject`.
+
+---
+
+### 7.7 Evaluation & Safety
+
+**Metrics**
+- Classifier top-1 / top-3 accuracy.  
+- Draft-Mapper `$validate` pass-rate.  
+- Reviewer edit distance (token/field diff).  
+- Production error rates by Mapping version.
+
+**Gates & Policies**
+- Never auto-activate AI-generated mappings without human approval.  
+- Require `$validate` pass + zero **errors** in Critic output.  
+- Redact PHI in prompts (configurable allow-list).  
+- Rate-limit AI calls per tenant; support on-prem models where needed.  
+- Store `promptMetadata` (`modelId`, `promptVersion`, `systemPromptHash`) with each suggestion.
+
+**Rollbacks**
+- If failures spike after activation, re-activate the previous Mapping version (see Section 16).
 
 ---
 
@@ -344,6 +573,8 @@ GET   /api/mappings/{id}
 
 POST  /api/mapping/suggest
 POST  /api/mapping/validate-draft
+POST  /api/mappings/preview-from-dsl           # { resourceType, mappingDslYaml, sampleRawData } -> { fhirPreviewJson, validation }
+POST  /api/mappings/compile                    # { mappingDslYaml } -> { compiledSpecJson, warnings[] }
 
 POST  /api/mapping-suggestions                 # optional persistence of suggestions
 GET   /api/mapping-suggestions/{id}
@@ -674,8 +905,7 @@ _Bulk selector_
 | `status.workflow.{workflowId}`      | `aw.v1.WorkflowStatusChanged`         | `workflowId, workflowRunId, status, startedAt, finishedAt, errorMessage, stats`                                                 |
 | `status.transformation.{rawDataId}` | `aw.v1.TransformationStatusChanged`   | `rawDataId, state, appliedMappingIds, validationStatus, medplumId, errorMessage`                                                |
 | `control.rawData.reprocess`         | `aw.v1.ControlRawDataReprocess`       | `rawDataId` **or** `selector`, `mode`, `pinMappingVersionIds?`, `pinTemplateVersion?`, `pinValidationRuleVersionIds?`, `reason` |
-| `control.workflow.pause`            | `aw.v1.ControlWorkflowStateChange`    | `workflowId, desiredState, reason`                                                                                              |
-| `control.workflow.resume`           | `aw.v1.ControlWorkflowStateChange`    | `workflowId, desiredState, reason`                                                                                              |
+| `control.workflow.pause             | resume`                               | `aw.v1.ControlWorkflowStateChange`                                                                                              | `workflowId, desiredState, reason` |
 | `control.workflowTemplate.deploy`   | `aw.v1.ControlWorkflowTemplateDeploy` | `workflowTemplateId, version, targetTenantId, params, kind, tags`                                                               |
 
 ---
@@ -819,6 +1049,74 @@ POST /api/controls/raw-data/{id}/reprocess
 1. Create WorkflowTemplate v6 (draft) → `activate` v6.
 2. Deploy new Workflows pinned to v6; old runs remain pinned to prior versions.
 3. Reprocess problematic records with `pinTemplateVersion` if needed.
+
+---
+
+## Appendix A — `mapping-dsl v1` JSON Schema (authoring)
+
+> Authoring schema for suggestions and reviews. The production executor consumes an equivalent compiled form.
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://awell.health/schemas/mapping-dsl-v1.json",
+  "title": "mapping-dsl v1",
+  "type": "object",
+  "required": ["resourceType"],
+  "properties": {
+    "resourceType": { "type": "string", "minLength": 1 },
+    "_meta": {
+      "type": "object",
+      "properties": {
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "fields": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": {
+    "oneOf": [
+      { "type": "string" },
+      {
+        "type": "object",
+        "additionalProperties": true
+      }
+    ]
+  },
+  "examples": [
+    {
+      "resourceType": "Observation",
+      "status": "final",
+      "subject": { "reference": "Patient/${map('patientId')}" },
+      "code": { "coding": [ { "system": "http://loinc.org", "code": "${map('loincCode')}" } ] },
+      "valueQuantity": {
+        "value": "${toNumber(map('value'))}",
+        "unit": "${map('unit')}",
+        "system": "http://unitsofmeasure.org",
+        "code": "${map('unitCode')}"
+      },
+      "effectiveDateTime": "${parseDate(map('timestamp'),'iso')}",
+      "_meta": { "confidence": 0.82, "fields": { "valueQuantity.value": 0.91 } }
+    }
+  ]
+}
+```
+
+**Helper signatures (authoring contract)**
+- `map(path: string)` → any  
+- `toNumber(x: any)` → number  
+- `parseDate(x: string, fmt: "iso" | "epoch" | "custom:<pattern>")` → ISO string  
+- `hash(x: any)` → string  
+- `concat(...args: any[])` → string  
+- `if(cond: boolean, a: any, b: any)` → any  
+- `lookup(table: string, key: string)` → string | number  
+- `default(value: any, expr: any)` → any
+
+**Executor rules**
+- Fail on unknown helpers or unresolved `map()` unless wrapped in `default(...)`.  
+- Disallow network I/O.  
+- Validate final FHIR JSON with Medplum `$validate` before publish.
 
 ---
 

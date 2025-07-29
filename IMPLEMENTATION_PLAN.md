@@ -1,7 +1,7 @@
-# Healthcare Data Hub - Services Implementation Plan (Enhanced vNext)
+# Healthcare Data Hub - Services Implementation Plan (Comprehensive vNext)
 
 ## Overview
-This plan transforms the current basic services module into the comprehensive Healthcare Data Hub architecture described in EVOLUTION.md (Enhanced vNext). Following an external-to-internal approach: start with API interfaces (with fake implementations), then build internals, finally connect real implementations.
+This plan transforms the current basic services module into the comprehensive Healthcare Data Hub architecture described in EVOLUTION.md (Comprehensive vNext). Following an external-to-internal approach: start with API interfaces (with fake implementations), then build internals, finally connect real implementations.
 
 **Key Changes from Previous Versions:**
 - **Immutable Versioning System**: WorkflowTemplate, Mapping, ValidationRule all support versioning with activation/rollback
@@ -11,6 +11,11 @@ This plan transforms the current basic services module into the comprehensive He
 - **Enhanced Audit Fields**: templateId, templateVersion, validationRuleVersionIds, modelId, modelParams in TransformationResult
 - **Comprehensive JetStream Schemas**: Detailed message formats with aw.v1.* schemas
 - **Enhanced API Endpoints**: Version filtering, activation controls, reprocess with pinning
+- **mapping-dsl v1**: Complete DSL specification for human-readable, deterministic FHIR mapping authoring
+- **AI-Assisted Mapping Pipeline**: Classifier → Draft-Mapper → HITL Review → Production with detailed prompts
+- **HITL Review Interface**: Live FHIR preview, DSL editor, validation panel, confidence heat-maps
+- **Advanced Mapping APIs**: Preview, compilation, validation, critic evaluation endpoints
+- **Safety & Evaluation**: Metrics, gates, rollback policies for AI-generated mappings
 
 ---
 
@@ -67,21 +72,38 @@ This plan transforms the current basic services module into the comprehensive He
   - [ ] `POST /api/agent-workflows/deploy` - deploy agent workflow
 
 ### Stage 1.4: AI-Assisted Mapping (HITL) APIs (Fake Implementation)
-- [ ] **1.4.1** Mapping suggestion endpoints with fake data
-  - [ ] `POST /api/mapping/suggest` - suggest mappings with confidence (return fake FHIR suggestions)
-  - [ ] `POST /api/mapping/validate-draft` - validate draft mapping (fake validation)
-  - [ ] `POST /api/mapping-suggestions` - persist mapping suggestions (fake creation)
-  - [ ] `GET /api/mapping-suggestions/{id}` - get mapping suggestion details (mock suggestion)
+- [ ] **1.4.1** AI Pipeline endpoints (Classifier → Draft-Mapper → Critic)
+  - [ ] `POST /api/mapping/suggest` - Resource type classification + draft mapping generation (fake AgentWorkflow calls)
+  - [ ] `POST /api/mapping/validate-draft` - Validate mapping-dsl v1 with critic + Medplum $validate (fake validation)
+  - [ ] `POST /api/mapping/preview-from-dsl` - Live FHIR preview from mapping-dsl v1 + sample data (fake executor)
+  - [ ] `POST /api/mapping/compile` - Compile mapping-dsl v1 to executable form (fake compilation)
 
-- [ ] **1.4.2** Mapping management endpoints with versioning (fake data)
+- [ ] **1.4.2** mapping-dsl v1 Support endpoints with fake implementation
+  - [ ] JSON Schema validation for mapping-dsl v1 authoring format
+  - [ ] Helper function validation (map, toNumber, parseDate, etc.)
+  - [ ] Expression syntax checking and determinism validation
+  - [ ] FHIR path validation against StructureDefinition
+
+- [ ] **1.4.3** Mapping suggestion persistence with versioning (fake data)
+  - [ ] `POST /api/mapping-suggestions` - persist AI suggestions with modelId/promptVersion (fake creation)
+  - [ ] `GET /api/mapping-suggestions/{id}` - get suggestion details with confidence scores (mock suggestion)
+  - [ ] `GET /api/mapping-suggestions` - list suggestions with filtering (mock suggestions)
+
+- [ ] **1.4.4** Approved mapping management endpoints with versioning (fake data)
   - [ ] `GET /api/mappings` - list approved mappings with ruleName/version filtering (mock rules)
-  - [ ] `POST /api/mappings` - create mapping rule draft (fake creation)
+  - [ ] `POST /api/mappings` - create mapping rule draft from approved suggestion (fake creation)
   - [ ] `PUT /api/mappings/{id}/activate` - activate mapping rule version (fake activation)
-  - [ ] `GET /api/mappings/{id}` - get mapping rule details (mock rule)
+  - [ ] `GET /api/mappings/{id}` - get mapping rule details with DSL and metadata (mock rule)
 
-- [ ] **1.4.3** Human review workflow endpoints with fake data
-  - [ ] `POST /api/human-review-events` - record human review decision (fake recording)
-  - [ ] `GET /api/human-review-events` - list review events (mock events)
+- [ ] **1.4.5** Human review workflow endpoints with comprehensive HITL support (fake data)
+  - [ ] `POST /api/human-review-events` - record human review decision with notes and edits (fake recording)
+  - [ ] `GET /api/human-review-events` - list review events with filtering (mock events)
+  - [ ] Review workflow state management (pending → reviewing → approved/rejected)
+
+- [ ] **1.4.6** Safety and evaluation endpoints (fake implementation)
+  - [ ] `GET /api/mapping/metrics` - AI pipeline metrics (accuracy, edit distance, error rates) (mock metrics)
+  - [ ] `POST /api/mapping/evaluate` - Evaluate mapping performance against test data (fake evaluation)
+  - [ ] Rate limiting and tenant controls for AI usage
 
 ### Stage 1.5: Raw Data & Transformation APIs (Fake Implementation)
 - [ ] **1.5.1** Raw data management endpoints with fake data
@@ -132,11 +154,29 @@ This plan transforms the current basic services module into the comprehensive He
   - [ ] Control schemas (version pinning, lock info, commands)
   - [ ] Event schemas (JetStream envelope with aw.v1.* schemas, subject payloads)
 
-- [ ] **1.8.2** TypeScript type definitions with versioning
+- [ ] **1.8.2** mapping-dsl v1 Zod schemas and validation
+  - [ ] Complete JSON Schema implementation for mapping-dsl v1
+  - [ ] Helper function signatures (map, toNumber, parseDate, hash, concat, if, lookup, default)
+  - [ ] Expression validation and determinism checking
+  - [ ] FHIR path validation schemas
+  - [ ] Confidence score and metadata schemas
+  - [ ] Compilation and execution result schemas
+
+- [ ] **1.8.3** AI-Assisted Mapping Zod schemas
+  - [ ] Classifier prompt and response schemas (candidates with confidence/rationale)
+  - [ ] Draft-Mapper prompt and response schemas (mapping-dsl v1 output)
+  - [ ] Critic prompt and response schemas (validation results)
+  - [ ] HITL review schemas (accept/reject/edit actions with notes)
+  - [ ] Mapping suggestion schemas (suggestedResourceType, suggestedMapping, modelId, promptVersion)
+  - [ ] Human review event schemas (action, notes, createdAt)
+  - [ ] Preview and compilation request/response schemas
+
+- [ ] **1.8.4** TypeScript type definitions with versioning and AI support
   - [ ] Export types from @panels/types
   - [ ] Ensure camelCase consistency across all endpoints
   - [ ] Add versioning constraint types
-  - [ ] Add proper error response types
+  - [ ] Add mapping-dsl v1 and AI pipeline types
+  - [ ] Add proper error response types with validation details
 
 ---
 
@@ -161,9 +201,11 @@ This plan transforms the current basic services module into the comprehensive He
   - [ ] Scope: global|clientSpecific
   - [ ] Unique constraints: (tenantId, ruleName, version), at most one active per (tenantId, ruleName)
 
-- [ ] **2.1.4** Create MappingSuggestion entity
-  - [ ] Fields: id, tenantId, rawDataId, suggestedResourceType, suggestedMapping, modelId, promptVersion, createdAt
+- [ ] **2.1.4** Create MappingSuggestion entity (enhanced for mapping-dsl v1)
+  - [ ] Fields: id, tenantId, rawDataId, suggestedResourceType, suggestedMapping (mapping-dsl v1 YAML as JSON), modelId, promptVersion, createdAt
+  - [ ] Confidence and metadata fields: confidence scores, field-level confidences, rationale
   - [ ] Links to RawData for AI suggestions
+  - [ ] Validation results and critic feedback storage
 
 - [ ] **2.1.5** Create HumanReviewEvent entity
   - [ ] Fields: id, tenantId, suggestionId, reviewerId, action, notes, createdAt
@@ -287,11 +329,28 @@ This plan transforms the current basic services module into the comprehensive He
   - [ ] Read-through simulation for audit endpoints
   - [ ] Provenance and AuditEvent creation simulation
 
-- [ ] **3.3.3** Mock AI service client (AgentWorkflows)
-  - [ ] Detection AgentWorkflow simulation (candidate FHIR resource types with confidence)
-  - [ ] Draft-mapping AgentWorkflow simulation (field-level mapping)
-  - [ ] Confidence scoring simulation
-  - [ ] Prompt metadata tracking (modelId, promptVersion)
+- [ ] **3.3.3** Mock AI service client (AgentWorkflows with detailed prompts)
+  - [ ] **Classifier AgentWorkflow A simulation**
+    - [ ] Resource type classification with confidence and rationale
+    - [ ] System prompt: FHIR R4 expert with strict JSON output
+    - [ ] Input: SourceDefinition, redacted RawData, optional examples
+    - [ ] Output: candidates array with resourceType, confidence, rationale
+  - [ ] **Draft-Mapper AgentWorkflow B simulation**
+    - [ ] mapping-dsl v1 generation for chosen resource type
+    - [ ] System prompt: mapping-dsl v1 generator with YAML output
+    - [ ] Input: resourceType, StructureDefinition summary, redacted RawData, examples
+    - [ ] Output: complete mapping-dsl v1 YAML with _meta confidence/notes
+  - [ ] **Critic AgentWorkflow C simulation (optional)**
+    - [ ] Validation of mapping-dsl v1 against StructureDefinition and sample data
+    - [ ] System prompt: strict validator with JSON output
+    - [ ] Input: mapping-dsl v1 YAML, StructureDefinition, sample RawData
+    - [ ] Output: validation results with errors/warnings
+  - [ ] **mapping-dsl v1 executor simulation**
+    - [ ] Helper function execution (map, toNumber, parseDate, etc.)
+    - [ ] Expression evaluation with determinism rules
+    - [ ] FHIR resource assembly and Medplum $validate simulation
+  - [ ] Prompt metadata tracking (modelId, promptVersion, systemPromptHash)
+  - [ ] Rate limiting and per-tenant AI_ALLOWED controls
 
 ---
 
@@ -329,11 +388,33 @@ This plan transforms the current basic services module into the comprehensive He
   - [ ] Tenant isolation and scope enforcement
   - [ ] Version resolution at execution time
 
-- [ ] **4.3.2** AI integration (AgentWorkflows)
-  - [ ] Real AI model integration for suggestions
-  - [ ] Prompt management and metadata tracking
-  - [ ] Confidence scoring and candidate ranking
-  - [ ] Fallback to static rules
+- [ ] **4.3.2** AI integration (AgentWorkflows with comprehensive pipeline)
+  - [ ] **Real AI model integration for 5-stage pipeline**
+    - [ ] Stage 1: Classifier AgentWorkflow - resource type classification
+    - [ ] Stage 2: Draft-Mapper AgentWorkflow - mapping-dsl v1 generation
+    - [ ] Stage 3: Validation - ValidationRule + Medplum $validate
+    - [ ] Stage 4: HITL Review - human approval/editing interface
+    - [ ] Stage 5: Production - approved Mapping execution
+  - [ ] **mapping-dsl v1 real executor implementation**
+    - [ ] Helper function implementations (map, toNumber, parseDate, hash, concat, if, lookup, default)
+    - [ ] Expression parser and evaluator with safety checks
+    - [ ] Determinism enforcement (no network I/O, pure functions)
+    - [ ] FHIR resource assembly and validation
+  - [ ] **Prompt management and safety**
+    - [ ] Prompt versioning and metadata tracking (modelId, promptVersion, systemPromptHash)
+    - [ ] PHI redaction in prompts with configurable allow-lists
+    - [ ] Rate limiting per tenant and model usage tracking
+    - [ ] On-premises model support for sensitive environments
+  - [ ] **Evaluation and rollback mechanisms**
+    - [ ] Classifier accuracy metrics (top-1/top-3)
+    - [ ] Draft-Mapper $validate pass-rate tracking
+    - [ ] Reviewer edit distance measurement
+    - [ ] Automatic rollback on error rate spikes
+  - [ ] **Safety gates and policies**
+    - [ ] Never auto-activate without human approval
+    - [ ] Require $validate pass + zero critic errors
+    - [ ] Per-tenant AI_ALLOWED switch
+    - [ ] Fallback to static rules on AI failure
 
 ### Stage 4.4: Transformation Pipeline with Audit
 - [ ] **4.4.1** Core transformation logic (hybrid mode)
@@ -426,17 +507,66 @@ This plan transforms the current basic services module into the comprehensive He
   - [ ] Schema compliance checking
   - [ ] Error message handling and categorization
 
-### Stage 6.3: AI Service Integration (AgentWorkflows)
-- [ ] **6.3.1** Real AI model integration
-  - [ ] Detection AgentWorkflow calls
-  - [ ] Draft-mapping AgentWorkflow calls
-  - [ ] Prompt engineering and versioning
-  - [ ] Response processing and validation
+### Stage 6.3: AI Service Integration (AgentWorkflows with detailed prompts)
+- [ ] **6.3.1** Real AI model integration with comprehensive prompts
+  - [ ] **Classifier AgentWorkflow A (Resource Type Classification)**
+    - [ ] Implement system prompt: "You are a FHIR R4 expert. Given raw healthcare data..."
+    - [ ] Variable injection: sourceDefinition, rawData (redacted), examples
+    - [ ] Strict JSON output parsing with candidates array
+    - [ ] Confidence scoring and rationale extraction
+    - [ ] Fallback to "Observation" or "DocumentReference" on uncertainty
+  - [ ] **Draft-Mapper AgentWorkflow B (mapping-dsl v1 Generation)**
+    - [ ] Implement system prompt: "You generate a mapping-dsl v1 that converts raw data..."
+    - [ ] Variable injection: resourceType, structureSummary, rawData (redacted), examples
+    - [ ] YAML output parsing and validation
+    - [ ] Confidence metadata extraction (_meta.confidence, _meta.fields)
+    - [ ] Required field safety handling
+  - [ ] **Critic AgentWorkflow C (Validation)**
+    - [ ] Implement system prompt: "You are a strict validator. Given mapping-dsl v1..."
+    - [ ] Variable injection: resourceType, suggestedMapping, structureSummary, rawData
+    - [ ] JSON output parsing with errors/warnings arrays
+    - [ ] Integration with ValidationRule and Medplum $validate
+  - [ ] **HITL Review Interface Integration**
+    - [ ] Live FHIR preview generation from mapping-dsl v1
+    - [ ] DSL editor with syntax highlighting and validation
+    - [ ] Confidence heat-map overlay on fields
+    - [ ] Before/after diff visualization
+    - [ ] Inline suggestions for missing required fields
 
-- [ ] **6.3.2** Fallback mechanisms
-  - [ ] AI failure handling
-  - [ ] Static rule fallback
-  - [ ] Performance monitoring and circuit breaking
+- [ ] **6.3.2** Advanced prompt management and safety
+  - [ ] **Prompt versioning and metadata**
+    - [ ] Store promptMetadata with modelId, promptVersion, systemPromptHash
+    - [ ] Support for prompt A/B testing and gradual rollout
+    - [ ] Prompt performance tracking and optimization
+  - [ ] **PHI protection and redaction**
+    - [ ] Configurable allow-list for fields that can be sent to AI
+    - [ ] Automatic redaction of sensitive healthcare data
+    - [ ] Audit trail for all AI interactions
+  - [ ] **Rate limiting and usage controls**
+    - [ ] Per-tenant rate limits for AI calls
+    - [ ] Cost tracking and budgeting per tenant
+    - [ ] Priority queuing for interactive vs batch requests
+  - [ ] **On-premises and hybrid model support**
+    - [ ] Support for local model deployments
+    - [ ] Fallback chains: local → cloud → static rules
+    - [ ] Model performance comparison and routing
+
+- [ ] **6.3.3** Evaluation, metrics, and fallback mechanisms
+  - [ ] **Comprehensive evaluation metrics**
+    - [ ] Classifier top-1 and top-3 accuracy tracking
+    - [ ] Draft-Mapper Medplum $validate pass-rate
+    - [ ] Human reviewer edit distance (token and field level)
+    - [ ] Production error rates by Mapping version
+    - [ ] End-to-end pipeline latency and throughput
+  - [ ] **Automated rollback and safety**
+    - [ ] Spike detection in validation failures
+    - [ ] Automatic revert to previous Mapping version
+    - [ ] Circuit breaker patterns for AI service failures
+    - [ ] Graceful degradation to deterministic rules
+  - [ ] **Continuous improvement**
+    - [ ] Feedback loop from production errors to model training
+    - [ ] A/B testing for prompt variations
+    - [ ] Model performance benchmarking and updates
 
 ---
 
@@ -451,13 +581,32 @@ This plan transforms the current basic services module into the comprehensive He
   - [ ] Transformation latency
   - [ ] JetStream message rates and lag
 
-- [ ] **7.1.2** Business metrics with versioning
-  - [ ] Per-tenant statistics
-  - [ ] FHIR validation rates
-  - [ ] AI usage tracking and confidence scores
-  - [ ] HITL throughput (human review events)
-  - [ ] Version activation frequency
-  - [ ] Tag reconciliation drift metrics
+- [ ] **7.1.2** Business metrics with versioning and comprehensive AI tracking
+  - [ ] **Per-tenant statistics**
+    - [ ] Data ingestion rates and success rates
+    - [ ] Transformation success rates by source type
+    - [ ] Tenant-specific AI usage and costs
+  - [ ] **FHIR validation and compliance**
+    - [ ] Medplum $validate success rates
+    - [ ] Resource type distribution and validation errors
+    - [ ] Compliance score tracking over time
+  - [ ] **AI pipeline comprehensive metrics**
+    - [ ] Classifier accuracy: top-1/top-3 resource type accuracy
+    - [ ] Draft-Mapper performance: $validate pass-rate, confidence scores
+    - [ ] Critic effectiveness: error/warning detection rates
+    - [ ] HITL efficiency: review time, edit distance, approval rates
+    - [ ] End-to-end AI pipeline latency and throughput
+    - [ ] Per-model usage and cost tracking
+  - [ ] **Human review and mapping quality**
+    - [ ] Review queue depth and processing time
+    - [ ] Reviewer edit distance (token and field level changes)
+    - [ ] Mapping activation frequency and rollback rates
+    - [ ] Production error rates by Mapping version
+  - [ ] **Version management and operations**
+    - [ ] Version activation frequency across entity types
+    - [ ] Rollback frequency and reasons
+    - [ ] Tag reconciliation drift metrics
+    - [ ] GraphChecksum drift detection and resolution
 
 ### Stage 7.2: Logging Enhancement
 - [ ] **7.2.1** Structured logging
@@ -543,13 +692,14 @@ This plan transforms the current basic services module into the comprehensive He
 
 ## Progress Tracking
 
-**Current Stage:** Not Started (Plan Recreated with Enhanced Versioning)
+**Current Stage:** Not Started (Plan Recreated with Comprehensive AI Integration)
 **Next Action:** Begin Stage 1.1.1 - Create new module directories structure
 
 ---
 
 ## Notes & Considerations
 
+### Core Architecture
 - **Immutable Versioning**: All executable definitions (WorkflowTemplate, Mapping, ValidationRule) use immutable versioning with activation/rollback
 - **Version Pinning**: WorkflowRun and TransformationResult record exact versions for reproducibility
 - **LogicalName Pattern**: Stable identifiers across versions (logicalName for templates, ruleName for mappings/validation)
@@ -559,6 +709,22 @@ This plan transforms the current basic services module into the comprehensive He
 - **Reprocess with Pinning**: Support for reprocessing with specific version pins for debugging/rollback
 - **Tenant Isolation**: Strict tenant scoping across all entities and API endpoints
 - **Audit Trail**: Complete before/after traceability with JSON Patch, ExecutionEvent, and version tracking
+
+### AI-Assisted Mapping (HITL) System
+- **mapping-dsl v1**: Human-readable, deterministic DSL for FHIR mapping authoring with complete JSON Schema
+- **5-Stage AI Pipeline**: Classifier → Draft-Mapper → Validation → HITL Review → Production
+- **Comprehensive AgentWorkflows**: Detailed system prompts for resource classification, mapping generation, and validation
+- **HITL Review Interface**: Live FHIR preview, confidence heat-maps, DSL editor with validation, before/after diffs
+- **Safety-First Approach**: Never auto-activate, require human approval, $validate pass, zero critic errors
+- **PHI Protection**: Configurable redaction, audit trails, on-premises model support
+- **Continuous Evaluation**: Accuracy metrics, edit distance tracking, automatic rollback on error spikes
+
+### Implementation Strategy
+- **External-to-Internal**: API contracts first with comprehensive fake implementations
+- **Deterministic Core**: AI used only in authoring phase, production uses approved deterministic mappings
+- **Progressive Enhancement**: Start with fake AgentWorkflows, gradually replace with real AI integrations
+- **Comprehensive Testing**: End-to-end AI pipeline testing, prompt validation, safety gate verification
+- **Monitoring & Observability**: Full AI pipeline metrics, business intelligence, operational dashboards
 
 ---
 
