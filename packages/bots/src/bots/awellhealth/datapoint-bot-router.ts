@@ -394,13 +394,6 @@ export async function handler(
       )
     }
 
-    // Find or create patient
-    const patientId = await findOrCreatePatient(
-      medplum,
-      patient_id,
-      pathway?.patient_identifiers || [],
-    )
-
     // Route datapoint to appropriate bot based on data_point_definition_id
     const isObservation = OBSERVATION_IDS.includes(
       data_point.data_point_definition_id,
@@ -428,10 +421,16 @@ export async function handler(
       if (!observationBotId) {
         throw new Error('Observation bot ID not found in BOT_ROUTER_DICT')
       }
+      // Find or create patient only when routing to observation bot
+      const medplumPatientId = await findOrCreatePatient(
+        medplum,
+        patient_id,
+        pathway?.patient_identifiers || [],
+      )
       await medplum.executeBot(observationBotId, {
         data_point,
         observation_dict: OBSERVATION_DICT,
-        patient_id: patientId,
+        patient_id: medplumPatientId,
       } as DataPointRouterPayload)
 
       console.log(
@@ -465,10 +464,17 @@ export async function handler(
       if (!encounterBotId) {
         throw new Error('Encounter bot ID not found in BOT_ROUTER_DICT')
       }
+      // Find or create patient only when routing to encounter bot
+      const medplumPatientId = await findOrCreatePatient(
+        medplum,
+        patient_id,
+        pathway?.patient_identifiers || [],
+      )
+
       await medplum.executeBot(encounterBotId, {
         data_point,
         encounter_dict: ENCOUNTER_DICT,
-        patient_id: patientId,
+        patient_id: medplumPatientId,
         pathway_id: pathway?.id || event.input.pathway_id,
       } as DataPointRouterPayload)
 
