@@ -71,6 +71,7 @@ export function useColumnVisibility(
   )
 
   // Set visibility for a specific column
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   const setVisibility = useCallback(
     async (columnId: string, visible: boolean): Promise<void> => {
       if (contextType === 'view' && view && updateView) {
@@ -102,9 +103,12 @@ export function useColumnVisibility(
         }
       } else if (contextType === 'panel') {
         // Panel context - update column display properties
+        const column = allColumns.find((col) => col.id === columnId)
         await updateColumn(panelId, columnId, {
           properties: {
+            ...column?.properties,
             display: {
+              ...column?.properties?.display,
               visible,
             },
           },
