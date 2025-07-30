@@ -8,8 +8,17 @@ import TaskDetails from './TaskDetails/TaskDetails'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import { useDateTimeFormat } from '@/hooks/use-date-time-format'
-import type { Identifier } from '@medplum/fhirtypes'
+import type { Identifier, Resource } from '@medplum/fhirtypes'
 import { Dialog, DialogContent } from '../../../../../components/ui/dialog'
+import { getNestedProperty } from '@medplum/core'
+import {
+  getNestedValue,
+  getNestedValueFromBundle,
+} from '../../../../../lib/fhir-path'
+import { useReactivePanel } from '../../../../../hooks/use-reactive-data'
+import { getCardConfigs } from '../../../../../utils/static/CardConfigs'
+import type { FHIRCard } from './StaticContent/FhirExpandableCard'
+import { useParams } from 'next/navigation'
 
 interface ModalDetailsProps {
   patient?: WorklistPatient
@@ -23,6 +32,15 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
   const { showSuccess, showError } = useToastHelpers()
   const { formatDate } = useDateTimeFormat()
   const modalRef = useRef<HTMLDivElement>(null)
+
+  const { organizationSlug } = useAuthentication()
+  const params = useParams()
+  const panelId = params.panel as string
+  const { panel } = useReactivePanel(panelId)
+
+  const contentCards =
+    (panel?.metadata?.cardsConfiguration as FHIRCard[]) ??
+    getCardConfigs(organizationSlug ?? 'default')
 
   // Internal state management
   const [currentPatient, setCurrentPatient] = useState<WorklistPatient | null>(
@@ -119,11 +137,26 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
   // Get patient name and DOB for header
   const patientName = currentPatient?.name || ''
   const dateOfBirth = currentPatient?.birthDate || ''
-  const mrn = currentPatient?.identifier?.find(
-    (identifier: Identifier) =>
-      identifier.system === 'https://www.encompasshealth.com',
-  )?.value
   const gender = currentPatient?.gender || ''
+
+  const fhirPathForMrn = contentCards
+    .find((card) => {
+      return card.fields.find((field) => field.key === 'mrn')?.fhirPath
+    })
+    ?.fields.find((field) => field.key === 'mrn')?.fhirPath
+
+  const mrn = getNestedValueFromBundle(
+    {
+      resourceType: 'Bundle',
+      type: 'searchset',
+      entry: [
+        {
+          resource: currentPatient as unknown as Resource,
+        },
+      ],
+    },
+    fhirPathForMrn ?? '',
+  )
 
   return (
     <Dialog
