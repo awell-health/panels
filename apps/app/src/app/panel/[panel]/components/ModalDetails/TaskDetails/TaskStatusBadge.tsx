@@ -1,53 +1,55 @@
 export const statuses = {
   draft: {
     label: 'Draft',
-    color: 'bg-gray-400',
+    color: 'badge-neutral',
   },
   requested: {
     label: 'Requested',
-    color: 'bg-blue-400',
+    color: 'badge-primary',
   },
   received: {
     label: 'Received',
-    color: 'bg-green-500',
+    color: 'badge-success',
   },
   accepted: {
     label: 'Accepted',
-    color: 'bg-yellow-400',
+    color: 'badge-warning',
   },
   rejected: {
     label: 'Rejected',
-    color: 'bg-red-400',
+    color: 'badge-error',
   },
   ready: {
     label: 'Ready',
-    color: 'bg-purple-400',
+    color: 'badge-info',
   },
   cancelled: {
     label: 'Cancelled',
-    color: 'bg-gray-400',
+    color: 'badge-neutral',
   },
   'in-progress': {
     label: 'In progress',
-    color: 'bg-blue-400',
+    color: 'badge-primary',
   },
   'on-hold': {
     label: 'On hold',
-    color: 'bg-gray-400',
+    color: 'badge-neutral',
   },
   failed: {
     label: 'Failed',
-    color: 'bg-red-400',
+    color: 'badge-error',
   },
   completed: {
     label: 'Completed',
-    color: 'bg-green-500',
+    color: 'badge-success',
   },
   'entered-in-error': {
     label: 'Entered in error',
-    color: 'bg-gray-400',
+    color: 'badge-neutral',
   },
 }
+
+export const taskStatuses = Object.keys(statuses)
 
 export const isTaskStatus = (status: string): boolean => {
   return status.toLowerCase() in statuses
@@ -57,9 +59,7 @@ const TaskStatusBadge = ({ status }: { status: string }) => {
   const statusData = statuses[status as keyof typeof statuses]
 
   return (
-    <span
-      className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full text-white ${statusData.color}`}
-    >
+    <span className={`badge badge-xs ${statusData.color}`}>
       {statusData.label}
     </span>
   )
