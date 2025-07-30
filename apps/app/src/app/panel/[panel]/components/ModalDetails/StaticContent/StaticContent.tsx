@@ -5,6 +5,15 @@ import SearchInput from './SearchInput'
 import ContentCards from './ContentCards/ContentCards'
 import CardRowItem from './CardRowItem'
 
+interface ExtensionItem {
+  id?: string
+  url?: string
+  extension?: Array<{
+    url: string
+    valueString: string | unknown[]
+  }>
+}
+
 interface StaticContentProps {
   task?: WorklistTask
   patient?: WorklistPatient
@@ -38,41 +47,33 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
     return <CardRowItem label={key} value={value} searchQuery={searchQuery} />
   }
 
-  const renderExtensionData = (
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    data: Record<string, any> | Array<Record<string, any>>,
-  ) => {
+  const renderExtensionData = (data: ExtensionItem[]) => {
     if (Array.isArray(data)) {
       return (
         <>
           {data.map((item, index) => (
             <ExpandableCard
-              key={`${item.id}-${index}`}
-              title={getTitle(item?.url) ?? ''}
+              key={`${item.id || 'ext'}-${index}`}
+              title={getTitle(item?.url || '') || 'Extension'}
               defaultExpanded={searchQuery.length > 0 || expandAll.extension}
-              summary={`Show ${item?.extension?.length} items`}
+              summary={`Show ${item?.extension?.length || 0} items`}
             >
               <div className="flex flex-col gap-2">
                 <div className="text-gray-700 space-y-2 mt-3">
-                  {item?.extension?.map(
-                    (
-                      ext: { url: string; valueString: string },
-                      index: number,
-                    ) => {
-                      const { valueString, url } = ext
+                  {item?.extension?.map((ext, extIndex) => {
+                    const { valueString, url } = ext
 
-                      if (Array.isArray(valueString)) {
-                        return renderExtensionData(valueString)
-                      }
+                    if (Array.isArray(valueString)) {
+                      return renderExtensionData(valueString as ExtensionItem[])
+                    }
 
-                      return (
-                        // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-                        <Fragment key={`${url}-${index}`}>
-                          {renderKeyValue(url, valueString)}
-                        </Fragment>
-                      )
-                    },
-                  )}
+                    return (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: There can be multiple extensions with the same url and possibly the same value
+                      <Fragment key={`${url}-${extIndex}`}>
+                        {renderKeyValue(url, String(valueString))}
+                      </Fragment>
+                    )
+                  })}
                 </div>
               </div>
             </ExpandableCard>
@@ -81,7 +82,9 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
       )
     }
   }
-  const extension = task?.extension ?? patient?.extension ?? []
+  const extension = (task?.extension ??
+    patient?.extension ??
+    []) as ExtensionItem[]
 
   const handleExpandAll = () => {
     if (expandAll.wellpath || expandAll.encompass || expandAll.extension) {

@@ -1,7 +1,7 @@
 import type { FC } from 'react'
 import HighlightText from './HighlightContent'
 import RenderValue from './RenderValue'
-import { hasSearchQuery, isISODate } from './utils'
+import { createSearchFilter, isISODate, handleError } from './utils'
 import { useDateTimeFormat } from '../../../../../../hooks/use-date-time-format'
 import { RenderWithCopy } from './RenderWithCopy'
 
@@ -21,10 +21,8 @@ const CardRowItem: FC<Props> = ({
   const { formatDate, formatDateTime } = useDateTimeFormat()
 
   if (searchQuery) {
-    if (
-      !hasSearchQuery(label, searchQuery) &&
-      !hasSearchQuery(value ?? '', searchQuery)
-    ) {
+    const searchFilter = createSearchFilter(searchQuery)
+    if (!searchFilter.matchesAnyText(label, value)) {
       return null
     }
   }
@@ -43,11 +41,16 @@ const CardRowItem: FC<Props> = ({
   // Format the value if it's a date and we know the context
   const getDisplayValue = (): string => {
     if (!value || !isISODate(value)) {
-      return value || ''
+      return value ?? ''
     }
 
     // Use date-only formatting for birth dates, datetime for everything else
-    return isBirthDateField(label) ? formatDate(value) : formatDateTime(value)
+    try {
+      return isBirthDateField(label) ? formatDate(value) : formatDateTime(value)
+    } catch (error) {
+      handleError(error, 'CardRowItem.formatDate')
+      return value
+    }
   }
 
   const displayValue = getDisplayValue()

@@ -1,23 +1,9 @@
 import { isMatchingFhirPathCondition } from '@/lib/fhir-path'
 import { useCallback, useEffect, useState } from 'react'
+import { useDebounce } from './use-debounce'
 
 type SearchMode = 'text' | 'fhirpath'
 
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value)
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedValue(value)
-    }, delay)
-
-    return () => {
-      clearTimeout(timer)
-    }
-  }, [value, delay])
-
-  return debouncedValue
-}
 // TODO: Needs to be revisited soon
 // We are allowing two types of search text and fhirpath
 // Likely fhirpath would just be useful for AI to be able to apply filters or for column filters

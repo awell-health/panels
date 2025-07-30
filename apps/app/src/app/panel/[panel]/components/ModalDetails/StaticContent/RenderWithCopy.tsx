@@ -1,5 +1,6 @@
 import { Check, Copy } from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
+import { handleError } from './utils'
 
 export const RenderWithCopy: FC<{
   children: string | React.ReactNode
@@ -9,23 +10,36 @@ export const RenderWithCopy: FC<{
 
   if (!text) return children
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
-    setTimeout(() => {
-      setIsCopied(false)
-    }, 1000)
+    if (isCopied) {
+      const timeout = setTimeout(() => {
+        setIsCopied(false)
+      }, 1000)
+      return () => clearTimeout(timeout)
+    }
   }, [isCopied])
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setIsCopied(true)
+    } catch (error) {
+      handleError(error, 'RenderWithCopy.handleCopy')
+    }
+  }
 
   const iconBaseClasses = 'absolute -right-3.5 w-3 h-3'
 
   return (
     <span
       className="cursor-pointer group relative flex items-center break-words"
-      onClick={() => {
-        navigator.clipboard.writeText(text ?? '')
-        setIsCopied(true)
+      onClick={handleCopy}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleCopy()
+        }
       }}
-      onKeyDown={() => {}}
     >
       {children}
       {!isCopied && (
