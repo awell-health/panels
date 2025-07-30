@@ -1,5 +1,5 @@
 import type { BotEvent, MedplumClient } from '@medplum/core'
-import type { Communication, Patient, Task } from '@medplum/fhirtypes'
+import type { Patient, Task } from '@medplum/fhirtypes'
 
 interface ActivityData {
   activity: {
@@ -81,36 +81,12 @@ async function findOrCreatePatient(
     identifier: `https://awellhealth.com/patients|${awellPatientId}`,
   }
 
-  console.log(
-    'Searching for existing patient:',
-    JSON.stringify(
-      {
-        awellPatientId,
-        searchQuery,
-      },
-      null,
-      2,
-    ),
-  )
-
   const existingPatient = await medplum.searchOne('Patient', searchQuery)
 
   if (existingPatient) {
     if (!existingPatient.id) {
       throw new Error('Found patient but missing ID')
     }
-    console.log(
-      'Found existing patient, returning without changes:',
-      JSON.stringify(
-        {
-          originalId: awellPatientId,
-          existingPatientId: existingPatient.id,
-          lastUpdated: existingPatient.meta?.lastUpdated,
-        },
-        null,
-        2,
-      ),
-    )
     return existingPatient.id
   }
 
@@ -126,31 +102,7 @@ async function findOrCreatePatient(
     active: true,
   }
 
-  console.log(
-    'Creating minimal patient record:',
-    JSON.stringify(
-      {
-        awellPatientId,
-      },
-      null,
-      2,
-    ),
-  )
-
   const createdPatient = await medplum.createResource(minimalPatient)
-
-  console.log(
-    'Minimal patient created successfully:',
-    JSON.stringify(
-      {
-        originalId: awellPatientId,
-        patientId: createdPatient.id,
-        lastUpdated: createdPatient.meta?.lastUpdated,
-      },
-      null,
-      2,
-    ),
-  )
 
   return createdPatient.id || ''
 }
@@ -232,17 +184,9 @@ async function createOrUpdateTask(
     value: activity.id,
   }
 
-  let existingTasks: Task[] = []
-  try {
-    const searchResult = await medplum.search(
-      'Task',
-      `identifier=${activity.id}`,
-    )
-    existingTasks =
-      searchResult.entry?.map((entry) => entry.resource as Task) || []
-  } catch (error) {
-    console.log('No existing tasks found, will create new one')
-  }
+  const existingTask = await medplum.searchOne('Task', {
+    identifier: activity.id,
+  })
 
   // Set task status based on activity status and event type
   let taskStatus: Task['status']
@@ -284,7 +228,6 @@ async function createOrUpdateTask(
     activity.action_component?.title ?? activity.object?.name
 
   if (!taskDescription) {
-    console.log('No task description found, skipping task creation')
     return ''
   }
 
@@ -315,171 +258,18 @@ async function createOrUpdateTask(
     task.statusReason = statusReason
   }
 
-  try {
-    if (existingTasks.length > 0) {
-      console.log(`Updating ${existingTasks.length} existing tasks`)
-      // Update all existing tasks
-      const updatedTasks = await Promise.all(
-        existingTasks.map(async (existingTask) => {
-          if (existingTask.id) {
-            const freshTask = await medplum.readResource(
-              'Task',
-              existingTask.id,
-            )
-            const resultTask = await medplum.updateResource({
-              ...freshTask,
-              status: task.status,
-              statusReason: task.statusReason,
-            })
-            console.log(
-              'Task successfully updated:',
-              JSON.stringify(
-                {
-                  taskId: resultTask.id,
-                  status: resultTask.status,
-                  statusReason: resultTask.statusReason?.coding?.[0]?.code,
-                  lastUpdated: resultTask.meta?.lastUpdated,
-                  activityStatus: activity.status,
-                  eventType: eventData.event_type,
-                },
-                null,
-                2,
-              ),
-            )
-            return resultTask
-          }
-        }),
-      )
-      return updatedTasks[0]?.id || ''
-    }
-
-    console.log('Creating new task for activity:', activity.id)
-    const resultTask = await medplum.createResource(task)
-    console.log(
-      'Task created successfully:',
-      JSON.stringify(
-        {
-          taskId: resultTask.id,
-          status: resultTask.status,
-          statusReason: resultTask.statusReason?.coding?.[0]?.code,
-          activityId: activity.id,
-          patientId: patientId,
-          pathwayId: pathway?.id || 'Unknown',
-          eventType: eventData.event_type,
-        },
-        null,
-        2,
-      ),
-    )
+  if (existingTask?.id) {
+    const freshTask = await medplum.readResource('Task', existingTask.id)
+    const resultTask = await medplum.updateResource({
+      ...freshTask,
+      status: task.status,
+      statusReason: task.statusReason,
+    })
     return resultTask.id || ''
-  } catch (error) {
-    console.log(
-      'Error processing task:',
-      JSON.stringify(
-        {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          activityId: activity.id,
-          activityStatus: activity.status,
-          eventType: eventData.event_type,
-          stakeholderId: activity.indirect_object?.id,
-        },
-        null,
-        2,
-      ),
-    )
-    throw error
   }
-}
 
-/**
- * Creates a FHIR Communication resource to notify other bots that enrichment can begin.
- * This communication serves as a signal that a task has been created/updated and
- * enrichment bots can now start their processing.
- */
-async function createEnrichmentCommunication(
-  medplum: MedplumClient,
-  activity: ActivityData['activity'],
-  patientId: string,
-  pathway: ActivityData['pathway'] | undefined,
-  taskId: string,
-  eventData: ActivityData,
-): Promise<void> {
-  try {
-    const communication: Communication = {
-      resourceType: 'Communication',
-      status: 'completed',
-      category: [
-        {
-          coding: [
-            {
-              system:
-                'http://awellhealth.com/fhir/CodeSystem/communication-category',
-              code: 'enrichment',
-              display: 'Enrichment',
-            },
-          ],
-        },
-      ],
-      subject: {
-        reference: `Patient/${patientId}`,
-      },
-      sent: new Date().toISOString(),
-      reasonCode: [
-        {
-          coding: [
-            {
-              system:
-                'https://awellhealth.com/fhir/CodeSystem/communication-reason',
-              code: 'ready-for-enrichment',
-              display: 'Ready for Enrichment',
-            },
-          ],
-        },
-      ],
-      note: [
-        {
-          text: `Task created/updated for activity ${activity.id}. Enrichment bots can now process this patient.`,
-        },
-      ],
-      payload: [
-        {
-          contentString: JSON.stringify({
-            eventData,
-          }),
-        },
-      ],
-    }
-
-    const resultCommunication = await medplum.createResource(communication)
-    console.log(
-      'Enrichment communication created:',
-      JSON.stringify(
-        {
-          communicationId: resultCommunication.id,
-          activityId: activity.id,
-          patientId: patientId,
-          pathwayId: pathway?.id || eventData.pathway_id || 'Unknown',
-          lastUpdated: resultCommunication.meta?.lastUpdated,
-        },
-        null,
-        2,
-      ),
-    )
-  } catch (error) {
-    console.log(
-      'Error creating enrichment communication:',
-      JSON.stringify(
-        {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          activityId: activity.id,
-          patientId: patientId,
-        },
-        null,
-        2,
-      ),
-    )
-    // Don't throw error here as this is not critical for the main flow
-  }
+  const resultTask = await medplum.createResource(task)
+  return resultTask.id || ''
 }
 
 // Main handler
@@ -495,84 +285,21 @@ export async function handler(
   }
 
   console.log(
-    'Bot started processing activity:',
-    JSON.stringify(
-      {
-        activityId: activity.id,
-        eventType: event.input.event_type,
-        pathwayId: event.input.pathway_id,
-      },
-      null,
-      2,
-    ),
+    `Starting activity-to-task process for activity ${activity.id} (${event.input.event_type})`,
   )
 
   try {
     const patientId = await findOrCreatePatient(medplum, awellPatientId)
-    const taskId = await createOrUpdateTask(
-      medplum,
-      activity,
-      patientId,
-      pathway,
-      event.input,
-    )
-
-    // Only create enrichment communication for active tasks
-    // Cancelled or deleted activities should not trigger enrichment
-    if (
-      activity.status !== 'canceled' &&
-      event.input.event_type !== 'activity.deleted'
-    ) {
-      await createEnrichmentCommunication(
-        medplum,
-        activity,
-        patientId,
-        pathway,
-        taskId,
-        event.input,
-      )
-    } else {
-      console.log(
-        'Skipping enrichment communication for cancelled/deleted activity:',
-        JSON.stringify(
-          {
-            activityId: activity.id,
-            activityStatus: activity.status,
-            eventType: event.input.event_type,
-          },
-          null,
-          2,
-        ),
-      )
-    }
+    await createOrUpdateTask(medplum, activity, patientId, pathway, event.input)
 
     console.log(
-      'Bot finished processing activity:',
-      JSON.stringify(
-        {
-          activityId: activity.id,
-          activityStatus: activity.status,
-          eventType: event.input.event_type,
-          taskCreated: activity.indirect_object?.type === 'stakeholder',
-          enrichmentTriggered:
-            activity.status !== 'canceled' &&
-            event.input.event_type !== 'activity.deleted',
-        },
-        null,
-        2,
-      ),
+      `Activity-to-task completed successfully for activity ${activity.id}: task processed with status '${activity.status}'`,
     )
   } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error'
     console.log(
-      'Error in handler:',
-      JSON.stringify(
-        {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          activityId: activity.id,
-        },
-        null,
-        2,
-      ),
+      `Activity-to-task failed for activity ${activity.id}: ${errorMessage}`,
     )
     throw error
   }
