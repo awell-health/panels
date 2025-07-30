@@ -18,7 +18,10 @@ const Dialog = ({
 }: DialogProps) => {
   return (
     <dialog
-      className={cn('modal', open && 'modal-open')}
+      className={cn(
+        'fixed inset-0 z-50 flex items-start justify-center w-full h-full bg-black/50 text-xs pt-10',
+        open ? 'block' : 'hidden',
+      )}
       onClick={(e) => {
         e.stopPropagation()
         onOpenChange?.(false)
@@ -32,7 +35,10 @@ const Dialog = ({
     >
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: it's a modal */}
       <div
-        className={cn('modal-box p-0', className)}
+        className={cn(
+          'bg-white rounded-lg shadow-xl max-w-md mx-auto p-0 overflow-hidden h-full ',
+          className,
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
@@ -45,7 +51,14 @@ const DialogTrigger = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement>
 >(({ className, children, ...props }, ref) => (
-  <button ref={ref} className={cn('btn', className)} {...props}>
+  <button
+    ref={ref}
+    className={cn(
+      'inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700',
+      className,
+    )}
+    {...props}
+  >
     {children}
   </button>
 ))

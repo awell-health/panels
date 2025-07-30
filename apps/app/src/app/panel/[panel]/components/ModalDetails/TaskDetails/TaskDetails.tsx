@@ -18,33 +18,31 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
       {VIEWS.map((view) => (
         <div
           key={view}
-          className={`flex-1 overflow-y-auto p-2 border-r border-gray-200 ${
+          className={`h-full p-2 border-r border-gray-200 overflow-auto ${
             view === 'content' ? 'w-[36%]' : 'w-[32%]'
           }`}
         >
-          <div className="h-full">
-            {view === 'ahp' && (
-              <div className="flex flex-col h-full">
-                <TaskAsignment task={task} />
-                <div className="flex-1 overflow-hidden">
-                  <FramePanel
-                    url={AHP_URL}
-                    status={task.status}
-                    taskName={task.description}
-                  />
-                </div>
+          {view === 'ahp' && (
+            <div className="flex flex-col h-full">
+              <TaskAsignment task={task} />
+              <div className="flex-1 overflow-hidden">
+                <FramePanel
+                  url={AHP_URL}
+                  status={task.status}
+                  taskName={task.description}
+                />
               </div>
-            )}
-            {view === 'content' && (
-              <div className="p-2">
-                <StaticContent task={task} />
-                <div className="mt-4">
-                  <ConnectorsSection task={task} showAhpConnector={!!AHP_URL} />
-                </div>
+            </div>
+          )}
+          {view === 'content' && (
+            <>
+              <StaticContent task={task} />
+              <div className="mt-4">
+                <ConnectorsSection task={task} showAhpConnector={!!AHP_URL} />
               </div>
-            )}
-            {view === 'notes' && <TaskComments task={task} />}
-          </div>
+            </>
+          )}
+          {view === 'notes' && <TaskComments task={task} />}
         </div>
       ))}
     </>

@@ -81,7 +81,7 @@ export default function PanelToolbar({
           {/* Column management buttons */}
           <button
             type="button"
-            className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-700"
+            className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
             onClick={onAddColumn}
           >
             <Plus className="mr-1 h-3 w-3" /> Add column
@@ -93,7 +93,7 @@ export default function PanelToolbar({
         <div className="flex items-center space-x-2">
           {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
           <button
-            className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-700"
+            className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
             onClick={() => {
               console.log('Actions')
             }}

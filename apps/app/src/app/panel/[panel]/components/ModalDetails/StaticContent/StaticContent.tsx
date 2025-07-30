@@ -104,7 +104,7 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
   }
 
   return (
-    <div className="overflow-y-auto h-full">
+    <div className="">
       <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
         <div

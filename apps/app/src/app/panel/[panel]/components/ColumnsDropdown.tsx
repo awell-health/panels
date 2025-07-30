@@ -150,7 +150,7 @@ export function ColumnsDropdown({ context }: ColumnsDropdownProps) {
       <button
         ref={buttonRef}
         type="button"
-        className="btn text-xs font-normal h-8 px-2 flex items-center text-gray-700 hover:bg-gray-100"
+        className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
         onClick={toggleDropdown}
       >
         <Settings className="mr-1 h-3 w-3" />

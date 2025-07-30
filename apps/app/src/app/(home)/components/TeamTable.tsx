@@ -20,7 +20,7 @@ const TeamTable: React.FC<TeamTableProps> = ({ users }) => {
         <h2 className="text-base font-medium">Teams and users</h2>
         <button
           type="button"
-          className="btn btn-sm bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs"
+          className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200"
         >
           <Plus className="h-3 w-3 mr-1" />
           Add User

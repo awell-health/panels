@@ -2,7 +2,6 @@ import { useOptimistic, useTransition } from 'react'
 import { useAuthentication } from '../../../../../../hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import type { WorklistTask } from '@/lib/fhir-to-table-data'
-import { LoaderCircle } from 'lucide-react'
 import { cn } from '../../../../../../lib/utils'
 
 type AssigneeState = {
@@ -56,17 +55,12 @@ const TaskAsignment = ({ task }: { task: WorklistTask }) => {
       .toLowerCase()
       .trim() === user?.name?.toLowerCase().trim()
 
-  const loader = <LoaderCircle className="w-4 h-4 animate-spin" />
-  const buttonClassNames = cn(
-    'group flex items-center gap-1 px-3 py-1 rounded text-xs transition-colors cursor-pointer border',
-    {
-      'text-red-600 border-red-200 hover:bg-red-50':
-        isCurrentUser && !isPending,
-      'text-blue-600 border-blue-200 hover:bg-blue-50':
-        !isCurrentUser && !isPending,
-      'text-gray-600 border-0': isPending,
-    },
-  )
+  const loader = <span className="loading loading-spinner loading-xs" />
+  const buttonClassNames = cn('btn btn-outline btn-xs', {
+    'btn-error': isCurrentUser && !isPending,
+    'btn-primary': !isCurrentUser && !isPending,
+    'btn-square': isPending,
+  })
 
   return (
     <div className="flex-shrink-0 p-2  rounded-lg border border-gray-200 mb-4">
