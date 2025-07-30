@@ -78,16 +78,6 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
     return null
   }
 
-  // Show loading state while tracks are loading
-  if (isLoadingTracks) {
-    return (
-      <div className="flex items-center gap-2">
-        <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
-        <span className="text-sm text-gray-600">Loading tracks...</span>
-      </div>
-    )
-  }
-
   // Don't show button if no tracks available or if there was an error loading them
   if (!hasAvailableTracks || tracksError) {
     return null
@@ -95,60 +85,63 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
 
   const isLoading = isActivatingTrack || isOptimisticUpdate
 
+  if (isLoadingTracks) {
+    return (
+      <button type="button" tabIndex={0} className="btn btn-xs btn-default">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading tracks...
+      </button>
+    )
+  }
+
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        disabled={isLoading}
-        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-        aria-label="Add manual documentation track"
-      >
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Plus className="h-4 w-4" />
-        )}
-        Add Task
-        <ChevronDown
-          className={`h-3 w-3 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
-        />
-      </button>
+      <div className="dropdown dropdown-end">
+        <button type="button" tabIndex={0} className="btn btn-xs btn-default">
+          <>
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+            Add Task
+            <ChevronDown
+              className={`h-3 w-3 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+            />
+          </>
+        </button>
+        <ul
+          // tabIndex={0}
+          className="dropdown-content menu bg-base-100 rounded-box z-1 w-48 shadow p-1"
+        >
+          {availableTracks.map((track) => {
+            const isTrackDisabled = !track.isPathwayActive || isLoading
+            const trackTooltip = !track.isPathwayActive
+              ? `Care flow is ${track.pathwayStatus} - track unavailable`
+              : undefined
 
-      {isDropdownOpen && (
-        <div className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-          <div className="p-3">
-            <div className="space-y-1">
-              {availableTracks.map((track) => {
-                const isTrackDisabled = !track.isPathwayActive || isLoading
-                const trackTooltip = !track.isPathwayActive
-                  ? `Care flow is ${track.pathwayStatus} - track unavailable`
-                  : undefined
-
-                return (
-                  <button
-                    key={`${track.id}-${track.pathwayId}`}
-                    type="button"
-                    onClick={() => handleTrackSelection(track)}
-                    disabled={isTrackDisabled}
-                    title={trackTooltip}
-                    className={`w-full px-3 py-2 text-left text-sm rounded-md transition-colors flex items-center gap-2 ${
-                      isTrackDisabled
-                        ? 'text-gray-400 cursor-not-allowed bg-gray-50'
-                        : 'text-gray-700 hover:bg-gray-50 cursor-pointer'
-                    }`}
-                  >
-                    <Plus
-                      className={`h-3 w-3 ${isTrackDisabled ? 'text-gray-300' : 'text-gray-500'}`}
-                    />
-                    <span>{track.title}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+            return (
+              <li key={`${track.id}-${track.pathwayId}`}>
+                <button
+                  type="button"
+                  onClick={() => handleTrackSelection(track)}
+                  disabled={isTrackDisabled}
+                  title={trackTooltip}
+                  className={`text-xs ${
+                    isTrackDisabled
+                      ? 'text-gray-400 cursor-not-allowed bg-gray-50'
+                      : 'text-gray-700 hover:bg-gray-50 cursor-pointer'
+                  }`}
+                >
+                  <Plus
+                    className={`h-3 w-3 ${isTrackDisabled ? 'text-gray-300' : 'text-gray-900'}`}
+                  />
+                  <span>{track.title}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
     </div>
   )
 }
