@@ -272,7 +272,9 @@ async function findOrCreatePatient(
   patientIdentifiers: Array<{ system: string; value: string }>,
 ): Promise<string> {
   // Search for existing patient
-  const searchQuery = `identifier=https://awellhealth.com/patients|${patientId}`
+  const searchQuery = {
+    identifier: `https://awellhealth.com/patients|${patientId}`,
+  }
 
   console.log(
     'Searching for existing patient:',
@@ -286,11 +288,10 @@ async function findOrCreatePatient(
     ),
   )
 
-  const existingPatients = await medplum.searchResources('Patient', searchQuery)
+  const existingPatient = await medplum.searchOne('Patient', searchQuery)
 
-  if (existingPatients.length > 0) {
-    const existingPatient = existingPatients[0]
-    if (!existingPatient?.id) {
+  if (existingPatient) {
+    if (!existingPatient.id) {
       throw new Error('Found patient but missing ID')
     }
     console.log(

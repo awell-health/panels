@@ -5,7 +5,6 @@ import type {
   ContactPoint,
   Address,
   Identifier,
-  BundleEntry,
 } from '@medplum/fhirtypes'
 
 // Types for webhook payload
@@ -239,19 +238,137 @@ function convertSexToGender(
   return undefined
 }
 
-async function upsertPatient(
+function createPatientProfilePatchOps(
+  profile: PatientProfile,
+  existingPatient: Patient,
+  awellPatientId: string,
+): Array<{
+  op: 'replace' | 'add' | 'remove'
+  path: string
+  value?: unknown
+}> {
+  const patchOps: Array<{
+    op: 'replace' | 'add' | 'remove'
+    path: string
+    value?: unknown
+  }> = []
+
+  // Update name
+  const name = createPatientName(profile)
+  if (Object.keys(name).length > 0) {
+    patchOps.push({
+      op: 'replace',
+      path: '/name',
+      value: [name],
+    })
+  }
+
+  // Update identifiers - properly merge existing identifiers with new ones
+  const newIdentifiers = createPatientIdentifiers(awellPatientId, profile)
+  const additionalIdentifiers = newIdentifiers.filter(
+    (id) => id.system !== 'https://awellhealth.com/patients',
+  )
+
+  if (additionalIdentifiers.length > 0) {
+    // Preserve existing identifiers and merge with new ones
+    const existingIdentifiers = existingPatient.identifier || []
+
+    // Keep Awell identifier and non-Awell existing identifiers, then add new additional identifiers
+    const preservedIdentifiers = existingIdentifiers.filter(
+      (id) =>
+        id.system === 'https://awellhealth.com/patients' ||
+        !additionalIdentifiers.some(
+          (newId) => newId.system === id.system && newId.value === id.value,
+        ),
+    )
+
+    const mergedIdentifiers = [
+      ...preservedIdentifiers,
+      ...additionalIdentifiers,
+    ]
+
+    patchOps.push({
+      op: 'replace',
+      path: '/identifier',
+      value: mergedIdentifiers,
+    })
+  }
+
+  // Update telecom
+  const telecom = createPatientTelecom(profile)
+  if (telecom.length > 0) {
+    patchOps.push({
+      op: 'replace',
+      path: '/telecom',
+      value: telecom,
+    })
+  }
+
+  // Update address
+  const address = createPatientAddress(profile)
+  if (Object.keys(address).length > 0) {
+    patchOps.push({
+      op: 'replace',
+      path: '/address',
+      value: [address],
+    })
+  }
+
+  // Update gender
+  const gender = convertSexToGender(profile.sex)
+  if (gender) {
+    patchOps.push({
+      op: 'replace',
+      path: '/gender',
+      value: gender,
+    })
+  }
+
+  // Update birth date
+  const birthDate = formatBirthDate(profile.birth_date)
+  if (birthDate) {
+    patchOps.push({
+      op: 'replace',
+      path: '/birthDate',
+      value: birthDate,
+    })
+  }
+
+  // Update communication/preferred language
+  const preferredLanguage = safeStringTrim(profile.preferred_language)
+  if (preferredLanguage) {
+    patchOps.push({
+      op: 'replace',
+      path: '/communication',
+      value: [
+        {
+          language: {
+            coding: [
+              {
+                system: 'urn:ietf:bcp:47',
+                code: preferredLanguage,
+              },
+            ],
+          },
+        },
+      ],
+    })
+  }
+
+  return patchOps
+}
+
+async function createOrPatchPatient(
   medplum: MedplumClient,
   awellPatientId: string,
   profile: PatientProfile,
 ): Promise<Patient> {
-  const fhirPatient = createFhirPatient(awellPatientId, profile)
-
-  // Use upsert with Awell patient ID as the search criteria
-  // This will either update existing patient or create new one atomically
-  const searchQuery = `identifier=https://awellhealth.com/patients|${awellPatientId}`
+  const searchQuery = {
+    identifier: `https://awellhealth.com/patients|${awellPatientId}`,
+  }
 
   console.log(
-    'Upserting patient:',
+    'Searching for existing patient:',
     JSON.stringify(
       {
         awellPatientId,
@@ -262,22 +379,108 @@ async function upsertPatient(
     ),
   )
 
-  const upsertedPatient = await medplum.upsertResource(fhirPatient, searchQuery)
+  // Search for existing patient first
+  const existingPatient = await medplum.searchOne('Patient', searchQuery)
+
+  if (existingPatient) {
+    // Patient exists - use PATCH to update only profile data, preserving extensions
+
+    console.log(
+      'Found existing patient, updating profile with PATCH:',
+      JSON.stringify(
+        {
+          awellPatientId,
+          existingPatientId: existingPatient.id,
+          existingExtensionsCount: existingPatient.extension?.length || 0,
+        },
+        null,
+        2,
+      ),
+    )
+
+    // Create patch operations for profile data only
+    const patchOps = createPatientProfilePatchOps(
+      profile,
+      existingPatient,
+      awellPatientId,
+    )
+
+    if (patchOps.length > 0) {
+      console.log(
+        `Applying ${patchOps.length} PATCH operations to update patient profile`,
+      )
+      const patientId = existingPatient.id
+      if (!patientId) {
+        throw new Error('Patient ID is missing')
+      }
+
+      // Add version test to prevent race conditions
+      const patchOpsWithVersionTest = [
+        {
+          op: 'test' as const,
+          path: '/meta/versionId',
+          value: existingPatient.meta?.versionId,
+        },
+        ...patchOps,
+      ]
+
+      const patchedPatient = await medplum.patchResource(
+        'Patient',
+        patientId,
+        patchOpsWithVersionTest,
+      )
+
+      console.log(
+        'Patient profile updated successfully:',
+        JSON.stringify(
+          {
+            awellPatientId,
+            patientId: patchedPatient.id,
+            lastUpdated: patchedPatient.meta?.lastUpdated,
+            preservedExtensionsCount: patchedPatient.extension?.length || 0,
+          },
+          null,
+          2,
+        ),
+      )
+
+      return patchedPatient
+    }
+
+    console.log('No profile changes detected, returning existing patient')
+    return existingPatient
+  }
+
+  // Patient does not exist - create new patient
+  const newPatient = createFhirPatient(awellPatientId, profile)
 
   console.log(
-    'Patient upserted successfully:',
+    'Creating new patient:',
     JSON.stringify(
       {
         awellPatientId,
-        medplumPatientId: upsertedPatient.id,
-        lastUpdated: upsertedPatient.meta?.lastUpdated,
       },
       null,
       2,
     ),
   )
 
-  return upsertedPatient
+  const createdPatient = await medplum.createResource(newPatient)
+
+  console.log(
+    'Patient created successfully:',
+    JSON.stringify(
+      {
+        awellPatientId,
+        patientId: createdPatient.id,
+        lastUpdated: createdPatient.meta?.lastUpdated,
+      },
+      null,
+      2,
+    ),
+  )
+
+  return createdPatient
 }
 
 async function handlePatientCreated(
@@ -300,7 +503,7 @@ async function handlePatientCreated(
   )
 
   try {
-    await upsertPatient(medplum, awellPatientId, profile)
+    await createOrPatchPatient(medplum, awellPatientId, profile)
   } catch (error) {
     console.log(
       'Error creating patient:',
@@ -337,7 +540,7 @@ async function handlePatientUpdated(
   )
 
   try {
-    await upsertPatient(medplum, awellPatientId, profile)
+    await createOrPatchPatient(medplum, awellPatientId, profile)
   } catch (error) {
     console.log(
       'Error updating patient:',
@@ -357,25 +560,24 @@ async function handlePatientUpdated(
 async function findPatientByAwellId(
   medplum: MedplumClient,
   awellPatientId: string,
-): Promise<BundleEntry<Patient> | undefined> {
+): Promise<Patient | undefined> {
   try {
-    const searchResult = await medplum.search(
-      'Patient',
-      `identifier=https://awellhealth.com/patients|${awellPatientId}`,
-    )
-    if (searchResult.entry?.[0]?.resource?.id) {
+    const patient = await medplum.searchOne('Patient', {
+      identifier: `https://awellhealth.com/patients|${awellPatientId}`,
+    })
+    if (patient?.id) {
       console.log(
         'Patient found in Medplum:',
         JSON.stringify(
           {
             awellPatientId,
-            medplumPatientId: searchResult.entry[0].resource.id,
+            medplumPatientId: patient.id,
           },
           null,
           2,
         ),
       )
-      return searchResult.entry[0]
+      return patient
     }
   } catch (error) {
     console.log(
@@ -414,7 +616,7 @@ async function handlePatientDeleted(
   try {
     // For deleted webhooks, profile is not set, so we search only by Awell patient ID
     const existingPatient = await findPatientByAwellId(medplum, awellPatientId)
-    if (!existingPatient?.resource?.id) {
+    if (!existingPatient?.id) {
       console.log(
         'Patient not found for deletion:',
         JSON.stringify({ awellPatientId }, null, 2),
@@ -425,7 +627,7 @@ async function handlePatientDeleted(
     // delete all tasks for this patient
     const tasks = await medplum.search(
       'Task',
-      `subject=Patient/${existingPatient.resource.id}`,
+      `subject=Patient/${existingPatient.id}`,
     )
     if (tasks.entry) {
       console.log(
@@ -446,14 +648,14 @@ async function handlePatientDeleted(
     }
 
     // Hard delete - completely remove the resource
-    await medplum.deleteResource('Patient', existingPatient.resource.id)
+    await medplum.deleteResource('Patient', existingPatient.id)
 
     console.log(
       'Patient deleted successfully:',
       JSON.stringify(
         {
           awellPatientId,
-          medplumPatientId: existingPatient.resource.id,
+          medplumPatientId: existingPatient.id,
           deletedAt: new Date().toISOString(),
         },
         null,

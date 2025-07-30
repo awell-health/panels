@@ -1,6 +1,5 @@
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type {
-  BundleEntry,
   Patient,
   Composition,
   CompositionSection,
@@ -44,25 +43,24 @@ type ClinicalNoteWebhookPayload = {
 async function findPatientByIdentifier(
   medplum: MedplumClient,
   patientId: string,
-): Promise<BundleEntry<Patient> | undefined> {
+): Promise<Patient | undefined> {
   try {
-    const searchResult = await medplum.search(
-      'Patient',
-      `identifier=${patientId}`,
-    )
-    if (searchResult.entry?.[0]?.resource?.id) {
+    const patient = await medplum.searchOne('Patient', {
+      identifier: `https://awellhealth.com/patients|${patientId}`,
+    })
+    if (patient?.id) {
       console.log(
         'Patient found in system:',
         JSON.stringify(
           {
             patientId,
-            foundPatientId: searchResult.entry[0].resource.id,
+            foundPatientId: patient.id,
           },
           null,
           2,
         ),
       )
-      return searchResult.entry[0]
+      return patient
     }
   } catch (error) {
     console.log(
@@ -214,9 +212,9 @@ export async function handler(
 
   try {
     // Search for the patient in Medplum
-    const patientEntry = await findPatientByIdentifier(medplum, awellPatientId)
+    const patient = await findPatientByIdentifier(medplum, awellPatientId)
 
-    if (!patientEntry || !patientEntry.resource) {
+    if (!patient) {
       console.log(
         'Patient not found in Medplum, skipping composition creation:',
         JSON.stringify(
@@ -231,7 +229,7 @@ export async function handler(
       return
     }
 
-    const patientId = patientEntry.resource.id
+    const patientId = patient.id
     if (!patientId) {
       console.log(
         'Patient resource has no ID, skipping composition creation:',
