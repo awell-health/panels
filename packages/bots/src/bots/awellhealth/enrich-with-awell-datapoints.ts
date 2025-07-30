@@ -1,15 +1,18 @@
 import type { BotEvent, MedplumClient } from '@medplum/core'
-import type { Task, Extension } from '@medplum/fhirtypes'
+import type { Task, Extension, TaskInput } from '@medplum/fhirtypes'
 
 // Constants for extension URLs
 const AWELL_TASK_EXTENSION_URL =
   'https://awellhealth.com/fhir/StructureDefinition/awell-task'
 const AWELL_DATA_POINTS_EXTENSION_URL =
   'https://awellhealth.com/fhir/StructureDefinition/awell-data-points'
+const AWELL_ENRICHMENT_STATUS_EXTENSION_URL =
+  'https://awellhealth.com/fhir/StructureDefinition/awell-enrichment-status'
 
 interface ApiConfig {
   endpoint: string
   apiKey: string
+  environment: string
 }
 
 interface GraphQLError {
@@ -36,15 +39,57 @@ interface DataPointsResponse {
   errors?: GraphQLError[]
 }
 
+interface BaselineDataPoint {
+  value: string
+  definition: {
+    id: string
+    valueType: string
+  }
+}
+
 interface BaselineInfoResponse {
   data: {
     baselineInfo: {
-      baselineDataPoints: DataPoint[]
+      baselineDataPoints: BaselineDataPoint[]
     }
   }
   errors?: GraphQLError[]
 }
 
+interface GetHostedPagesLinkResponse {
+  data: {
+    hostedPagesLink: {
+      hosted_pages_link: { url: string }
+    }
+  }
+  errors?: GraphQLError[]
+}
+
+interface PossibleValue {
+  value: string
+  label: string
+}
+
+interface DataPointDefinition {
+  id: string
+  title: string
+  possibleValues?: PossibleValue[]
+}
+
+interface DataPoint {
+  serialized_value: string
+  data_point_definition_id: string
+  valueType: string
+}
+
+interface TaskExtensionData {
+  releaseId: string
+  pathwayId: string
+  activityId?: string
+  stakeholderId?: string
+}
+
+// GraphQL Queries
 const GET_DATA_POINT_DEFINITIONS_QUERY = `
   query GetPathwayDataPointDefinitions(
     $release_id: String!
@@ -65,7 +110,7 @@ const GET_DATA_POINT_DEFINITIONS_QUERY = `
 `
 
 const GET_DATA_POINT_QUERY = `
-    query GetPathwayDataPoints($pathway_id: String!, $activity_id: String) {
+  query GetPathwayDataPoints($pathway_id: String!, $activity_id: String) {
     pathwayDataPoints(
       pathway_id: $pathway_id
       activity_id: $activity_id
@@ -74,7 +119,6 @@ const GET_DATA_POINT_QUERY = `
         serialized_value
         data_point_definition_id
         valueType
-        date
       }
     }
   }
@@ -84,48 +128,35 @@ const GET_BASELINE_INFO_QUERY = `
   query GetBaselineInfo($pathway_id: String!) {
     baselineInfo(pathway_id: $pathway_id) {
       baselineDataPoints {
-        serialized_value
-        data_point_definition_id
-        valueType
-        date
+        value
+        definition {
+          id
+          valueType
+        }
       }
     }
   }
 `
 
-interface PossibleValue {
-  value: string
-  label: string
-}
+const GET_HOSTED_PAGES_LINK = `
+  query GetHostedPagesLink($pathwayId: String!, $stakeholderId: String!) {
+    hostedPagesLink(pathway_id: $pathwayId, stakeholder_id: $stakeholderId) {
+      code
+      success
+      hosted_pages_link {
+        url
+        __typename
+      }
+      __typename
+    }
+  }
+`
 
-interface DataPointDefinition {
-  id: string
-  title: string
-  possibleValues?: PossibleValue[]
-}
-
-interface DataPoint {
-  serialized_value: string
-  data_point_definition_id: string
-  valueType: string
-  date: string
-}
-
-interface TaskExtensionData {
-  releaseId: string
-  pathwayId: string
-  activityId?: string
-}
-
-// Generic GraphQL fetch function to eliminate duplication
 async function executeGraphQLQuery<T>(
   config: ApiConfig,
   query: string,
   variables: Record<string, unknown>,
-  operationName: string,
 ): Promise<T> {
-  console.log(`Executing ${operationName} with variables:`, variables)
-
   const response = await fetch(config.endpoint, {
     method: 'POST',
     headers: {
@@ -136,11 +167,21 @@ async function executeGraphQLQuery<T>(
   })
 
   if (!response.ok) {
-    throw new Error(`GraphQL request failed with status ${response.status}`)
+    const responseText = await response.text()
+    throw new Error(
+      `GraphQL request failed with status ${response.status}: ${response.statusText}. Response: ${responseText}`,
+    )
   }
 
   const data = (await response.json()) as T
-  console.log(`${operationName} completed successfully`)
+  const dataWithErrors = data as unknown as { errors?: GraphQLError[] }
+  if (dataWithErrors.errors && Array.isArray(dataWithErrors.errors)) {
+    const errorMessages = dataWithErrors.errors
+      .map((err) => err.message)
+      .join('; ')
+    throw new Error(`GraphQL errors: ${errorMessages}`)
+  }
+
   return data
 }
 
@@ -152,13 +193,8 @@ async function fetchDataPointDefinitions(
     config,
     GET_DATA_POINT_DEFINITIONS_QUERY,
     { release_id: releaseId },
-    'fetchDataPointDefinitions',
   )
-
-  const definitions =
-    data.data.pathwayDataPointDefinitions.data_point_definitions
-  console.log(`Retrieved ${definitions.length} data point definitions`)
-  return definitions
+  return data.data.pathwayDataPointDefinitions.data_point_definitions
 }
 
 async function fetchDataPoints(
@@ -166,53 +202,100 @@ async function fetchDataPoints(
   pathwayId: string,
   activityId?: string,
 ): Promise<DataPoint[]> {
-  const isBaseline = !activityId
-  const operationName = isBaseline
-    ? 'fetchBaselineDataPoints'
-    : 'fetchActivityDataPoints'
-
-  if (isBaseline) {
+  if (!activityId) {
     const data = await executeGraphQLQuery<BaselineInfoResponse>(
       config,
       GET_BASELINE_INFO_QUERY,
       { pathway_id: pathwayId },
-      operationName,
     )
-
-    const dataPoints = data.data.baselineInfo.baselineDataPoints
-    console.log(`Retrieved ${dataPoints.length} baseline data points`)
-    return dataPoints
+    return data.data.baselineInfo.baselineDataPoints.map((dp) => ({
+      data_point_definition_id: dp.definition.id,
+      valueType: dp.definition.valueType,
+      serialized_value: dp.value,
+    }))
   }
 
   const data = await executeGraphQLQuery<DataPointsResponse>(
     config,
     GET_DATA_POINT_QUERY,
     { pathway_id: pathwayId, activity_id: activityId },
-    operationName,
   )
+  return data.data.pathwayDataPoints.dataPoints
+}
 
-  const dataPoints = data.data.pathwayDataPoints.dataPoints
-  console.log(`Retrieved ${dataPoints.length} activity-specific data points`)
-  return dataPoints
+async function fetchHostedPagesLink(
+  config: ApiConfig,
+  pathwayId: string,
+  stakeholderId: string,
+): Promise<string | null> {
+  try {
+    const data = await executeGraphQLQuery<GetHostedPagesLinkResponse>(
+      config,
+      GET_HOSTED_PAGES_LINK,
+      { pathwayId, stakeholderId },
+    )
+    return data.data.hostedPagesLink.hosted_pages_link.url
+  } catch (error) {
+    throw new Error(
+      `Failed to fetch hosted pages link: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    )
+  }
+}
+
+function extractFromTaskExtension(
+  task: Task,
+  fieldName: string,
+): string | null {
+  const awellExtension = task.extension
+    ?.find((ext) => ext.url === AWELL_TASK_EXTENSION_URL)
+    ?.extension?.find((ext) => ext.url === fieldName)
+  return awellExtension?.valueString || null
+}
+
+function extractTaskExtensionData(task: Task): TaskExtensionData | null {
+  const releaseId = extractFromTaskExtension(task, 'release-id')
+  const pathwayId = extractFromTaskExtension(task, 'pathway-id')
+  const activityId = extractFromTaskExtension(task, 'activity-id')
+  const stakeholderId = extractFromTaskExtension(task, 'stakeholder-id')
+
+  if (!releaseId || !pathwayId) {
+    return null
+  }
+
+  return {
+    releaseId,
+    pathwayId,
+    activityId: activityId || undefined,
+    stakeholderId: stakeholderId || undefined,
+  }
+}
+
+function hasEnrichmentBeenDone(task: Task, status: string): boolean {
+  const enrichmentExtension = task.extension?.find(
+    (ext) => ext.url === AWELL_ENRICHMENT_STATUS_EXTENSION_URL,
+  )
+  const statusExtension = enrichmentExtension?.extension?.find(
+    (ext) => ext.url === status,
+  )
+  return statusExtension?.valueBoolean === true
 }
 
 function createDataPointExtensions(
   dataPoints: DataPoint[],
   dataPointDefinitions: DataPointDefinition[],
 ): Extension[] {
-  if (dataPoints.length === 0) {
-    console.log('No data points to process')
-    return []
-  }
+  if (dataPoints.length === 0) return []
 
   const result: Extension[] = []
 
-  // Process non-JSON data points
-  const nonJsonDataPoints = dataPoints.filter((dp) => dp.valueType !== 'JSON')
-  if (nonJsonDataPoints.length > 0) {
-    const extensions = nonJsonDataPoints
+  // Data points are added to the awell-data-points extension in tasks & patients
+  // JSON data points are excluded from there as they tend to be large and
+  // therefore cause rendering issues.
+  const standardDataPoints = dataPoints.filter((dp) => dp.valueType !== 'JSON')
+  if (standardDataPoints.length > 0) {
+    const extensions = standardDataPoints
       .map((dataPoint) =>
-        createSingleDataPointExtension(dataPoint, dataPointDefinitions),
+        createSingleDataPointExtensions(dataPoint, dataPointDefinitions),
       )
       .filter(
         (ext): ext is { url: string; valueString: string }[] => ext !== null,
@@ -227,12 +310,13 @@ function createDataPointExtensions(
     }
   }
 
-  // Process JSON data points
+  // JSON data points are added to a separate extension so that they can
+  // be rendered with specific styling to help with readability.
   const jsonDataPoints = dataPoints.filter((dp) => dp.valueType === 'JSON')
   if (jsonDataPoints.length > 0) {
     const extensions = jsonDataPoints
       .map((dataPoint) =>
-        createSingleDataPointExtension(dataPoint, dataPointDefinitions),
+        createSingleDataPointExtensions(dataPoint, dataPointDefinitions),
       )
       .filter(
         (ext): ext is { url: string; valueString: string }[] => ext !== null,
@@ -247,13 +331,10 @@ function createDataPointExtensions(
     }
   }
 
-  console.log(
-    `Created ${result.length} extension groups from ${dataPoints.length} data points`,
-  )
   return result
 }
 
-function createSingleDataPointExtension(
+function createSingleDataPointExtensions(
   dataPoint: DataPoint,
   dataPointDefinitions: DataPointDefinition[],
 ): { url: string; valueString: string }[] | null {
@@ -261,17 +342,7 @@ function createSingleDataPointExtension(
     (def) => def.id === dataPoint.data_point_definition_id,
   )
 
-  if (!definition) {
-    console.log(
-      `WARNING: No definition found for data point with ID: ${dataPoint.data_point_definition_id}`,
-    )
-    return null
-  }
-
-  if (!dataPoint.serialized_value || !definition.title) {
-    console.log(
-      `WARNING: Skipping data point ${definition.title} due to empty value`,
-    )
+  if (!definition || !dataPoint.serialized_value || !definition.title) {
     return null
   }
 
@@ -283,263 +354,195 @@ function createSingleDataPointExtension(
     const matchingValue = definition.possibleValues.find(
       (pv) => pv.value === value,
     )
-
     if (matchingValue) {
       return [
         baseExtension,
         { url: `${definition.title}_label`, valueString: matchingValue.label },
       ]
     }
-
-    console.log(
-      `WARNING: Value "${value}" for "${definition.title}" doesn't match any possible values`,
-    )
   }
 
   return [baseExtension]
 }
 
-// Simplified task update - single operation, better error handling
-async function updateTaskWithExtensions(
-  medplum: MedplumClient,
-  task: Task,
-  extensions: Extension[],
-): Promise<void> {
-  if (extensions.length === 0) {
-    console.log('No extensions to add to task')
-    return
-  }
+async function createConnectorInputs(
+  config: ApiConfig,
+  extensionData: TaskExtensionData,
+): Promise<TaskInput[]> {
+  const connectorInputs: TaskInput[] = []
 
-  if (!task.extension) {
-    task.extension = []
-  }
-
-  console.log(`Adding ${extensions.length} data point extensions to task`)
-  task.extension.push(...extensions)
-
-  try {
-    await medplum.updateResource(task)
-    console.log('Successfully updated task with data point extensions')
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    console.log(`ERROR: Failed to update task ${task.id}: ${errorMessage}`)
-    throw error
-  }
-}
-
-// Simplified patient update using patch operations
-async function updatePatientWithExtensions(
-  medplum: MedplumClient,
-  task: Task,
-  extensions: Extension[],
-): Promise<void> {
-  if (extensions.length === 0) {
-    console.log('No extensions to add to patient')
-    return
-  }
-
-  const patientId = task.for?.reference?.split('/')[1]
-  if (!patientId) {
-    console.log('No patient reference found in task')
-    return
-  }
-
-  try {
-    console.log(
-      `Updating patient ${patientId} with ${extensions.length} data point extensions`,
-    )
-    const patient = await medplum.readResource('Patient', patientId)
-
-    const patchOps = createPatientExtensionPatchOps(patient, extensions)
-
-    if (patchOps.length > 1) {
-      // More than just version test
-      await medplum.patchResource('Patient', patientId, patchOps)
-      console.log(
-        'Successfully updated patient with data point extensions using patch operations',
-      )
-    } else {
-      console.log('No data point extensions to update on patient')
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    console.log(`ERROR: Failed to update patient ${patientId}: ${errorMessage}`)
-    throw error
-  }
-}
-
-type PatchOperation = {
-  op: 'replace' | 'add' | 'remove' | 'test'
-  path: string
-  value?: unknown
-}
-
-function createPatientExtensionPatchOps(
-  patient: { extension?: Extension[]; meta?: { versionId?: string } },
-  newExtensions: Extension[],
-): PatchOperation[] {
-  const patchOps: PatchOperation[] = [
-    {
-      op: 'test',
-      path: '/meta/versionId',
-      value: patient.meta?.versionId,
+  // Add Awell Care connector
+  const connectorUrl = `https://care.${config.environment}.awellhealth.com/pathway/${extensionData.pathwayId}/activity-feed?activityId=${extensionData.activityId}`
+  connectorInputs.push({
+    type: {
+      coding: [
+        {
+          system: 'http://awellhealth.com/fhir/connector-type',
+          code: 'awell-care',
+          display: 'Awell Care',
+        },
+      ],
     },
-  ]
-
-  // Get URLs of extensions we're about to add/update
-  const newExtensionUrls = new Set(
-    newExtensions.map((ext) => ext.url).filter(Boolean) as string[],
-  )
-
-  if (newExtensionUrls.size === 0) {
-    console.log('No valid extension URLs to update')
-    return patchOps
-  }
-
-  // Create a new extensions array:
-  // 1. Keep existing extensions that don't match our URLs
-  // 2. Add our new extensions
-  const existingExtensions = patient.extension || []
-  const filteredExistingExtensions = existingExtensions.filter(
-    (ext) => !ext.url || !newExtensionUrls.has(ext.url),
-  )
-
-  const updatedExtensions = [...filteredExistingExtensions, ...newExtensions]
-
-  // Replace the entire extensions array - this is atomic and reliable
-  patchOps.push({
-    op: 'replace',
-    path: '/extension',
-    value: updatedExtensions,
+    valueUrl: connectorUrl,
   })
 
-  console.log(
-    `Replacing extensions array: removing ${existingExtensions.length - filteredExistingExtensions.length} existing data point extensions, adding ${newExtensions.length} new extensions`,
+  // Add Awell Hosted Pages connector if stakeholder ID is available
+  if (extensionData.stakeholderId) {
+    const hostedPagesLink = await fetchHostedPagesLink(
+      config,
+      extensionData.pathwayId,
+      extensionData.stakeholderId,
+    )
+    if (hostedPagesLink) {
+      connectorInputs.push({
+        type: {
+          coding: [
+            {
+              system: 'http://awellhealth.com/fhir/connector-type',
+              code: 'awell-hosted-pages',
+              display: 'Awell Hosted Pages',
+            },
+          ],
+        },
+        valueUrl: hostedPagesLink,
+      })
+    }
+  }
+
+  return connectorInputs
+}
+
+/**
+ * Recursively merges extensions, replacing existing ones that have matching URLs
+ * with new ones, while preserving non-conflicting extensions.
+ *
+ * For extensions with nested extensions, recursively merges those as well.
+ * This handles arbitrary levels of nesting.
+ *
+ * Example:
+ * - existing: [{url: "age", value: "30"}, {url: "name", value: "John"}]
+ * - new: [{url: "age", value: "31"}]
+ * - result: [{url: "name", value: "John"}, {url: "age", value: "31"}]
+ */
+function mergeExtensions(
+  existingExtensions: Extension[],
+  newExtensions: Extension[],
+): Extension[] {
+  if (newExtensions.length === 0) return existingExtensions
+  if (existingExtensions.length === 0) return newExtensions
+
+  // Create lookup map for new extensions by URL
+  const newExtensionsByUrl = new Map<string, Extension>()
+  for (const ext of newExtensions) {
+    if (ext.url) {
+      newExtensionsByUrl.set(ext.url, ext)
+    }
+  }
+
+  const mergedExtensions: Extension[] = []
+
+  // Process existing extensions
+  for (const existingExt of existingExtensions) {
+    const matchingNewExt = existingExt.url
+      ? newExtensionsByUrl.get(existingExt.url)
+      : null
+
+    if (!matchingNewExt) {
+      // No conflict - keep existing extension as-is
+      mergedExtensions.push(existingExt)
+    } else {
+      // Both extensions have the same URL - merge them
+      if (existingExt.extension && matchingNewExt.extension) {
+        // Both have nested extensions - recursively merge them
+        const mergedNestedExtensions = mergeExtensions(
+          existingExt.extension,
+          matchingNewExt.extension,
+        )
+        mergedExtensions.push({
+          ...matchingNewExt, // Use new extension as base
+          extension: mergedNestedExtensions,
+        })
+      } else {
+        // At least one doesn't have nested extensions - use the new one completely
+        mergedExtensions.push(matchingNewExt)
+      }
+
+      // Mark as processed so we don't add it again
+      if (existingExt.url) {
+        newExtensionsByUrl.delete(existingExt.url)
+      }
+    }
+  }
+
+  // Add any completely new extensions that didn't exist before
+  for (const remainingNewExt of newExtensionsByUrl.values()) {
+    mergedExtensions.push(remainingNewExt)
+  }
+
+  return mergedExtensions
+}
+
+function createEnrichmentStatusExtension(status: string): Extension {
+  return {
+    url: AWELL_ENRICHMENT_STATUS_EXTENSION_URL,
+    extension: [
+      {
+        url: status,
+        valueBoolean: true,
+      },
+    ],
+  }
+}
+
+/**
+ * Creates an enrichment status extension for the given status.
+ * Returns the extension to be added to the task - does not mutate the task.
+ */
+function createEnrichmentStatusExtensionForTask(
+  existingExtensions: Extension[],
+  status: string,
+): Extension {
+  const existingEnrichmentExt = existingExtensions.find(
+    (ext) => ext.url === AWELL_ENRICHMENT_STATUS_EXTENSION_URL,
   )
 
-  return patchOps
-}
-
-// Generic extraction function to eliminate duplication
-function extractFromTaskExtension(
-  task: Task,
-  fieldName: string,
-): string | null {
-  const awellExtension = task.extension
-    ?.find((ext) => ext.url === AWELL_TASK_EXTENSION_URL)
-    ?.extension?.find((ext) => ext.url === fieldName)
-
-  const value = awellExtension?.valueString || null
-
-  if (value) {
-    console.log(`Found ${fieldName}: ${value}`)
-  } else {
-    console.log(`No ${fieldName} found in task extensions`)
+  if (!existingEnrichmentExt) {
+    return createEnrichmentStatusExtension(status)
   }
 
-  return value
-}
+  // Merge with existing enrichment extension
+  const existingStatusExtensions = existingEnrichmentExt.extension || []
+  const statusExtension = existingStatusExtensions.find(
+    (ext) => ext.url === status,
+  )
 
-// Consolidated extraction function
-function extractTaskExtensionData(task: Task): TaskExtensionData | null {
-  const releaseId = extractFromTaskExtension(task, 'release-id')
-  const pathwayId = extractFromTaskExtension(task, 'pathway-id')
-  const activityId = extractFromTaskExtension(task, 'activity-id')
-
-  if (!releaseId || !pathwayId) {
-    return null
+  if (!statusExtension) {
+    // Add new status to existing enrichment extension
+    return {
+      url: AWELL_ENRICHMENT_STATUS_EXTENSION_URL,
+      extension: [
+        ...existingStatusExtensions,
+        { url: status, valueBoolean: true },
+      ],
+    }
   }
 
-  return { releaseId, pathwayId, activityId: activityId || undefined }
-}
-
-export async function handler(
-  medplum: MedplumClient,
-  event: BotEvent<Task>,
-): Promise<void> {
-  const task = event.input
-
-  try {
-    console.log('Starting data point enrichment for task:', task.id)
-
-    // Validate required secrets
-    if (!event.secrets.AWELL_API_URL || !event.secrets.AWELL_API_KEY) {
-      console.log('AWELL_API_URL or AWELL_API_KEY is not set')
-      return
-    }
-
-    const apiConfig: ApiConfig = {
-      endpoint: event.secrets.AWELL_API_URL.valueString || '',
-      apiKey: event.secrets.AWELL_API_KEY.valueString || '',
-    }
-
-    // Extract required data from task extensions
-    const extensionData = extractTaskExtensionData(task)
-    if (!extensionData) {
-      console.log(
-        'Missing required extension data (release-id or pathway-id), skipping enrichment',
-      )
-      return
-    }
-
-    // Validate task ID
-    if (!task.id) {
-      throw new Error('Task is missing required id property')
-    }
-
-    // Determine data points to fetch based on task status
-    const dataPoints = await fetchDataPointsForTaskStatus(
-      apiConfig,
-      task.status,
-      extensionData,
-    )
-
-    if (dataPoints.length === 0) {
-      console.log('No data points retrieved, skipping enrichment')
-      return
-    }
-
-    // Process data points and create extensions
-    const dataPointDefinitions = await fetchDataPointDefinitions(
-      apiConfig,
-      extensionData.releaseId,
-    )
-    const extensions = createDataPointExtensions(
-      dataPoints,
-      dataPointDefinitions,
-    )
-
-    // Update task and patient with extensions
-    await updateTaskWithExtensions(medplum, task, extensions)
-    await updatePatientWithExtensions(medplum, task, extensions)
-
-    console.log('Data point enrichment completed successfully')
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    console.log(
-      `ERROR: Data point enrichment failed for task ${task.id}: ${errorMessage}`,
-    )
-    throw error
+  // Update existing status to true
+  return {
+    url: AWELL_ENRICHMENT_STATUS_EXTENSION_URL,
+    extension: existingStatusExtensions.map((ext) =>
+      ext.url === status ? { ...ext, valueBoolean: true } : ext,
+    ),
   }
 }
 
-// Helper function to determine which data points to fetch based on task status
 async function fetchDataPointsForTaskStatus(
   config: ApiConfig,
   taskStatus: string,
   extensionData: TaskExtensionData,
 ): Promise<DataPoint[]> {
   if (taskStatus === 'completed') {
-    // Task is completed - fetch data points collected in the associated activity
-    if (!extensionData.activityId) {
-      console.log(
-        'Missing activity ID for completed task, skipping data point enrichment',
-      )
-      return []
-    }
-    console.log(
-      `Task is completed, fetching activity-specific data points for activity: ${extensionData.activityId}`,
-    )
+    if (!extensionData.activityId) return []
     return fetchDataPoints(
       config,
       extensionData.pathwayId,
@@ -548,13 +551,136 @@ async function fetchDataPointsForTaskStatus(
   }
 
   if (taskStatus === 'requested') {
-    // Task is created - fetch only baseline info data points
-    console.log('Task is created, fetching baseline data points')
     return fetchDataPoints(config, extensionData.pathwayId)
   }
 
-  console.log(
-    `Task status '${taskStatus}' does not require data point enrichment`,
-  )
   return []
+}
+
+async function updatePatientWithDataPointExtensions(
+  medplum: MedplumClient,
+  task: Task,
+  dataPointExtensions: Extension[],
+): Promise<void> {
+  if (dataPointExtensions.length === 0) return
+
+  const patientId = task.for?.reference?.split('/')[1]
+  if (!patientId) {
+    throw new Error('No patient reference found in task')
+  }
+
+  const patient = await medplum.readResource('Patient', patientId)
+  const mergedExtensions = mergeExtensions(
+    patient.extension || [],
+    dataPointExtensions,
+  )
+
+  await medplum.updateResource({
+    ...patient,
+    extension: mergedExtensions,
+  })
+}
+
+export async function handler(
+  medplum: MedplumClient,
+  event: BotEvent<Task>,
+): Promise<void> {
+  const task = event.input
+
+  console.log(
+    `Starting enrichment process for task ${task.id} with status '${task.status}'`,
+  )
+
+  try {
+    if (!task.id) {
+      throw new Error('Task is missing required id property')
+    }
+
+    if (hasEnrichmentBeenDone(task, task.status)) {
+      console.log(
+        `Enrichment already completed for task ${task.id} with status '${task.status}' - skipping`,
+      )
+      return
+    }
+
+    if (
+      !event.secrets.AWELL_API_URL ||
+      !event.secrets.AWELL_API_KEY ||
+      !event.secrets.AWELL_ENVIRONMENT
+    ) {
+      throw new Error(
+        'Missing required API configuration: AWELL_API_URL, AWELL_API_KEY, or AWELL_ENVIRONMENT',
+      )
+    }
+
+    const apiConfig: ApiConfig = {
+      endpoint: event.secrets.AWELL_API_URL.valueString || '',
+      apiKey: event.secrets.AWELL_API_KEY.valueString || '',
+      environment: event.secrets.AWELL_ENVIRONMENT.valueString || '',
+    }
+
+    const extensionData = extractTaskExtensionData(task)
+    if (!extensionData) {
+      throw new Error(
+        'Missing required extension data (release-id and pathway-id)',
+      )
+    }
+
+    const updatedInputs: TaskInput[] = []
+    if (task.status === 'requested') {
+      const newConnectorInputs = await createConnectorInputs(
+        apiConfig,
+        extensionData,
+      )
+      updatedInputs.push(...newConnectorInputs)
+    }
+
+    const dataPointExtensions: Extension[] = []
+    const dataPoints = await fetchDataPointsForTaskStatus(
+      apiConfig,
+      task.status,
+      extensionData,
+    )
+    if (dataPoints.length > 0) {
+      const dataPointDefinitions = await fetchDataPointDefinitions(
+        apiConfig,
+        extensionData.releaseId,
+      )
+      dataPointExtensions.push(
+        ...createDataPointExtensions(dataPoints, dataPointDefinitions),
+      )
+    }
+
+    const freshTask = await medplum.readResource('Task', task.id)
+
+    const statusExtension = createEnrichmentStatusExtensionForTask(
+      freshTask.extension || [],
+      task.status,
+    )
+
+    await medplum.updateResource({
+      ...freshTask,
+      ...(updatedInputs.length > 0 && { input: updatedInputs }),
+      extension: mergeExtensions(freshTask.extension || [], [
+        statusExtension,
+        ...dataPointExtensions,
+      ]),
+    })
+
+    if (dataPointExtensions.length > 0) {
+      await updatePatientWithDataPointExtensions(
+        medplum,
+        freshTask,
+        dataPointExtensions,
+      )
+    }
+
+    console.log(
+      `Enrichment completed successfully for task ${task.id}: processed ${dataPoints.length} data points, added ${updatedInputs.length} connector inputs, updated ${dataPointExtensions.length > 0 ? 'patient' : 'task only'}`,
+    )
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.log(`Enrichment failed for task ${task.id}: ${errorMessage}`)
+    throw error
+  }
 }

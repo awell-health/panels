@@ -321,27 +321,33 @@ async function createOrUpdateTask(
       // Update all existing tasks
       const updatedTasks = await Promise.all(
         existingTasks.map(async (existingTask) => {
-          const resultTask = await medplum.updateResource({
-            ...existingTask,
-            ...task,
-            meta: existingTask.meta,
-          })
-          console.log(
-            'Task successfully updated:',
-            JSON.stringify(
-              {
-                taskId: resultTask.id,
-                status: resultTask.status,
-                statusReason: resultTask.statusReason?.coding?.[0]?.code,
-                lastUpdated: resultTask.meta?.lastUpdated,
-                activityStatus: activity.status,
-                eventType: eventData.event_type,
-              },
-              null,
-              2,
-            ),
-          )
-          return resultTask
+          if (existingTask.id) {
+            const freshTask = await medplum.readResource(
+              'Task',
+              existingTask.id,
+            )
+            const resultTask = await medplum.updateResource({
+              ...freshTask,
+              status: task.status,
+              statusReason: task.statusReason,
+            })
+            console.log(
+              'Task successfully updated:',
+              JSON.stringify(
+                {
+                  taskId: resultTask.id,
+                  status: resultTask.status,
+                  statusReason: resultTask.statusReason?.coding?.[0]?.code,
+                  lastUpdated: resultTask.meta?.lastUpdated,
+                  activityStatus: activity.status,
+                  eventType: eventData.event_type,
+                },
+                null,
+                2,
+              ),
+            )
+            return resultTask
+          }
         }),
       )
       return updatedTasks[0]?.id || ''
