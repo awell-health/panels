@@ -49,7 +49,6 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
   })
 
   const sortedTasks = orderBy(filteredTasks, 'authoredOn', order)
-  console.log('order', order)
 
   const ascLabel = (
     <span className="flex items-center gap-1">
@@ -157,6 +156,8 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
       </div>
       <div className="flex flex-col gap-2">
         {sortedTasks.map((task) => {
+          const isCompleted = task.status === 'completed'
+
           return (
             // biome-ignore lint/a11y/useKeyWithClickEvents: <explanation>
             <div
@@ -183,6 +184,12 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
                       <Calendar className="w-3 h-3" /> Created:{' '}
                       {formatDateTime(task.authoredOn)}
                     </div>
+                    {isCompleted && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600 font-normal">
+                        <Calendar className="w-3 h-3" /> Completed:{' '}
+                        {formatDateTime(task.lastModified)}
+                      </div>
+                    )}
                     <div className="flex items-center gap-1 text-xs text-gray-600 font-normal">
                       <User className="w-3 h-3" />
                       {task.owner
