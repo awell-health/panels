@@ -1,7 +1,31 @@
 import { take } from 'lodash'
-import { useEffect, useState } from 'react'
 import { isValid, parseISO } from 'date-fns'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+
+// Centralized error handling
+export const handleError = (error: unknown, context: string): void => {
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+  console.warn(`[${context}] ${errorMessage}`, error)
+}
+
+// Centralized search utilities
+export const createSearchFilter = (searchQuery: string) => {
+  const normalizedQuery = searchQuery.toLowerCase().trim()
+
+  return {
+    matchesText: (text: string | undefined | null): boolean => {
+      if (!text || !normalizedQuery) return false
+      return text.toLowerCase().includes(normalizedQuery)
+    },
+
+    matchesAnyText: (...texts: (string | undefined | null)[]): boolean => {
+      return texts.some((text) => {
+        if (!text || !normalizedQuery) return false
+        return text.toLowerCase().includes(normalizedQuery)
+      })
+    },
+  }
+}
 
 export function calculateAge(dateString: string): number {
   const birthDate = new Date(dateString)
@@ -32,8 +56,7 @@ export const isJSON = (str: string): boolean => {
 }
 
 // More comprehensive isObject function
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-export const isObject = (value: any): boolean => {
+export const isObject = (value: unknown): boolean => {
   // Check if value is null (typeof null === 'object' in JavaScript)
   if (value === null) return false
 
@@ -50,61 +73,61 @@ export const isObject = (value: any): boolean => {
   return true
 }
 
-export const hasSearchQuery = (value: string, searchQuery: string): boolean => {
-  return value.toLowerCase().includes(searchQuery.toLowerCase())
-}
-
-// Custom debounce hook
-export const useDebounce = <T>(value: T, delay: number): T => {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value)
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedValue(value)
-    }, delay)
-
-    return () => {
-      clearTimeout(timer)
-    }
-  }, [value, delay])
-
-  return debouncedValue
-}
-
 export const getExtensionValue = (
   source: WorklistPatient | WorklistTask | undefined,
   url: string,
-) => {
-  if (!source) return ''
+): string => {
+  if (!source || !url) return ''
 
-  return source?.extension?.[0]?.extension?.find(
-    (extension: { url: string }) => extension.url === url,
-  )?.valueString
+  try {
+    return (
+      source?.extension?.[0]?.extension?.find(
+        (extension: { url: string }) => extension.url === url,
+      )?.valueString ?? ''
+    )
+  } catch (error) {
+    handleError(error, 'getExtensionValue')
+    return ''
+  }
 }
 
 export const getCardSummary = (
-  source: WorklistPatient | WorklistTask,
-  card: {
-    fields: { label: string; key: string }[]
-  },
+  source: WorklistPatient | WorklistTask | undefined,
+  card:
+    | {
+        fields: { label: string; key: string }[]
+      }
+    | undefined,
 ): string => {
-  const summary = take(card.fields, 3)
-    .map((field) => {
-      const value = getExtensionValue(source, field.key)
+  if (!source || !card?.fields) return ''
 
-      if (isJSON(value)) {
-        return `${field.label}: ${JSON.parse(value).length} items`
-      }
+  try {
+    const summary = take(card.fields, 3)
+      .map((field) => {
+        const value = getExtensionValue(source, field.key)
 
-      if (value) {
-        return `${field.label}: ${value}`
-      }
+        if (isJSON(value)) {
+          try {
+            const parsed = JSON.parse(value)
+            return `${field.label}: ${Array.isArray(parsed) ? parsed.length : 'object'} items`
+          } catch {
+            return `${field.label}: ${value}`
+          }
+        }
 
-      return null
-    })
-    .filter(Boolean)
-    .slice(0, 2)
-    .join(', ')
+        if (value) {
+          return `${field.label}: ${value}`
+        }
 
-  return summary
+        return null
+      })
+      .filter(Boolean)
+      .slice(0, 2)
+      .join(', ')
+
+    return summary
+  } catch (error) {
+    handleError(error, 'getCardSummary')
+    return ''
+  }
 }

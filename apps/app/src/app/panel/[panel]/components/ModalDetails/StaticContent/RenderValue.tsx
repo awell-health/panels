@@ -2,13 +2,31 @@ import type { FC } from 'react'
 import { RenderWithCopy } from './RenderWithCopy'
 import HighlightText from './HighlightContent'
 import ExpandableCard from './ExpandableCard'
-import { hasSearchQuery, isISODate, isJSON } from './utils'
+import { createSearchFilter, isISODate, isJSON, handleError } from './utils'
 import { isObject } from 'lodash'
 import { useDateTimeFormat } from '../../../../../../hooks/use-date-time-format'
 
+// Type definitions for rendering values in the UI
+export interface RenderableObject {
+  [key: string]: RenderableValue
+}
+
+export type RenderableValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | RenderableObject
+  | RenderableValue[]
+
+export interface TableRow {
+  [key: string]: RenderableValue
+  id?: string | number
+}
+
 interface Props {
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  value: string | Record<string, any> | Array<Record<string, any>>
+  value: RenderableValue
   searchQuery?: string
 }
 
@@ -21,31 +39,40 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
 
   const { formatDateTime } = useDateTimeFormat()
 
-  const haseSearchTerm =
-    searchQuery.length > 0 && hasSearchQuery(JSON.stringify(value), searchQuery)
+  const searchFilter = createSearchFilter(searchQuery)
+  const hasSearchTerm =
+    searchQuery.length > 0 && searchFilter.matchesText(JSON.stringify(value))
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  const rederArrayValue = (value: any[]) => {
+  const renderArrayValue = (value: RenderableValue[]) => {
     return (
       <div className="mb-4 mt-1">
         <ExpandableCard
           title={`Show ${value.length} items`}
-          defaultExpanded={haseSearchTerm}
+          defaultExpanded={hasSearchTerm}
         >
           <div className="space-y-2">
-            {value.map((item, index) => (
-              <div key={`${item.id}-${index}`}>
-                <RenderValue value={item} searchQuery={searchQuery} />
-              </div>
-            ))}
+            {value.map((item, index) => {
+              const itemKey =
+                item && typeof item === 'object' && 'id' in item
+                  ? `${(item as { id: string | number }).id}-${index}`
+                  : `item-${index}`
+              return (
+                <div key={itemKey}>
+                  <RenderValue value={item} searchQuery={searchQuery} />
+                </div>
+              )
+            })}
           </div>
         </ExpandableCard>
       </div>
     )
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  const renderObjectValue = (value: Record<string, any>) => {
+  const renderObjectValue = (value: RenderableObject) => {
+    if (!value || typeof value !== 'object') {
+      return emptyValue
+    }
+
     const keysLength = Object.keys(value).length
     const visibleObject = 5
 
@@ -53,7 +80,7 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
       return emptyValue
     }
 
-    const renderKeyValue = (key: string, value: string) => {
+    const renderKeyValue = (key: string, value: RenderableValue) => {
       return (
         <div key={key}>
           <strong>
@@ -75,7 +102,7 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
           <div className="mt-2">
             <ExpandableCard
               title={`Show ${keysLength - visibleObject} more items`}
-              defaultExpanded={haseSearchTerm}
+              defaultExpanded={hasSearchTerm}
             >
               <div className="space-y-2 my-2">
                 {Object.keys(value)
@@ -89,9 +116,12 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
     )
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  const renderTable = (list: any[]) => {
+  const renderTable = (list: TableRow[]) => {
     if (list.length === 0) {
+      return <span className="pr-2">-</span>
+    }
+
+    if (!list[0] || typeof list[0] !== 'object') {
       return <span className="pr-2">-</span>
     }
 
@@ -137,66 +167,87 @@ const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
       return emptyValue
     }
 
-    return rederArrayValue(value)
+    return renderArrayValue(value)
   }
 
   if (isObject(value)) {
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    return renderObjectValue(value as Record<string, any>)
+    return renderObjectValue(value)
   }
 
   if (isJSON(value as string)) {
-    const jsonValue = JSON.parse(value as string)
-    const jsonValueKeys = Object.keys(jsonValue)
+    try {
+      const jsonValue = JSON.parse(value as string)
 
-    // is array after parsing json
-    if (Array.isArray(jsonValue)) {
-      return renderTable(jsonValue)
+      if (!jsonValue || typeof jsonValue !== 'object') {
+        return <RenderValue value={jsonValue} searchQuery={searchQuery} />
+      }
+
+      const jsonValueKeys = Object.keys(jsonValue)
+
+      // is array after parsing json
+      if (Array.isArray(jsonValue)) {
+        return renderTable(jsonValue)
+      }
+
+      if (jsonValueKeys.length === 0) {
+        return <RenderValue value={jsonValue} searchQuery={searchQuery} />
+      }
+
+      return renderObjectValue(jsonValue)
+    } catch (error) {
+      handleError(error, 'RenderValue.parseJSON')
+      return <span className="text-red-500">Invalid JSON</span>
     }
-
-    if (jsonValueKeys.length === 0) {
-      return <RenderValue value={jsonValue} searchQuery={searchQuery} />
-    }
-
-    return renderObjectValue(jsonValue)
   }
 
   if (value && isISODate(value as string)) {
-    // Use formatDate for birth dates, formatDateTime for everything else
-    const formattedValue = formatDateTime(value as string)
-    return (
-      <RenderWithCopy text={formattedValue}>
-        <HighlightText text={formattedValue} searchQuery={searchQuery} />
-      </RenderWithCopy>
-    )
+    try {
+      // Use formatDate for birth dates, formatDateTime for everything else
+      const formattedValue = formatDateTime(value as string)
+      return (
+        <RenderWithCopy text={formattedValue}>
+          <HighlightText text={formattedValue} searchQuery={searchQuery} />
+        </RenderWithCopy>
+      )
+    } catch (error) {
+      handleError(error, 'RenderValue.formatDateTime')
+      return <span>{value}</span>
+    }
   }
 
   const containsHTML = (str: string) => /<[a-z][\s\S]*>/i.test(str)
 
-  if (containsHTML(value as string)) {
-    let htmlContent = value?.replaceAll('\n', '<br />') ?? ''
+  if (typeof value === 'string' && containsHTML(value)) {
+    try {
+      let htmlContent = value.replaceAll('\n', '<br />')
 
-    if (searchQuery) {
-      htmlContent = htmlContent.replaceAll(
-        searchQuery,
-        `<span class="bg-yellow-200">${searchQuery}</span>`,
+      if (searchQuery) {
+        htmlContent = htmlContent.replaceAll(
+          searchQuery,
+          `<span class="bg-yellow-200">${searchQuery}</span>`,
+        )
+      }
+
+      return (
+        <div
+          className="text-xs"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+          dangerouslySetInnerHTML={{
+            __html: htmlContent,
+          }}
+        />
       )
+    } catch (error) {
+      handleError(error, 'RenderValue.processHTML')
+      return <span>{value}</span>
     }
-
-    return (
-      <div
-        className="text-xs"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
-        dangerouslySetInnerHTML={{
-          __html: htmlContent,
-        }}
-      />
-    )
   }
 
   return (
-    <RenderWithCopy text={value}>
-      {value && <HighlightText text={value} searchQuery={searchQuery} />}
+    <RenderWithCopy text={String(value)}>
+      {value && (
+        <HighlightText text={String(value)} searchQuery={searchQuery} />
+      )}
     </RenderWithCopy>
   )
 }
