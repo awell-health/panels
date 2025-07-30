@@ -1,12 +1,54 @@
 @import "tailwindcss";
 
+@plugin "daisyui" {
+  themes: github-light --default, light, dark;
+}
+
+@plugin "daisyui/theme" {
+  name: "github-light";
+  default: true;
+  color-scheme: light;
+
+  --color-primary: oklch(55.3% 0.3 240);
+  --color-primary-content: oklch(98% 0.01 240);
+  --color-secondary: oklch(46.8% 0.15 240);
+  --color-secondary-content: oklch(98% 0.01 240);
+  --color-accent: oklch(49.12% 0.3 240);
+  --color-accent-content: oklch(98% 0.01 240);
+  --color-neutral: oklch(58.3% 0.03 240);
+  --color-neutral-content: oklch(24% 0.05 240);
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(96.9% 0.015 240);
+  --color-base-300: oklch(88.4% 0.02 240);
+  --color-base-content: oklch(24% 0.05 240);
+  --color-info: oklch(55.3% 0.3 240);
+  --color-info-content: oklch(98% 0.01 240);
+  --color-success: oklch(64.8% 0.15 160);
+  --color-success-content: oklch(98% 0.01 160);
+  --color-warning: oklch(84.71% 0.199 83.87);
+  --color-warning-content: oklch(24% 0.05 83.87);
+  --color-error: oklch(65% 0.3 30);
+  --color-error-content: oklch(98% 0.01 30);
+
+  --radius-box: 0.5rem;
+  --radius-field: 0.375rem;
+  --radius-selector: 1.9rem;
+  --border: 1px;
+}
+
+[data-theme="github-light"] .btn {
+  font-weight: normal;
+}
+
 
 /* Layout Grid System */
 .app-shell {
   display: grid;
   height: 100vh;
   grid-template-rows: auto auto 1fr auto;
-  /* header, toolbar, content, footer */
+  /* header, toolbar, content, footer
+  
+  */
   grid-template-columns: 1fr 0;
   /* content, drawer (closed by default) */
   grid-template-areas:
