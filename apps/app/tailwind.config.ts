@@ -10,6 +10,11 @@ const config = {
     extend: {},
   },
   plugins: [require('@tailwindcss/typography'), require('daisyui')],
+  daisyui: {
+    base: true,
+    styled: true,
+    themes: ['github-light', 'light', 'dark'],
+  },
 }
 
 export default config

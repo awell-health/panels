@@ -1,12 +1,7 @@
 @import "tailwindcss";
+@plugin "daisyui";
 
-@plugin "daisyui" {
-  themes: github-light --default, light, dark;
-}
-
-@plugin "daisyui/theme" {
-  name: "github-light";
-  default: true;
+[data-theme="github-light"] {
   color-scheme: light;
 
   --color-primary: oklch(55.3% 0.3 240);
@@ -34,12 +29,38 @@
   --radius-field: 0.375rem;
   --radius-selector: 1.9rem;
   --border: 1px;
+
+  /* Alternative based on primer */
+  /* --color-primary: #2dba4e;           GitHub Green
+  --color-primary-content: #ffffff;
+  --color-secondary: #0969da;         GitHub Blue
+  --color-secondary-content: #ffffff;
+  --color-accent: #8250df;            GitHub Purple
+  --color-accent-content: #ffffff;
+  --color-neutral: #656d76;           GitHub Gray
+  --color-neutral-content: #24292f;   GitHub Dark Text
+  --color-base-100: #ffffff;          Pure White
+  --color-base-200: #f6f8fa;          GitHub Light Gray
+  --color-base-300: #d0d7de;          GitHub Border Gray
+  --color-base-content: #24292f;      GitHub Dark Text
+  --color-info: #0969da;              GitHub Blue
+  --color-info-content: #ffffff;
+  --color-success: #1a7f37;           GitHub Green (Dark)
+  --color-success-content: #ffffff;
+  --color-warning: #d1242f;           GitHub Red
+  --color-warning-content: #ffffff;
+  --color-error: #cf222e;             GitHub Red (Error)
+  --color-error-content: #ffffff;
+
+  --radius-box: 0.375rem;             GitHub's 6px radius
+  --radius-field: 0.375rem;
+  --radius-selector: 1rem;
+  --border: 1px; */
 }
 
 [data-theme="github-light"] .btn {
   font-weight: normal;
 }
-
 
 /* Layout Grid System */
 .app-shell {

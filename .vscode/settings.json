@@ -5,6 +5,9 @@
     "source.organizeImports": "never",
     "quickfix.biome": "explicit"
   },
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
   //   "search.exclude": {
   //     "**/node_modules/**": true,
   //     "**/dist/**": true,
