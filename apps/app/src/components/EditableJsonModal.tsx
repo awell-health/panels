@@ -259,7 +259,7 @@ Each card should follow this structure:
       onOpenChange={(open) => !open && onClose()}
       className="max-w-[90vw] max-h-[90vh]"
     >
-      <DialogContent className="flex flex-col p-0 m-0 text-xs">
+      <DialogContent className="flex flex-col p-0 m-0 text-xs h-full">
         <DialogHeader className="p-3 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <DialogTitle className="font-medium text-gray-900 text-sm">
