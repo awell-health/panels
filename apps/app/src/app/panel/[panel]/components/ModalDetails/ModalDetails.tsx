@@ -47,10 +47,12 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
     null,
   )
   const [selectedTask, setSelectedTask] = useState<WorklistTask | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (patient) {
       setCurrentPatient(patient)
+      setIsLoading(false)
     }
   }, [patient])
 
@@ -61,8 +63,10 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
       if (resolvedPatient) {
         setCurrentPatient(resolvedPatient)
         setSelectedTask(task)
+        setIsLoading(false)
       } else {
         setCurrentPatient(null)
+        setIsLoading(false)
         logger.error(
           {
             operationType: 'resolve-patient',
@@ -167,7 +171,11 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
       <div className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0 text-xs">
         <div className="flex items-center gap-2 text-gray-700 pl-4">
           <User className="h-5 w-5" />
-          {!currentPatient ? (
+          {isLoading ? (
+            <span className="font-medium text-gray-500">
+              Loading patient...
+            </span>
+          ) : !currentPatient ? (
             <span className="font-medium text-red-600">
               Error loading patient
             </span>
@@ -226,7 +234,14 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
         </div>
       </div>
       <div className="flex h-[calc(100%-48px)]">
-        {!currentPatient ? (
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center gap-2">
+            <div className="loading loading-spinner loading-lg text-primary" />
+            <div className="text-gray-600 text-sm">
+              Loading patient details...
+            </div>
+          </div>
+        ) : !currentPatient ? (
           <div className="flex-1 flex items-center justify-center p-8">
             <div className="text-center">
               <div className="text-red-500 text-lg font-medium mb-2">
