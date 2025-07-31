@@ -39,7 +39,7 @@ function ChatInput({
 
   return (
     <div className="p-4 border-t border-gray-200 bg-white">
-      <div className="flex space-x-2">
+      <div className="flex space-x-2 items-center">
         <input
           type="text"
           value={inputValue}
@@ -53,9 +53,9 @@ function ChatInput({
           type="button"
           onClick={handleSubmit}
           disabled={!inputValue.trim() || disabled}
-          className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          className="btn btn-sm btn-primary btn-square"
         >
-          <Send className="h-4 w-4" />
+          <Send className="h-3 w-3" />
         </button>
       </div>
     </div>
@@ -244,7 +244,7 @@ What specific question do you have about your FHIR card configuration?`
                             <div className="flex justify-end items-center mt-1">
                               <button
                                 type="button"
-                                className="flex justify-end text-xs text-gray-500 cursor-pointer hover:text-gray-700 opacity-0 transition-opacity duration-200 group-hover:opacity-100 gap-1"
+                                className="btn btn-xs btn-ghost opacity-0 group-hover:opacity-100"
                                 tabIndex={0}
                                 onClick={() => {
                                   handleCopy()
@@ -299,7 +299,7 @@ What specific question do you have about your FHIR card configuration?`
                   <button
                     type="button"
                     onClick={() => handleRetryMessage(message.id)}
-                    className="ml-2 p-1 text-red-600 hover:text-red-800 focus:outline-none"
+                    className="btn btn-xs btn-ghost text-red-600 hover:text-red-800 ml-2"
                     title="Retry message"
                   >
                     <RotateCcw className="h-3 w-3" />

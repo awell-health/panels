@@ -88,7 +88,7 @@ const TaskComment = ({ task }: TaskCommentProps) => {
           type="button"
           onClick={handleSubmitComment}
           disabled={!newComment.trim() || isSubmitting}
-          className="w-full bg-blue-500 text-white py-2 rounded-md text-xs hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
+          className="btn btn-sm btn-primary w-full"
         >
           {isSubmitting ? (
             <span className="flex items-center gap-1 w-full justify-center">

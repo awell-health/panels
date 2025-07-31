@@ -20,7 +20,7 @@ const ExpandableCard: FC<Props> = (props) => {
     <div className="border border-gray-200 rounded-lg bg-white">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-3 flex items-center justify-between  hover:bg-gray-100 transition-colors"
+        className="btn btn-sm btn-ghost w-full justify-between h-auto min-h-8 p-3"
         type="button"
       >
         <div className="flex-1 text-left cursor-pointer">

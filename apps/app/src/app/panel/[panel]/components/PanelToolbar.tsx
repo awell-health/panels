@@ -34,7 +34,7 @@ export default function PanelToolbar({
     <div className="border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between p-2">
         {!isViewPage && (
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 mr-2">
             {/* View dropdown - only show on panel page */}
             <WorklistViewDropDown
               currentView={currentView}
@@ -44,7 +44,7 @@ export default function PanelToolbar({
         )}
 
         {/* Search bar and column management */}
-        <div className="flex-1 mx-4 flex items-center space-x-2">
+        <div className="flex-1 flex items-center space-x-2">
           <div className="relative flex-1">
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
               <Search className="h-4 w-4 text-gray-400" />
@@ -78,35 +78,26 @@ export default function PanelToolbar({
             />
           </div>
 
+          <ColumnsDropdown context={columnVisibilityContext} />
+
           {/* Column management buttons */}
           <button
             type="button"
-            className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
+            className="btn btn-sm btn-primary btn-outline min-w-32"
             onClick={onAddColumn}
           >
-            <Plus className="mr-1 h-3 w-3" /> Add column
+            <Plus className="h-3 w-3" /> Add column
           </button>
 
-          <ColumnsDropdown context={columnVisibilityContext} />
-        </div>
-
-        <div className="flex items-center space-x-2">
-          {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
-          <button
-            className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
-            onClick={() => {
-              console.log('Actions')
-            }}
-          >
-            Actions
-          </button>
-          {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
-          <button
-            className="text-xs font-normal h-8 px-2 bg-blue-500 hover:bg-blue-600 text-white flex items-center"
-            onClick={onEnrichData}
-          >
-            <Plus className="mr-1 h-3 w-3" /> Enrich data
-          </button>
+          {onEnrichData && (
+            <button
+              type="button"
+              className="btn btn-sm btn-primary btn-outline"
+              onClick={onEnrichData}
+            >
+              <Plus className="mr-1 h-3 w-3" /> Enrich data
+            </button>
+          )}
         </div>
       </div>
     </div>

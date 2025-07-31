@@ -151,7 +151,7 @@ export function AddIngestionModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full p-1 hover:bg-gray-100"
+              className="btn btn-xs btn-ghost btn-circle"
               aria-label="Close"
             >
               <X className="h-4 w-4" />

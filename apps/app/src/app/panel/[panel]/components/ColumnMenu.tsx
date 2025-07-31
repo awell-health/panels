@@ -244,7 +244,7 @@ export function ColumnMenu({
         {input}
         <button
           type="button"
-          className="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600 h-6"
+          className="btn btn-xs btn-primary"
           onClick={handleFilterApply}
         >
           Apply
@@ -272,7 +272,7 @@ export function ColumnMenu({
         </div>
         <button
           type="button"
-          className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full flex items-center justify-center"
+          className="btn btn-xs btn-ghost btn-circle"
           onClick={onClose}
           aria-label="Close menu"
         >
@@ -283,7 +283,7 @@ export function ColumnMenu({
         {/* Sort option */}
         {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
         <button
-          className="flex items-center w-full px-3 py-2 text-xs font-normal text-left hover:bg-gray-50 border-b border-gray-100"
+          className="btn btn-xs btn-ghost w-full justify-start border-b border-gray-100 rounded-none"
           onClick={() => {
             onSort()
             onClose()
@@ -302,7 +302,7 @@ export function ColumnMenu({
             {filterValue && (
               <button
                 type="button"
-                className="text-xs text-blue-500 hover:text-blue-600"
+                className="btn btn-xs btn-ghost text-blue-500 hover:text-blue-600"
                 onClick={handleFilterClear}
               >
                 Clear
@@ -316,7 +316,7 @@ export function ColumnMenu({
         <div className="px-3 py-2 border-b border-gray-100">
           <button
             type="button"
-            className="flex items-center w-full px-0 py-1 text-xs font-normal text-left hover:bg-gray-50 rounded"
+            className="btn btn-xs btn-ghost w-full justify-start"
             onClick={() => {
               onColumnUpdate?.({
                 id: column.id,
@@ -445,7 +445,7 @@ export function ColumnMenu({
             </div>
             <button
               type="button"
-              className="w-full px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
+              className="btn btn-xs btn-primary w-full"
               onClick={() => {
                 onColumnUpdate?.({
                   id: column.id,
@@ -464,7 +464,7 @@ export function ColumnMenu({
             {onColumnDelete && (
               <button
                 type="button"
-                className="w-full px-2 py-1 text-xs text-white bg-red-500 rounded hover:bg-red-600"
+                className="btn btn-xs btn-error w-full"
                 onClick={() => {
                   setShowDeleteConfirm(true)
                 }}

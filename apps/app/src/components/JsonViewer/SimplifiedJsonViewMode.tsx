@@ -152,7 +152,7 @@ export function SimplifiedJsonViewMode({
       <button
         type="button"
         onClick={handleToggle}
-        className="flex items-center space-x-2 text-sm hover:bg-gray-50 rounded px-1 py-0.5 w-full text-left"
+        className="btn btn-xs btn-ghost w-full justify-start"
         aria-expanded={expanded}
       >
         {expanded ? (

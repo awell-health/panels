@@ -47,10 +47,12 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
     null,
   )
   const [selectedTask, setSelectedTask] = useState<WorklistTask | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (patient) {
       setCurrentPatient(patient)
+      setIsLoading(false)
     }
   }, [patient])
 
@@ -61,8 +63,10 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
       if (resolvedPatient) {
         setCurrentPatient(resolvedPatient)
         setSelectedTask(task)
+        setIsLoading(false)
       } else {
         setCurrentPatient(null)
+        setIsLoading(false)
         logger.error(
           {
             operationType: 'resolve-patient',
@@ -162,19 +166,23 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
     <Dialog
       open={true}
       onOpenChange={onClose}
-      className="max-w-[90vw] max-h-[90vh]"
+      className="max-w-[90vw] max-h-[90vh] h-full"
     >
       <div className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0 text-xs">
         <div className="flex items-center gap-2 text-gray-700 pl-4">
           <User className="h-5 w-5" />
-          {!currentPatient ? (
+          {isLoading ? (
+            <span className="font-medium text-gray-500">
+              Loading patient...
+            </span>
+          ) : !currentPatient ? (
             <span className="font-medium text-red-600">
               Error loading patient
             </span>
           ) : selectedTask ? (
             <button
               type="button"
-              className="hover:underline text-medium text-blue-600 cursor-pointer"
+              className="btn btn-sm btn-link text-blue-600 hover:underline px-1"
               onClick={() => setSelectedTask(null)}
             >
               {patientName}
@@ -206,7 +214,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
                 <button
                   type="button"
                   onClick={handleDeleteRequest}
-                  className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md border border-red-300 text-red-700 hover:bg-red-50 ml-2"
+                  className="btn btn-xs btn-error btn-outline ml-2"
                 >
                   <Trash2Icon className="w-4 h-4" />
                   Delete Patient & Tasks
@@ -215,14 +223,25 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={onClose} className="h-8 w-8 p-0" type="button">
+        <div className="flex items-center gap-2 mx-1">
+          <button
+            onClick={onClose}
+            className="btn btn-square btn-ghost btn-sm"
+            type="button"
+          >
             <X className="h-6 w-6 cursor-pointer hover:text-gray-800" />
           </button>
         </div>
       </div>
       <div className="flex h-[calc(100%-48px)]">
-        {!currentPatient ? (
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center gap-2">
+            <div className="loading loading-spinner loading-lg text-primary" />
+            <div className="text-gray-600 text-sm">
+              Loading patient details...
+            </div>
+          </div>
+        ) : !currentPatient ? (
           <div className="flex-1 flex items-center justify-center p-8">
             <div className="text-center">
               <div className="text-red-500 text-lg font-medium mb-2">

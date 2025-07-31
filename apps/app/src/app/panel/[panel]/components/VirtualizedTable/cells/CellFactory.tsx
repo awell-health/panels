@@ -22,7 +22,7 @@ export function CellFactory(props: CellFactoryProps) {
       <BaseCell {...props}>
         <button
           type="button"
-          className="inline-flex items-center px-2 h-6 text-xs font-medium rounded-md bg-transparent text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+          className="btn btn-xs btn-primary btn-outline"
           onClick={(e) => {
             e.stopPropagation()
             onPDFClick?.(String(value), row['Patient Name'] || 'Patient')
