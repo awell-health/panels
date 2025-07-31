@@ -78,16 +78,16 @@ export default function PanelToolbar({
             />
           </div>
 
+          <ColumnsDropdown context={columnVisibilityContext} />
+
           {/* Column management buttons */}
           <button
             type="button"
-            className="btn btn-sm min-w-32"
+            className="btn btn-sm btn-primary btn-outline min-w-32"
             onClick={onAddColumn}
           >
             <Plus className="h-3 w-3" /> Add column
           </button>
-
-          <ColumnsDropdown context={columnVisibilityContext} />
 
           {onEnrichData && (
             <button
