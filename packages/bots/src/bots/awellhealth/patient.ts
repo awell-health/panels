@@ -5,6 +5,7 @@ import type {
   ContactPoint,
   Address,
   Identifier,
+  Extension,
 } from '@medplum/fhirtypes'
 
 // Types for webhook payload
@@ -47,6 +48,25 @@ interface PatientProfile {
   } | null
 }
 
+// Constants for connector extensions
+const AWELL_PATIENT_CONNECTORS_EXTENSION_URL =
+  'https://awellhealth.com/fhir/StructureDefinition/awell-patient-connectors'
+
+interface Config {
+  environment: string
+}
+
+interface PatientConnector {
+  type: {
+    coding: Array<{
+      system: string
+      code: string
+      display: string
+    }>
+  }
+  valueUrl: string
+}
+
 // Helper functions (reused from activity-to-task.ts with adaptations)
 function safeStringTrim(value: unknown): string | undefined {
   return value && typeof value === 'string' && value.trim()
@@ -82,9 +102,147 @@ function formatBirthDate(
   }
 }
 
+function createPatientConnectors(
+  awellPatientId: string,
+  config: Config,
+  identifiers: Identifier[],
+): PatientConnector[] {
+  const connectors: PatientConnector[] = []
+
+  // Add Awell Care connector
+  const awellCareUrl = `https://care.${config.environment}.awellhealth.com/patients/${awellPatientId}`
+  connectors.push({
+    type: {
+      coding: [
+        {
+          system: 'http://awellhealth.com/fhir/connector-type',
+          code: 'awell-care',
+          display: 'Awell Care',
+        },
+      ],
+    },
+    valueUrl: awellCareUrl,
+  })
+
+  // Add connectors based on other identifiers
+  for (const identifier of identifiers) {
+    if (identifier.system && identifier.value) {
+      // Skip the Awell identifier since we already added that connector
+      if (identifier.system === 'https://awellhealth.com/patients') {
+        continue
+      }
+
+      // Check for Elation identifier
+      if (identifier.system.includes('elation')) {
+        // Determine Elation URL based on environment
+        const elationDomain = ['sandbox', 'development', 'staging'].includes(
+          config.environment,
+        )
+          ? 'sandbox.elationemr.com'
+          : 'elationemr.com'
+
+        connectors.push({
+          type: {
+            coding: [
+              {
+                system: 'http://awellhealth.com/fhir/connector-type',
+                code: 'elation',
+                display: 'Elation',
+              },
+            ],
+          },
+          valueUrl: `https://${elationDomain}/patient/${identifier.value}`,
+        })
+      }
+    }
+  }
+
+  return connectors
+}
+
+function createPatientConnectorsExtension(
+  connectors: PatientConnector[],
+): Extension | null {
+  if (connectors.length === 0) return null
+
+  return {
+    url: AWELL_PATIENT_CONNECTORS_EXTENSION_URL,
+    extension: connectors.map((connector, index) => ({
+      url: `connector-${index}`,
+      extension: [
+        {
+          url: 'type-system',
+          valueString: connector.type.coding[0]?.system || '',
+        },
+        {
+          url: 'type-code',
+          valueString: connector.type.coding[0]?.code || '',
+        },
+        {
+          url: 'type-display',
+          valueString: connector.type.coding[0]?.display || '',
+        },
+        {
+          url: 'url',
+          valueString: connector.valueUrl,
+        },
+      ],
+    })),
+  }
+}
+
+/**
+ * Recursively merges extensions, replacing existing ones that have matching URLs
+ * with new ones, while preserving non-conflicting extensions.
+ */
+function mergeExtensions(
+  existingExtensions: Extension[],
+  newExtensions: Extension[],
+): Extension[] {
+  if (newExtensions.length === 0) return existingExtensions
+  if (existingExtensions.length === 0) return newExtensions
+
+  // Create lookup map for new extensions by URL
+  const newExtensionsByUrl = new Map<string, Extension>()
+  for (const ext of newExtensions) {
+    if (ext.url) {
+      newExtensionsByUrl.set(ext.url, ext)
+    }
+  }
+
+  const mergedExtensions: Extension[] = []
+
+  // Process existing extensions
+  for (const existingExt of existingExtensions) {
+    const matchingNewExt = existingExt.url
+      ? newExtensionsByUrl.get(existingExt.url)
+      : null
+
+    if (!matchingNewExt) {
+      // No conflict - keep existing extension as-is
+      mergedExtensions.push(existingExt)
+    } else {
+      // Both extensions have the same URL - use the new one
+      mergedExtensions.push(matchingNewExt)
+      // Mark as processed so we don't add it again
+      if (existingExt.url) {
+        newExtensionsByUrl.delete(existingExt.url)
+      }
+    }
+  }
+
+  // Add any completely new extensions that didn't exist before
+  for (const remainingNewExt of newExtensionsByUrl.values()) {
+    mergedExtensions.push(remainingNewExt)
+  }
+
+  return mergedExtensions
+}
+
 function createFhirPatient(
   awellPatientId: string,
   profile: PatientProfile,
+  config?: Config,
 ): Patient {
   const name = createPatientName(profile)
   const identifiers = createPatientIdentifiers(awellPatientId, profile)
@@ -120,6 +278,19 @@ function createFhirPatient(
         },
       },
     ]
+  }
+
+  // Add connector extensions if config is provided
+  if (config) {
+    const connectors = createPatientConnectors(
+      awellPatientId,
+      config,
+      identifiers,
+    )
+    const connectorsExtension = createPatientConnectorsExtension(connectors)
+    if (connectorsExtension) {
+      patient.extension = [connectorsExtension]
+    }
   }
 
   return patient
@@ -242,6 +413,7 @@ function updatePatientWithProfile(
   existingPatient: Patient,
   profile: PatientProfile,
   awellPatientId: string,
+  config?: Config,
 ): Patient {
   const name = createPatientName(profile)
   const identifiers = createPatientIdentifiers(awellPatientId, profile)
@@ -281,6 +453,23 @@ function updatePatientWithProfile(
     ]
   }
 
+  // Update connector extensions if config is provided
+  if (config) {
+    const connectors = createPatientConnectors(
+      awellPatientId,
+      config,
+      identifiers,
+    )
+    const connectorsExtension = createPatientConnectorsExtension(connectors)
+    if (connectorsExtension) {
+      const mergedExtensions = mergeExtensions(
+        existingPatient.extension || [],
+        [connectorsExtension],
+      )
+      updatedPatient.extension = mergedExtensions
+    }
+  }
+
   return updatedPatient
 }
 
@@ -288,6 +477,7 @@ async function createPatient(
   medplum: MedplumClient,
   awellPatientId: string,
   profile: PatientProfile,
+  config?: Config,
 ): Promise<Patient> {
   const searchQuery = {
     identifier: `https://awellhealth.com/patients|${awellPatientId}`,
@@ -324,7 +514,7 @@ async function createPatient(
   }
 
   // Patient does not exist - create new patient
-  const newPatient = createFhirPatient(awellPatientId, profile)
+  const newPatient = createFhirPatient(awellPatientId, profile, config)
 
   console.log(
     'Creating new patient:',
@@ -359,6 +549,7 @@ async function updateExistingPatient(
   medplum: MedplumClient,
   awellPatientId: string,
   profile: PatientProfile,
+  config?: Config,
 ): Promise<Patient | undefined> {
   const searchQuery = {
     identifier: `https://awellhealth.com/patients|${awellPatientId}`,
@@ -416,6 +607,7 @@ async function updateExistingPatient(
     existingPatient,
     profile,
     awellPatientId,
+    config,
   )
 
   const savedPatient = await medplum.updateResource(updatedPatient)
@@ -439,6 +631,7 @@ async function updateExistingPatient(
 async function handlePatientCreated(
   medplum: MedplumClient,
   payload: PatientWebhookPayload,
+  config?: Config,
 ): Promise<void> {
   const awellPatientId = payload.patient.user.id
   const profile = payload.patient.profile
@@ -456,7 +649,7 @@ async function handlePatientCreated(
   )
 
   try {
-    await createPatient(medplum, awellPatientId, profile)
+    await createPatient(medplum, awellPatientId, profile, config)
   } catch (error) {
     console.log(
       'Error creating patient:',
@@ -476,6 +669,7 @@ async function handlePatientCreated(
 async function handlePatientUpdated(
   medplum: MedplumClient,
   payload: PatientWebhookPayload,
+  config?: Config,
 ): Promise<void> {
   const awellPatientId = payload.patient.user.id
   const profile = payload.patient.profile
@@ -497,6 +691,7 @@ async function handlePatientUpdated(
       medplum,
       awellPatientId,
       profile,
+      config,
     )
 
     if (!updatedPatient) {
@@ -673,13 +868,19 @@ export async function handler(
     ),
   )
 
+  // Create API config for connectors if environment is available
+  const config: Config | undefined = event.secrets.AWELL_ENVIRONMENT
+    ?.valueString
+    ? { environment: event.secrets.AWELL_ENVIRONMENT.valueString }
+    : undefined
+
   try {
     switch (payload.event_type) {
       case 'patient.created':
-        await handlePatientCreated(medplum, payload)
+        await handlePatientCreated(medplum, payload, config)
         break
       case 'patient.updated':
-        await handlePatientUpdated(medplum, payload)
+        await handlePatientUpdated(medplum, payload, config)
         break
       case 'patient.deleted':
         await handlePatientDeleted(medplum, payload)

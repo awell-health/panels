@@ -1,46 +1,60 @@
 import type { WorklistPatient } from '@/lib/fhir-to-table-data'
+import type { Extension } from '@medplum/fhirtypes'
 import { useEffect, useState } from 'react'
 
 interface PatientConnectorsSectionProps {
   patient: WorklistPatient
 }
 
+interface PatientConnector {
+  name: string
+  code: string
+  url: string
+}
+
+const AWELL_PATIENT_CONNECTORS_EXTENSION_URL =
+  'https://awellhealth.com/fhir/StructureDefinition/awell-patient-connectors'
+
 const PatientConnectorsSection = ({
   patient,
 }: PatientConnectorsSectionProps) => {
-  const [connectors, setConnectors] = useState<
-    { name: string; code: string; url: string }[]
-  >([])
+  const [connectors, setConnectors] = useState<PatientConnector[]>([])
 
   useEffect(() => {
-    // Generate connectors from patient identifiers
-    const generatedConnectors: { name: string; code: string; url: string }[] =
-      []
+    const extractedConnectors: PatientConnector[] = []
 
-    if (patient.identifier && Array.isArray(patient.identifier)) {
-      for (const identifier of patient.identifier) {
-        if (identifier.system && identifier.value) {
-          // Check for Awell identifier
-          if (identifier.system.includes('awell')) {
-            generatedConnectors.push({
-              name: 'Awell',
-              code: 'awell',
-              url: `https://care.sandbox.awellhealth.com/patients/${identifier.value}`,
-            })
-          }
-          // Check for Elation identifier
-          else if (identifier.system?.includes('elation')) {
-            generatedConnectors.push({
-              name: 'Elation',
-              code: 'elation',
-              url: `https://sandbox.elationemr.com/patient/${identifier.value}`,
-            })
+    // Extract connectors from patient extensions
+    if (patient.extension && Array.isArray(patient.extension)) {
+      const connectorsExtension = patient.extension.find(
+        (ext: Extension) => ext.url === AWELL_PATIENT_CONNECTORS_EXTENSION_URL,
+      )
+
+      if (connectorsExtension?.extension) {
+        for (const connectorExt of connectorsExtension.extension) {
+          if (connectorExt.extension) {
+            const typeCode = connectorExt.extension.find(
+              (ext: Extension) => ext.url === 'type-code',
+            )?.valueString
+            const typeDisplay = connectorExt.extension.find(
+              (ext: Extension) => ext.url === 'type-display',
+            )?.valueString
+            const url = connectorExt.extension.find(
+              (ext: Extension) => ext.url === 'url',
+            )?.valueString
+
+            if (typeCode && typeDisplay && url) {
+              extractedConnectors.push({
+                name: typeDisplay,
+                code: typeCode,
+                url: url,
+              })
+            }
           }
         }
       }
     }
 
-    setConnectors(generatedConnectors)
+    setConnectors(extractedConnectors)
   }, [patient])
 
   return (
