@@ -128,6 +128,7 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
             <li>
               <button
                 type="button"
+                className="btn btn-xs btn-ghost w-full justify-start"
                 onClick={() => {
                   setFilter(ALL_STATUS_FILTER)
                   ;(document.activeElement as HTMLElement)?.blur()
@@ -141,6 +142,7 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
               <li key={status}>
                 <button
                   type="button"
+                  className="btn btn-xs btn-ghost w-full justify-start"
                   onClick={() => {
                     setFilter(status)
                     ;(document.activeElement as HTMLElement)?.blur()

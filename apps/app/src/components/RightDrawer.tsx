@@ -33,7 +33,7 @@ export default function RightDrawer({
           <h2 className="text-xs font-normal text-gray-700">{title}</h2>
           <button
             type="button"
-            className="inline-flex items-center justify-center w-8 h-8 text-xs font-normal text-gray-700 rounded-full bg-transparent hover:bg-gray-100"
+            className="btn btn-xs btn-ghost btn-circle"
             onClick={onClose}
             aria-label="Close drawer"
           >

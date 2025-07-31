@@ -52,7 +52,7 @@ const PatientConnectorsSection = ({
             href={connector.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full bg-blue-400 text-white p-2 rounded-md text-xs font-medium hover:bg-blue-500 transition-colors duration-200 text-left block"
+            className="btn btn-sm btn-primary w-full justify-start"
           >
             Open patient record in {connector.name}
           </a>

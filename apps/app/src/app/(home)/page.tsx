@@ -40,10 +40,7 @@ const Home = () => {
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-center mb-6">
-            <button
-              type="button"
-              className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-transparent hover:bg-gray-100 mr-4"
-            >
+            <button type="button" className="btn btn-xs btn-ghost mr-4">
               <Menu className="h-4 w-4" />
             </button>
             <div>

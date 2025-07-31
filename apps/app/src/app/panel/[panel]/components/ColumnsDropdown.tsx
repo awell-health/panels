@@ -150,10 +150,10 @@ export function ColumnsDropdown({ context }: ColumnsDropdownProps) {
       <button
         ref={buttonRef}
         type="button"
-        className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
+        className="btn btn-sm min-w-32"
         onClick={toggleDropdown}
       >
-        <Settings className="mr-1 h-3 w-3" />
+        <Settings className="h-3 w-3" />
         Columns ({visibleCount}/{totalCount})
       </button>
       {dropdownContent && createPortal(dropdownContent, document.body)}

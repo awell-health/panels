@@ -385,7 +385,7 @@ export function StorageStatusIndicator({
       <button
         ref={buttonRef}
         type="button"
-        className={`inline-flex items-center justify-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md ${getStatusColor()} ${className}`}
+        className={`btn btn-xs ${className}`}
         onClick={toggleDetails}
         title={`Storage: ${getStatusText()} - Click for details`}
       >

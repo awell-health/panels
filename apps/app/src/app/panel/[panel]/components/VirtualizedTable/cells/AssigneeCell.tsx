@@ -1,6 +1,7 @@
 'use client'
 
 import { useOptimistic, useTransition } from 'react'
+import { cn } from '@/lib/utils'
 import { BaseCell } from './BaseCell'
 import type { InteractiveCellProps } from './types'
 
@@ -59,11 +60,10 @@ export function AssigneeCell(props: InteractiveCellProps) {
         {currentValue ? (
           <button
             type="button"
-            className={`group flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors cursor-pointer ${
-              isCurrentUser
-                ? 'text-gray-700 hover:text-red-600 hover:bg-red-50'
-                : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50'
-            }`}
+            className={cn('btn btn-xs btn-ghost group', {
+              'hover:btn-error hover:btn-soft': isCurrentUser,
+              'hover:btn-primary hover:btn-soft': !isCurrentUser,
+            })}
             onClick={(e) => {
               e.stopPropagation()
               handleClick()
@@ -75,11 +75,11 @@ export function AssigneeCell(props: InteractiveCellProps) {
             {isPending ? (
               <div className="h-3 w-3 animate-spin rounded-full border border-gray-300 border-t-gray-600" />
             ) : isCurrentUser ? (
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white-500">
                 ×
               </span>
             ) : (
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white-500">
                 →
               </span>
             )}
@@ -87,7 +87,7 @@ export function AssigneeCell(props: InteractiveCellProps) {
         ) : (
           <button
             type="button"
-            className="inline-flex items-center gap-1 px-2 h-6 text-xs font-medium rounded-md border border-blue-200 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+            className="btn btn-xs btn-primary btn-outline"
             onClick={(e) => {
               e.stopPropagation()
               handleClick()

@@ -108,7 +108,7 @@ export function MessageStatus({
         <button
           type="button"
           onClick={onRetry}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+          className="btn btn-xs btn-error btn-outline"
           aria-label="Retry sending message"
         >
           <RefreshCw className="h-3 w-3" />

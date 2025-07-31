@@ -91,7 +91,7 @@ export function DateTimeFormatSelector({
                 type="button"
                 onClick={() => setIsDateOpen(!isDateOpen)}
                 disabled={isUpdating}
-                className="w-full flex items-center justify-between p-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn btn-xs btn-outline w-full justify-between"
               >
                 <span className="text-sm text-gray-700">
                   {dateFormatConfig.label}
@@ -112,7 +112,7 @@ export function DateTimeFormatSelector({
                         handleDateFormatChange(key as DateFormatKey)
                       }
                       disabled={isUpdating}
-                      className="w-full px-3 py-2 text-left hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+                      className="btn btn-xs btn-ghost w-full justify-between"
                     >
                       <div className="flex-1">
                         <div className="text-sm text-gray-900">
@@ -159,7 +159,7 @@ export function DateTimeFormatSelector({
                 type="button"
                 onClick={() => setIsDateTimeOpen(!isDateTimeOpen)}
                 disabled={isUpdating}
-                className="w-full flex items-center justify-between p-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn btn-xs btn-outline w-full justify-between"
               >
                 <span className="text-sm text-gray-700">
                   {dateTimeFormatConfig.label}
@@ -181,7 +181,7 @@ export function DateTimeFormatSelector({
                           handleDateTimeFormatChange(key as DateTimeFormatKey)
                         }
                         disabled={isUpdating}
-                        className="w-full px-3 py-2 text-left hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+                        className="btn btn-xs btn-ghost w-full justify-between"
                       >
                         <div className="flex-1">
                           <div className="text-sm text-gray-900">

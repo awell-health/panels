@@ -116,7 +116,7 @@ export function CaptureWidget() {
     <button
       type="button"
       data-capture-trigger={isInternalUser ? 'extended' : 'customer'}
-      className="fixed top-4 right-4 z-50 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg transition-colors duration-200 flex items-center gap-2 text-sm font-medium"
+      className="fixed top-4 right-4 z-50 btn btn-primary shadow-lg"
       aria-label="Report an issue"
     >
       <svg

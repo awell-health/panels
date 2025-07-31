@@ -63,27 +63,17 @@ export default function PanelFooter({
   return (
     <div className="border-t border-gray-200 p-2 flex items-center justify-between bg-white">
       <div className="flex items-center space-x-3">
-        <button
-          type="button"
-          className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
-          onClick={navigateToHome}
-        >
+        <button type="button" className="btn btn-xs" onClick={navigateToHome}>
           <Home className="mr-1 h-3 w-3" />
           Home
         </button>
 
         {/* Moved columns and rows buttons here */}
-        <button
-          type="button"
-          className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
-        >
+        <button type="button" className="btn btn-xs">
           {`${columnsCounter} columns`}
         </button>
         <div className="flex items-center space-x-2">
-          <button
-            type="button"
-            className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100"
-          >
+          <button type="button" className="btn btn-xs">
             {`${rowsCounter} rows`}
           </button>
 
@@ -91,7 +81,7 @@ export default function PanelFooter({
           {onRefresh && (
             <button
               type="button"
-              className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-600 rounded-md bg-transparent hover:text-gray-800 hover:bg-gray-100"
+              className="btn btn-xs"
               onClick={onRefresh}
               disabled={isLoading}
               title="Refresh data"
@@ -106,7 +96,7 @@ export default function PanelFooter({
           {hasMore && onLoadMore && (
             <button
               type="button"
-              className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-600 rounded-md bg-transparent hover:text-gray-800 hover:bg-gray-100"
+              className="btn btn-xs btn-ghost"
               onClick={onLoadMore}
               disabled={isLoadingMore || isLoading}
             >
@@ -140,21 +130,21 @@ export default function PanelFooter({
         <button
           disabled={true}
           type="button"
-          className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100 disabled:opacity-50"
+          className="btn btn-xs btn-disabled"
         >
           <History className="mr-1 h-3 w-3" /> View table history
         </button>
         <button
           disabled={true}
           type="button"
-          className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:bg-gray-100 disabled:opacity-50"
+          className="btn btn-xs btn-disabled"
         >
           <RotateCcw className="h-3 w-3" />
         </button>
 
         <button
           type="button"
-          className="inline-flex items-center px-2 h-8 text-xs font-normal text-gray-700 rounded-md bg-transparent hover:text-gray-800 hover:bg-gray-100"
+          className="btn btn-xs"
           onClick={() => {
             setIsConfigModalOpen(true)
           }}
@@ -167,7 +157,7 @@ export default function PanelFooter({
         <button
           disabled={true}
           type="button"
-          className={`inline-flex items-center justify-center px-2 h-8 text-xs font-normal rounded-md disabled:opacity-50 ${isAISidebarOpen ? 'bg-blue-500 text-white' : 'bg-transparent text-gray-700 hover:bg-gray-100'}`}
+          className={`btn btn-xs btn-disabled ${isAISidebarOpen ? 'btn-primary' : ''}`}
           title="AI Assistant"
         >
           <MessageSquare className="h-3 w-3" />

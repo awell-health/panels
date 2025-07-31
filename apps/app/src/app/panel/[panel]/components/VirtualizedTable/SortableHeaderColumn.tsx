@@ -148,7 +148,7 @@ export function SortableHeaderColumn({
         <button
           type="button"
           className={cn(
-            'flex items-center cursor-grab hover:bg-gray-100 rounded px-1 -ml-1 mr-1 border-0 bg-transparent',
+            'btn btn-xs btn-ghost btn-header cursor-grab -ml-1 mr-2',
             isDragging && 'cursor-grabbing bg-gray-100',
           )}
           {...listeners}
@@ -161,7 +161,7 @@ export function SortableHeaderColumn({
         <button
           type="button"
           className={cn(
-            'flex items-center cursor-pointer hover:text-gray-900 flex-1 border-0 bg-transparent text-left',
+            'btn btn-xs btn-ghost btn-header flex-1 justify-start',
             isDragging && 'pointer-events-none',
           )}
           onClick={isDragging ? undefined : onSort}
@@ -170,7 +170,7 @@ export function SortableHeaderColumn({
         >
           {getTypeIcon()}
           <span className="truncate">{column.name}</span>
-          <span className="ml-1 text-gray-500">{getSortIndicator()}</span>
+          <span className=" text-gray-500">{getSortIndicator()}</span>
         </button>
 
         {/* Menu controls */}
@@ -183,8 +183,8 @@ export function SortableHeaderColumn({
           <button
             type="button"
             className={cn(
-              'h-5 w-10 px-1 hover:bg-gray-100 rounded-full flex items-center justify-center gap-1',
-              filterValue ? 'text-blue-500 bg-blue-20' : 'text-gray-500',
+              'btn btn-xs btn-ghost btn-header',
+              filterValue ? 'text-blue-500 bg-blue-50' : 'text-gray-500',
             )}
             onClick={isDragging ? undefined : toggleMenu}
             disabled={isDragging}

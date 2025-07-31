@@ -36,7 +36,7 @@ const Dialog = ({
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: it's a modal */}
       <div
         className={cn(
-          'bg-white rounded-lg shadow-xl max-w-md mx-auto p-0 overflow-hidden h-full ',
+          'bg-white rounded-lg shadow-xl max-w-md mx-auto p-0 overflow-hidden',
           className,
         )}
         onClick={(e) => e.stopPropagation()}
@@ -51,14 +51,7 @@ const DialogTrigger = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement>
 >(({ className, children, ...props }, ref) => (
-  <button
-    ref={ref}
-    className={cn(
-      'inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700',
-      className,
-    )}
-    {...props}
-  >
+  <button ref={ref} className={cn('btn btn-primary', className)} {...props}>
     {children}
   </button>
 ))
