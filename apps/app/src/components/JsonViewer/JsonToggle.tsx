@@ -10,10 +10,8 @@ export function JsonToggle({ mode, onChange, className }: JsonToggleProps) {
         type="button"
         onClick={() => onChange('view')}
         className={cn(
-          'px-2 py-1 text-xs rounded-l border border-gray-200',
-          mode === 'view'
-            ? 'bg-blue-50 text-blue-600 border-blue-200'
-            : 'bg-white text-gray-600 hover:bg-gray-50',
+          'btn btn-xs',
+          mode === 'view' ? 'btn-primary' : 'btn-ghost',
         )}
         aria-label="Switch to view mode"
       >
@@ -23,10 +21,8 @@ export function JsonToggle({ mode, onChange, className }: JsonToggleProps) {
         type="button"
         onClick={() => onChange('json')}
         className={cn(
-          'px-2 py-1 text-xs rounded-r border border-gray-200',
-          mode === 'json'
-            ? 'bg-blue-50 text-blue-600 border-blue-200'
-            : 'bg-white text-gray-600 hover:bg-gray-50',
+          'btn btn-xs',
+          mode === 'json' ? 'btn-primary' : 'btn-ghost',
         )}
         aria-label="Switch to JSON mode"
       >

@@ -160,7 +160,7 @@ export default function ViewTypeDropdown({
         type="button"
         ref={buttonRef}
         onClick={toggleDropdown}
-        className="flex items-center h-8 px-3 text-xs font-normal text-gray-700 border border-gray-200 rounded-md bg-white hover:bg-gray-50"
+        className="btn btn-sm"
       >
         {getViewContent(currentView)}
         <ChevronDown className="h-3.5 w-3.5 ml-2 text-gray-400" />

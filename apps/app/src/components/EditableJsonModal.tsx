@@ -268,7 +268,7 @@ Each card should follow this structure:
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1 hover:bg-gray-100 transition-colors cursor-pointer"
+              className="btn btn-xs btn-ghost btn-square"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -289,20 +289,14 @@ Each card should follow this structure:
                   <button
                     type="button"
                     onClick={handleFormat}
-                    className={cn(
-                      'flex items-center px-3 py-1 rounded-md border transition-colors cursor-pointer',
-                      'text-gray-600 border-gray-200 hover:bg-gray-50',
-                    )}
+                    className="btn btn-xs"
                   >
                     Format
                   </button>
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className={cn(
-                      'flex items-center gap-1 px-3 py-1 rounded-md border transition-colors cursor-pointer h-full',
-                      'text-gray-600 border-gray-200 hover:bg-gray-50',
-                    )}
+                    className="btn btn-xs"
                   >
                     {copied ? (
                       <>
@@ -346,7 +340,7 @@ Each card should follow this structure:
               <button
                 type="button"
                 onClick={() => setShowExample(!showExample)}
-                className="flex items-center text-gray-600 hover:text-gray-900 focus:outline-none transition-colors cursor-pointer"
+                className="btn btn-xs btn-ghost"
               >
                 {showExample ? (
                   <ChevronDown className="h-4 w-4 mr-1" />
@@ -431,10 +425,7 @@ Each card should follow this structure:
             <button
               type="button"
               onClick={onClose}
-              className={cn(
-                'flex items-center px-4 py-2 rounded-md border transition-colors cursor-pointer',
-                'text-gray-600 border-gray-200 hover:bg-gray-50',
-              )}
+              className="btn btn-sm btn-default"
             >
               Cancel
             </button>
@@ -442,12 +433,7 @@ Each card should follow this structure:
               type="button"
               onClick={handleSave}
               disabled={!!error}
-              className={cn(
-                'flex items-center px-4 py-2 rounded-md border transition-colors cursor-pointer text-xs',
-                !error
-                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-800'
-                  : 'text-gray-600 border-0 opacity-50 cursor-not-allowed',
-              )}
+              className="btn btn-sm btn-primary"
             >
               Save Changes
             </button>

@@ -174,7 +174,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
           ) : selectedTask ? (
             <button
               type="button"
-              className="hover:underline text-medium text-blue-600 cursor-pointer"
+              className="btn btn-sm btn-link text-blue-600 hover:underline px-1"
               onClick={() => setSelectedTask(null)}
             >
               {patientName}
@@ -206,7 +206,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
                 <button
                   type="button"
                   onClick={handleDeleteRequest}
-                  className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md border border-red-300 text-red-700 hover:bg-red-50 ml-2"
+                  className="btn btn-xs btn-error btn-outline ml-2"
                 >
                   <Trash2Icon className="w-4 h-4" />
                   Delete Patient & Tasks
@@ -215,8 +215,12 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={onClose} className="h-8 w-8 p-0" type="button">
+        <div className="flex items-center gap-2 mx-1">
+          <button
+            onClick={onClose}
+            className="btn btn-square btn-ghost btn-sm"
+            type="button"
+          >
             <X className="h-6 w-6 cursor-pointer hover:text-gray-800" />
           </button>
         </div>

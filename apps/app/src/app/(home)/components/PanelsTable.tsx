@@ -81,7 +81,7 @@ const PanelsTable: React.FC<PanelsTableProps> = ({
         <div className="flex gap-2">
           <button
             type="button"
-            className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-200"
+            className="btn btn-xs btn-warning btn-outline"
             onClick={onCreatePanel}
           >
             <Plus className="h-3 w-3 mr-1" />
@@ -195,7 +195,7 @@ const PanelRow: React.FC<{
         <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2 text-right">
           <button
             type="button"
-            className="h-6 w-6 p-0 rounded-full hover:bg-neutral-100"
+            className="btn btn-xs btn-ghost btn-circle"
             onClick={(e) => {
               e.stopPropagation()
               setShowDeleteConfirm(true)
@@ -228,7 +228,7 @@ const PanelRow: React.FC<{
           <TableCell className="p-4 align-middle [&:has([role=checkbox])]:pr-0 text-xs py-2 text-right">
             <button
               type="button"
-              className="h-6 w-6 p-0 rounded-full hover:bg-neutral-100"
+              className="btn btn-xs btn-ghost btn-circle"
               onClick={(e) => {
                 e.stopPropagation()
                 onDeleteView(id, view.id)
@@ -247,14 +247,14 @@ const PanelRow: React.FC<{
             <div className="flex justify-center items-center gap-4">
               <button
                 type="button"
-                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-red-50 hover:bg-red-100 text-red-800 border border-red-200"
+                className="btn btn-xs btn-error btn-outline"
                 onClick={handleDelete}
               >
                 Confirm
               </button>
               <button
                 type="button"
-                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-neutral-50 hover:bg-neutral-100 text-neutral-800 border border-neutral-200"
+                className="btn btn-xs btn-ghost"
                 onClick={() => setShowDeleteConfirm(false)}
               >
                 Cancel

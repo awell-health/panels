@@ -158,7 +158,7 @@ export function Toast({
               <button
                 type="button"
                 onClick={handleRetry}
-                className={`text-sm font-medium ${config.titleColor} hover:${config.messageColor} transition-colors`}
+                className="btn btn-xs btn-ghost"
               >
                 Try again
               </button>
@@ -170,7 +170,7 @@ export function Toast({
             <button
               type="button"
               onClick={handleDismiss}
-              className={`inline-flex rounded-md ${config.bgColor} ${config.messageColor} hover:${config.titleColor} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600`}
+              className="btn btn-xs btn-ghost"
             >
               <span className="sr-only">Dismiss</span>
               <X className="h-5 w-5" />
