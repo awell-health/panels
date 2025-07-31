@@ -79,28 +79,25 @@ export default function PanelToolbar({
           </div>
 
           {/* Column management buttons */}
-          <button type="button" className="btn btn-sm" onClick={onAddColumn}>
-            <Plus className="mr-1 h-3 w-3" /> Add column
+          <button
+            type="button"
+            className="btn btn-sm min-w-32"
+            onClick={onAddColumn}
+          >
+            <Plus className="h-3 w-3" /> Add column
           </button>
 
           <ColumnsDropdown context={columnVisibilityContext} />
 
-          {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
-          <button
-            className="btn btn-sm"
-            onClick={() => {
-              console.log('Actions')
-            }}
-          >
-            Actions
-          </button>
-          {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
-          <button
-            className="btn btn-sm btn-primary btn-outline"
-            onClick={onEnrichData}
-          >
-            <Plus className="mr-1 h-3 w-3" /> Enrich data
-          </button>
+          {onEnrichData && (
+            <button
+              type="button"
+              className="btn btn-sm btn-primary btn-outline"
+              onClick={onEnrichData}
+            >
+              <Plus className="mr-1 h-3 w-3" /> Enrich data
+            </button>
+          )}
         </div>
       </div>
     </div>

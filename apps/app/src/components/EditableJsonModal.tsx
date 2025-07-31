@@ -257,7 +257,7 @@ Each card should follow this structure:
     <Dialog
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
-      className="max-w-[90vw] max-h-[90vh]"
+      className="max-w-[90vw] max-h-[90vh] h-full"
     >
       <DialogContent className="flex flex-col p-0 m-0 text-xs h-full">
         <DialogHeader className="p-3 border-b border-gray-200">

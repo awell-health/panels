@@ -36,7 +36,7 @@ const Dialog = ({
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: it's a modal */}
       <div
         className={cn(
-          'bg-white rounded-lg shadow-xl max-w-md mx-auto p-0 overflow-hidden h-full ',
+          'bg-white rounded-lg shadow-xl max-w-md mx-auto p-0 overflow-hidden',
           className,
         )}
         onClick={(e) => e.stopPropagation()}
