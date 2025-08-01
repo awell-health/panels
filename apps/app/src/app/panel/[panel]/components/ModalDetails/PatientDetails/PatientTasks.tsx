@@ -29,6 +29,7 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
   const ALL_STATUS_FILTER = 'all-status'
   const [order, setOrder] = useState<'asc' | 'desc'>('desc')
   const [filter, setFilter] = useState<string>(ALL_STATUS_FILTER)
+  const taskAvailableStatuses = [...new Set(tasks.map((task) => task.status))]
 
   const getTaskPriorityBadge = (priority: string) => {
     switch (priority.toLowerCase()) {
@@ -79,13 +80,9 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
         <div className="font-medium text-gray-900">Tasks list</div>
         <ManualTrackButton patientId={patientId} />
       </div>
-      <div className="border rounded-md p-2  border-gray-200 flex gap-2">
+      <div className=" border-gray-200 flex gap-2">
         <div className="dropdown">
-          <button
-            type="button"
-            tabIndex={0}
-            className="btn btn-xs btn-outline btn-default"
-          >
+          <button type="button" tabIndex={0} className="btn btn-xs btn-default">
             <ArrowDownUp className="w-3 h-3" />{' '}
             {order === 'asc' ? ascLabel : descLabel}
           </button>
@@ -118,7 +115,7 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
           </ul>
         </div>
         <div className="dropdown">
-          <button type="button" tabIndex={0} className="btn btn-xs btn-outline">
+          <button type="button" tabIndex={0} className="btn btn-xs">
             <FilterIcon className="w-3 h-3" /> {startCase(filter)}
           </button>
           <ul
@@ -138,21 +135,29 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
                 All Status
               </button>
             </li>
-            {taskStatuses.map((status) => (
-              <li key={status}>
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost w-full justify-start"
-                  onClick={() => {
-                    setFilter(status)
-                    ;(document.activeElement as HTMLElement)?.blur()
-                  }}
-                >
-                  {getItemLabel(filter === status)}
-                  {startCase(status)}
-                </button>
-              </li>
-            ))}
+            {taskStatuses
+              .filter((status) => taskAvailableStatuses.includes(status))
+              .sort((a, b) => {
+                return (
+                  taskAvailableStatuses.indexOf(b) -
+                  taskAvailableStatuses.indexOf(a)
+                )
+              })
+              .map((status) => (
+                <li key={status}>
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost w-full justify-start"
+                    onClick={() => {
+                      setFilter(status)
+                      ;(document.activeElement as HTMLElement)?.blur()
+                    }}
+                  >
+                    {getItemLabel(filter === status)}
+                    {startCase(status)}
+                  </button>
+                </li>
+              ))}
           </ul>
         </div>
       </div>
@@ -170,7 +175,7 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
             >
               <div className="flex justify-between p-2 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
                 <div className="flex justify-between w-full items-center">
-                  <div className="font-medium text-gray-900 flex flex-col gap-1">
+                  <div className="font-medium text-gray-900 flex flex-col gap-1.5">
                     {task.description}
                     <div className="flex items-center gap-2">
                       <TaskStatusBadge status={task.status} />
@@ -182,14 +187,16 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
                         {startCase(task.priority)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-600 font-normal">
-                      <Calendar className="w-3 h-3" /> Created:{' '}
-                      {formatDateTime(task.authoredOn)}
-                    </div>
+                    {task.authoredOn && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600 font-normal">
+                        <Calendar className="w-3 h-3" /> Created:{' '}
+                        {formatDateTime(task.authoredOn)}
+                      </div>
+                    )}
                     {isCompleted && (
                       <div className="flex items-center gap-1 text-xs text-gray-600 font-normal">
                         <Calendar className="w-3 h-3" /> Completed:{' '}
-                        {formatDateTime(task.lastModified)}
+                        {formatDateTime(task.meta?.lastUpdated)}
                       </div>
                     )}
                     <div className="flex items-center gap-1 text-xs text-gray-600 font-normal">
