@@ -1,3 +1,21 @@
+/**
+ * Bot Name: [PROJECT][Awell] Datapoint router
+ *
+ * Triggering Event:
+ * - Awell datapoint webhook events that need to be routed to specific FHIR resource creation bots
+ *
+ * FHIR Resources Created/Updated:
+ * - Patient: Created (when patient does not exist) - Minimal record with identifier array (Awell identifier) and active status only
+ * - No other direct FHIR modifications: Routes to specialized bots (observation-bot, encounter-bot) that create Observation and Encounter resources respectively
+ *
+ * Process Overview:
+ * - Receives Awell datapoint webhook payload with datapoint definition ID and value
+ * - Ensures patient exists in FHIR store by creating minimal record with Awell identifier if needed
+ * - Determines routing based on datapoint definition ID mapping (observation vs encounter types using predefined dictionaries)
+ * - Invokes appropriate specialized bot (observation-bot or encounter-bot) with enriched payload containing relevant mapping dictionaries
+ * - Passes along comprehensive observation/encounter dictionaries for proper FHIR resource mapping with LOINC codes and proper categorization
+ */
+
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type { Patient } from '@medplum/fhirtypes'
 

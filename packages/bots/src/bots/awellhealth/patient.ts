@@ -1,3 +1,22 @@
+/**
+ * Bot Name: [PROJECT][Awell] Patient ingestion
+ *
+ * Triggering Event:
+ * - Awell webhook events for patient lifecycle (patient.created, patient.updated, patient.deleted)
+ *
+ * FHIR Resources Created/Updated:
+ * - Patient: Created (patient.created events) - Complete resource with demographics, identifiers, telecom, address, connector extensions, and communication preferences
+ * - Patient: Updated (patient.updated events) - All profile fields with merged extensions preserving existing data
+ * - Task: Deleted (patient.deleted events) - All tasks associated with patient via subject reference for referential integrity
+ * - Patient: Deleted (patient.deleted events) - Complete resource removal after task cleanup
+ *
+ * Process Overview:
+ * - Receives Awell patient webhook payloads with patient profile data
+ * - Transforms Awell patient profile data to FHIR Patient resource format with proper name, telecom, address mapping
+ * - Creates connector extensions for linking to external systems (Awell Care, Elation) based on environment configuration
+ * - Handles patient creation, updates with extension merging, and deletion with comprehensive cleanup of related resources
+ */
+
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type {
   Patient,
@@ -194,6 +213,16 @@ function createPatientConnectorsExtension(
 /**
  * Recursively merges extensions, replacing existing ones that have matching URLs
  * with new ones, while preserving non-conflicting extensions.
+ *
+ * For extensions with nested extensions, recursively merges those as well.
+ * This handles arbitrary levels of nesting.
+ *
+ * Example:
+ * - existing: [{url: "age", value: "30"}, {url: "name", value: "John"}]
+ * - new: [{url: "age", value: "31"}]
+ * - result: [{url: "name", value: "John"}, {url: "age", value: "31"}]
+ *
+ * @see utility_functions.ts - mergeExtensions function
  */
 function mergeExtensions(
   existingExtensions: Extension[],
@@ -222,8 +251,22 @@ function mergeExtensions(
       // No conflict - keep existing extension as-is
       mergedExtensions.push(existingExt)
     } else {
-      // Both extensions have the same URL - use the new one
-      mergedExtensions.push(matchingNewExt)
+      // Both extensions have the same URL - merge them
+      if (existingExt.extension && matchingNewExt.extension) {
+        // Both have nested extensions - recursively merge them
+        const mergedNestedExtensions = mergeExtensions(
+          existingExt.extension,
+          matchingNewExt.extension,
+        )
+        mergedExtensions.push({
+          ...matchingNewExt, // Use new extension as base
+          extension: mergedNestedExtensions,
+        })
+      } else {
+        // At least one doesn't have nested extensions - use the new one completely
+        mergedExtensions.push(matchingNewExt)
+      }
+
       // Mark as processed so we don't add it again
       if (existingExt.url) {
         newExtensionsByUrl.delete(existingExt.url)

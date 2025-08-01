@@ -1,3 +1,23 @@
+/**
+ * Bot Name: [PROJECT] Task enrichment
+ *
+ * Triggering Event:
+ * - Task subscription
+ *
+ * FHIR Resources Created/Updated:
+ * - Task: Updated (always) - Extensions array with Awell-specific extensions (pathway data points, hosted pages links, enrichment status, connector inputs)
+ * - Patient: Updated (when new data points have been found) - Extensions array with data point extensions merged with existing extensions
+ *
+ * Process Overview:
+ * - Receives Task resource via subscription with Awell context extensions
+ * - Fetches pathway data points and definitions from Awell GraphQL API
+ * - Generates hosted pages link for task completion UI
+ * - Creates enrichment status tracking extensions
+ * - Merges new extensions with existing task extensions recursively
+ * - Updates Task resource with comprehensive enriched data and connector inputs
+ * - Conditionally updates associated Patient resource with data point extensions
+ */
+
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type { Task, Extension, TaskInput } from '@medplum/fhirtypes'
 
@@ -423,6 +443,8 @@ async function createConnectorInputs(
  * - existing: [{url: "age", value: "30"}, {url: "name", value: "John"}]
  * - new: [{url: "age", value: "31"}]
  * - result: [{url: "name", value: "John"}, {url: "age", value: "31"}]
+ *
+ * @see utility_functions.ts - mergeExtensions function
  */
 function mergeExtensions(
   existingExtensions: Extension[],

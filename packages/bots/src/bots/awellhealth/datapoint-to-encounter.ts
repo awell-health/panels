@@ -1,3 +1,20 @@
+/**
+ * Bot Name: [PROJECT][Awell] Datapoint to encounter conversion
+ *
+ * Triggering Event:
+ * - Routed datapoint events from datapoint-bot-router for encounter-type datapoints
+ *
+ * FHIR Resources Created/Updated:
+ * - Encounter: Created (always when sufficient encounter datapoints available) - Complete resource with class, type, location, service type, period, status, participant information, and patient subject reference
+ *
+ * Process Overview:
+ * - Receives datapoint payload from router with encounter dictionary mapping for proper field translation
+ * - Fetches additional encounter datapoints from Awell GraphQL API to gather complete encounter context and related data
+ * - Maps encounter datapoint values to FHIR Encounter fields using encounter dictionary (class, type, location, service type, nurse unit information)
+ * - Creates comprehensive Encounter resource with proper period timing, encounter status, and participant information
+ * - Links encounter to existing patient resource with proper subject reference and encounter context for clinical workflows
+ */
+
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type { Encounter } from '@medplum/fhirtypes'
 

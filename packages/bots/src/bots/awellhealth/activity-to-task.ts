@@ -1,3 +1,22 @@
+/**
+ * Bot Name: [PROJECT][Awell] Activity to task conversion
+ *
+ * Triggering Event:
+ * - Awell activity webhook events (activity creation, updates, completion)
+ *
+ * FHIR Resources Created/Updated:
+ * - Patient: Created (when patient does not exist) - Minimal record with identifier array (Awell identifier) and active status only
+ * - Task: Created (when no existing task found) - Complete resource with Awell context extensions, pathway details, activity metadata, status, and subject reference
+ * - Task: Updated (when existing task found) - Status and statusReason fields only
+ *
+ * Process Overview:
+ * - Receives Awell activity webhook payload with comprehensive activity and pathway context
+ * - Ensures patient exists in FHIR store by creating minimal record with Awell identifier if needed
+ * - Transforms activity data into FHIR Task resource format with proper subject, description, and status mapping
+ * - Creates Awell-specific extensions including pathway context, activity details, track information, and action components
+ * - Handles task status mapping from Awell activity status to FHIR Task status with proper lifecycle management
+ */
+
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type { Patient, Task } from '@medplum/fhirtypes'
 

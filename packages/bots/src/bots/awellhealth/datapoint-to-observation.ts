@@ -1,3 +1,20 @@
+/**
+ * Bot Name: [PROJECT][Awell] Datapoint to observation conversion
+ *
+ * Triggering Event:
+ * - Routed datapoint events from datapoint-bot-router for observation-type datapoints
+ *
+ * FHIR Resources Created/Updated:
+ * - Observation: Created (always when observation mapping found) - Complete resource with LOINC coding, category (laboratory/vital-signs), value (quantity/string), status, effective date, issued timestamp, and patient subject reference
+ *
+ * Process Overview:
+ * - Receives datapoint payload from router with comprehensive observation dictionary mapping for proper field translation
+ * - Maps observation datapoint values to FHIR Observation fields using standardized LOINC coding system for clinical interoperability
+ * - Handles different value types appropriately (numeric quantities with units vs string values) based on datapoint value type
+ * - Creates Observation resource with proper categories (laboratory vs vital-signs), status, effective date, and issued timestamp
+ * - Links observation to existing patient resource with comprehensive identifiers including Awell datapoint identifier for traceability
+ */
+
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type { Observation } from '@medplum/fhirtypes'
 
