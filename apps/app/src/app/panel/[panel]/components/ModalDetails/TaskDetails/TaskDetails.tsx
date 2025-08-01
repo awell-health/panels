@@ -11,7 +11,24 @@ interface TaskDetailsProps {
 
 const TaskDetails = ({ task }: TaskDetailsProps) => {
   const VIEWS = ['content', 'ahp', 'notes']
-  const AHP_URL = task.input?.[0]?.valueUrl
+  const AHP_CODE = 'awell-hosted-pages'
+
+  function getAwellHostedPagesUrl(code: string) {
+    if (!task.input) return null
+
+    for (const input of task.input) {
+      if (input.type?.coding) {
+        for (const coding of input.type.coding) {
+          if (coding.code === code) {
+            return input.valueUrl
+          }
+        }
+      }
+    }
+    return null
+  }
+
+  const AHP_URL = getAwellHostedPagesUrl(AHP_CODE)
 
   return (
     <>
