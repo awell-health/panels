@@ -2,7 +2,14 @@
 import { Code, Plus, Search } from 'lucide-react'
 import { ColumnsDropdown } from './ColumnsDropdown'
 import WorklistViewDropDown from './ViewTypeDropdown'
-import type { ViewType, ColumnVisibilityContext } from '@/types/panel'
+import { FilterSortIndicators } from './FilterSortIndicators'
+import type {
+  ViewType,
+  ColumnVisibilityContext,
+  Filter,
+  Sort,
+  Column,
+} from '@/types/panel'
 
 interface PanelToolbarProps {
   searchTerm: string
@@ -16,6 +23,12 @@ interface PanelToolbarProps {
   columnVisibilityContext: ColumnVisibilityContext
   onAddColumn: () => void
   isViewPage?: boolean
+  // Filter/sort props
+  filters?: Filter[]
+  sort?: Sort | null
+  columns?: Column[]
+  onFiltersChange?: (filters: Filter[]) => void
+  onSortUpdate?: (sort: Sort | undefined) => void
 }
 
 export default function PanelToolbar({
@@ -29,6 +42,11 @@ export default function PanelToolbar({
   columnVisibilityContext,
   onAddColumn,
   isViewPage = false,
+  filters = [],
+  sort,
+  columns = [],
+  onFiltersChange,
+  onSortUpdate,
 }: PanelToolbarProps) {
   return (
     <div className="border-b border-gray-200 bg-white">
@@ -77,6 +95,14 @@ export default function PanelToolbar({
               className="w-full pl-16 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-400 placeholder:font-normal"
             />
           </div>
+
+          <FilterSortIndicators
+            filters={filters}
+            sort={sort}
+            columns={columns}
+            onFiltersChange={onFiltersChange || (() => {})}
+            onSortUpdate={onSortUpdate || (() => {})}
+          />
 
           <ColumnsDropdown context={columnVisibilityContext} />
 

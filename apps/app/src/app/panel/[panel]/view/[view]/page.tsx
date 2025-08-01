@@ -313,6 +313,11 @@ export default function WorklistViewPage() {
               columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
               isViewPage={true}
+              filters={tableFilters}
+              sort={view?.metadata.sort}
+              columns={visibleColumns}
+              onFiltersChange={onFiltersChange}
+              onSortUpdate={onSortUpdate}
             />
           </div>
           <div className="content-area">
