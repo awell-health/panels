@@ -1,0 +1,33 @@
+---
+description: When you are asked to solve a bug or troubleshoot an issue.
+alwaysApply: false
+---
+# Issue Resolution Process: Three-Step Validation
+
+When working on issues, bugs, or feature requests, follow this structured three-step process with mandatory validation at each stage:
+
+## ❌ DO NOT:
+- Jump directly to implementing solutions without proper diagnosis
+- Move between phases without explicit user approval
+- Skip the review phase after implementation
+- Combine multiple phases into a single response
+- Assume the first identified cause is the root cause
+
+## ✅ DO:
+- **DIAGNOSE**: Analyze symptoms thoroughly and identify true root causes
+- **IMPLEMENT**: Design and apply comprehensive solutions to root causes
+- **REVIEW**: Assess code quality, readability, maintainability, and reuse opportunities
+- Wait for explicit user validation before proceeding to the next phase
+- Search for similar patterns that may need the same fix
+- Document key findings at each stage
+
+## Why Three-Step Validation:
+- Prevents rushed solutions that address symptoms rather than root causes
+- Ensures thorough analysis before making code changes
+- Allows for course correction at each stage based on user feedback
+- Promotes higher quality solutions through structured review
+- Reduces the risk of incomplete or poorly implemented fixes
+- Maintains focus on long-term codebase health
+
+## Phase Completion:
+Each phase must end with presenting findings to the user and asking "Ready to proceed to [next phase]?" before continuing. Never auto-advance between phases.
