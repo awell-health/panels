@@ -1,5 +1,10 @@
 import type { WorklistTask } from '@/lib/fhir-to-table-data'
 import { useEffect, useState } from 'react'
+import {
+  getFirstCodingDisplay,
+  getFirstCodingCode,
+  getFirstCodingSystem,
+} from '@/lib/fhir-utils'
 
 interface ConnectorsSectionProps {
   task: WorklistTask
@@ -21,13 +26,13 @@ const ConnectorsSection = ({
         ?.filter(
           // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
           (input: any) =>
-            input.type?.coding?.[0]?.system ===
+            getFirstCodingSystem(input.type) ===
             'http://awellhealth.com/fhir/connector-type',
         )
         // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
         .map((input: any) => ({
-          name: input.type.coding[0].display,
-          code: input.type.coding[0].code,
+          name: getFirstCodingDisplay(input.type),
+          code: getFirstCodingCode(input.type),
           url: input.valueUrl,
         }))
         .filter((connector: { code: string; url: string }) => {

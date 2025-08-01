@@ -425,7 +425,7 @@ export class MedplumStoreClient {
         return await this.client.updateResource(updatedTask)
       }
 
-      const displayName = `${Array.isArray(practitioner.name?.[0]?.given) ? practitioner.name[0].given.join(' ') : (practitioner.name?.[0]?.given ?? '')} ${Array.isArray(practitioner.name?.[0]?.family) ? practitioner.name[0].family.join(' ') : (practitioner.name?.[0]?.family ?? '')}`
+      const displayName = `${Array.isArray(practitioner.name?.[0]?.given) ? practitioner.name?.[0]?.given.join(' ') : (practitioner.name?.[0]?.given ?? '')} ${Array.isArray(practitioner.name?.[0]?.family) ? practitioner.name?.[0]?.family.join(' ') : (practitioner.name?.[0]?.family ?? '')}`
 
       // Update the task owner
       const updatedTask = {
