@@ -102,6 +102,7 @@ export default function PanelToolbar({
             columns={columns}
             onFiltersChange={onFiltersChange || (() => {})}
             onSortUpdate={onSortUpdate || (() => {})}
+            allColumns={columnVisibilityContext.getAllColumns()}
           />
 
           <ColumnsDropdown context={columnVisibilityContext} />

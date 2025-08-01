@@ -3,13 +3,19 @@
 import { Filter, SortAsc, ChevronDown, X } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import type { Filter as FilterType, Sort, Column } from '@/types/panel'
+import type {
+  Filter as FilterType,
+  Sort,
+  Column,
+  ColumnVisibilityContext,
+} from '@/types/panel'
 import { cn } from '@/lib/utils'
 
 interface FilterSortIndicatorsProps {
   filters: FilterType[]
   sort: Sort | null | undefined
   columns: Column[]
+  allColumns: Column[]
   onFiltersChange: (filters: FilterType[]) => void
   onSortUpdate: (sort: Sort | undefined) => void
   className?: string
@@ -19,6 +25,7 @@ export function FilterSortIndicators({
   filters,
   sort,
   columns,
+  allColumns,
   onFiltersChange,
   onSortUpdate,
   className,
@@ -58,7 +65,7 @@ export function FilterSortIndicators({
   }
 
   const getColumnName = (columnId: string): string => {
-    const column = columns.find((col) => col.id === columnId)
+    const column = allColumns.find((col) => col.id === columnId)
     return column?.name || columnId
   }
 
