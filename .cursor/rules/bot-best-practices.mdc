@@ -1,0 +1,94 @@
+---
+globs: packages/bots/src/**
+alwaysApply: false
+---
+# Bot Development Best Practices
+
+## Documentation Requirements
+
+Every bot file must include a comprehensive header that provides:
+
+### Bot Name Format
+Use the format: `[Project][Source System] Main goal`
+- **Project**: Name of the Medplum project where the bot is deployed (use template placeholder if deployed across all projects)
+- **Source System**: The system that triggers or provides data for the bot
+  - For Medplum subscription events: Source system is implied and can be omitted
+  - Format becomes: `[Project] Main goal`
+- **Main goal**: Clear description of the bot's primary function
+
+### Required Documentation
+- **Triggering Event**: The specific event or type of event that triggers bot execution
+  - For Medplum subscription events: Use format `<Resource> subscription` (e.g., "Task subscription")
+  - For external events: Specify the exact event type and source
+- **FHIR Resources**: **EXHAUSTIVE** list of FHIR resources created or updated by the bot
+  - This is critical information for understanding bot impact and dependencies
+  - Include all resource types, even if modifications are minor
+  - For each resource, specify: operation type (Created/Updated/Deleted) and data scope (what fields are modified)
+  - **Use functional language**: Describe changes in business terms, not technical conditions
+- **Process Overview**: High-level description of the workflow executed by the bot
+
+#### FHIR Resource Discovery Process
+To ensure completeness, systematically analyze:
+- **All resource operations**: Search for `createResource`, `updateResource`, `deleteResource`, `patchResource`
+- **Helper functions**: Check all functions called by the main handler
+- **Conditional logic**: Review all if/else branches for resource operations
+- **Error handling**: Include resource operations in error and cleanup code paths
+
+## Race Condition Prevention
+
+To minimize race conditions, bots must follow this strict execution pattern:
+
+1. **Fetch Phase**: Retrieve all additional data needed for processing
+2. **Transform Phase**: Process input data and additional data transformations
+3. **Update Phase**: Execute all FHIR store updates
+
+**Critical Rule**: Group all FHIR resource updates at the end of the main handler function.
+
+## Safe FHIR Resource Updates
+
+Choose one of these approaches for safe resource updates:
+
+### Option 1: Patch Operations (Preferred)
+Use patch operations to make targeted changes to specific fields in FHIR resources.
+
+### Option 2: Update Operations
+When using update operations:
+1. Fetch a fresh copy of the resource immediately before updating
+2. Replace only the changed properties
+3. Preserve all other existing data
+
+## Utility Functions
+
+### Reference File
+The `@utility_functions.ts` file contains pure functions for common bot operations (e.g., nested merge of extensions).
+
+### Usage Requirements
+- **Medplum Imports Allowed**: Imports from the Medplum namespace (e.g., `@medplum/core`, `@medplum/fhirtypes`) are supported
+- **Custom Utility Functions**: Copy utility functions from `@utility_functions.ts` directly into your bot file (cannot be imported). When copying such a function make sure to include a reference to the utility file in the tsdoc.
+- **Version Verification**: Always verify that copied utility functions match the latest version in the reference file before deployment
+
+### Best Practice
+Regularly check for updates to utility functions and update your bot implementations accordingly.
+
+## Logging Requirements
+
+Effective logging is critical for troubleshooting bot issues. Since logs are displayed in space-constrained tables, focus on essential information only.
+
+### Required Log Points
+
+1. **Process Start**: Log key input data needed to understand what the bot will process
+   - Include resource ID and relevant identifying information
+   - Example: `"Starting enrichment process for task ${task.id} with status '${task.status}'"`
+
+2. **Process Outcome**: Log the result with relevant metrics or error details
+   - **Success**: Include quantitative results and what was modified
+   - **Error**: Include resource ID and concise error message
+   - Examples:
+     - Success: `"Enrichment completed: processed 5 data points, added 3 connector inputs, updated patient"`
+     - Error: `"Enrichment failed for task ${task.id}: ${errorMessage}"`
+
+### Logging Guidelines
+- Keep messages concise but informative
+- Always include the primary resource ID for correlation
+- Use quantitative metrics when possible (counts, types of changes)
+- Avoid verbose descriptions - focus on actionable information

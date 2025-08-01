@@ -1,3 +1,20 @@
+/**
+ * Bot Name: [PROJECT][Awell] Clinical note to composition conversion
+ *
+ * Triggering Event:
+ * - Awell clinical note webhook events (clinical note creation or updates)
+ *
+ * FHIR Resources Created/Updated:
+ * - Composition: Created (always when patient found) - Complete resource with clinical note narratives as sections, FHIR-compliant date formatting, status, and patient subject reference
+ *
+ * Process Overview:
+ * - Receives Awell clinical note webhook payload with multiple narratives and pathway context
+ * - Searches for existing patient in FHIR store using Awell patient identifier for proper resource linking
+ * - Transforms clinical note narratives into FHIR Composition sections with title, code, and narrative text
+ * - Creates Composition resource with proper status, FHIR-compliant date formatting, and structured section organization
+ * - Links composition to existing patient resource and pathway context for comprehensive clinical documentation
+ */
+
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type {
   Patient,

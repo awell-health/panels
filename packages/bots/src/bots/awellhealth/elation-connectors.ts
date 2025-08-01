@@ -1,3 +1,21 @@
+/**
+ * Bot Name: [PROJECT] Connector enrichment
+ *
+ * Triggering Event:
+ * - Task subscription
+ *
+ * FHIR Resources Created/Updated:
+ * - Task: Updated (when Elation identifier found and connector not already present) - Input array with new Elation connector TaskInput containing patient-specific URL
+ * - DocumentReference: Created (when Elation identifier found) - Complete resource with Elation patient data reference, linked to patient and task context
+ *
+ * Process Overview:
+ * - Receives Task resource as input via subscription
+ * - Checks if Task already has Elation connector input to avoid duplicates
+ * - Searches for Elation identifier in the associated Patient resource
+ * - Adds Elation connector input to Task with environment-specific URL
+ * - Creates DocumentReference linking to Elation patient data with proper categorization and content
+ */
+
 import type { BotEvent, MedplumClient } from '@medplum/core'
 import type {
   Task,
