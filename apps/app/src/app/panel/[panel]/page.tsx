@@ -322,6 +322,11 @@ export default function WorklistPage() {
               setCurrentView={updatePanelViewType}
               columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
+              filters={tableFilters}
+              sort={panel?.metadata.sort}
+              columns={visibleColumns}
+              onFiltersChange={onFiltersChange}
+              onSortUpdate={onSortUpdate}
             />
           </div>
           <div className="content-area">
