@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '15mb',
     },
   },
+  // Enable source maps for better error debugging in production
+  productionBrowserSourceMaps: true,
   images: {
     remotePatterns: [
       {
@@ -23,7 +25,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  reactProductionProfiling: true
+  reactProductionProfiling: true,
 }
 
 export default nextConfig

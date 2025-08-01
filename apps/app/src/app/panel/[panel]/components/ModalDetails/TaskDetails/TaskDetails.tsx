@@ -11,7 +11,7 @@ interface TaskDetailsProps {
 
 const TaskDetails = ({ task }: TaskDetailsProps) => {
   const VIEWS = ['content', 'ahp', 'notes']
-  const AHP_URL = task.input[0]?.valueUrl
+  const AHP_URL = task.input?.[0]?.valueUrl
 
   return (
     <>
