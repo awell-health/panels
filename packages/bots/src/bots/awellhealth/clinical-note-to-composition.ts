@@ -95,6 +95,7 @@ function createCompositionSection(
   narrative: ClinicalNoteWebhookPayload['clinical_note']['narratives'][0],
 ): CompositionSection {
   return {
+    id: narrative.id,
     title: narrative.title,
     code: {
       text: narrative.key,
