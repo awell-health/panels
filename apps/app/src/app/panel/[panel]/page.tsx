@@ -8,6 +8,7 @@ import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
 import { useColumnOperations } from '@/hooks/use-column-operations'
 import { useColumnVisibility } from '@/hooks/use-column-visibility'
+import { useColumnLocking } from '@/hooks/use-column-locking'
 import {
   useReactiveColumns,
   useReactivePanel,
@@ -26,7 +27,7 @@ import type {
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Loader2 } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { AddIngestionModal } from './components/AddIngestionModal'
 import { ModalDetails } from './components/ModalDetails'
 import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
@@ -87,6 +88,9 @@ export default function WorklistPage() {
   // Create column visibility context for panel
   const columnVisibilityContext = useColumnVisibility(panelId)
 
+  // Create column locking context for panel (no viewId, so uses panel-level locking)
+  const { setColumnLocked, isColumnLocked } = useColumnLocking(panelId)
+
   const router = useRouter()
 
   // Get columns for current view type using tag-based filtering
@@ -98,6 +102,40 @@ export default function WorklistPage() {
 
   // Get only visible columns using column visibility context
   const visibleColumns = columnVisibilityContext.getVisibleColumns()
+
+  // Maintain separate arrays for locked and unlocked columns to preserve drag-drop order within groups
+  const { lockedColumns, unlockedColumns, allColumnsOrdered } = useMemo(() => {
+    const enhancedColumns = visibleColumns.map((column) => ({
+      ...column,
+      properties: {
+        ...column.properties,
+        display: {
+          ...column.properties?.display,
+          // Set locked state based on current context (panel-level or view-specific)
+          locked:
+            isColumnLocked(column.id) ||
+            (column.properties?.display?.locked ?? false),
+        },
+      },
+    }))
+
+    // Separate into locked and unlocked arrays, preserving order within each group
+    const locked = enhancedColumns.filter(
+      (col) => col.properties?.display?.locked,
+    )
+    const unlocked = enhancedColumns.filter(
+      (col) => !col.properties?.display?.locked,
+    )
+
+    // Always merge locked first, then unlocked (required for sticky positioning)
+    const allOrdered = [...locked, ...unlocked]
+
+    return {
+      lockedColumns: locked,
+      unlockedColumns: unlocked,
+      allColumnsOrdered: allOrdered,
+    }
+  }, [visibleColumns, isColumnLocked])
 
   // Set table data based on current view
   const tableData = currentView === 'patient' ? patients : tasks
@@ -175,10 +213,17 @@ export default function WorklistPage() {
       return
     }
 
-    try {
-      await updateColumn(panel.id, updates.id, updates)
-    } catch (error) {
-      console.error('Failed to update column:', error)
+    // Check if this is a locking/unlocking operation
+    if (updates.properties?.display?.locked !== undefined) {
+      // Use panel-level locking (no viewId provided)
+      await setColumnLocked(updates.id, updates.properties.display.locked)
+    } else {
+      // For other column updates, use the regular updateColumn
+      try {
+        await updateColumn(panel.id, updates.id, updates)
+      } catch (error) {
+        console.error('Failed to update column:', error)
+      }
     }
   }
 
@@ -256,7 +301,6 @@ export default function WorklistPage() {
     [],
   )
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the visible columns that matter here
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event
@@ -265,15 +309,31 @@ export default function WorklistPage() {
       }
 
       // Find the active column's index and the over column's index
-      const oldIndex = visibleColumns.findIndex((col) => col.id === active.id)
-      const newIndex = visibleColumns.findIndex((col) => col.id === over.id)
+      const oldIndex = allColumnsOrdered.findIndex(
+        (col) => col.id === active.id,
+      )
+      const newIndex = allColumnsOrdered.findIndex((col) => col.id === over.id)
 
       if (oldIndex === -1 || newIndex === -1) {
         return
       }
 
+      // Get the actual column objects to check locked states
+      const activeColumn = allColumnsOrdered[oldIndex]
+      const overColumn = allColumnsOrdered[newIndex]
+
+      // Check locked states - for panel context, use column-level locked state directly
+      const activeIsLocked = activeColumn?.properties?.display?.locked ?? false
+      const overIsLocked = overColumn?.properties?.display?.locked ?? false
+
+      // Prevent dragging between locked and unlocked groups
+      // (locked columns must stay at the beginning for sticky positioning to work)
+      if (activeIsLocked !== overIsLocked) {
+        return
+      }
+
       // Reorder the columns
-      const reorderedColumns = arrayMove(visibleColumns, oldIndex, newIndex)
+      const reorderedColumns = arrayMove(allColumnsOrdered, oldIndex, newIndex)
 
       // Use the dedicated reorder method which shows only one toast
       if (panel) {
@@ -284,7 +344,7 @@ export default function WorklistPage() {
         }
       }
     },
-    [visibleColumns],
+    [allColumnsOrdered, panel, reorderColumns],
   )
 
   const isLoading =
@@ -330,7 +390,7 @@ export default function WorklistPage() {
                 isLoading={isProgressiveLoading}
                 selectedRows={selectedRows}
                 toggleSelectAll={() => {}}
-                columns={visibleColumns}
+                columns={allColumnsOrdered}
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
                 handlePDFClick={() => {}}
@@ -380,7 +440,7 @@ export default function WorklistPage() {
           )}
           <div className="footer-area">
             <PanelFooter
-              columnsCounter={visibleColumns.length}
+              columnsCounter={allColumnsOrdered.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}

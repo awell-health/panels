@@ -5,9 +5,12 @@ import type { Column, Sort } from '@/types/panel'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
+  ArrowDown,
+  ArrowUp,
   Calendar,
   GripVertical,
   Hash,
+  Lock,
   MoreVertical,
   Text,
   ToggleLeft,
@@ -19,12 +22,13 @@ interface SortableHeaderColumnProps {
   column: Column
   index: number
   style: React.CSSProperties
-  sortConfig?: Sort | null
+  sortConfig?: Sort | undefined
   onSort: () => void
   filterValue: string
   onFilter: (value: string) => void
   onColumnUpdate: (updates: Partial<Column>) => void
   onColumnDelete?: (columnId: string) => void
+  isLocked?: boolean // Current locked state in the active context
 }
 
 export function SortableHeaderColumn({
@@ -37,6 +41,7 @@ export function SortableHeaderColumn({
   onFilter,
   onColumnUpdate,
   onColumnDelete,
+  isLocked = false,
 }: SortableHeaderColumnProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
@@ -80,7 +85,11 @@ export function SortableHeaderColumn({
   // Get sort indicator
   const getSortIndicator = () => {
     if (!sortConfig || sortConfig.columnId !== column.id) return null
-    return sortConfig.direction === 'asc' ? '↑' : '↓'
+    return sortConfig.direction === 'asc' ? (
+      <ArrowUp className="h-3 w-3 text-gray-500 mr-2" />
+    ) : (
+      <ArrowDown className="h-3 w-3 text-gray-500 mr-2" />
+    )
   }
 
   // Toggle menu open/closed and calculate position
@@ -144,24 +153,41 @@ export function SortableHeaderColumn({
       )}
 
       <div className="flex items-center justify-between w-full h-full">
-        {/* Drag handle */}
+        {/* Drag handle or Lock icon */}
         <button
           type="button"
           className={cn(
-            'btn btn-xs btn-ghost btn-header cursor-grab -ml-1 mr-2',
-            isDragging && 'cursor-grabbing bg-gray-100',
+            'btn btn-xs btn-ghost btn-header mr-2 ml-1 text-xs',
+            column.properties?.display?.locked
+              ? 'cursor-default'
+              : isDragging
+                ? 'cursor-grabbing bg-gray-100'
+                : 'cursor-grab',
           )}
-          {...listeners}
-          aria-label="Drag to reorder column"
+          {...(column.properties?.display?.locked ? {} : listeners)}
+          aria-label={
+            column.properties?.display?.locked
+              ? "Locked columns can't be dragged"
+              : 'Drag to reorder column'
+          }
+          title={
+            column.properties?.display?.locked
+              ? "Locked columns can't be dragged"
+              : 'Drag to reorder column'
+          }
         >
-          <GripVertical className="h-3 w-3 text-gray-400" />
+          {column.properties?.display?.locked ? (
+            <Lock className="h-3 w-3 text-yellow-500" />
+          ) : (
+            <GripVertical className="h-3 w-3 text-gray-400" />
+          )}
         </button>
 
         {/* Column content - clickable for sorting */}
         <button
           type="button"
           className={cn(
-            'btn btn-xs btn-ghost btn-header flex-1 justify-start',
+            'btn btn-xs btn-ghost btn-header flex-1 justify-start text-xs',
             isDragging && 'pointer-events-none',
           )}
           onClick={isDragging ? undefined : onSort}
@@ -169,8 +195,8 @@ export function SortableHeaderColumn({
           aria-label={`Sort by ${column.name}`}
         >
           {getTypeIcon()}
-          <span className="truncate">{column.name}</span>
-          <span className=" text-gray-500">{getSortIndicator()}</span>
+          <span className="truncate text-xs">{column.name}</span>
+          <span className="text-xs text-gray-500">{getSortIndicator()}</span>
         </button>
 
         {/* Menu controls */}
@@ -183,7 +209,7 @@ export function SortableHeaderColumn({
           <button
             type="button"
             className={cn(
-              'btn btn-xs btn-ghost btn-header',
+              'btn btn-xs btn-ghost btn-header text-xs',
               filterValue ? 'text-blue-500 bg-blue-50' : 'text-gray-500',
             )}
             onClick={isDragging ? undefined : toggleMenu}
@@ -227,6 +253,7 @@ export function SortableHeaderColumn({
         onFilter={onFilter}
         onColumnUpdate={onColumnUpdate}
         onColumnDelete={onColumnDelete}
+        isLocked={isLocked}
       />
     </div>
   )

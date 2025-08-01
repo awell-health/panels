@@ -8,8 +8,7 @@ import {
   useRef,
   useEffect,
 } from 'react'
-import { VariableSizeGrid } from 'react-window'
-import AutoSizer from 'react-virtualized-auto-sizer'
+import { TableVirtuoso } from 'react-virtuoso'
 import type { Column, Filter, Sort } from '@/types/panel'
 import { getNestedValue, isMatchingFhirPathCondition } from '@/lib/fhir-path'
 import {
@@ -25,7 +24,7 @@ import {
 } from '@dnd-kit/core'
 import { restrictToHorizontalAxis } from '@dnd-kit/modifiers'
 import { StickyGridProvider } from './StickyContext'
-import { VirtualizedCell } from './VirtualizedCell'
+import { VirtualizedRow } from './VirtualizedRow'
 import { StickyHeader } from './StickyHeader'
 import {
   calculateColumnWidthByTitle,
@@ -51,27 +50,48 @@ interface VirtualizedTableProps {
     taskStatus: string,
     patientName: string,
   ) => void
-  handleRowHover: (
-    rowIndex: number,
-    isHovered: boolean,
-    rect: DOMRect | null,
-  ) => void
+  handleRowHover: (rowIndex: number) => void
   toggleSelectRow: (rowId: string) => void
   handleAssigneeClick: (taskId: string) => Promise<void>
-  onColumnUpdate: (updates: Partial<Column>) => void
+  onColumnUpdate?: (updates: Partial<Column>) => void
   onColumnDelete?: (columnId: string) => void
-  onSortUpdate: (sort: Sort | undefined) => void
+  onSortUpdate?: (sort: Sort | undefined) => void
   currentView: string
-  filters: Filter[]
-  onFiltersChange: (filters: Filter[]) => void
-  initialSort: Sort | null
+  filters?: Filter[]
+  onFiltersChange?: (filters: Filter[]) => void
+  initialSort?: Sort | null
   currentUserName?: string
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   onRowClick: (row: Record<string, any>) => void
-  handleDragEnd?: (event: DragEndEvent) => void
+  handleDragEnd: (event: DragEndEvent) => void
   hasMore?: boolean
   onLoadMore?: () => void
   isLoadingMore?: boolean
+}
+
+// Icon helper function (same as original)
+function getTypeIcon(column: Column) {
+  const iconClasses = 'w-3 h-3 mr-1 text-gray-400'
+  switch (column.type) {
+    case 'text':
+      return <span className={iconClasses}>📝</span>
+    case 'number':
+      return <span className={iconClasses}>🔢</span>
+    case 'date':
+    case 'datetime':
+      return <span className={iconClasses}>📅</span>
+    case 'boolean':
+      return <span className={iconClasses}>☑️</span>
+    case 'select':
+    case 'multi_select':
+      return <span className={iconClasses}>📋</span>
+    case 'user':
+      return <span className={iconClasses}>👤</span>
+    case 'file':
+      return <span className={iconClasses}>📎</span>
+    default:
+      return <span className={iconClasses}>🔧</span>
+  }
 }
 
 export function VirtualizedTable({
@@ -100,262 +120,20 @@ export function VirtualizedTable({
   onLoadMore,
   isLoadingMore,
 }: VirtualizedTableProps) {
-  // Drag and drop state
-  const [activeColumn, setActiveColumn] = useState<Column | null>(null)
-
-  // Row hover state
+  // State management (similar to original)
   const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null)
-
-  // Grid ref for resetting cached dimensions
-  const gridRef = useRef<VariableSizeGrid>(null)
-
-  // Sort columns by order if needed
-  const visibleColumns = useMemo(() => {
-    if (orderColumnMode === 'auto') {
-      return columns.sort((a: Column, b: Column) => {
-        const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
-        const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
-        return orderA - orderB
-      })
-    }
-    return columns
-  }, [columns, orderColumnMode])
-
-  // Create a stable key for grid re-rendering
-  const gridKey = useMemo(() => {
-    const columnIds = visibleColumns.map((col: Column) => col.id).join('-')
-    return `${currentView}-${columnIds}`
-  }, [currentView, visibleColumns])
-
-  // Reset grid dimensions when view or columns change
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dependencies are fine
-  useEffect(() => {
-    if (gridRef.current) {
-      // Reset cached column widths
-      gridRef.current.resetAfterColumnIndex(0)
-      // Reset cached row heights
-      gridRef.current.resetAfterRowIndex(0)
-    }
-  }, [currentView, visibleColumns])
-
-  // Apply filtering and sorting to data
-  const filteredAndSortedData = useMemo(() => {
-    // First apply filters
-    let filteredData = tableData
-    if (filters && filters.length > 0) {
-      filteredData = tableData.filter((row) => {
-        return filters.every((filter) => {
-          const column = columns.find((c) => c.id === filter.columnId)
-          if (column) {
-            if (filter.fhirExpressionTemplate) {
-              // For date filters, parse from/to from the value
-              let templateVars: Record<string, string> = {
-                sourceField: column.sourceField || '',
-                value: filter.value,
-              }
-
-              // Parse date range if the filter contains a date range format
-              // This handles both explicit date columns and any filter with date range format
-              if (column.type === 'date') {
-                // Handle both '#' and ' - ' delimiters for backward compatibility
-                const delimiter = filter.value.includes('#') ? '#' : ' - '
-                const [from, to] = filter.value.split(delimiter)
-                templateVars = {
-                  ...templateVars,
-                  from: from?.trim() || '',
-                  to: to?.trim() || '',
-                }
-              }
-
-              const fhirPath = template(filter.fhirExpressionTemplate, {
-                interpolate: /{{([\s\S]+?)}}/g,
-              })(templateVars)
-              return isMatchingFhirPathCondition(row, fhirPath)
-            }
-            return true
-          }
-          // Legacy behaviour
-          const legacyColumn = columns.find(
-            (c) => c.sourceField === filter.fhirPathFilter?.[0],
-          )
-          if (legacyColumn && filter.fhirPathFilter) {
-            const fhirPath = `${legacyColumn.sourceField}.lower().contains('${filter.fhirPathFilter[1].toLowerCase()}')`
-            return isMatchingFhirPathCondition(row, fhirPath)
-          }
-          return true
-        })
-      })
-    }
-
-    // Then apply sorting
-    if (!initialSort) return filteredData
-
-    const sortFhirPath = columns.find(
-      (c) => c.id === initialSort.columnId,
-    )?.sourceField
-    if (!sortFhirPath) return filteredData
-
-    return [...filteredData].sort((a, b) => {
-      const aValue = getNestedValue(a, sortFhirPath)
-      const bValue = getNestedValue(b, sortFhirPath)
-
-      if (aValue === null || aValue === undefined) return 1
-      if (bValue === null || bValue === undefined) return -1
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return initialSort.direction === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue)
-      }
-
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return initialSort.direction === 'asc'
-          ? aValue - bValue
-          : bValue - aValue
-      }
-
-      if (aValue instanceof Date && bValue instanceof Date) {
-        return initialSort.direction === 'asc'
-          ? aValue.getTime() - bValue.getTime()
-          : bValue.getTime() - aValue.getTime()
-      }
-
-      return initialSort.direction === 'asc'
-        ? String(aValue).localeCompare(String(bValue))
-        : String(bValue).localeCompare(String(aValue))
-    })
-  }, [tableData, initialSort, filters, columns])
-
-  // Calculate base column width based on title length and custom width
-  const getBaseColumnWidth = useCallback(
-    (columnIndex: number) => {
-      const column = visibleColumns[columnIndex]
-      if (!column) return MIN_COLUMN_WIDTH
-
-      const customWidth = column.properties?.display?.width
-      const calculatedWidth = calculateColumnWidthByTitle(
-        column.name,
-        column.type,
-      )
-
-      return Math.max(
-        MIN_COLUMN_WIDTH,
-        Math.min(MAX_COLUMN_WIDTH, customWidth || calculatedWidth),
-      )
-    },
-    [visibleColumns],
+  const [activeColumn, setActiveColumn] = useState<Column | null>(null)
+  const [sortConfig, setSortConfig] = useState<Sort | undefined>(
+    initialSort || undefined,
   )
+  const [containerWidth, setContainerWidth] = useState(1200)
+  const [gridKey, setGridKey] = useState(0)
 
-  // Calculate column width for grid (includes selection column at index 0)
-  const getColumnWidth = useCallback(
-    (columnIndex: number) => {
-      // Selection column
-      if (columnIndex === 0) {
-        return SELECTION_COLUMN_WIDTH
-      }
+  // Refs
+  const virtuosoRef = useRef(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-      // Data columns
-      return getBaseColumnWidth(columnIndex - 1)
-    },
-    [getBaseColumnWidth],
-  )
-
-  // Handle sorting
-  const handleSort = useCallback(
-    (columnId: string) => {
-      const current = initialSort
-      let newSort: Sort | undefined
-
-      if (current?.columnId === columnId) {
-        newSort = {
-          columnId,
-          direction: current.direction === 'asc' ? 'desc' : 'asc',
-        }
-      } else {
-        newSort = { columnId, direction: 'desc' }
-      }
-
-      onSortUpdate(newSort)
-    },
-    [initialSort, onSortUpdate],
-  )
-
-  // Handle filtering
-  const handleFilter = useCallback(
-    (columnId: string, value: string) => {
-      const newFilters = filters.filter((f) => f.columnId !== columnId)
-      const column = columns.find((c) => c.id === columnId)
-
-      if (value) {
-        if (column?.type === 'date') {
-          // For date filters, determine if it's a period object or simple date field
-          const [from, to] = value.split('#')
-          const isSimpleDateField =
-            column.sourceField === 'birthDate' ||
-            column.sourceField?.endsWith('.birthDate') ||
-            !column.sourceField?.includes('period')
-
-          // Create conditional FHIR expression based on available values and field type
-          let fhirExpression = ''
-
-          if (isSimpleDateField) {
-            // Simple date field (like birthDate)
-            if (from?.trim() && to?.trim()) {
-              fhirExpression = `{{sourceField}} >= '{{from}}' and {{sourceField}} <= '{{to}}'`
-            } else if (to?.trim()) {
-              fhirExpression = `{{sourceField}} <= '{{to}}'`
-            } else if (from?.trim()) {
-              fhirExpression = `{{sourceField}} >= '{{from}}'`
-            }
-          } else {
-            // Period object (like admission/discharge periods)
-            if (from?.trim() && to?.trim()) {
-              fhirExpression = `{{sourceField}}.start <= '{{to}}' and {{sourceField}}.end >= '{{from}}'`
-            } else if (to?.trim()) {
-              fhirExpression = `{{sourceField}}.start <= '{{to}}'`
-            } else if (from?.trim()) {
-              fhirExpression = `{{sourceField}}.end >= '{{from}}'`
-            }
-          }
-
-          newFilters.push({
-            columnId: columnId,
-            value: value.trim(), // Don't lowercase dates
-            fhirExpressionTemplate: fhirExpression,
-          })
-        } else {
-          newFilters.push({
-            columnId: columnId,
-            value: value.trim().toLowerCase(),
-            fhirExpressionTemplate: `{{sourceField}}.lower().contains('{{value}}')`,
-          })
-        }
-      }
-
-      onFiltersChange(newFilters)
-    },
-    [filters, onFiltersChange, columns],
-  )
-
-  // Drag and drop handlers
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      const { active } = event
-      const column = visibleColumns.find((col) => col.id === active.id)
-      setActiveColumn(column || null)
-    },
-    [visibleColumns],
-  )
-
-  const handleDragEndWithReset = useCallback(
-    (event: DragEndEvent) => {
-      setActiveColumn(null)
-      handleDragEnd?.(event)
-    },
-    [handleDragEnd],
-  )
-
-  // Drag sensors
+  // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -365,136 +143,301 @@ export function VirtualizedTable({
     useSensor(KeyboardSensor),
   )
 
-  // Get type icon for drag overlay
-  const getTypeIcon = useCallback((column: Column) => {
-    switch (column.type) {
-      case 'date':
-        return (
-          <svg
-            className="h-3.5 w-3.5 mr-1.5 text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            role="img"
-          >
-            <title>Date column</title>
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-        )
-      case 'number':
-        return (
-          <svg
-            className="h-3.5 w-3.5 mr-1.5 text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            role="img"
-          >
-            <title>Number column</title>
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
-            />
-          </svg>
-        )
-      case 'boolean':
-        return (
-          <svg
-            className="h-3.5 w-3.5 mr-1.5 text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            role="img"
-          >
-            <title>Boolean column</title>
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-        )
-      default:
-        return (
-          <svg
-            className="h-3.5 w-3.5 mr-1.5 text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            role="img"
-          >
-            <title>Text column</title>
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6h16M4 12h16M4 18h7"
-            />
-          </svg>
-        )
+  // Handle container resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth)
+      }
     }
+
+    const resizeObserver = new ResizeObserver(handleResize)
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+
+    return () => resizeObserver.disconnect()
   }, [])
 
-  // Handle internal row hover - manages local state and calls parent handler
+  // Force re-render when view or columns change
+  useEffect(() => {
+    setGridKey((prevKey) => prevKey + 1)
+  }, [])
+
+  // Update sort config when initialSort changes
+  useEffect(() => {
+    setSortConfig(initialSort || undefined)
+  }, [initialSort])
+
+  // Column visibility and ordering
+  const visibleColumns = useMemo(() => {
+    // Just filter for visibility - page level already handles locked/unlocked ordering
+    return columns.filter((col) => col.properties?.display?.visible !== false)
+  }, [columns])
+
+  // Pre-calculate all column widths to prevent recalculation during scroll
+  const columnWidths = useMemo(() => {
+    return visibleColumns.map((column) => {
+      if (
+        column.properties?.display?.width &&
+        column.properties.display.width > 0
+      ) {
+        return Math.max(
+          Math.min(column.properties.display.width, MAX_COLUMN_WIDTH),
+          MIN_COLUMN_WIDTH,
+        )
+      }
+      return calculateColumnWidthByTitle(column.name, column.type)
+    })
+  }, [visibleColumns])
+
+  // Simple column width getter
+  const getColumnWidth = useCallback(
+    (columnIndex: number) => {
+      return columnWidths[columnIndex] || MIN_COLUMN_WIDTH
+    },
+    [columnWidths],
+  )
+
+  // Calculate sticky left positions for locked columns
+  const getStickyColumnStyles = useCallback(
+    (columnIndex: number, isHovered = false, isHeader = false) => {
+      const column = visibleColumns[columnIndex]
+      // Check view-specific locked state first, then fall back to column-level for backward compatibility
+      const isLocked = column?.properties?.display?.locked
+
+      if (!isLocked) {
+        return {}
+      }
+
+      // Calculate cumulative width of all locked columns to the left
+      let leftPosition = 0
+      for (let i = 0; i < columnIndex; i++) {
+        const prevColumn = visibleColumns[i]
+        if (prevColumn?.properties?.display?.locked) {
+          leftPosition += getColumnWidth(i)
+        } else {
+          // Stop calculating when we hit an unlocked column
+          break
+        }
+      }
+
+      return {
+        position: 'sticky' as const,
+        left: leftPosition,
+        // Headers need higher z-index to stay above both content and regular headers
+        // Data cells need lower z-index to stay below headers during scroll
+        zIndex: isHeader ? 41 : 1,
+        backgroundColor: isHovered ? '#f9fafb' : isHeader ? '#fefefe' : 'white', // Slightly off-white for headers
+        boxShadow: isHeader
+          ? '2px 0 8px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1)' // Enhanced shadow for headers
+          : '2px 0 8px rgba(0,0,0,0.15)',
+        // Ensure proper stacking context
+        isolation: 'isolate' as const,
+      }
+    },
+    [visibleColumns, getColumnWidth],
+  )
+
+  // Data filtering and sorting (same logic as original)
+  const filteredAndSortedData = useMemo(() => {
+    let processedData = [...tableData]
+
+    // Apply filters
+    if (filters && filters.length > 0) {
+      processedData = processedData.filter((row) => {
+        return filters.every((filter) => {
+          if (!filter.value || filter.value.trim() === '') return true
+
+          // Handle new filter format with columnId
+          if (filter.columnId) {
+            const column = visibleColumns.find(
+              (col) => col.id === filter.columnId,
+            )
+            if (!column) return true
+
+            const cellValue = getNestedValue(row, column.sourceField)
+            const filterValue = filter.value.toLowerCase()
+
+            if (cellValue === null || cellValue === undefined) return false
+
+            return String(cellValue).toLowerCase().includes(filterValue)
+          }
+
+          // Handle legacy filter format with fhirPathFilter
+          if (filter.fhirPathFilter && filter.fhirPathFilter.length >= 2) {
+            const [fhirPath, expectedValue] = filter.fhirPathFilter
+            const fhirExpression = `${fhirPath}.lower().contains('${expectedValue.toLowerCase()}')`
+            return isMatchingFhirPathCondition(row, fhirExpression)
+          }
+
+          return true
+        })
+      })
+    }
+
+    // Apply sorting
+    if (sortConfig) {
+      processedData.sort((a, b) => {
+        const column = visibleColumns.find(
+          (col) => col.id === sortConfig.columnId,
+        )
+        if (!column) return 0
+
+        const aValue = getNestedValue(a, column.sourceField)
+        const bValue = getNestedValue(b, column.sourceField)
+
+        if (aValue === null || aValue === undefined) return 1
+        if (bValue === null || bValue === undefined) return -1
+
+        let comparison = 0
+        if (column.type === 'number') {
+          comparison = Number(aValue) - Number(bValue)
+        } else if (column.type === 'date' || column.type === 'datetime') {
+          comparison = new Date(aValue).getTime() - new Date(bValue).getTime()
+        } else {
+          comparison = String(aValue).localeCompare(String(bValue))
+        }
+
+        return sortConfig.direction === 'desc' ? -comparison : comparison
+      })
+    }
+
+    return processedData
+  }, [tableData, filters, sortConfig, visibleColumns])
+
+  // Handle internal row hover
   const handleInternalRowHover = useCallback(
     (rowIndex: number, isHovered: boolean, rect: DOMRect | null) => {
       setHoveredRowIndex(isHovered ? rowIndex : null)
-      handleRowHover(rowIndex, isHovered, rect)
+      if (isHovered) {
+        handleRowHover(rowIndex)
+      }
     },
     [handleRowHover],
   )
 
-  // Handle when items are rendered to detect when we're near the end
-  const handleItemsRendered = useCallback(
-    ({ overscanRowStopIndex }: { overscanRowStopIndex: number }) => {
-      if (!onLoadMore || !hasMore || isLoadingMore || isLoading) return
-
-      const totalRows = filteredAndSortedData.length
-      const threshold = 5
-
-      if (overscanRowStopIndex >= totalRows - threshold) {
-        onLoadMore()
+  // Handle sort
+  const handleSort = useCallback(
+    (columnId: string) => {
+      const newSortConfig: Sort = {
+        columnId,
+        direction:
+          sortConfig?.columnId === columnId && sortConfig.direction === 'asc'
+            ? 'desc'
+            : 'asc',
       }
+      setSortConfig(newSortConfig)
+      onSortUpdate?.(newSortConfig)
     },
+    [sortConfig, onSortUpdate],
+  )
+
+  // Handle filter
+  const handleFilter = useCallback(
+    (columnId: string, value: string) => {
+      if (!onFiltersChange) return
+
+      const newFilters = [...(filters || [])]
+      const existingFilterIndex = newFilters.findIndex(
+        (f) => f.columnId === columnId,
+      )
+
+      if (value.trim() === '') {
+        if (existingFilterIndex >= 0) {
+          newFilters.splice(existingFilterIndex, 1)
+        }
+      } else {
+        const newFilter: Filter = {
+          columnId,
+          value,
+          fhirExpressionTemplate: `{{sourceField}}.lower().contains('{{value}}')`,
+        }
+        if (existingFilterIndex >= 0) {
+          newFilters[existingFilterIndex] = newFilter
+        } else {
+          newFilters.push(newFilter)
+        }
+      }
+
+      onFiltersChange(newFilters)
+    },
+    [filters, onFiltersChange],
+  )
+
+  // Drag handlers
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const columnId = event.active.id as string
+      const column = visibleColumns.find((col) => col.id === columnId)
+      setActiveColumn(column || null)
+    },
+    [visibleColumns],
+  )
+
+  const handleDragEndWithReset = useCallback(
+    (event: DragEndEvent) => {
+      handleDragEnd(event)
+      setActiveColumn(null)
+    },
+    [handleDragEnd],
+  )
+
+  // Load more handler
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && !isLoadingMore && onLoadMore) {
+      onLoadMore()
+    }
+  }, [hasMore, isLoadingMore, onLoadMore])
+
+  // Context value for sticky grid - keep stable by excluding frequently changing values
+  const contextValue = useMemo(
+    () => ({
+      stickyIndices: [0],
+      columns: visibleColumns,
+      getColumnWidth,
+      getStickyColumnStyles,
+      onSort: handleSort,
+      onFilter: handleFilter,
+      onColumnUpdate,
+      onColumnDelete,
+    }),
     [
-      onLoadMore,
-      hasMore,
-      isLoadingMore,
-      isLoading,
-      filteredAndSortedData.length,
+      visibleColumns,
+      getColumnWidth,
+      getStickyColumnStyles,
+      handleSort,
+      handleFilter,
+      onColumnUpdate,
+      onColumnDelete,
     ],
   )
 
-  // Prepare data for rows - uses filtered and sorted data
-  const rowData = useMemo(
-    () => ({
-      rows: filteredAndSortedData,
-      selectedRows,
-      toggleSelectRow,
-      onRowClick,
-      onRowHover: handleInternalRowHover,
-      onPDFClick: handlePDFClick,
-      onTaskClick: handleTaskClick,
-      onAssigneeClick: handleAssigneeClick,
-      currentView,
-      currentUserName,
-      hoveredRowIndex,
-      // Header-specific data
-      toggleSelectAll,
-      tableDataLength: filteredAndSortedData.length,
-    }),
+  // Row renderer for TableVirtuoso
+  const RowRenderer = useCallback(
+    (index: number) => {
+      const row = filteredAndSortedData[index]
+      if (!row) return null
+
+      return (
+        <VirtualizedRow
+          key={row.id || index}
+          index={index}
+          row={row}
+          selectedRows={selectedRows}
+          toggleSelectRow={toggleSelectRow}
+          onRowClick={onRowClick}
+          onRowHover={handleInternalRowHover}
+          onPDFClick={handlePDFClick}
+          onTaskClick={handleTaskClick}
+          onAssigneeClick={handleAssigneeClick}
+          currentView={currentView}
+          currentUserName={currentUserName}
+          hoveredRowIndex={hoveredRowIndex}
+          getColumnWidth={getColumnWidth}
+        />
+      )
+    },
     [
       filteredAndSortedData,
       selectedRows,
@@ -506,73 +449,15 @@ export function VirtualizedTable({
       handleAssigneeClick,
       currentView,
       currentUserName,
-      hoveredRowIndex,
-      toggleSelectAll,
+      hoveredRowIndex, // Re-added: needed for hover visual updates to work
+      getColumnWidth,
     ],
   )
 
-  // Get row height - header row is taller
-  const getRowHeight = useCallback((rowIndex: number) => {
-    return rowIndex === 0 ? HEADER_HEIGHT : ROW_HEIGHT
-  }, [])
-
-  // Custom inner element that renders sticky header
-  const CustomInnerElement = useMemo(() => {
-    // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
-    return forwardRef<HTMLDivElement, any>(({ children, ...rest }, ref) => (
-      <div ref={ref} {...rest}>
-        <StickyHeader
-          key={gridKey} // Force header re-render when view changes
-          selectedRows={selectedRows}
-          toggleSelectAll={toggleSelectAll}
-          tableDataLength={filteredAndSortedData.length}
-          getColumnWidth={getColumnWidth}
-        />
-        <div style={{ paddingTop: HEADER_HEIGHT }}>{children}</div>
-      </div>
-    ))
-  }, [
-    gridKey,
-    selectedRows,
-    toggleSelectAll,
-    filteredAndSortedData.length,
-    getColumnWidth,
-  ])
-
-  // Context value for sticky grid
-  const contextValue = useMemo(
-    () => ({
-      stickyIndices: [0], // First row is header
-      columns: visibleColumns,
-      getColumnWidth,
-      onSort: handleSort,
-      sortConfig: initialSort,
-      onFilter: handleFilter,
-      filters,
-      onColumnUpdate,
-      onColumnDelete,
-    }),
-    [
-      visibleColumns,
-      getColumnWidth,
-      handleSort,
-      initialSort,
-      handleFilter,
-      filters,
-      onColumnUpdate,
-      onColumnDelete,
-    ],
-  )
-
-  if (isLoading && filteredAndSortedData.length === 0) {
+  if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="h-8 w-8 text-blue-500 animate-spin mb-2" />
-          <p className="text-sm text-gray-500 font-normal">
-            Building your panel...
-          </p>
-        </div>
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
       </div>
     )
   }
@@ -586,35 +471,46 @@ export function VirtualizedTable({
       modifiers={[restrictToHorizontalAxis]}
     >
       <StickyGridProvider value={contextValue}>
-        <div className="h-full w-full">
-          <AutoSizer>
-            {({ height, width }) => {
-              // Create a closure that captures the container width
-              const getColumnWidthWithContainer = (columnIndex: number) => {
-                return getColumnWidth(columnIndex)
-              }
-
-              return (
-                <VariableSizeGrid
-                  ref={gridRef}
-                  key={gridKey} // Force re-render when view or columns change
-                  height={height}
-                  width={width}
-                  columnCount={visibleColumns.length + 1} // +1 for selection column
-                  rowCount={filteredAndSortedData.length + 1} // +1 for header row
-                  columnWidth={getColumnWidthWithContainer}
-                  rowHeight={getRowHeight}
-                  itemData={{
-                    ...rowData,
+        <div ref={containerRef} className="h-full w-full">
+          <TableVirtuoso
+            ref={virtuosoRef}
+            key={gridKey}
+            totalCount={filteredAndSortedData.length}
+            fixedHeaderContent={() => (
+              <StickyHeader
+                selectedRows={selectedRows}
+                toggleSelectAll={toggleSelectAll}
+                tableDataLength={filteredAndSortedData.length}
+                getColumnWidth={getColumnWidth}
+                sortConfig={sortConfig}
+                filters={filters}
+              />
+            )}
+            itemContent={(index) => RowRenderer(index)}
+            endReached={handleLoadMore}
+            overscan={10}
+            style={{ height: '100%' }}
+            components={{
+              Table: ({ style, ...props }) => (
+                <table
+                  {...props}
+                  style={{
+                    ...style,
+                    borderCollapse: 'separate',
+                    borderSpacing: 0,
+                    tableLayout: 'fixed',
                   }}
-                  innerElementType={CustomInnerElement}
-                  onItemsRendered={handleItemsRendered}
-                >
-                  {VirtualizedCell}
-                </VariableSizeGrid>
-              )
+                />
+              ),
+              TableHead: forwardRef<HTMLTableSectionElement>((props, ref) => (
+                <thead {...props} ref={ref} />
+              )),
+              TableRow: ({ ...props }) => <tr {...props} />,
+              TableBody: forwardRef<HTMLTableSectionElement>((props, ref) => (
+                <tbody {...props} ref={ref} />
+              )),
             }}
-          </AutoSizer>
+          />
         </div>
       </StickyGridProvider>
 
