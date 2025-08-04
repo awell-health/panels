@@ -1,0 +1,3 @@
+[submodule ".cursor/shared_rules"]
+	path = .cursor/shared_rules
+	url = https://github.com/awell-health/cursor-rules.git
