@@ -5,14 +5,15 @@
  * - Awell webhook events for patient lifecycle (patient.created, patient.updated, patient.deleted)
  *
  * FHIR Resources Created/Updated:
- * - Patient: Created (patient.created events) - Complete resource with demographics, identifiers, telecom, address, connector extensions, and communication preferences
- * - Patient: Updated (patient.updated events) - All profile fields with merged extensions preserving existing data
+ * - Patient: Created (patient.created events) - Complete resource with demographics, identifiers, telecom, address, timezone extension, connector extensions, and communication preferences
+ * - Patient: Updated (patient.updated events) - All profile fields with merged extensions preserving existing data including timezone using safe update operations
  * - Task: Deleted (patient.deleted events) - All tasks associated with patient via subject reference for referential integrity
  * - Patient: Deleted (patient.deleted events) - Complete resource removal after task cleanup
  *
  * Process Overview:
  * - Receives Awell patient webhook payloads with patient profile data
  * - Transforms Awell patient profile data to FHIR Patient resource format with proper name, telecom, address mapping
+ * - Creates timezone extension for patient timezone information (TZ identifier format like Europe/Brussels)
  * - Creates connector extensions for linking to external systems (Awell Care, Elation) based on environment configuration
  * - Handles patient creation, updates with extension merging, and deletion with comprehensive cleanup of related resources
  */
@@ -58,6 +59,7 @@ interface PatientProfile {
   preferred_language?: string | null
   patient_code?: string | null
   national_registry_number?: string | null
+  patient_timezone?: string | null
   address?: {
     street?: string | null
     city?: string | null
@@ -67,9 +69,11 @@ interface PatientProfile {
   } | null
 }
 
-// Constants for connector extensions
+// Constants for extensions
 const AWELL_PATIENT_CONNECTORS_EXTENSION_URL =
   'https://awellhealth.com/fhir/StructureDefinition/awell-patient-connectors'
+const AWELL_PATIENT_TIMEZONE_EXTENSION_URL =
+  'https://awellhealth.com/fhir/StructureDefinition/patient-timezone'
 
 interface Config {
   environment: string
@@ -210,6 +214,16 @@ function createPatientConnectorsExtension(
   }
 }
 
+function createPatientTimezoneExtension(timezone: string): Extension | null {
+  const trimmedTimezone = safeStringTrim(timezone)
+  if (!trimmedTimezone) return null
+
+  return {
+    url: AWELL_PATIENT_TIMEZONE_EXTENSION_URL,
+    valueString: trimmedTimezone,
+  }
+}
+
 /**
  * Recursively merges extensions, replacing existing ones that have matching URLs
  * with new ones, while preserving non-conflicting extensions.
@@ -275,7 +289,7 @@ function mergeExtensions(
   }
 
   // Add any completely new extensions that didn't exist before
-  for (const remainingNewExt of newExtensionsByUrl.values()) {
+  for (const remainingNewExt of Array.from(newExtensionsByUrl.values())) {
     mergedExtensions.push(remainingNewExt)
   }
 
@@ -323,6 +337,9 @@ function createFhirPatient(
     ]
   }
 
+  // Add extensions
+  const extensions: Extension[] = []
+
   // Add connector extensions if config is provided
   if (config) {
     const connectors = createPatientConnectors(
@@ -332,8 +349,20 @@ function createFhirPatient(
     )
     const connectorsExtension = createPatientConnectorsExtension(connectors)
     if (connectorsExtension) {
-      patient.extension = [connectorsExtension]
+      extensions.push(connectorsExtension)
     }
+  }
+
+  // Add timezone extension if provided
+  const timezoneExtension = createPatientTimezoneExtension(
+    profile.patient_timezone || '',
+  )
+  if (timezoneExtension) {
+    extensions.push(timezoneExtension)
+  }
+
+  if (extensions.length > 0) {
+    patient.extension = extensions
   }
 
   return patient
@@ -452,37 +481,47 @@ function convertSexToGender(
   return undefined
 }
 
-function updatePatientWithProfile(
-  existingPatient: Patient,
+function createPatientUpdates(
   profile: PatientProfile,
   awellPatientId: string,
+  existingExtensions: Extension[] = [],
   config?: Config,
-): Patient {
-  const name = createPatientName(profile)
-  const identifiers = createPatientIdentifiers(awellPatientId, profile)
-  const telecom = createPatientTelecom(profile)
-  const address = createPatientAddress(profile)
-  const gender = convertSexToGender(profile.sex)
-  const birthDate = profile.birth_date
-    ? formatBirthDate(profile.birth_date)
-    : undefined
-
-  const updatedPatient: Patient = {
-    ...existingPatient,
-    identifier: identifiers,
+): Partial<Patient> {
+  const updates: Partial<Patient> = {
+    identifier: createPatientIdentifiers(awellPatientId, profile),
     active: true,
   }
 
-  if (Object.keys(name).length > 0) updatedPatient.name = [name]
-  if (telecom.length > 0) updatedPatient.telecom = telecom
-  if (Object.keys(address).length > 0)
-    updatedPatient.address = [address as Address]
-  if (gender) updatedPatient.gender = gender
-  if (birthDate) updatedPatient.birthDate = birthDate
+  const name = createPatientName(profile)
+  if (Object.keys(name).length > 0) {
+    updates.name = [name]
+  }
+
+  const telecom = createPatientTelecom(profile)
+  if (telecom.length > 0) {
+    updates.telecom = telecom
+  }
+
+  const address = createPatientAddress(profile)
+  if (Object.keys(address).length > 0) {
+    updates.address = [address as Address]
+  }
+
+  const gender = convertSexToGender(profile.sex)
+  if (gender) {
+    updates.gender = gender
+  }
+
+  const birthDate = profile.birth_date
+    ? formatBirthDate(profile.birth_date)
+    : undefined
+  if (birthDate) {
+    updates.birthDate = birthDate
+  }
 
   const preferredLanguage = safeStringTrim(profile.preferred_language)
   if (preferredLanguage) {
-    updatedPatient.communication = [
+    updates.communication = [
       {
         language: {
           coding: [
@@ -496,24 +535,37 @@ function updatePatientWithProfile(
     ]
   }
 
-  // Update connector extensions if config is provided
+  // Handle extensions
+  const newExtensions: Extension[] = []
+
+  // Add connector extensions if config is provided
   if (config) {
     const connectors = createPatientConnectors(
       awellPatientId,
       config,
-      identifiers,
+      updates.identifier || [],
     )
     const connectorsExtension = createPatientConnectorsExtension(connectors)
     if (connectorsExtension) {
-      const mergedExtensions = mergeExtensions(
-        existingPatient.extension || [],
-        [connectorsExtension],
-      )
-      updatedPatient.extension = mergedExtensions
+      newExtensions.push(connectorsExtension)
     }
   }
 
-  return updatedPatient
+  // Add timezone extension if provided
+  const timezoneExtension = createPatientTimezoneExtension(
+    profile.patient_timezone || '',
+  )
+  if (timezoneExtension) {
+    newExtensions.push(timezoneExtension)
+  }
+
+  // Merge extensions if we have any new ones
+  if (newExtensions.length > 0) {
+    const mergedExtensions = mergeExtensions(existingExtensions, newExtensions)
+    updates.extension = mergedExtensions
+  }
+
+  return updates
 }
 
 async function createPatient(
@@ -645,13 +697,19 @@ async function updateExistingPatient(
     throw new Error('Patient ID is missing')
   }
 
-  // Create updated patient with new profile data
-  const updatedPatient = updatePatientWithProfile(
-    existingPatient,
+  // Create patient updates with new profile data
+  const patientUpdates = createPatientUpdates(
     profile,
     awellPatientId,
+    existingPatient.extension || [],
     config,
   )
+
+  // Apply updates to existing patient
+  const updatedPatient: Patient = {
+    ...existingPatient,
+    ...patientUpdates,
+  }
 
   const savedPatient = await medplum.updateResource(updatedPatient)
 
