@@ -59,7 +59,7 @@ const TaskStatusBadge = ({ status }: { status: string }) => {
   const statusData = statuses[status as keyof typeof statuses]
 
   return (
-    <span className={`badge badge-xs ${statusData.color}`}>
+    <span className={`badge badge-xs badge-outline ${statusData.color}`}>
       {statusData.label}
     </span>
   )

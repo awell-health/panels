@@ -96,7 +96,7 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
   return (
     <div className="relative" ref={dropdownRef}>
       <div className="dropdown dropdown-end">
-        <button type="button" tabIndex={0} className="btn btn-xs btn-default">
+        <button type="button" tabIndex={0} className="btn btn-xs btn-success">
           <>
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />

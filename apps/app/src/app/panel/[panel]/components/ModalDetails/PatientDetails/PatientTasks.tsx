@@ -31,19 +31,6 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
   const [filter, setFilter] = useState<string>(ALL_STATUS_FILTER)
   const taskAvailableStatuses = [...new Set(tasks.map((task) => task.status))]
 
-  const getTaskPriorityBadge = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return 'badge-error'
-      case 'medium':
-        return 'badge-warning'
-      case 'low':
-        return 'badge-success'
-      default:
-        return 'badge-neutral'
-    }
-  }
-
   const filteredTasks = tasks.filter((task) => {
     if (filter === ALL_STATUS_FILTER) return true
     return task.status === filter
@@ -177,16 +164,7 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
                 <div className="flex justify-between w-full items-center">
                   <div className="font-medium text-gray-900 flex flex-col gap-1.5">
                     {task.description}
-                    <div className="flex items-center gap-2">
-                      <TaskStatusBadge status={task.status} />
-                      <span
-                        className={`badge badge-outline badge-xs ${getTaskPriorityBadge(
-                          task.priority ?? '',
-                        )}`}
-                      >
-                        {startCase(task.priority)}
-                      </span>
-                    </div>
+                    <TaskStatusBadge status={task.status} />
                     {task.authoredOn && (
                       <div className="flex items-center gap-1 text-xs text-gray-600 font-normal">
                         <Calendar className="w-3 h-3" /> Created:{' '}

@@ -111,7 +111,7 @@ const StaticContent = ({ task, patient }: StaticContentProps) => {
       <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery}>
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
         <div
-          className="text-blue-600 cursor-pointer text-xs"
+          className="text-blue-600 cursor-pointer text-xs underline"
           onClick={handleExpandAll}
         >
           {expandAll.wellpath || expandAll.encompass || expandAll.extension

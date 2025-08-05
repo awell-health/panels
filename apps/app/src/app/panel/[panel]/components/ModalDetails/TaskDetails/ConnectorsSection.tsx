@@ -57,7 +57,7 @@ const ConnectorsSection = ({
               onClick={() => {
                 window.open(connector.url, '_blank')
               }}
-              className="btn btn-sm btn-primary w-full justify-start"
+              className="btn btn-sm btn-default w-full justify-start"
             >
               Complete the task in {connector.name}
             </button>
