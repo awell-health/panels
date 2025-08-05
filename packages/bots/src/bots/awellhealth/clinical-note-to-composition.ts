@@ -514,18 +514,21 @@ function mergeExtensions(
  */
 async function updatePatientWithBaselineDataPoints(
   medplum: MedplumClient,
-  patient: Patient,
+  patientId: string,
   dataPointExtensions: Extension[],
 ): Promise<void> {
   if (dataPointExtensions.length === 0) return
 
+  // Fetch a fresh copy of the patient immediately before updating
+  const freshPatient = await medplum.readResource('Patient', patientId)
+
   const mergedExtensions = mergeExtensions(
-    patient.extension || [],
+    freshPatient.extension || [],
     dataPointExtensions,
   )
 
   await medplum.updateResource({
-    ...patient,
+    ...freshPatient,
     extension: mergedExtensions,
   })
 }
@@ -649,7 +652,7 @@ export async function handler(
           if (dataPointExtensions.length > 0) {
             await updatePatientWithBaselineDataPoints(
               medplum,
-              patient,
+              patientId,
               dataPointExtensions,
             )
             baselineDataPointsCount = baselineDataPoints.length
