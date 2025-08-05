@@ -248,7 +248,7 @@ Avatars are used to show a thumbnail
 - You can use mask classes such as `mask-squircle`, `mask-hexagon`, `mask-triangle`
 
 ### badge
-Badges are used to inform the user of the status of specific data
+Badges are used to inform the user of the status of specific data. Preffered badge style is outline.
 
 [badge docs](https://daisyui.com/components/badge/)
 

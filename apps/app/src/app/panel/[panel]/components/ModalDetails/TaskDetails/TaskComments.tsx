@@ -84,21 +84,23 @@ const TaskComment = ({ task }: TaskCommentProps) => {
           className="w-full p-2 border border-gray-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
           rows={3}
         />
-        <button
-          type="button"
-          onClick={handleSubmitComment}
-          disabled={!newComment.trim() || isSubmitting}
-          className="btn btn-sm btn-primary w-full"
-        >
-          {isSubmitting ? (
-            <span className="flex items-center gap-1 w-full justify-center">
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-              Saving...
-            </span>
-          ) : (
-            'Add Comment'
-          )}
-        </button>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleSubmitComment}
+            disabled={!newComment.trim() || isSubmitting}
+            className="btn btn-sm btn-primary disabled:!bg-primary disabled:text-primary-content disabled:border-primary disabled:opacity-30"
+          >
+            {isSubmitting ? (
+              <span className="flex items-center gap-1 w-full justify-center">
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                Saving...
+              </span>
+            ) : (
+              'Add Comment'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -136,18 +136,21 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
     patientId,
   ])
 
-  const getIndicatorColor = (type: string) => {
+  const getIndicatorColor = (type: string, title?: string) => {
     switch (type) {
       case 'observation':
-        return 'bg-blue-400'
+        return 'bg-info'
       case 'encounter':
-        return 'bg-green-400'
+        return 'bg-warning'
       case 'detected-issue':
-        return 'bg-red-400'
+        return 'bg-error'
       case 'task':
-        return 'bg-cyan-400'
+        if (title?.toLowerCase().includes('completed')) {
+          return 'bg-accent'
+        }
+        return 'bg-success'
       default:
-        return 'bg-gray-400'
+        return 'bg-neutral'
     }
   }
 
@@ -174,6 +177,7 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
                           <div
                             className={`h-3 w-3 rounded-full ${getIndicatorColor(
                               item.type || '',
+                              item.title,
                             )}`}
                           />
                         </div>

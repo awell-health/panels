@@ -56,7 +56,7 @@ const TaskAsignment = ({ task }: { task: WorklistTask }) => {
       .trim() === user?.name?.toLowerCase().trim()
 
   const loader = <span className="loading loading-spinner loading-xs" />
-  const buttonClassNames = cn('btn btn-outline btn-xs', {
+  const buttonClassNames = cn('btn btn-outline btn-sm', {
     'btn-error': isCurrentUser && !isPending,
     'btn-primary': !isCurrentUser && !isPending,
     'btn-square': isPending,

@@ -220,7 +220,7 @@ export function FilterSortIndicators({
         ref={buttonRef}
         type="button"
         onClick={toggleDropdown}
-        className={cn('btn btn-sm min-w-32', className)}
+        className={cn('btn btn-sm btn-accent min-w-32', className)}
       >
         {filters.length > 0 && <Filter className="h-3 w-3" />}
         {sort && <SortAsc className="h-3 w-3" />}
