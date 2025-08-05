@@ -4,59 +4,59 @@
 [data-theme="github-light"] {
   color-scheme: light;
 
- /* Base Colors */
- --color-base-100: #ffffff; /* bgColor-default */
- --color-base-200: #f6f8fa; /* bgColor-muted */
- --color-base-300: #d1d9e0; /* borderColor-default */
- --color-base-content: #1f2328; /* fgColor-default */
+  /* Base Colors */
+  --color-base-100: #ffffff; /* bgColor-default */
+  --color-base-200: #f6f8fa; /* bgColor-muted */
+  --color-base-300: #d1d9e0; /* borderColor-default */
+  --color-base-content: #1f2328; /* fgColor-default */
 
- /* Primary - GitHub Accent Blue */
- --color-primary: #0969da;
- --color-primary-content: #ffffff;
+  /* Primary - GitHub Accent Blue */
+  --color-primary: #0969da;
+  --color-primary-content: #ffffff;
 
- /* Secondary - GitHub Neutral */
- --color-secondary: #59636e;
- --color-secondary-content: #ffffff;
+  /* Secondary - GitHub Neutral */
+  --color-secondary: #59636e;
+  --color-secondary-content: #ffffff;
 
- /* Accent - GitHub Purple */
- --color-accent: #8250df;
- --color-accent-content: #ffffff;
+  /* Accent - GitHub Purple */
+  --color-accent: #8250df;
+  --color-accent-content: #ffffff;
 
- /* Neutral - GitHub Gray */
- --color-neutral: #59636e;
- --color-neutral-content: #ffffff;
+  /* Neutral - GitHub Gray */
+  --color-neutral: #59636e;
+  --color-neutral-content: #ffffff;
 
- /* Info - GitHub Accent Blue */
- --color-info: #0969da;
- --color-info-content: #ffffff;
+  /* Info - GitHub Accent Blue */
+  --color-info: #0969da;
+  --color-info-content: #ffffff;
 
- /* Success - GitHub Success Green */
- --color-success: #1a7f37;
- --color-success-content: #ffffff;
+  /* Success - GitHub Success Green */
+  --color-success: #1a7f37;
+  --color-success-content: #ffffff;
 
- /* Warning - GitHub Attention Orange */
- --color-warning: #9a6700;
- --color-warning-content: #ffffff;
+  /* Warning - GitHub Attention Orange */
+  --color-warning: #9a6700;
+  --color-warning-content: #ffffff;
 
- /* Error - GitHub Danger Red */
- --color-error: #d1242f;
- --color-error-content: #ffffff;
+  /* Error - GitHub Danger Red */
+  --color-error: #d1242f;
+  --color-error-content: #ffffff;
 
- /* Border Radius */
- --radius-box: 0.5rem;
- --radius-field: 0.375rem;
- --radius-selector: 1.9rem;
+  /* Border Radius */
+  --radius-box: 0.5rem;
+  --radius-field: 0.375rem;
+  --radius-selector: 1.9rem;
 
- /* Border Width */
- --border: 1px;
+  /* Border Width */
+  --border: 1px;
 
- /* Size Settings */
- --size-selector: 0.25rem;
- --size-field: 0.25rem;
+  /* Size Settings */
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
 
- /* Effects */
- --depth: 1;
- --noise: 0;
+  /* Effects */
+  --depth: 1;
+  --noise: 0;
 }
 
 [data-theme="github-light"] .btn-header,
