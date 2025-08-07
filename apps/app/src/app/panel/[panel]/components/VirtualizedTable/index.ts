@@ -1,6 +1,6 @@
 export { VirtualizedTable } from './VirtualizedTable'
 export { StickyGridProvider, useStickyGridContext } from './StickyContext'
-export { VirtualizedCell } from './VirtualizedCell'
+export { VirtualizedRow } from './VirtualizedRow'
 export { StickyHeader } from './StickyHeader'
 export { SortableHeaderColumn } from './SortableHeaderColumn'
 export * from './cells'

@@ -68,6 +68,13 @@ export class APIStorageAdapter implements StorageAdapter {
 
   async createPanel(panel: Omit<Panel, 'id'>): Promise<Panel> {
     try {
+      // Validate that we have the required config values
+      if (!this.config.tenantId || !this.config.userId) {
+        throw new Error(
+          `Invalid configuration: tenantId (${this.config.tenantId}) and userId (${this.config.userId}) are required`,
+        )
+      }
+
       const { panelsAPI } = await import('@/api/panelsAPI')
 
       // Simple panel creation - no column creation
@@ -90,7 +97,10 @@ export class APIStorageAdapter implements StorageAdapter {
 
       return mapBackendPanelToFrontend(createdPanel)
     } catch (error) {
-      logger.error({ error }, 'Failed to create panel via API')
+      logger.error(
+        { error, config: this.config },
+        'Failed to create panel via API',
+      )
       throw new Error(
         `Failed to create panel: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
@@ -99,6 +109,13 @@ export class APIStorageAdapter implements StorageAdapter {
 
   async updatePanel(id: string, updates: Partial<Panel>): Promise<Panel> {
     try {
+      // Validate that we have the required config values
+      if (!this.config.tenantId || !this.config.userId) {
+        throw new Error(
+          `Invalid configuration: tenantId (${this.config.tenantId}) and userId (${this.config.userId}) are required`,
+        )
+      }
+
       const { panelsAPI } = await import('@/api/panelsAPI')
 
       // Build the panel info with only the fields that are being updated
@@ -126,7 +143,10 @@ export class APIStorageAdapter implements StorageAdapter {
 
       return frontendPanel
     } catch (error) {
-      logger.error({ error, id }, `Failed to update panel ${id} via API`)
+      logger.error(
+        { error, id, config: this.config },
+        `Failed to update panel ${id} via API`,
+      )
       throw new Error(
         `Failed to update panel: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
@@ -135,10 +155,20 @@ export class APIStorageAdapter implements StorageAdapter {
 
   async deletePanel(id: string): Promise<void> {
     try {
+      // Validate that we have the required config values
+      if (!this.config.tenantId || !this.config.userId) {
+        throw new Error(
+          `Invalid configuration: tenantId (${this.config.tenantId}) and userId (${this.config.userId}) are required`,
+        )
+      }
+
       const { panelsAPI } = await import('@/api/panelsAPI')
       await panelsAPI.delete(this.config.tenantId, this.config.userId, { id })
     } catch (error) {
-      logger.error({ error, id }, `Failed to delete panel ${id} via API`)
+      logger.error(
+        { error, id, config: this.config },
+        `Failed to delete panel ${id} via API`,
+      )
       throw new Error(
         `Failed to delete panel: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
@@ -269,28 +299,98 @@ export class APIStorageAdapter implements StorageAdapter {
     updates: Partial<Column>,
   ): Promise<Column> {
     try {
+      // Validate that we have the required config values
+      if (!this.config.tenantId || !this.config.userId) {
+        throw new Error(
+          `Invalid configuration: tenantId (${this.config.tenantId}) and userId (${this.config.userId}) are required`,
+        )
+      }
+
+      // Validate that we have required parameters
+      if (!panelId || typeof panelId !== 'string') {
+        throw new Error(
+          `Invalid panelId: expected non-empty string, got ${typeof panelId} (${panelId})`,
+        )
+      }
+
+      if (!columnId || typeof columnId !== 'string') {
+        throw new Error(
+          `Invalid columnId: expected non-empty string, got ${typeof columnId} (${columnId})`,
+        )
+      }
+
+      // Log what we're about to send for debugging
+      logger.debug(
+        {
+          panelId,
+          columnId,
+          updates,
+          config: this.config,
+        },
+        'About to update column',
+      )
+
       const { panelsAPI } = await import('@/api/panelsAPI')
 
-      // Direct API call without complex logic
-      const updatedColumn = await panelsAPI.columns.update(
-        {
-          id: columnId,
-          name: updates.name,
-          type: updates.type,
-          sourceField: updates.sourceField,
-          properties: updates.properties,
-          metadata: updates.metadata,
-          tags: updates.tags,
-          tenantId: this.config.tenantId,
-          userId: this.config.userId,
-        },
-        { id: panelId },
+      // Only include defined properties to avoid sending undefined values
+      // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
+      const updatePayload: any = {
+        id: columnId,
+        tenantId: this.config.tenantId,
+        userId: this.config.userId,
+      }
+
+      // Only add properties that are actually defined in the updates
+      if (updates.name !== undefined) updatePayload.name = updates.name
+      if (updates.type !== undefined) updatePayload.type = updates.type
+      if (updates.sourceField !== undefined)
+        updatePayload.sourceField = updates.sourceField
+      if (updates.properties !== undefined) {
+        // Validate and sanitize properties before sending
+        const sanitizedProperties = { ...updates.properties }
+
+        // Ensure display.order is valid if present
+        if (sanitizedProperties.display?.order !== undefined) {
+          const order = sanitizedProperties.display.order
+          if (typeof order !== 'number' || order < 0) {
+            logger.warn(
+              { originalOrder: order, columnId, panelId },
+              'Invalid display.order value, setting to 0',
+            )
+            sanitizedProperties.display.order = 0
+          }
+        }
+
+        updatePayload.properties = sanitizedProperties
+      }
+      if (updates.metadata !== undefined)
+        updatePayload.metadata = updates.metadata
+      if (updates.tags !== undefined) updatePayload.tags = updates.tags
+
+      logger.debug(
+        { updatePayload, panelIdParam: { id: panelId } },
+        'API call parameters',
       )
+
+      const updatedColumn = await panelsAPI.columns.update(updatePayload, {
+        id: panelId,
+      })
+
+      logger.debug({ updatedColumn }, 'API response received')
 
       return mapBackendColumnToFrontend(updatedColumn, panelId)
     } catch (error) {
       logger.error(
-        { error, columnId, panelId },
+        {
+          error,
+          columnId,
+          panelId,
+          updates,
+          config: this.config,
+          errorMessage:
+            error instanceof Error ? error.message : 'Unknown error',
+          errorStack: error instanceof Error ? error.stack : undefined,
+        },
         `Failed to update column ${columnId} in panel ${panelId}`,
       )
       throw new Error(
@@ -412,13 +512,20 @@ export class APIStorageAdapter implements StorageAdapter {
 
   async deleteView(panelId: string, viewId: string): Promise<void> {
     try {
+      // Validate that we have the required config values
+      if (!this.config.tenantId || !this.config.userId) {
+        throw new Error(
+          `Invalid configuration: tenantId (${this.config.tenantId}) and userId (${this.config.userId}) are required`,
+        )
+      }
+
       const { viewsAPI } = await import('@/api/viewsAPI')
       await viewsAPI.delete(this.config.tenantId, this.config.userId, {
         id: viewId,
       })
     } catch (error) {
       logger.error(
-        { error, viewId, panelId },
+        { error, viewId, panelId, config: this.config },
         `Failed to delete view ${viewId} in panel ${panelId}`,
       )
       throw new Error(

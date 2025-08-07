@@ -1,5 +1,6 @@
 'use client'
 
+import { cn } from '@/lib/utils'
 import { useStickyGridContext } from './StickyContext'
 import { SortableHeaderColumn } from './SortableHeaderColumn'
 import { SELECTION_COLUMN_WIDTH, HEADER_HEIGHT } from './constants'
@@ -8,12 +9,16 @@ import {
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import type { Column } from '@/types/panel'
+import type { Sort } from '@/types/panel'
+import type { Filter } from '@/types/panel'
 
 interface StickyHeaderProps {
   selectedRows: string[]
   toggleSelectAll: () => void
   tableDataLength: number
   getColumnWidth: (columnIndex: number) => number
+  sortConfig?: Sort | undefined
+  filters?: Filter[]
 }
 
 export function StickyHeader({
@@ -21,15 +26,16 @@ export function StickyHeader({
   toggleSelectAll,
   tableDataLength,
   getColumnWidth,
+  sortConfig,
+  filters,
 }: StickyHeaderProps) {
   const {
     columns,
     onSort,
-    sortConfig,
     onFilter,
-    filters,
     onColumnUpdate,
     onColumnDelete,
+    getStickyColumnStyles,
   } = useStickyGridContext()
 
   const getFilterValue = (column: Column) => {
@@ -47,37 +53,24 @@ export function StickyHeader({
   }
 
   return (
-    <div
-      className="sticky top-0 z-20 shadow-sm flex"
-      style={{ height: HEADER_HEIGHT }}
-    >
-      {/* Selection column header */}
-      <div
-        className="bg-white border-r border-gray-200 flex items-center justify-center shrink-0"
-        style={{ width: SELECTION_COLUMN_WIDTH }}
-      >
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-gray-300"
-          checked={
-            selectedRows.length > 0 && selectedRows.length === tableDataLength
-          }
-          onChange={toggleSelectAll}
-          aria-label="Select all rows"
-          title="Select all rows"
-        />
-      </div>
-
-      {/* Column headers */}
+    <tr className="sticky top-0 z-40 bg-white shadow-sm text-xs">
       <SortableContext
         items={columns.map((col) => col.id)}
         strategy={horizontalListSortingStrategy}
       >
         {columns.map((column, index) => (
-          <div
+          <th
             key={column.id}
-            style={{ width: getColumnWidth(index + 1) }}
-            className="border-r border-b border-gray-200"
+            style={{
+              width: getColumnWidth(index),
+              minWidth: getColumnWidth(index),
+              height: HEADER_HEIGHT,
+              ...getStickyColumnStyles(index, false, true),
+            }}
+            className={cn(
+              'border-r border-b border-gray-200',
+              column.properties?.display?.locked && 'sticky-column',
+            )}
           >
             <SortableHeaderColumn
               column={column}
@@ -93,10 +86,11 @@ export function StickyHeader({
               onFilter={(value: string) => onFilter?.(column.id, value)}
               onColumnUpdate={onColumnUpdate || (() => {})}
               onColumnDelete={onColumnDelete}
+              isLocked={!!column.properties?.display?.locked}
             />
-          </div>
+          </th>
         ))}
       </SortableContext>
-    </div>
+    </tr>
   )
 }
