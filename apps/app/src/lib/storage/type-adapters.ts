@@ -76,6 +76,25 @@ export const mapBackendColumnToFrontend = (
     | ColumnInfoResponse,
   panelId: string,
 ): Column => {
+  // Validate that we have the required fields
+  if (!backendColumn) {
+    throw new Error(
+      'mapBackendColumnToFrontend: backendColumn is null or undefined',
+    )
+  }
+
+  if (backendColumn.id === null || backendColumn.id === undefined) {
+    throw new Error(
+      `mapBackendColumnToFrontend: backendColumn.id is ${backendColumn.id}. Full column: ${JSON.stringify(backendColumn)}`,
+    )
+  }
+
+  if (!backendColumn.name) {
+    throw new Error(
+      `mapBackendColumnToFrontend: backendColumn.name is missing. Full column: ${JSON.stringify(backendColumn)}`,
+    )
+  }
+
   return {
     id: backendColumn.id.toString(),
     panelId,

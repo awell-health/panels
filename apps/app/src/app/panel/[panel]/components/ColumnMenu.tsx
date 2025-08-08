@@ -2,7 +2,16 @@
 
 import type { Column, Sort } from '@/types/panel'
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
-import { ArrowUpDown, Calendar, Hash, Text, ToggleLeft, X } from 'lucide-react'
+import {
+  ArrowUpDown,
+  Calendar,
+  Hash,
+  Lock,
+  LockOpen,
+  Text,
+  ToggleLeft,
+  X,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { format } from 'date-fns'
@@ -18,6 +27,7 @@ type ColumnMenuProps = {
   onFilter: (value: string) => void
   onColumnUpdate?: (updates: Partial<Column>) => void
   onColumnDelete?: (columnId: string) => void
+  isLocked?: boolean // Current locked state in the active context (view-specific or panel-level)
 }
 
 export function ColumnMenu({
@@ -31,6 +41,7 @@ export function ColumnMenu({
   onFilter,
   onColumnUpdate,
   onColumnDelete,
+  isLocked = false, // Default to false if not provided
 }: ColumnMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [localFilterValue, setLocalFilterValue] = useState(filterValue)
@@ -343,6 +354,35 @@ export function ColumnMenu({
               />
             </svg>
             Hide Column
+          </button>
+        </div>
+
+        {/* Lock Column Option */}
+        <div className="px-3 py-2 border-b border-gray-100">
+          <button
+            type="button"
+            className="btn btn-xs btn-ghost w-full justify-start"
+            onClick={() => {
+              // For view-specific or panel-level locking, we just toggle the locked state
+              // The actual logic of where to store it (view metadata vs column properties)
+              // is handled in onColumnUpdate
+              onColumnUpdate?.({
+                id: column.id,
+                properties: {
+                  display: {
+                    locked: !isLocked,
+                  },
+                },
+              })
+              onClose()
+            }}
+          >
+            {isLocked ? (
+              <LockOpen className="h-3.5 w-3.5 mr-2 text-gray-500" />
+            ) : (
+              <Lock className="h-3.5 w-3.5 mr-2 text-gray-500" />
+            )}
+            {isLocked ? 'Unlock Column' : 'Lock Column'}
           </button>
         </div>
 

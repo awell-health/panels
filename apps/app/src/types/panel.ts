@@ -34,6 +34,7 @@ export type Column = {
       format?: string
       visible?: boolean
       order?: number
+      locked?: boolean
     }
   }
   metadata?: {
@@ -57,6 +58,8 @@ export type View = {
     sort?: Sort
     // Column visibility state for this view (columnId -> visible)
     columnVisibility?: Record<string, boolean>
+    // Column locked state for this view (columnId -> locked)
+    columnLocked?: Record<string, boolean>
     [key: string]: unknown
   }
 }

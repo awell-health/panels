@@ -260,3 +260,44 @@ body {
 .drawer-content pre::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+/* Sticky column styles */
+.sticky-column {
+  position: sticky !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+thead .sticky-column {
+  overflow: visible !important;
+  white-space: normal !important;
+}
+
+tbody .sticky-column {
+  overflow: hidden !important;
+  white-space: nowrap !important;
+}
+
+/* Pure CSS hover effects - no JavaScript needed */
+/* When hovering over a table row, change the background of its sticky columns */
+tbody tr:hover .sticky-column {
+  background-color: #f9fafb !important;
+  z-index: 25 !important;
+}
+
+/* When hovering over the header row, change the background of its sticky columns */
+thead tr:hover .sticky-column {
+  background-color: #f9fafb !important;
+  z-index: 45 !important;
+}
+
+/* When hovering over a table row, change the background of all cells in that row */
+tbody tr:hover td {
+  background-color: #f9fafb !important;
+}
+
+/* But sticky columns should override the above with their specific color */
+tbody tr:hover .sticky-column {
+  background-color: #f9fafb !important;
+  z-index: 25 !important;
+}

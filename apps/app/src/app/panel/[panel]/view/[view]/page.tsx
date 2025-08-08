@@ -6,6 +6,7 @@ import { useAuthentication } from '@/hooks/use-authentication'
 import { useColumnCreator } from '@/hooks/use-column-creator'
 import { useColumnOperations } from '@/hooks/use-column-operations'
 import { useColumnVisibility } from '@/hooks/use-column-visibility'
+import { useColumnLocking } from '@/hooks/use-column-locking'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
 import {
@@ -19,7 +20,7 @@ import { arrayMove } from '@/lib/utils'
 import type { Column, ColumnChangesResponse, Filter, Sort } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useParams, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import ModalDetails from '../../components/ModalDetails/ModalDetails'
 import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
@@ -82,6 +83,9 @@ export default function WorklistViewPage() {
   // Create column visibility context for view
   const columnVisibilityContext = useColumnVisibility(panelId, viewId)
 
+  // Create column locking context for view
+  const { setColumnLocked, isColumnLocked } = useColumnLocking(panelId, viewId)
+
   const searchData = view?.metadata.viewType === 'patient' ? patients : tasks
   const { searchTerm, setSearchTerm, searchMode, setSearchMode, filteredData } =
     // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
@@ -100,6 +104,52 @@ export default function WorklistViewPage() {
 
   // Get only visible columns using column visibility context
   const visibleColumns = columnVisibilityContext.getVisibleColumns()
+
+  // Maintain separate arrays for locked and unlocked columns to preserve drag-drop order within groups
+  const { lockedColumns, unlockedColumns, allColumnsOrdered } = useMemo(() => {
+    const enhancedColumns = visibleColumns.map((column) => {
+      const viewSpecificLocked = isColumnLocked(column.id)
+      const columnLevelLocked = column.properties?.display?.locked ?? false
+
+      // Check if there's a view-specific state for this column
+      const hasViewSpecificState =
+        view?.metadata?.columnLocked?.[column.id] !== undefined
+
+      // Priority logic: view-specific state takes precedence over column-level state
+      const finalLocked = hasViewSpecificState
+        ? viewSpecificLocked
+        : columnLevelLocked
+
+      return {
+        ...column,
+        properties: {
+          ...column.properties,
+          display: {
+            ...column.properties?.display,
+            // Set locked state based on priority: view-specific first, then column-level fallback
+            locked: finalLocked,
+          },
+        },
+      }
+    })
+
+    // Separate into locked and unlocked arrays, preserving order within each group
+    const locked = enhancedColumns.filter(
+      (col) => col.properties?.display?.locked,
+    )
+    const unlocked = enhancedColumns.filter(
+      (col) => !col.properties?.display?.locked,
+    )
+
+    // Always merge locked first, then unlocked (required for sticky positioning)
+    const allOrdered = [...locked, ...unlocked]
+
+    return {
+      lockedColumns: locked,
+      unlockedColumns: unlocked,
+      allColumnsOrdered: allOrdered,
+    }
+  }, [visibleColumns, isColumnLocked, view])
 
   const tableData = filteredData ?? []
 
@@ -131,16 +181,32 @@ export default function WorklistViewPage() {
     panelId,
   ])
 
+  // Handle column updates - with view-specific locking support
   const onColumnUpdate = async (updates: Partial<Column>) => {
-    if (!view || !panel || !updates.id) {
-      return
-    }
+    if (!updates.id) return
 
-    try {
-      // Update the column in the panel
-      await updateColumn(panelId, updates.id, updates)
-    } catch (error) {
-      console.error('Failed to update column:', error)
+    console.log('🔄 onColumnUpdate called:', {
+      columnId: updates.id,
+      locked: updates.properties?.display?.locked,
+      isLockingOperation: updates.properties?.display?.locked !== undefined,
+    })
+
+    // Check if this is a locking/unlocking operation
+    if (updates.properties?.display?.locked !== undefined) {
+      // Use view-specific locking instead of column-level locking
+      console.log(
+        '🔐 Calling setColumnLocked with:',
+        updates.id,
+        updates.properties.display.locked,
+      )
+      await setColumnLocked(updates.id, updates.properties.display.locked)
+    } else {
+      // For other column updates, use the regular updateColumn
+      try {
+        await updateColumn(panelId, updates.id, updates)
+      } catch (error) {
+        console.error('Failed to update column:', error)
+      }
     }
   }
 
@@ -162,7 +228,6 @@ export default function WorklistViewPage() {
     }
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: It's only the columns that matter here
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event
@@ -175,6 +240,34 @@ export default function WorklistViewPage() {
       const newIndex = view.visibleColumns.findIndex((col) => col === over.id)
 
       if (oldIndex === -1 || newIndex === -1) {
+        return
+      }
+
+      // Get column information to check locked states
+      const activeColumn = allColumnsForViewType.find(
+        (col) => col.id === active.id,
+      )
+      const overColumn = allColumnsForViewType.find((col) => col.id === over.id)
+
+      if (!activeColumn || !overColumn) {
+        return
+      }
+
+      // Check locked states using the same logic as getVisibleColumns
+      const getIsLocked = (column: Column) => {
+        const hasViewSpecificState =
+          view?.metadata?.columnLocked?.[column.id] !== undefined
+        return hasViewSpecificState
+          ? isColumnLocked(column.id)
+          : (column.properties?.display?.locked ?? false)
+      }
+
+      const activeIsLocked = getIsLocked(activeColumn)
+      const overIsLocked = getIsLocked(overColumn)
+
+      // Prevent dragging between locked and unlocked groups
+      // (locked columns must stay at the beginning for sticky positioning to work)
+      if (activeIsLocked !== overIsLocked) {
         return
       }
 
@@ -194,7 +287,7 @@ export default function WorklistViewPage() {
         console.error('Failed to reorder columns:', error)
       }
     },
-    [view],
+    [view, updateView, panelId, viewId, allColumnsForViewType, isColumnLocked],
   )
 
   const handleColumnChanges = async (columnChanges: ColumnChangesResponse) => {
@@ -326,7 +419,7 @@ export default function WorklistViewPage() {
                 isLoading={isProgressiveLoading}
                 selectedRows={[]}
                 toggleSelectAll={() => {}}
-                columns={visibleColumns}
+                columns={allColumnsOrdered}
                 orderColumnMode="manual"
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
@@ -368,7 +461,7 @@ export default function WorklistViewPage() {
           )}
           <div className="footer-area">
             <PanelFooter
-              columnsCounter={visibleColumns.length}
+              columnsCounter={allColumnsOrdered.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}

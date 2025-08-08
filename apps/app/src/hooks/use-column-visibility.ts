@@ -7,6 +7,7 @@ import {
 } from './use-reactive-data'
 import { useReactivePanelStore } from './use-reactive-panel-store'
 import { useColumnOperations } from './use-column-operations'
+import { useColumnLocking } from './use-column-locking'
 
 /**
  * Column visibility manager hook that provides a unified interface for both panel and view contexts
@@ -23,6 +24,7 @@ export function useColumnVisibility(
   const { view } = useReactiveView(panelId, viewId || '')
   const { updatePanel, updateView } = useReactivePanelStore()
   const { updateColumn } = useColumnOperations()
+  const { isColumnLocked } = useColumnLocking(panelId, viewId)
 
   // Determine context type and get relevant columns
   const contextType = viewId ? 'view' : 'panel'
@@ -117,16 +119,30 @@ export function useColumnVisibility(
   // Get visible columns
   const getVisibleColumns = useCallback((): Column[] => {
     if (view) {
-      return (
+      // For view context: get columns in view order, then separate locked/unlocked
+      const viewColumns =
         view?.visibleColumns
           .map((col) => {
             return contextColumns.find((c) => c.id === col)
           })
           .filter((c) => c !== undefined)
           .filter((c) => getVisibility(c.id)) ?? []
-      )
+
+      // For views, we now do the locked/unlocked separation at the page level
+      // where we have better access to the final locked state after enhancement
+      // So we just return the columns in view order here
+      return viewColumns
     }
-    return contextColumns.filter((col) => getVisibility(col.id))
+
+    // For panel context: sort by display order and let page level handle locked/unlocked separation
+    return contextColumns
+      .filter((col) => getVisibility(col.id))
+      .sort((a, b) => {
+        // Sort by order first to get the drag-drop order
+        const orderA = a.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+        const orderB = b.properties?.display?.order ?? Number.MAX_SAFE_INTEGER
+        return orderA - orderB
+      })
   }, [contextColumns, getVisibility, view])
 
   // Get all columns for the current context

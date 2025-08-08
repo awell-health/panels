@@ -8,10 +8,13 @@ interface StickyGridContextValue {
   stickyIndices: number[]
   columns: Column[]
   getColumnWidth: (index: number) => number
+  getStickyColumnStyles: (
+    columnIndex: number,
+    isHovered?: boolean,
+    isHeader?: boolean,
+  ) => React.CSSProperties
   onSort?: (columnId: string) => void
-  sortConfig?: Sort | null
   onFilter?: (columnKey: string, value: string) => void
-  filters?: Filter[]
   onColumnUpdate?: (updates: Partial<Column>) => void
   onColumnDelete?: (columnId: string) => void
 }
