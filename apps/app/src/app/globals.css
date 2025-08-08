@@ -163,8 +163,6 @@
   min-width: 100%;
 }
 
-
-
 /* Responsive Drawer */
 @media (max-width: 1023px) and (min-width: 768px) {
   .app-shell.drawer-open {
