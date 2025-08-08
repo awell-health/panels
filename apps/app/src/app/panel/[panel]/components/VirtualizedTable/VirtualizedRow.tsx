@@ -24,7 +24,6 @@ interface VirtualizedRowProps {
   onAssigneeClick: (taskId: string) => Promise<void>
   currentView: string
   currentUserName?: string
-  hoveredRowIndex: number | null
   getColumnWidth: (columnIndex: number) => number
 }
 
@@ -40,12 +39,9 @@ export function VirtualizedRow({
   onAssigneeClick,
   currentView,
   currentUserName,
-  hoveredRowIndex,
   getColumnWidth,
 }: VirtualizedRowProps) {
   const { columns, getStickyColumnStyles } = useStickyGridContext()
-
-  const isHovered = hoveredRowIndex === index
 
   return (
     <>
@@ -54,17 +50,15 @@ export function VirtualizedRow({
         <td
           key={column.id}
           className={cn(
-            'border-r border-b border-gray-200 cursor-pointer p-2',
-            // Only apply background colors to unlocked columns (locked columns handle bg in sticky styles)
-            !column.properties?.display?.locked &&
-              (isHovered ? 'bg-gray-50' : 'bg-white'),
+            'border-r border-b border-gray-200 cursor-pointer p-2 bg-white',
+            // Sticky columns get their background from CSS hover effects
             column.properties?.display?.locked && 'sticky-column',
           )}
           style={{
             width: getColumnWidth(columnIndex),
             minWidth: getColumnWidth(columnIndex),
             height: ROW_HEIGHT,
-            ...getStickyColumnStyles(columnIndex, isHovered),
+            ...getStickyColumnStyles(columnIndex),
           }}
           onClick={() => onRowClick(row)}
           onMouseEnter={() => onRowHover(index, true, null)}

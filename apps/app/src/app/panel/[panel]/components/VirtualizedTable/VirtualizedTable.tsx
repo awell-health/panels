@@ -122,7 +122,7 @@ export function VirtualizedTable({
   isLoadingMore,
 }: VirtualizedTableProps) {
   // State management (similar to original)
-  const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null)
+
   const [activeColumn, setActiveColumn] = useState<Column | null>(null)
   const [sortConfig, setSortConfig] = useState<Sort | undefined>(
     initialSort || undefined,
@@ -232,7 +232,7 @@ export function VirtualizedTable({
 
   // Calculate sticky left positions for locked columns
   const getStickyColumnStyles = useCallback(
-    (columnIndex: number, isHovered = false, isHeader = false) => {
+    (columnIndex: number, isHeader = false) => {
       const column = visibleColumns[columnIndex]
       // Check view-specific locked state first, then fall back to column-level for backward compatibility
       const isLocked = column?.properties?.display?.locked
@@ -253,7 +253,7 @@ export function VirtualizedTable({
         // Headers need higher z-index to stay above both content and regular headers
         // Data cells need lower z-index to stay below headers during scroll
         zIndex: isHeader ? 41 : 1,
-        backgroundColor: isHovered ? '#f9fafb' : isHeader ? '#fefefe' : 'white', // Slightly off-white for headers
+        backgroundColor: isHeader ? '#fefefe' : 'white', // Slightly off-white for headers
         boxShadow: isHeader
           ? '2px 0 8px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)' // Enhanced shadow for headers
           : '2px 0 8px rgba(0,0,0,0.15)',
@@ -338,7 +338,6 @@ export function VirtualizedTable({
   // Handle internal row hover
   const handleInternalRowHover = useCallback(
     (rowIndex: number, isHovered: boolean, rect: DOMRect | null) => {
-      setHoveredRowIndex(isHovered ? rowIndex : null)
       if (isHovered) {
         handleRowHover(rowIndex)
       }
@@ -462,7 +461,6 @@ export function VirtualizedTable({
           onAssigneeClick={handleAssigneeClick}
           currentView={currentView}
           currentUserName={currentUserName}
-          hoveredRowIndex={hoveredRowIndex}
           getColumnWidth={getColumnWidth}
         />
       )
@@ -478,7 +476,6 @@ export function VirtualizedTable({
       handleAssigneeClick,
       currentView,
       currentUserName,
-      hoveredRowIndex, // Re-added: needed for hover visual updates to work
       getColumnWidth,
     ],
   )
