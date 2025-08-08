@@ -65,7 +65,7 @@ export function StickyHeader({
               width: getColumnWidth(index),
               minWidth: getColumnWidth(index),
               height: HEADER_HEIGHT,
-              ...getStickyColumnStyles(index, false, true),
+              ...getStickyColumnStyles(index, true),
             }}
             className={cn(
               'border-r border-b border-gray-200',

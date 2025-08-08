@@ -10,7 +10,6 @@ interface StickyGridContextValue {
   getColumnWidth: (index: number) => number
   getStickyColumnStyles: (
     columnIndex: number,
-    isHovered?: boolean,
     isHeader?: boolean,
   ) => React.CSSProperties
   onSort?: (columnId: string) => void
