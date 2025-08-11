@@ -24,17 +24,13 @@ import type {
 export const panelsAPI = {
   get: async (
     panel: IdParam,
-    tenantId: string,
-    userId: string,
     options?: Record<string, unknown>,
   ): Promise<PanelResponse> => {
     const { apiConfig } = await import('./config/apiConfig')
-    const defaultOptions = await apiConfig.getDefaultOptions()
+    const defaultOptions = await apiConfig.getDefaultOptionsNoBody()
 
     const response = await fetch(
-      await apiConfig.buildUrl(
-        `/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`,
-      ),
+      await apiConfig.buildUrl(`/panels/${panel.id}`),
       {
         method: 'GET',
         ...defaultOptions,
@@ -44,21 +40,14 @@ export const panelsAPI = {
     return response.json() as Promise<PanelResponse>
   },
 
-  all: async (
-    tenantId: string,
-    userId: string,
-    options = undefined,
-  ): Promise<PanelsResponse> => {
+  all: async (options = undefined): Promise<PanelsResponse> => {
     const { apiConfig } = await import('./config/apiConfig')
-    const defaultOptions = await apiConfig.getDefaultOptions()
-    const panels = await fetch(
-      await apiConfig.buildUrl(`/panels?tenantId=${tenantId}&userId=${userId}`),
-      {
-        method: 'GET',
-        ...defaultOptions,
-        ...(options || {}),
-      },
-    )
+    const defaultOptions = await apiConfig.getDefaultOptionsNoBody()
+    const panels = await fetch(await apiConfig.buildUrl('/panels'), {
+      method: 'GET',
+      ...defaultOptions,
+      ...(options || {}),
+    })
     return panels.json() as Promise<PanelsResponse>
   },
 
@@ -99,39 +88,25 @@ export const panelsAPI = {
     return response.json() as Promise<PanelResponse>
   },
 
-  delete: async (
-    tenantId: string,
-    userId: string,
-    panel: IdParam,
-    options = undefined,
-  ): Promise<void> => {
+  delete: async (panel: IdParam, options = undefined): Promise<void> => {
     const { apiConfig } = await import('./config/apiConfig')
-    const defaultOptions = await apiConfig.getDefaultOptions()
-    await fetch(
-      await apiConfig.buildUrl(
-        `/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`,
-      ),
-      {
-        method: 'DELETE',
-        ...defaultOptions,
-        ...(options || {}),
-      },
-    )
+    const defaultOptions = await apiConfig.getDefaultOptionsNoBody()
+    await fetch(await apiConfig.buildUrl(`/panels/${panel.id}`), {
+      method: 'DELETE',
+      ...defaultOptions,
+      ...(options || {}),
+    })
   },
 
   dataSources: {
     list: async (
       panel: IdParam,
-      tenantId: string,
-      userId: string,
       options = undefined,
     ): Promise<DataSourcesResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
-      const defaultOptions = await apiConfig.getDefaultOptions()
+      const defaultOptions = await apiConfig.getDefaultOptionsNoBody()
       const response = await fetch(
-        await apiConfig.buildUrl(
-          `/panels/${panel.id}/datasources?tenantId=${tenantId}&userId=${userId}`,
-        ),
+        await apiConfig.buildUrl(`/panels/${panel.id}/datasources`),
         {
           method: 'GET',
           ...defaultOptions,
@@ -178,19 +153,12 @@ export const panelsAPI = {
       return response.json() as Promise<DataSourceResponse>
     },
 
-    delete: async (
-      dataSource: IdParam & { tenantId: string; userId: string },
-      options = undefined,
-    ): Promise<void> => {
+    delete: async (dataSource: IdParam, options = undefined): Promise<void> => {
       const { apiConfig } = await import('./config/apiConfig')
-      const defaultOptions = await apiConfig.getDefaultOptions()
+      const defaultOptions = await apiConfig.getDefaultOptionsNoBody()
       await fetch(await apiConfig.buildUrl(`/datasources/${dataSource.id}`), {
         method: 'DELETE',
         ...defaultOptions,
-        body: JSON.stringify({
-          tenantId: dataSource.tenantId,
-          userId: dataSource.userId,
-        }),
         ...(options || {}),
       })
     },
@@ -216,18 +184,14 @@ export const panelsAPI = {
   columns: {
     list: async (
       panel: IdParam,
-      tenantId: string,
-      userId: string,
       ids?: string[],
       tags?: string[],
       options = undefined,
     ): Promise<ColumnsResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
-      const defaultOptions = await apiConfig.getDefaultOptions()
+      const defaultOptions = await apiConfig.getDefaultOptionsNoBody()
 
       const queryParams = new URLSearchParams()
-      queryParams.append('tenantId', tenantId)
-      queryParams.append('userId', userId)
       if (ids) {
         for (const id of ids) {
           queryParams.append('ids', id)
@@ -310,16 +274,14 @@ export const panelsAPI = {
     },
 
     delete: async (
-      column: IdParam & { tenantId: string; userId: string },
+      column: IdParam,
       panelId: IdParam,
       options = undefined,
     ): Promise<void> => {
       const { apiConfig } = await import('./config/apiConfig')
-      const defaultOptions = await apiConfig.getDefaultOptions()
+      const defaultOptions = await apiConfig.getDefaultOptionsNoBody()
       await fetch(
-        await apiConfig.buildUrl(
-          `/panels/${panelId.id}/columns/${column.id}?tenantId=${column.tenantId}&userId=${column.userId}`,
-        ),
+        await apiConfig.buildUrl(`/panels/${panelId.id}/columns/${column.id}`),
         {
           method: 'DELETE',
           ...defaultOptions,

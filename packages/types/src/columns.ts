@@ -43,8 +43,6 @@ export const ColumnBaseCreateSchema = z.object({
   dataSourceId: z.number(),
   properties: ColumnPropertiesSchema,
   metadata: z.record(z.any()).optional(),
-  tenantId: z.string(),
-  userId: z.string(),
   tags: z.array(z.string()).optional(),
 })
 
@@ -73,8 +71,6 @@ export const ColumnCalculatedCreateSchema = z.object({
   dependencies: z.array(z.string()),
   properties: ColumnPropertiesSchema,
   metadata: z.record(z.any()).optional(),
-  tenantId: z.string(),
-  userId: z.string(),
   tags: z.array(z.string()).optional(),
 })
 

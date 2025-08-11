@@ -34,13 +34,28 @@ export const apiConfig = {
     runtimeConfigCache = null
   },
 
-  // Get default fetch options with JWT authentication
+  // Get default fetch options with JWT authentication (for requests with body)
   getDefaultOptions: async (): Promise<RequestInit> => {
     const authHeader = await jwtTokenService.getAuthorizationHeader()
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     }
+
+    if (authHeader) {
+      headers.Authorization = authHeader
+    }
+
+    return {
+      headers,
+    }
+  },
+
+  // Get default fetch options without Content-Type header (for requests without body)
+  getDefaultOptionsNoBody: async (): Promise<RequestInit> => {
+    const authHeader = await jwtTokenService.getAuthorizationHeader()
+
+    const headers: Record<string, string> = {}
 
     if (authHeader) {
       headers.Authorization = authHeader

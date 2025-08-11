@@ -1,5 +1,10 @@
 import { NotFoundError } from '@/errors/not-found-error.js'
-import { ErrorSchema, type IdParam, IdParamSchema } from '@panels/types'
+import {
+  ErrorSchema,
+  type ErrorType,
+  type IdParam,
+  IdParamSchema,
+} from '@panels/types'
 import {
   type ColumnsResponse,
   ColumnsResponseSchema,
@@ -9,8 +14,6 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 
 const querystringSchema = z.object({
-  tenantId: z.string(),
-  userId: z.string(),
   ids: z.union([z.array(z.string()), z.string()]).optional(),
   tags: z.array(z.string()).optional(),
 })
@@ -28,7 +31,7 @@ export const columnList = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: IdParam
     Querystring: QuerystringType
-    Reply: ColumnsResponse
+    Reply: ColumnsResponse | ErrorType
   }>({
     method: 'GET',
     schema: {
@@ -38,13 +41,23 @@ export const columnList = async (app: FastifyInstance) => {
       querystring: querystringSchema,
       response: {
         200: ColumnsResponseSchema,
+        401: ErrorSchema,
         404: ErrorSchema,
       },
     },
     url: '/panels/:id/columns',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { tenantId, tags, ids } = request.query
+      const { tags, ids } = request.query
+
+      // Extract tenantId and userId from JWT token
+      const { tenantId, userId } = request.authUser || {}
+
+      if (!tenantId || !userId) {
+        return reply.status(401).send({
+          message: 'Missing authentication context',
+        })
+      }
 
       const idsArray = Array.isArray(ids) ? ids : [ids]
 

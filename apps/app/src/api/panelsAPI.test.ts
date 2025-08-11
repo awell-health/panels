@@ -34,17 +34,15 @@ describe('panelsAPI', () => {
   describe('get', () => {
     it('should fetch a panel by id', async () => {
       const panel = { id: 'panel-123' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
       const expectedResponse = mockResponses.panelResponse()
 
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      const result = await panelsAPI.get(panel, tenantId, userId)
+      const result = await panelsAPI.get(panel)
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/panels/panel-123?tenantId=tenant-123&userId=user-123',
+        'https://api.test.com/panels/panel-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -53,14 +51,12 @@ describe('panelsAPI', () => {
 
     it('should handle custom options', async () => {
       const panel = { id: 'panel-123' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
       const expectedResponse = mockResponses.panelResponse()
       const customOptions = { signal: new AbortController().signal }
 
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      await panelsAPI.get(panel, tenantId, userId, customOptions)
+      await panelsAPI.get(panel, customOptions)
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -70,39 +66,31 @@ describe('panelsAPI', () => {
 
     it('should handle network errors', async () => {
       const panel = { id: 'panel-123' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
       mockFetch.mockReturnValue(mockNetworkError())
 
-      await expect(panelsAPI.get(panel, tenantId, userId)).rejects.toThrow(
-        'Network error',
-      )
+      await expect(panelsAPI.get(panel)).rejects.toThrow('Network error')
     })
 
     it('should handle HTTP errors', async () => {
       const panel = { id: 'panel-123' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
       mockFetch.mockReturnValue(mockFetchError(404, 'Not Found'))
 
-      const result = await panelsAPI.get(panel, tenantId, userId)
+      const result = await panelsAPI.get(panel)
       expect(result).toMatchObject({ error: expect.any(String) })
     })
   })
 
   describe('all', () => {
-    it('should fetch all panels for tenant and user', async () => {
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
+    it('should fetch all panels', async () => {
       const expectedResponse = mockResponses.panelsResponse()
 
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      const result = await panelsAPI.all(tenantId, userId)
+      const result = await panelsAPI.all()
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/panels?tenantId=tenant-123&userId=user-123',
+        'https://api.test.com/panels',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
       testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -110,23 +98,19 @@ describe('panelsAPI', () => {
     })
 
     it('should handle empty response', async () => {
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
       const emptyResponse: typeof mockResponses.panelsResponse = () => []
 
       mockFetch.mockReturnValue(mockFetchSuccess(emptyResponse()))
 
-      const result = await panelsAPI.all(tenantId, userId)
+      const result = await panelsAPI.all()
 
       expect(result).toEqual([])
     })
 
     it('should handle server errors', async () => {
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
       mockFetch.mockReturnValue(mockFetchError(500))
 
-      const result = await panelsAPI.all(tenantId, userId)
+      const result = await panelsAPI.all()
       expect(result).toMatchObject({ error: expect.any(String) })
     })
   })
@@ -202,30 +186,24 @@ describe('panelsAPI', () => {
   describe('delete', () => {
     it('should delete a panel', async () => {
       const panel = { id: 'panel-123' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
 
       mockFetch.mockReturnValue(mockFetchSuccess(null))
 
-      await panelsAPI.delete(tenantId, userId, panel)
+      await panelsAPI.delete(panel)
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        `https://api.test.com/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`,
+        `https://api.test.com/panels/${panel.id}`,
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'DELETE')
     })
 
     it('should handle forbidden errors', async () => {
       const panel = { id: 'panel-123' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
 
       mockFetch.mockReturnValue(mockFetchError(403, 'Forbidden'))
 
-      await expect(
-        panelsAPI.delete(tenantId, userId, panel),
-      ).resolves.toBeUndefined()
+      await expect(panelsAPI.delete(panel)).resolves.toBeUndefined()
     })
   })
 
@@ -233,17 +211,15 @@ describe('panelsAPI', () => {
     describe('list', () => {
       it('should fetch data sources for a panel', async () => {
         const panel = { id: 'panel-123' }
-        const tenantId = 'tenant-123'
-        const userId = 'user-123'
         const expectedResponse = { success: true, data: [] }
 
         mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-        const result = await panelsAPI.dataSources.list(panel, tenantId, userId)
+        const result = await panelsAPI.dataSources.list(panel)
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/panels/${panel.id}/datasources?tenantId=${tenantId}&userId=${userId}`,
+          `https://api.test.com/panels/${panel.id}/datasources`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
         expect(result).toEqual(expectedResponse)
@@ -251,11 +227,9 @@ describe('panelsAPI', () => {
 
       it('should handle server errors', async () => {
         const panel = { id: 'panel-123' }
-        const tenantId = 'tenant-123'
-        const userId = 'user-123'
         mockFetch.mockReturnValue(mockFetchError(500))
 
-        const result = await panelsAPI.dataSources.list(panel, tenantId, userId)
+        const result = await panelsAPI.dataSources.list(panel)
         expect(result).toMatchObject({ error: expect.any(String) })
       })
     })
@@ -266,8 +240,6 @@ describe('panelsAPI', () => {
         const dataSource = {
           type: 'database' as const,
           config: { host: 'localhost' },
-          tenantId: 'tenant-123',
-          userId: 'user-123',
         }
         const expectedResponse = {
           success: true,
@@ -292,8 +264,6 @@ describe('panelsAPI', () => {
         const dataSource = {
           type: 'database' as const,
           config: { host: 'localhost' },
-          tenantId: 'tenant-123',
-          userId: 'user-123',
         }
         mockFetch.mockReturnValue(mockFetchError(400, 'Bad Request'))
 
@@ -308,8 +278,6 @@ describe('panelsAPI', () => {
           id: 'ds-123',
           type: 'database' as const,
           config: { host: 'localhost' },
-          tenantId: 'tenant-123',
-          userId: 'user-123',
         }
         const expectedResponse = {
           success: true,
@@ -334,8 +302,6 @@ describe('panelsAPI', () => {
       it('should delete a data source', async () => {
         const dataSource = {
           id: 'ds-123',
-          tenantId: 'tenant-123',
-          userId: 'user-123',
         }
 
         mockFetch.mockReturnValue(mockFetchSuccess(null))
@@ -347,10 +313,6 @@ describe('panelsAPI', () => {
           `https://api.test.com/datasources/${dataSource.id}`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'DELETE')
-        testCrudOperations.expectCorrectBody(mockFetch, {
-          tenantId: dataSource.tenantId,
-          userId: dataSource.userId,
-        })
       })
     })
 
@@ -380,8 +342,6 @@ describe('panelsAPI', () => {
     describe('list', () => {
       it('should fetch columns for a panel', async () => {
         const panel = { id: 'panel-123' }
-        const tenantId = 'tenant-123'
-        const userId = 'user-123'
         const expectedResponse = {
           success: true,
           data: { baseColumns: [], calculatedColumns: [] },
@@ -389,11 +349,11 @@ describe('panelsAPI', () => {
 
         mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-        const result = await panelsAPI.columns.list(panel, tenantId, userId)
+        const result = await panelsAPI.columns.list(panel)
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/panels/${panel.id}/columns?tenantId=${tenantId}&userId=${userId}`,
+          `https://api.test.com/panels/${panel.id}/columns`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
         expect(result).toEqual(expectedResponse)
@@ -401,8 +361,6 @@ describe('panelsAPI', () => {
 
       it('should handle filtering by ids and tags', async () => {
         const panel = { id: 'panel-123' }
-        const tenantId = 'tenant-123'
-        const userId = 'user-123'
         const ids = ['col1', 'col2']
         const tags = ['tag1', 'tag2']
         const expectedResponse = {
@@ -412,17 +370,11 @@ describe('panelsAPI', () => {
 
         mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-        const result = await panelsAPI.columns.list(
-          panel,
-          tenantId,
-          userId,
-          ids,
-          tags,
-        )
+        const result = await panelsAPI.columns.list(panel, ids, tags)
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/panels/${panel.id}/columns?tenantId=${tenantId}&userId=${userId}&ids=col1&ids=col2&tags=tag1&tags=tag2`,
+          `https://api.test.com/panels/${panel.id}/columns?ids=col1&ids=col2&tags=tag1&tags=tag2`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
         expect(result).toEqual(expectedResponse)
@@ -435,8 +387,6 @@ describe('panelsAPI', () => {
         const column: ColumnBaseCreate = {
           name: 'Test Column',
           type: 'text' as const,
-          tenantId: 'tenant-123',
-          userId: 'user-123',
           sourceField: 'test',
           dataSourceId: 1,
           properties: {},
@@ -463,8 +413,6 @@ describe('panelsAPI', () => {
         const column = {
           name: 'Calculated Column',
           type: 'text' as const,
-          tenantId: 'tenant-123',
-          userId: 'user-123',
           formula: 'column1 + column2',
           dependencies: ['column1', 'column2'],
           properties: {},
@@ -491,8 +439,6 @@ describe('panelsAPI', () => {
           id: 'col-123',
           name: 'Updated Column',
           type: 'text' as const,
-          tenantId: 'tenant-123',
-          userId: 'user-123',
           sourceField: 'test',
           dataSourceId: 1,
           properties: {},
@@ -518,8 +464,6 @@ describe('panelsAPI', () => {
       it('should delete a column', async () => {
         const column = {
           id: 'col-123',
-          tenantId: 'tenant-123',
-          userId: 'user-123',
         }
         const panelId = { id: 'panel-123' }
 
@@ -529,7 +473,7 @@ describe('panelsAPI', () => {
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/panels/${panelId.id}/columns/${column.id}?tenantId=${column.tenantId}&userId=${column.userId}`,
+          `https://api.test.com/panels/${panelId.id}/columns/${column.id}`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'DELETE')
       })

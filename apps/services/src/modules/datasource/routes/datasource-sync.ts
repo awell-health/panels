@@ -1,5 +1,5 @@
 import { NotFoundError } from '@/errors/not-found-error.js'
-import { ErrorSchema } from '@panels/types'
+import { ErrorSchema, type ErrorType } from '@panels/types'
 import {
   type DataSourceSyncResponse,
   DataSourceSyncResponseSchema,
@@ -14,10 +14,7 @@ const paramsSchema = z.object({
   dsId: z.string(),
 })
 
-const bodySchema = z.object({
-  tenantId: z.string(),
-  userId: z.string(),
-})
+const bodySchema = z.object({})
 
 // Types
 type ParamsType = z.infer<typeof paramsSchema>
@@ -27,7 +24,7 @@ export const datasourceSync = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: ParamsType
     Body: BodyType
-    Reply: DataSourceSyncResponse
+    Reply: DataSourceSyncResponse | ErrorType
   }>({
     method: 'POST',
     schema: {
@@ -37,6 +34,7 @@ export const datasourceSync = async (app: FastifyInstance) => {
       body: bodySchema,
       response: {
         200: DataSourceSyncResponseSchema,
+        401: ErrorSchema,
         404: ErrorSchema,
         400: ErrorSchema,
       },
@@ -44,7 +42,15 @@ export const datasourceSync = async (app: FastifyInstance) => {
     url: '/panels/:id/datasources/:dsId/sync',
     handler: async (request, reply) => {
       const { id, dsId } = request.params
-      const { tenantId } = request.body
+
+      // Extract tenantId from JWT token
+      const { tenantId } = request.authUser || {}
+
+      if (!tenantId) {
+        return reply.status(401).send({
+          message: 'Missing authentication context',
+        })
+      }
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({

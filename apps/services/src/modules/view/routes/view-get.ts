@@ -1,14 +1,16 @@
 import { NotFoundError } from '@/errors/not-found-error.js'
-import { ErrorSchema, type IdParam, IdParamSchema } from '@panels/types'
+import {
+  ErrorSchema,
+  type ErrorType,
+  type IdParam,
+  IdParamSchema,
+} from '@panels/types'
 import { type View, ViewSchema } from '@panels/types/views'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 
-const querystringSchema = z.object({
-  tenantId: z.string(),
-  ownerUserId: z.string(),
-})
+const querystringSchema = z.object({})
 
 type QuerystringType = z.infer<typeof querystringSchema>
 
@@ -16,7 +18,7 @@ export const viewGet = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: IdParam
     Querystring: QuerystringType
-    Reply: View
+    Reply: View | ErrorType
   }>({
     method: 'GET',
     schema: {
@@ -26,13 +28,22 @@ export const viewGet = async (app: FastifyInstance) => {
       querystring: querystringSchema,
       response: {
         200: ViewSchema,
+        401: ErrorSchema,
         404: ErrorSchema,
       },
     },
     url: '/views/:id',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { tenantId } = request.query
+
+      // Extract tenantId from JWT token
+      const { tenantId } = request.authUser || {}
+
+      if (!tenantId) {
+        return reply.status(401).send({
+          message: 'Missing authentication context',
+        })
+      }
 
       const view = await request.store.view.findOne(
         {
