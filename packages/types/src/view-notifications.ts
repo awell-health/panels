@@ -55,8 +55,6 @@ export const ViewNotificationsResponseSchema = z.object({
 
 export const MarkReadSchema = z.object({
   notificationIds: z.array(z.number()),
-  tenantId: z.string(),
-  userId: z.string(),
 })
 
 export const MarkReadResponseSchema = z.object({

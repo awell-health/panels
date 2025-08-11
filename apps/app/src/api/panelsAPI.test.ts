@@ -149,8 +149,6 @@ describe('panelsAPI', () => {
       testCrudOperations.expectCorrectBody(mockFetch, {
         name: panelData.name,
         description: panelData.description,
-        tenantId: panelData.tenantId,
-        userId: panelData.userId,
         metadata: panelData.metadata,
       })
       expect(result).toEqual(expectedResponse)

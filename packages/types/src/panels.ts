@@ -22,8 +22,6 @@ export const PanelInfoSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   metadata: z.record(z.any()).optional(),
-  tenantId: z.string(),
-  userId: z.string(),
 })
 
 export type PanelInfo = z.infer<typeof PanelInfoSchema>

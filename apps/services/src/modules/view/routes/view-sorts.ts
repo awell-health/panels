@@ -8,22 +8,12 @@ import {
 } from '@panels/types/views'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
-import { z } from 'zod'
-
-// Zod Schemas
-const querystringSchema = z.object({
-  tenantId: z.string(),
-  ownerUserId: z.string(),
-})
-
-// Types
-type QuerystringType = z.infer<typeof querystringSchema>
+import type { UserContext } from '@/types/auth.js'
 
 export const viewSorts = async (app: FastifyInstance) => {
   // GET /views/:id/sorts - List view sorts
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: IdParam
-    Querystring: QuerystringType
     Reply: ViewSortsResponse
   }>({
     method: 'GET',
@@ -31,7 +21,6 @@ export const viewSorts = async (app: FastifyInstance) => {
       description: 'Get sorts for a view',
       tags: ['view', 'configuration'],
       params: IdParamSchema,
-      querystring: querystringSchema,
       response: {
         200: ViewSortsResponseSchema,
         404: ErrorSchema,
@@ -40,11 +29,19 @@ export const viewSorts = async (app: FastifyInstance) => {
     url: '/views/:id/sorts',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { tenantId } = request.query
+
+      // Get user context from JWT
+      const userContext = (request as { authUser?: UserContext }).authUser
+      if (!userContext) {
+        throw new Error('User context not found')
+      }
 
       const view = await request.store.view.findOne({
         id: Number(id),
-        $or: [{ tenantId }, { isPublished: true, tenantId }],
+        $or: [
+          { tenantId: userContext.tenantId },
+          { isPublished: true, tenantId: userContext.tenantId },
+        ],
       })
 
       if (!view) {
@@ -88,12 +85,18 @@ export const viewSorts = async (app: FastifyInstance) => {
     url: '/views/:id/sorts',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { sorts, tenantId, ownerUserId } = request.body
+      const { sorts } = request.body
+
+      // Get user context from JWT
+      const userContext = (request as { authUser?: UserContext }).authUser
+      if (!userContext) {
+        throw new Error('User context not found')
+      }
 
       const view = await request.store.view.findOne({
         id: Number(id),
-        ownerUserId,
-        tenantId,
+        ownerUserId: userContext.userId,
+        tenantId: userContext.tenantId,
       })
 
       if (!view) {

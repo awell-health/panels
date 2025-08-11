@@ -35,8 +35,6 @@ export const ViewCreateSchema = z.object({
   panelId: z.number(),
   visibleColumns: z.array(z.string()),
   metadata: z.record(z.any()).optional(),
-  tenantId: z.string(),
-  ownerUserId: z.string(),
 })
 
 // For updating views
@@ -44,8 +42,6 @@ export const ViewUpdateSchema = z.object({
   name: z.string().optional(),
   visibleColumns: z.array(z.string()).optional(),
   metadata: z.record(z.any()).optional(),
-  tenantId: z.string(),
-  ownerUserId: z.string(),
 })
 
 // Views list response
@@ -66,8 +62,6 @@ export const ViewSortsUpdateSchema = z.object({
       order: z.number(),
     }),
   ),
-  tenantId: z.string(),
-  ownerUserId: z.string(),
 })
 
 // Type exports

@@ -15,6 +15,7 @@ import {
 
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import type { UserContext } from '@/types/auth.js'
 
 // Zod Schemas
 
@@ -122,14 +123,20 @@ export const viewNotifications = async (app: FastifyInstance) => {
     },
     url: '/notifications/views/mark-read',
     handler: async (request, reply) => {
-      const { notificationIds, tenantId, userId } = request.body
+      const { notificationIds } = request.body
+
+      // Get user context from JWT
+      const userContext = (request as { authUser?: UserContext }).authUser
+      if (!userContext) {
+        throw new Error('User context not found')
+      }
 
       const updated = await request.store.em.nativeUpdate(
         'ViewNotification',
         {
           id: { $in: notificationIds },
-          userId,
-          tenantId,
+          userId: userContext.userId,
+          tenantId: userContext.tenantId,
           isRead: false, // Only update unread notifications
         },
         {

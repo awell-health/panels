@@ -74,8 +74,6 @@ export const panelsAPI = {
       body: JSON.stringify({
         name: panel.name,
         description: panel.description,
-        tenantId: panel.tenantId,
-        userId: panel.userId,
         metadata: panel.metadata,
       }),
       ...(options || {}),

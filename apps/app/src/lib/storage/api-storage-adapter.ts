@@ -468,8 +468,6 @@ export class APIStorageAdapter implements StorageAdapter {
         panelId: Number.parseInt(panelId, 10),
         visibleColumns: view.visibleColumns,
         metadata: view.metadata,
-        tenantId: this.config.tenantId,
-        ownerUserId: this.config.userId,
       })
 
       return mapBackendViewToFrontend(createdView, panelId)
@@ -494,8 +492,6 @@ export class APIStorageAdapter implements StorageAdapter {
         name: updates.name,
         visibleColumns: updates.visibleColumns,
         metadata: updates.metadata,
-        tenantId: this.config.tenantId,
-        ownerUserId: this.config.userId,
       })
 
       return mapBackendViewToFrontend(updatedView, panelId)
