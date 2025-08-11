@@ -243,11 +243,18 @@ export class MedplumStoreClient {
         nextCursor = lastRecord.meta?.lastUpdated
       }
 
+      // Try to get total count from bundle, fallback to data length if not available
+      let totalCount = bundle.total
+      if (totalCount === undefined && data.length > 0) {
+        // If we have data but no total count, estimate based on current page
+        totalCount = hasMore ? data.length + 1 : data.length
+      }
+
       return {
         data,
         hasMore,
         nextCursor,
-        totalCount: bundle.total,
+        totalCount,
       }
     } catch (error) {
       console.error('Error fetching paginated patients:', error)
@@ -281,15 +288,68 @@ export class MedplumStoreClient {
         nextCursor = lastRecord.meta?.lastUpdated
       }
 
+      // Try to get total count from bundle, fallback to data length if not available
+      let totalCount = bundle.total
+      if (totalCount === undefined && data.length > 0) {
+        // If we have data but no total count, estimate based on current page
+        totalCount = hasMore ? data.length + 1 : data.length
+      }
+
       return {
         data,
         hasMore,
         nextCursor,
-        totalCount: bundle.total,
+        totalCount,
       }
     } catch (error) {
       console.error('Error fetching paginated tasks:', error)
       throw error
+    }
+  }
+
+  async getPatientCount(): Promise<number> {
+    try {
+      // Try to get count with _summary=count first
+      const countBundle = await this.client.search('Patient', {
+        _summary: 'count',
+      })
+
+      if (countBundle.total !== undefined) {
+        return countBundle.total
+      }
+
+      // Fallback to regular search
+      const bundle = await this.client.search('Patient', {
+        _count: 1,
+      })
+
+      return bundle.total ?? 0
+    } catch (error) {
+      console.error('Error fetching patient count:', error)
+      return 0
+    }
+  }
+
+  async getTaskCount(): Promise<number> {
+    try {
+      // Try to get count with _summary=count first
+      const countBundle = await this.client.search('Task', {
+        _summary: 'count',
+      })
+
+      if (countBundle.total !== undefined) {
+        return countBundle.total
+      }
+
+      // Fallback to regular search
+      const bundle = await this.client.search('Task', {
+        _count: 1,
+      })
+
+      return bundle.total ?? 0
+    } catch (error) {
+      console.error('Error fetching task count:', error)
+      return 0
     }
   }
 
