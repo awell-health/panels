@@ -1,4 +1,5 @@
 import config from '@/model/orm.config.js'
+import { AccessControlList } from '@/modules/acl/entities/access-control-list.entity.js'
 import { PanelChange } from '@/modules/change/entities/panel-change.entity.js'
 import { ViewNotification } from '@/modules/change/entities/view-notification.entity.js'
 import { BaseColumn } from '@/modules/column/entities/base-column.entity.js'
@@ -25,6 +26,7 @@ type DataStorePluginOptions = Options & SeverDataSoreOptions
 export interface DataStore {
   orm: MikroORM
   em: SqlEntityManager
+  acl: EntityRepository<AccessControlList>
   panel: EntityRepository<Panel>
   panelChange: EntityRepository<PanelChange>
   view: EntityRepository<View>
@@ -45,6 +47,7 @@ export default fp<DataStorePluginOptions>(
     const dataStoreGenerator = (orm: MikroORM) => ({
       orm,
       em: orm.em as SqlEntityManager,
+      acl: orm.em.getRepository(AccessControlList),
       panel: orm.em.getRepository(Panel),
       panelChange: orm.em.getRepository(PanelChange),
       view: orm.em.getRepository(View),
