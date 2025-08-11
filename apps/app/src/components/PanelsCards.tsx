@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutGrid,
   Plus,
-  X,
   ExternalLink,
   Eye,
   Users,
@@ -13,9 +12,7 @@ import {
 } from 'lucide-react'
 import type { Panel } from '@/types/panel'
 import { DEFAULT_PANEL } from '@/utils/constants'
-import { useDateTimeFormat } from '@/hooks/use-date-time-format'
-import { useReactiveColumns, useReactiveViews } from '@/hooks/use-reactive-data'
-import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
+import { usePanelStats } from '@/hooks/use-panel-stats'
 import { cn } from '@/lib/utils'
 
 interface PanelsCardsProps {
@@ -100,27 +97,22 @@ interface PanelCardProps {
 function PanelCard({ panel }: PanelCardProps) {
   const { id, name, description } = panel
   const router = useRouter()
-  const { columns: allColumns } = useReactiveColumns(id)
-  const { views } = useReactiveViews(id)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const {
+    patients,
+    tasks,
+    views: viewsCount,
+    isLoading: isStatsLoading,
+  } = usePanelStats(id)
 
-  const patientColumns = allColumns.filter((col) =>
-    col.tags?.includes('panels:patients'),
-  )
-  const taskColumns = allColumns.filter((col) =>
-    col.tags?.includes('panels:tasks'),
-  )
-  const totalColumns = patientColumns.length + taskColumns.length
-
-  // Mock data for demonstration - in real app, this would come from the panel data
-  const mockStats = {
-    views: views?.length || Math.floor(Math.random() * 20) + 1,
-    patients: Math.floor(Math.random() * 2000) + 100,
-    sources: Math.floor(Math.random() * 8) + 1,
+  // Real stats from the panel data
+  const stats = {
+    views: viewsCount,
+    patients,
+    tasks,
   }
 
-  // Mock status - in real app, this would come from panel data
-  const isActive = Math.random() > 0.3 // 70% chance of being active
+  // Panel is active if it has any data or views
+  const isActive = patients > 0 || tasks > 0 || viewsCount > 0
 
   return (
     <div className="group relative h-[180px]">
@@ -159,15 +151,15 @@ function PanelCard({ panel }: PanelCardProps) {
         <div className="flex items-center justify-between text-sm text-gray-600">
           <div className="flex items-center gap-1">
             <Eye className="h-4 w-4" />
-            <span>{mockStats.views} views</span>
+            <span>{isStatsLoading ? '...' : `${stats.views} views`}</span>
           </div>
           <div className="flex items-center gap-1">
             <Users className="h-4 w-4" />
-            <span>{mockStats.patients} patients</span>
+            <span>{isStatsLoading ? '...' : `${stats.patients} patients`}</span>
           </div>
           <div className="flex items-center gap-1">
             <Database className="h-4 w-4" />
-            <span>{mockStats.sources} sources</span>
+            <span>{isStatsLoading ? '...' : `${stats.tasks} tasks`}</span>
           </div>
         </div>
       </div>
