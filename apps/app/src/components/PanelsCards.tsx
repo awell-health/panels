@@ -20,6 +20,8 @@ interface PanelsCardsProps {
   createPanel: (panel: Panel) => Promise<Panel>
 }
 
+const CARD_HEIGHT = 'h-[130px]'
+
 export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
@@ -56,11 +58,16 @@ export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
           <button
             type="button"
             onClick={onCreatePanel}
-            className="w-full h-[180px] border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors duration-200 bg-white"
+            className={cn(
+              'w-full border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center gap-2',
+              'text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors duration-200 bg-white cursor-pointer',
+              CARD_HEIGHT,
+              // 'h-[180px]',
+            )}
           >
-            <Plus className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform duration-200" />
-            <span className="font-semibold text-lg mb-2">Create New Panel</span>
-            <span className="text-sm text-center">
+            <Plus className="h-6 w-6 group-hover:scale-110 transition-transform duration-200" />
+            <span className="font-semibold text-sm">Create New Panel</span>
+            <span className="text-xs text-center">
               Set up a new patient monitoring dashboard
             </span>
           </button>
@@ -115,11 +122,12 @@ function PanelCard({ panel }: PanelCardProps) {
   const isActive = patients > 0 || tasks > 0 || viewsCount > 0
 
   return (
-    <div className="group relative h-[180px]">
+    <div className="group relative h-[130px]">
       <div
         className={cn(
           'bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow duration-200',
           'cursor-pointer h-full flex flex-col gap-2 hover:border-primary',
+          CARD_HEIGHT,
         )}
         onClick={() => router.push(`/panel/${id}`)}
         onKeyDown={(e) => {
@@ -130,7 +138,7 @@ function PanelCard({ panel }: PanelCardProps) {
       >
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 text-lg mb-2">{name}</h3>
+            <h3 className="font-semibold text-gray-900 text-sm mb-2">{name}</h3>
             <div className="flex items-center gap-2">
               <span
                 className={cn(
@@ -147,20 +155,20 @@ function PanelCard({ panel }: PanelCardProps) {
             <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
           </div>
         </div>
-        <p className="text-gray-600 text-sm flex-1">{description}</p>
-        <div className="flex items-center justify-between text-sm text-gray-600">
+        <p className="text-gray-600 text-xs flex-1 truncate">{description}</p>
+        <div className="flex items-center justify-between text-xs text-gray-600">
           <div className="flex items-center gap-1">
             <Eye className="h-4 w-4" />
             <span>{isStatsLoading ? '...' : `${stats.views} views`}</span>
           </div>
-          <div className="flex items-center gap-1">
+          {/* <div className="flex items-center gap-1">
             <Users className="h-4 w-4" />
             <span>{isStatsLoading ? '...' : `${stats.patients} patients`}</span>
           </div>
           <div className="flex items-center gap-1">
             <Database className="h-4 w-4" />
             <span>{isStatsLoading ? '...' : `${stats.tasks} tasks`}</span>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

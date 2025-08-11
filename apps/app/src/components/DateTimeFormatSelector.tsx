@@ -36,7 +36,6 @@ export function DateTimeFormatSelector({
   const [isUpdating, setIsUpdating] = useState(false)
 
   const handleDateFormatChange = async (option: FormatOption | null) => {
-    console.log('Date format change handler called with:', option)
     if (!option) return
 
     setIsUpdating(true)
@@ -50,7 +49,6 @@ export function DateTimeFormatSelector({
   }
 
   const handleDateTimeFormatChange = async (option: FormatOption | null) => {
-    console.log('Date/time format change handler called with:', option)
     if (!option) return
 
     setIsUpdating(true)
@@ -64,8 +62,8 @@ export function DateTimeFormatSelector({
   }
 
   // Sample dates for preview
-  const sampleDate = '2024-12-31'
-  const sampleDateTime = '2024-12-31T14:30:00'
+  const sampleDate = new Date()
+  const sampleDateTime = new Date()
 
   // Convert available formats to React Select options
   const dateFormatOptions: FormatOption[] = Object.entries(
