@@ -34,7 +34,7 @@ export enum ResourceType {
  */
 export interface UserContext {
   userId: string
-  userEmail: string
+  userEmail?: string // Made optional since Stytch JWT doesn't include it
   role: UserRole
   tenantId: string
 }
@@ -43,12 +43,20 @@ export interface UserContext {
  * JWT payload structure from Stytch
  */
 export interface JWTPayload {
-  userId: string
-  userEmail: string
-  role: UserRole
-  tenantId: string
-  iat: number
+  aud: string[]
   exp: number
+  'https://stytch.com/organization': {
+    slug: string
+  }
+  'https://stytch.com/session': {
+    id: string
+    expires_at: string
+    roles: string[]
+  }
+  iat: number
+  iss: string
+  nbf: number
+  sub: string
 }
 
 /**
@@ -68,7 +76,7 @@ export interface ACLEntry {
   tenantId: string
   resourceType: ResourceType
   resourceId: number
-  userEmail: string
+  userEmail?: string // Made optional to match UserContext
   permission: Permission
   createdAt: Date
   updatedAt: Date

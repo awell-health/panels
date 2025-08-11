@@ -29,15 +29,15 @@ export const panelsAPI = {
     options?: Record<string, unknown>,
   ): Promise<PanelResponse> => {
     const { apiConfig } = await import('./config/apiConfig')
+    const defaultOptions = await apiConfig.getDefaultOptions()
+
     const response = await fetch(
       await apiConfig.buildUrl(
         `/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`,
       ),
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        ...defaultOptions,
         ...(options || {}),
       },
     )
@@ -50,13 +50,12 @@ export const panelsAPI = {
     options = undefined,
   ): Promise<PanelsResponse> => {
     const { apiConfig } = await import('./config/apiConfig')
+    const defaultOptions = await apiConfig.getDefaultOptions()
     const panels = await fetch(
       await apiConfig.buildUrl(`/panels?tenantId=${tenantId}&userId=${userId}`),
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        ...defaultOptions,
         ...(options || {}),
       },
     )
@@ -68,11 +67,10 @@ export const panelsAPI = {
     options = undefined,
   ): Promise<CreatePanelResponse> => {
     const { apiConfig } = await import('./config/apiConfig')
+    const defaultOptions = await apiConfig.getDefaultOptions()
     const response = await fetch(await apiConfig.buildUrl('/panels'), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      ...defaultOptions,
       body: JSON.stringify({
         name: panel.name,
         description: panel.description,
@@ -90,13 +88,12 @@ export const panelsAPI = {
     options = undefined,
   ): Promise<PanelResponse> => {
     const { apiConfig } = await import('./config/apiConfig')
+    const defaultOptions = await apiConfig.getDefaultOptions()
     const response = await fetch(
       await apiConfig.buildUrl(`/panels/${panel.id}`),
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        ...defaultOptions,
         body: JSON.stringify(panel),
         ...(options || {}),
       },
@@ -111,12 +108,14 @@ export const panelsAPI = {
     options = undefined,
   ): Promise<void> => {
     const { apiConfig } = await import('./config/apiConfig')
+    const defaultOptions = await apiConfig.getDefaultOptions()
     await fetch(
       await apiConfig.buildUrl(
         `/panels/${panel.id}?tenantId=${tenantId}&userId=${userId}`,
       ),
       {
         method: 'DELETE',
+        ...defaultOptions,
         ...(options || {}),
       },
     )
@@ -130,15 +129,14 @@ export const panelsAPI = {
       options = undefined,
     ): Promise<DataSourcesResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
+      const defaultOptions = await apiConfig.getDefaultOptions()
       const response = await fetch(
         await apiConfig.buildUrl(
           `/panels/${panel.id}/datasources?tenantId=${tenantId}&userId=${userId}`,
         ),
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          ...defaultOptions,
           ...(options || {}),
         },
       )
@@ -151,13 +149,12 @@ export const panelsAPI = {
       options = undefined,
     ): Promise<DataSourceResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
+      const defaultOptions = await apiConfig.getDefaultOptions()
       const response = await fetch(
         await apiConfig.buildUrl(`/panels/${panel.id}/datasources`),
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          ...defaultOptions,
           body: JSON.stringify(dataSource),
           ...(options || {}),
         },
@@ -170,13 +167,12 @@ export const panelsAPI = {
       options = undefined,
     ): Promise<DataSourceResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
+      const defaultOptions = await apiConfig.getDefaultOptions()
       const response = await fetch(
         await apiConfig.buildUrl(`/datasources/${dataSource.id}`),
         {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          ...defaultOptions,
           body: JSON.stringify(dataSource),
           ...(options || {}),
         },
@@ -189,11 +185,10 @@ export const panelsAPI = {
       options = undefined,
     ): Promise<void> => {
       const { apiConfig } = await import('./config/apiConfig')
+      const defaultOptions = await apiConfig.getDefaultOptions()
       await fetch(await apiConfig.buildUrl(`/datasources/${dataSource.id}`), {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        ...defaultOptions,
         body: JSON.stringify({
           tenantId: dataSource.tenantId,
           userId: dataSource.userId,
@@ -207,13 +202,12 @@ export const panelsAPI = {
       options = undefined,
     ): Promise<DataSourceSyncResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
+      const defaultOptions = await apiConfig.getDefaultOptions()
       const response = await fetch(
         await apiConfig.buildUrl(`/datasources/${dataSource.id}/sync`),
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          ...defaultOptions,
           ...(options || {}),
         },
       )
@@ -231,6 +225,7 @@ export const panelsAPI = {
       options = undefined,
     ): Promise<ColumnsResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
+      const defaultOptions = await apiConfig.getDefaultOptions()
 
       const queryParams = new URLSearchParams()
       queryParams.append('tenantId', tenantId)
@@ -252,9 +247,7 @@ export const panelsAPI = {
         await apiConfig.buildUrl(`/panels/${panel.id}/columns?${queryString}`),
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          ...defaultOptions,
           ...(options || {}),
         },
       )
@@ -267,13 +260,12 @@ export const panelsAPI = {
       options = undefined,
     ): Promise<ColumnBaseCreateResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
+      const defaultOptions = await apiConfig.getDefaultOptions()
       const response = await fetch(
         await apiConfig.buildUrl(`/panels/${panel.id}/columns/base`),
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          ...defaultOptions,
           body: JSON.stringify(column),
           ...(options || {}),
         },
@@ -287,13 +279,12 @@ export const panelsAPI = {
       options = undefined,
     ): Promise<ColumnCalculatedCreateResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
+      const defaultOptions = await apiConfig.getDefaultOptions()
       const response = await fetch(
         await apiConfig.buildUrl(`/panels/${panel.id}/columns/calculated`),
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          ...defaultOptions,
           body: JSON.stringify(column),
           ...(options || {}),
         },
@@ -307,13 +298,12 @@ export const panelsAPI = {
       options = undefined,
     ): Promise<ColumnInfoResponse> => {
       const { apiConfig } = await import('./config/apiConfig')
+      const defaultOptions = await apiConfig.getDefaultOptions()
       const response = await fetch(
         await apiConfig.buildUrl(`/panels/${panelId.id}/columns/${column.id}`),
         {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          ...defaultOptions,
           body: JSON.stringify(column),
           ...(options || {}),
         },
@@ -327,12 +317,14 @@ export const panelsAPI = {
       options = undefined,
     ): Promise<void> => {
       const { apiConfig } = await import('./config/apiConfig')
+      const defaultOptions = await apiConfig.getDefaultOptions()
       await fetch(
         await apiConfig.buildUrl(
           `/panels/${panelId.id}/columns/${column.id}?tenantId=${column.tenantId}&userId=${column.userId}`,
         ),
         {
           method: 'DELETE',
+          ...defaultOptions,
           ...(options || {}),
         },
       )

@@ -1,4 +1,5 @@
 import { getRuntimeConfig } from '@/lib/config'
+import { jwtTokenService } from '@/lib/jwt-token-extractor'
 
 // Cache for runtime config to avoid repeated server calls
 let runtimeConfigCache: Awaited<ReturnType<typeof getRuntimeConfig>> | null =
@@ -31,6 +32,23 @@ export const apiConfig = {
   // Clear cache (useful for testing or when config changes)
   clearCache: (): void => {
     runtimeConfigCache = null
+  },
+
+  // Get default fetch options with JWT authentication
+  getDefaultOptions: async (): Promise<RequestInit> => {
+    const authHeader = await jwtTokenService.getAuthorizationHeader()
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (authHeader) {
+      headers.Authorization = authHeader
+    }
+
+    return {
+      headers,
+    }
   },
 
   // Default fetch options that can be overridden

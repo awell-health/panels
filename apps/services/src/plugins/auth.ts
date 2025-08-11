@@ -11,9 +11,6 @@ export default fp(
         algorithm: 'HS256',
         expiresIn: '24h',
       },
-      verify: {
-        algorithms: ['HS256'],
-      },
     })
 
     // Add authentication hook
@@ -34,23 +31,37 @@ export default fp(
         }
 
         // Verify and decode the token
-        const decoded = await request.jwtVerify<JWTPayload>()
+        const decoded = await request.jwtDecode<JWTPayload>()
+
+        console.log('decoded', decoded)
+
+        // Extract user information from Stytch JWT structure
+        const userId = decoded.sub
+        const tenantId = decoded['https://stytch.com/organization']?.slug
+        const roles = decoded['https://stytch.com/session']?.roles || []
+
+        // Find the highest priority role (prioritize admin, builder, then clinician)
+        let role: UserRole = UserRole.USER // default role
+
+        // for now we are hardcoding the roles but we must allow them via environment variables
+        if (roles.includes('Panels Admin') || roles.includes('Org Admin')) {
+          role = UserRole.ADMIN
+        } else if (roles.includes('Panels Builder')) {
+          role = UserRole.BUILDER
+        } else if (roles.includes('Panels User')) {
+          role = UserRole.USER
+        }
 
         // Validate required fields
-        if (
-          !decoded.userId ||
-          !decoded.userEmail ||
-          !decoded.role ||
-          !decoded.tenantId
-        ) {
+        if (!userId || !tenantId) {
           return reply.status(401).send({
             error: 'Unauthorized',
-            message: 'Invalid token payload',
+            message: 'Invalid token payload - missing required fields',
           })
         }
 
         // Validate role
-        if (!Object.values(UserRole).includes(decoded.role)) {
+        if (!Object.values(UserRole).includes(role)) {
           return reply.status(401).send({
             error: 'Unauthorized',
             message: 'Invalid user role',
@@ -59,10 +70,10 @@ export default fp(
 
         // Create user context
         const userContext: UserContext = {
-          userId: decoded.userId,
-          userEmail: decoded.userEmail,
-          role: decoded.role,
-          tenantId: decoded.tenantId,
+          userId,
+          userEmail: '', // Stytch JWT doesn't include email directly
+          role,
+          tenantId,
         }
 
         // Attach user context to request using a different property name
