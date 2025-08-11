@@ -13,9 +13,17 @@ import {
 
 // Mock the API config
 vi.mock('./config/apiConfig', () => ({
-  getApiConfig: () => ({
+  apiConfig: {
     buildUrl: (path: string) => `https://api.test.com${path}`,
-  }),
+    getDefaultOptions: async () => ({
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }),
+    getDefaultOptionsNoBody: async () => ({
+      headers: {},
+    }),
+  },
 }))
 
 describe('viewsAPI', () => {
@@ -42,7 +50,7 @@ describe('viewsAPI', () => {
         'https://api.test.com/views',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
-      testCrudOperations.expectCorrectHeaders(mockFetch)
+      testCrudOperations.expectNoContentTypeHeader(mockFetch)
       expect(result).toEqual(expectedResponse)
     })
 
@@ -67,7 +75,7 @@ describe('viewsAPI', () => {
         'https://api.test.com/views/view-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
-      testCrudOperations.expectCorrectHeaders(mockFetch)
+      testCrudOperations.expectNoContentTypeHeader(mockFetch)
       expect(result).toEqual(expectedResponse)
     })
 

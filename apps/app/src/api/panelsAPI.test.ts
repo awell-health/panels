@@ -16,6 +16,14 @@ import {
 vi.mock('./config/apiConfig', () => ({
   apiConfig: {
     buildUrl: (path: string) => `https://api.test.com${path}`,
+    getDefaultOptions: async () => ({
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }),
+    getDefaultOptionsNoBody: async () => ({
+      headers: {},
+    }),
   },
 }))
 
@@ -45,7 +53,7 @@ describe('panelsAPI', () => {
         'https://api.test.com/panels/panel-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
-      testCrudOperations.expectCorrectHeaders(mockFetch)
+      testCrudOperations.expectNoContentTypeHeader(mockFetch)
       expect(result).toEqual(expectedResponse)
     })
 
@@ -93,7 +101,7 @@ describe('panelsAPI', () => {
         'https://api.test.com/panels',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
-      testCrudOperations.expectCorrectHeaders(mockFetch)
+      testCrudOperations.expectNoContentTypeHeader(mockFetch)
       expect(result).toEqual(expectedResponse)
     })
 

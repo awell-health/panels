@@ -204,15 +204,15 @@ export const panelsAPI = {
       }
 
       const queryString = queryParams.toString()
+      const url = queryString
+        ? await apiConfig.buildUrl(`/panels/${panel.id}/columns?${queryString}`)
+        : await apiConfig.buildUrl(`/panels/${panel.id}/columns`)
 
-      const response = await fetch(
-        await apiConfig.buildUrl(`/panels/${panel.id}/columns?${queryString}`),
-        {
-          method: 'GET',
-          ...defaultOptions,
-          ...(options || {}),
-        },
-      )
+      const response = await fetch(url, {
+        method: 'GET',
+        ...defaultOptions,
+        ...(options || {}),
+      })
       return response.json() as Promise<ColumnsResponse>
     },
 

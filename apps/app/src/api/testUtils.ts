@@ -233,6 +233,12 @@ export const testCrudOperations = {
     })
   },
 
+  expectNoContentTypeHeader: (mockFetch: ReturnType<typeof vi.fn>) => {
+    const calls = mockFetch.mock.calls
+    const options = calls[calls.length - 1][1]
+    expect(options.headers).not.toHaveProperty('Content-Type')
+  },
+
   expectCorrectBody: (
     mockFetch: ReturnType<typeof vi.fn>,
     expectedBody: unknown,
