@@ -60,8 +60,6 @@ export const mapFrontendPanelToBackend = (
   return {
     name: frontendPanel.name,
     description: frontendPanel.description || '',
-    tenantId: config.tenantId,
-    userId: config.userId,
     metadata: frontendPanel.metadata || {},
   }
 }

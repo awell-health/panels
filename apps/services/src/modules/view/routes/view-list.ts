@@ -1,5 +1,5 @@
 import type { FilterQuery } from '@mikro-orm/core'
-import { ErrorSchema } from '@panels/types'
+import { ErrorSchema, type ErrorType } from '@panels/types'
 import { type ViewsResponse, ViewsResponseSchema } from '@panels/types/views'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
@@ -8,8 +8,6 @@ import type { View } from '../entities/view.entity.js'
 
 // Zod Schemas
 const querystringSchema = z.object({
-  tenantId: z.string(),
-  ownerUserId: z.string(),
   panelId: z.string().optional(),
   published: z.boolean().optional(),
 })
@@ -20,7 +18,7 @@ type QuerystringType = z.infer<typeof querystringSchema>
 export const viewList = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Querystring: QuerystringType
-    Reply: ViewsResponse
+    Reply: ViewsResponse | ErrorType
   }>({
     method: 'GET',
     schema: {
@@ -29,13 +27,24 @@ export const viewList = async (app: FastifyInstance) => {
       querystring: querystringSchema,
       response: {
         200: ViewsResponseSchema,
+        401: ErrorSchema,
         404: ErrorSchema,
         400: ErrorSchema,
       },
     },
     url: '/views',
     handler: async (request, reply) => {
-      const { tenantId, panelId, published } = request.query
+      const { panelId, published } = request.query
+
+      // Extract tenantId and userId from JWT token
+      const { tenantId, userId } = request.authUser || {}
+
+      if (!tenantId || !userId) {
+        return reply.status(401).send({
+          message: 'Missing authentication context',
+        })
+      }
+
       const where: FilterQuery<View> = {
         $or: [
           { tenantId }, // User's own views

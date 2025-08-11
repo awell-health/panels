@@ -19,8 +19,6 @@ export const mockData = {
   panel: (): PanelInfo => ({
     name: 'Test Panel',
     description: 'Test Description',
-    tenantId: 'tenant-123',
-    userId: 'user-123',
     metadata: {},
   }),
 
@@ -28,8 +26,6 @@ export const mockData = {
     id: 'panel-123',
     name: 'Test Panel',
     description: 'Test Description',
-    tenantId: 'tenant-123',
-    userId: 'user-123',
     metadata: {},
   }),
 
@@ -37,8 +33,6 @@ export const mockData = {
     name: 'Test View',
     panelId: 123,
     visibleColumns: ['name', 'status'],
-    tenantId: 'tenant-123',
-    ownerUserId: 'user-123',
   }),
 
   viewWithId: (): ViewCreate & IdParam => ({
@@ -46,8 +40,6 @@ export const mockData = {
     name: 'Test View',
     panelId: 123,
     visibleColumns: ['name', 'status'],
-    tenantId: 'tenant-123',
-    ownerUserId: 'user-123',
   }),
 
   viewSortsUpdate: (): ViewSortsUpdate => ({
@@ -58,8 +50,6 @@ export const mockData = {
         order: 1,
       },
     ],
-    tenantId: 'tenant-123',
-    ownerUserId: 'user-123',
   }),
 }
 
@@ -241,6 +231,12 @@ export const testCrudOperations = {
     expect(options.headers).toMatchObject({
       'Content-Type': 'application/json',
     })
+  },
+
+  expectNoContentTypeHeader: (mockFetch: ReturnType<typeof vi.fn>) => {
+    const calls = mockFetch.mock.calls
+    const options = calls[calls.length - 1][1]
+    expect(options.headers).not.toHaveProperty('Content-Type')
   },
 
   expectCorrectBody: (

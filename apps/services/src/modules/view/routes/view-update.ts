@@ -8,6 +8,7 @@ import {
 } from '@panels/types/views'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import type { UserContext } from '@/types/auth.js'
 
 export const viewUpdate = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
@@ -30,12 +31,18 @@ export const viewUpdate = async (app: FastifyInstance) => {
     url: '/views/:id',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { name, visibleColumns, tenantId, metadata } = request.body
+      const { name, visibleColumns, metadata } = request.body
+
+      // Get user context from JWT
+      const userContext = (request as { authUser?: UserContext }).authUser
+      if (!userContext) {
+        throw new Error('User context not found')
+      }
 
       const view = await request.store.view.findOne(
         {
           id: Number(id),
-          tenantId,
+          tenantId: userContext.tenantId,
         },
         {
           populate: ['sort'],

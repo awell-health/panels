@@ -3,8 +3,6 @@ import { z } from 'zod'
 export const DataSourceInfoSchema = z.object({
   type: z.enum(['database', 'api', 'file', 'custom']),
   config: z.record(z.any()),
-  tenantId: z.string(),
-  userId: z.string(),
 })
 
 export const DataSourceResponseSchema = z.object({

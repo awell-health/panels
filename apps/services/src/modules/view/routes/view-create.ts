@@ -9,6 +9,7 @@ import {
 
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import type { UserContext } from '@/types/auth.js'
 
 // Zod Schemas
 export const viewCreate = async (app: FastifyInstance) => {
@@ -29,13 +30,18 @@ export const viewCreate = async (app: FastifyInstance) => {
     },
     url: '/views',
     handler: async (request, reply) => {
-      const { name, panelId, visibleColumns, tenantId, ownerUserId, metadata } =
-        request.body
+      const { name, panelId, visibleColumns, metadata } = request.body
+
+      // Get user context from JWT
+      const userContext = (request as { authUser?: UserContext }).authUser
+      if (!userContext) {
+        throw new Error('User context not found')
+      }
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({
         id: panelId,
-        tenantId,
+        tenantId: userContext.tenantId,
       })
 
       if (!panel) {
@@ -45,8 +51,8 @@ export const viewCreate = async (app: FastifyInstance) => {
       const view = request.store.view.create({
         name,
         panel,
-        ownerUserId,
-        tenantId,
+        ownerUserId: userContext.userId,
+        tenantId: userContext.tenantId,
         isPublished: false,
         visibleColumns,
         metadata,

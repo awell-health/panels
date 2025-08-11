@@ -72,8 +72,7 @@ describe('Panel Column API', () => {
       expect(body.message).toContain('sourceField')
       expect(body.message).toContain('properties')
       expect(body.message).toContain('dataSourceId')
-      expect(body.message).toContain('tenantId')
-      expect(body.message).toContain('userId')
+      // Note: tenantId and userId are no longer required fields
     })
 
     it('should return 404 for non-existent panel', async () => {

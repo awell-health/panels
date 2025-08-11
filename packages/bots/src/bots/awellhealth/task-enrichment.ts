@@ -392,7 +392,7 @@ async function createConnectorInputs(
   const connectorInputs: TaskInput[] = []
 
   // Add Awell Care connector
-  const connectorUrl = `https://care.${config.environment}.awellhealth.com/pathway/${extensionData.pathwayId}/activity-feed?activityId=${extensionData.activityId}`
+  const connectorUrl = `https://care${config.environment !== '' ? `.${config.environment}` : ''}.awellhealth.com/pathway/${extensionData.pathwayId}/activity-feed?activityId=${extensionData.activityId}`
   connectorInputs.push({
     type: {
       coding: [

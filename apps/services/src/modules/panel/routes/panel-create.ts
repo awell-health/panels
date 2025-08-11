@@ -7,6 +7,7 @@ import {
 } from '@panels/types/panels'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import type { UserContext } from '@/types/auth.js'
 
 export const panelCreate = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
@@ -25,13 +26,19 @@ export const panelCreate = async (app: FastifyInstance) => {
     },
     url: '/panels',
     handler: async (request, reply) => {
-      const { name, description, tenantId, userId, metadata } = request.body
+      const { name, description, metadata } = request.body
+
+      // Get user context from JWT
+      const userContext = (request as { authUser?: UserContext }).authUser
+      if (!userContext) {
+        throw new Error('User context not found')
+      }
 
       const panel = request.store.panel.create({
         name: name ?? 'New Panel',
         description,
-        tenantId,
-        userId,
+        tenantId: userContext.tenantId,
+        userId: userContext.userId,
         cohortRule: { conditions: [], logic: 'AND' },
         createdAt: new Date(),
         updatedAt: new Date(),

@@ -46,20 +46,19 @@ describe('Panel API', () => {
       // expect(body.userId).toBe(testUserId);
     })
 
-    it('should validate required fields', async () => {
+    it('should create panel with default name when name is not provided', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/panels',
         payload: {
-          description: 'Test Description',
-          // Missing tenantId and userId which are required
+          // Missing name - should use default
         },
       })
 
-      expect(response.statusCode).toBe(400)
+      expect(response.statusCode).toBe(201)
       const body = JSON.parse(response.body)
-      expect(body.message).toContain('tenantId')
-      expect(body.message).toContain('userId')
+      expect(body.name).toBe('New Panel') // Default name from handler
+      // Note: tenantId and userId are no longer required fields
     })
   })
 

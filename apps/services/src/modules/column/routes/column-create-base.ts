@@ -1,5 +1,10 @@
 import { NotFoundError } from '@/errors/not-found-error.js'
-import { ErrorSchema, type IdParam, IdParamSchema } from '@panels/types'
+import {
+  ErrorSchema,
+  type ErrorType,
+  type IdParam,
+  IdParamSchema,
+} from '@panels/types'
 import {
   type ColumnBaseCreate,
   type ColumnBaseCreateResponse,
@@ -13,7 +18,7 @@ export const columnCreateBase = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: IdParam
     Body: ColumnBaseCreate
-    Reply: ColumnBaseCreateResponse
+    Reply: ColumnBaseCreateResponse | ErrorType
   }>({
     method: 'POST',
     schema: {
@@ -23,6 +28,7 @@ export const columnCreateBase = async (app: FastifyInstance) => {
       body: ColumnBaseCreateSchema,
       response: {
         201: ColumnBaseCreateResponseSchema,
+        401: ErrorSchema,
         404: ErrorSchema,
         400: ErrorSchema,
       },
@@ -37,9 +43,16 @@ export const columnCreateBase = async (app: FastifyInstance) => {
         dataSourceId,
         properties,
         metadata,
-        tenantId,
         tags,
       } = request.body
+
+      const { tenantId } = request.authUser || {}
+
+      if (!tenantId) {
+        return reply.status(401).send({
+          message: 'Missing authentication context',
+        })
+      }
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({

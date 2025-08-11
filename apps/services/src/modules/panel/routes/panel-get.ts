@@ -3,15 +3,11 @@ import { ErrorSchema, type IdParam, IdParamSchema } from '@panels/types'
 import { type PanelResponse, PanelResponseSchema } from '@panels/types/panels'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
-import { z } from 'zod'
+import type { UserContext } from '@/types/auth.js'
 
 export const panelGet = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: IdParam
-    Querystring: {
-      tenantId: string
-      userId: string
-    }
     Reply: PanelResponse
   }>({
     method: 'GET',
@@ -19,10 +15,6 @@ export const panelGet = async (app: FastifyInstance) => {
       description: 'Get a panel by ID',
       tags: ['panel'],
       params: IdParamSchema,
-      querystring: z.object({
-        tenantId: z.string(),
-        userId: z.string(),
-      }),
       response: {
         200: PanelResponseSchema,
         404: ErrorSchema,
@@ -31,15 +23,17 @@ export const panelGet = async (app: FastifyInstance) => {
     url: '/panels/:id',
     handler: async (request, reply) => {
       const { id } = request.params as { id: string }
-      const { tenantId } = request.query as {
-        tenantId: string
-        userId: string
+
+      // Get user context from JWT
+      const userContext = (request as { authUser?: UserContext }).authUser
+      if (!userContext) {
+        throw new Error('User context not found')
       }
 
       const panel = await request.store.panel.findOne(
         {
           id: Number(id),
-          tenantId,
+          tenantId: userContext.tenantId,
         },
         {
           populate: [

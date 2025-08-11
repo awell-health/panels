@@ -28,10 +28,7 @@ export class APIStorageAdapter implements StorageAdapter {
   async getPanels(): Promise<Panel[]> {
     try {
       const { panelsAPI } = await import('@/api/panelsAPI')
-      const backendPanels = await panelsAPI.all(
-        this.config.tenantId,
-        this.config.userId,
-      )
+      const backendPanels = await panelsAPI.all()
 
       // Simple mapping without complex enrichment
       return backendPanels.map((panel) => mapBackendPanelToFrontend(panel))
@@ -48,11 +45,7 @@ export class APIStorageAdapter implements StorageAdapter {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
       // Single API call for panel data
-      const backendPanel = await panelsAPI.get(
-        { id },
-        this.config.tenantId,
-        this.config.userId,
-      )
+      const backendPanel = await panelsAPI.get({ id })
 
       return mapBackendPanelToFrontend(backendPanel)
     } catch (error) {
@@ -90,15 +83,13 @@ export class APIStorageAdapter implements StorageAdapter {
             endpoint: '/api/patients',
             method: 'GET',
           },
-          tenantId: this.config.tenantId,
-          userId: this.config.userId,
         },
       )
 
       return mapBackendPanelToFrontend(createdPanel)
     } catch (error) {
       logger.error(
-        { error, config: this.config },
+        { error, panel, config: this.config },
         'Failed to create panel via API',
       )
       throw new Error(
@@ -118,33 +109,24 @@ export class APIStorageAdapter implements StorageAdapter {
 
       const { panelsAPI } = await import('@/api/panelsAPI')
 
-      // Build the panel info with only the fields that are being updated
-      // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
-      const backendPanelInfo: any = {
-        id: id,
-        tenantId: this.config.tenantId,
-        userId: this.config.userId,
+      // Get existing panel to merge with updates
+      const existingPanel = await this.getPanel(id)
+      if (!existingPanel) {
+        throw new Error(`Panel ${id} not found`)
       }
 
-      // Only include fields that are actually being updated
-      if (updates.name !== undefined) {
-        backendPanelInfo.name = updates.name
-      }
-      if (updates.description !== undefined) {
-        backendPanelInfo.description = updates.description
-      }
-      if (updates.metadata !== undefined) {
-        backendPanelInfo.metadata = updates.metadata
-      }
+      // Merge updates with existing panel
+      const updatedPanel = { ...existingPanel, ...updates }
+      const backendPanelInfo = mapFrontendPanelToBackend(
+        updatedPanel,
+        this.config,
+      )
 
-      const updatedPanel = await panelsAPI.update(backendPanelInfo)
-
-      const frontendPanel = mapBackendPanelToFrontend(updatedPanel)
-
-      return frontendPanel
+      const result = await panelsAPI.update({ ...backendPanelInfo, id })
+      return mapBackendPanelToFrontend(result)
     } catch (error) {
       logger.error(
-        { error, id, config: this.config },
+        { error, id, updates, config: this.config },
         `Failed to update panel ${id} via API`,
       )
       throw new Error(
@@ -163,7 +145,7 @@ export class APIStorageAdapter implements StorageAdapter {
       }
 
       const { panelsAPI } = await import('@/api/panelsAPI')
-      await panelsAPI.delete(this.config.tenantId, this.config.userId, { id })
+      await panelsAPI.delete({ id })
     } catch (error) {
       logger.error(
         { error, id, config: this.config },
@@ -180,10 +162,7 @@ export class APIStorageAdapter implements StorageAdapter {
     try {
       const { viewsAPI } = await import('@/api/viewsAPI')
 
-      const viewsResponse = await viewsAPI.all(
-        this.config.tenantId,
-        this.config.userId,
-      )
+      const viewsResponse = await viewsAPI.all()
 
       return viewsResponse.views.map((view: ViewsResponse['views'][number]) =>
         mapBackendViewToFrontend(view, view.panelId.toString()),
@@ -208,11 +187,7 @@ export class APIStorageAdapter implements StorageAdapter {
       // Fetch columns for each panel in parallel
       const columnPromises = panels.map(async (panel) => {
         try {
-          const columnsResponse = await panelsAPI.columns.list(
-            { id: panel.id },
-            this.config.tenantId,
-            this.config.userId,
-          )
+          const columnsResponse = await panelsAPI.columns.list({ id: panel.id })
 
           const panelColumns = [
             ...columnsResponse.baseColumns,
@@ -258,11 +233,7 @@ export class APIStorageAdapter implements StorageAdapter {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
       // Get data source for the panel
-      const dataSources = await panelsAPI.dataSources.list(
-        { id: panelId },
-        this.config.tenantId,
-        this.config.userId,
-      )
+      const dataSources = await panelsAPI.dataSources.list({ id: panelId })
       const dataSourceId = dataSources[0]?.id || 1
 
       // Direct API call to create column
@@ -276,8 +247,6 @@ export class APIStorageAdapter implements StorageAdapter {
           metadata: column.metadata || {},
           properties: column.properties || { display: {} },
           tags: column.tags || [],
-          tenantId: this.config.tenantId,
-          userId: this.config.userId,
         },
       )
 
@@ -336,8 +305,6 @@ export class APIStorageAdapter implements StorageAdapter {
       // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
       const updatePayload: any = {
         id: columnId,
-        tenantId: this.config.tenantId,
-        userId: this.config.userId,
       }
 
       // Only add properties that are actually defined in the updates
@@ -407,8 +374,6 @@ export class APIStorageAdapter implements StorageAdapter {
       await panelsAPI.columns.delete(
         {
           id: columnId,
-          tenantId: this.config.tenantId,
-          userId: this.config.userId,
         },
         { id: panelId },
       )
@@ -428,11 +393,7 @@ export class APIStorageAdapter implements StorageAdapter {
       const { panelsAPI } = await import('@/api/panelsAPI')
 
       // Fetch columns for the specified panel
-      const columnsResponse = await panelsAPI.columns.list(
-        { id: panelId },
-        this.config.tenantId,
-        this.config.userId,
-      )
+      const columnsResponse = await panelsAPI.columns.list({ id: panelId })
 
       // Combine base and calculated columns and map to frontend format
       const allColumns = [
@@ -453,7 +414,7 @@ export class APIStorageAdapter implements StorageAdapter {
         `Failed to fetch columns for panel ${panelId}`,
       )
       throw new Error(
-        `Failed to fetch columns: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to load columns: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
     }
   }
@@ -468,8 +429,6 @@ export class APIStorageAdapter implements StorageAdapter {
         panelId: Number.parseInt(panelId, 10),
         visibleColumns: view.visibleColumns,
         metadata: view.metadata,
-        tenantId: this.config.tenantId,
-        ownerUserId: this.config.userId,
       })
 
       return mapBackendViewToFrontend(createdView, panelId)
@@ -494,8 +453,6 @@ export class APIStorageAdapter implements StorageAdapter {
         name: updates.name,
         visibleColumns: updates.visibleColumns,
         metadata: updates.metadata,
-        tenantId: this.config.tenantId,
-        ownerUserId: this.config.userId,
       })
 
       return mapBackendViewToFrontend(updatedView, panelId)
@@ -520,7 +477,7 @@ export class APIStorageAdapter implements StorageAdapter {
       }
 
       const { viewsAPI } = await import('@/api/viewsAPI')
-      await viewsAPI.delete(this.config.tenantId, this.config.userId, {
+      await viewsAPI.delete({
         id: viewId,
       })
     } catch (error) {
@@ -537,11 +494,7 @@ export class APIStorageAdapter implements StorageAdapter {
   async getView(panelId: string, viewId: string): Promise<View | null> {
     try {
       const { viewsAPI } = await import('@/api/viewsAPI')
-      const backendView = await viewsAPI.get(
-        this.config.tenantId,
-        this.config.userId,
-        { id: viewId },
-      )
+      const backendView = await viewsAPI.get({ id: viewId })
 
       return mapBackendViewToFrontend(backendView, panelId)
     } catch (error) {
@@ -563,10 +516,7 @@ export class APIStorageAdapter implements StorageAdapter {
       const { viewsAPI } = await import('@/api/viewsAPI')
 
       // Get all views and filter by panelId since there's no direct list method by panel
-      const viewsResponse = await viewsAPI.all(
-        this.config.tenantId,
-        this.config.userId,
-      )
+      const viewsResponse = await viewsAPI.all()
 
       // Filter views for the specified panel and map to frontend format
       const panelViews = viewsResponse.views.filter(

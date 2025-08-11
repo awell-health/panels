@@ -1,6 +1,7 @@
 import { NotFoundError } from '@/errors/not-found-error.js'
 import {
   ErrorSchema,
+  type ErrorType,
   type OperationResult,
   OperationResultSchema,
 } from '@panels/types'
@@ -14,10 +15,7 @@ const paramsSchema = z.object({
   dsId: z.string(),
 })
 
-const bodySchema = z.object({
-  tenantId: z.string(),
-  userId: z.string(),
-})
+const bodySchema = z.object({})
 
 // Types
 type ParamsType = z.infer<typeof paramsSchema>
@@ -27,7 +25,7 @@ export const datasourceDelete = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: ParamsType
     Body: BodyType
-    Reply: OperationResult
+    Reply: OperationResult | ErrorType
   }>({
     method: 'DELETE',
     schema: {
@@ -37,13 +35,22 @@ export const datasourceDelete = async (app: FastifyInstance) => {
       body: bodySchema,
       response: {
         204: OperationResultSchema,
+        401: ErrorSchema,
         404: ErrorSchema,
       },
     },
     url: '/panels/:id/datasources/:dsId',
     handler: async (request, reply) => {
       const { id, dsId } = request.params
-      const { tenantId } = request.body
+
+      // Extract tenantId from JWT token
+      const { tenantId } = request.authUser || {}
+
+      if (!tenantId) {
+        return reply.status(401).send({
+          message: 'Missing authentication context',
+        })
+      }
 
       // First verify panel exists and user has access
       const panel = await request.store.em.findOne('Panel', {

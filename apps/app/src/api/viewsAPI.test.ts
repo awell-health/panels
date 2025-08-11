@@ -13,9 +13,17 @@ import {
 
 // Mock the API config
 vi.mock('./config/apiConfig', () => ({
-  getApiConfig: () => ({
+  apiConfig: {
     buildUrl: (path: string) => `https://api.test.com${path}`,
-  }),
+    getDefaultOptions: async () => ({
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }),
+    getDefaultOptionsNoBody: async () => ({
+      headers: {},
+    }),
+  },
 }))
 
 describe('viewsAPI', () => {
@@ -35,21 +43,21 @@ describe('viewsAPI', () => {
       const expectedResponse = mockResponses.viewsResponse()
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      const result = await viewsAPI.all('tenant-123', 'user-123')
+      const result = await viewsAPI.all()
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/views?tenantId=tenant-123&ownerUserId=user-123',
+        'https://api.test.com/views',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
-      testCrudOperations.expectCorrectHeaders(mockFetch)
+      testCrudOperations.expectNoContentTypeHeader(mockFetch)
       expect(result).toEqual(expectedResponse)
     })
 
     it('should handle fetch errors', async () => {
       mockFetch.mockReturnValue(mockFetchError(500, 'Internal Server Error'))
 
-      const result = await viewsAPI.all('tenant-123', 'user-123')
+      const result = await viewsAPI.all()
       expect(result).toMatchObject({ error: expect.any(String) })
     })
   })
@@ -57,52 +65,42 @@ describe('viewsAPI', () => {
   describe('get', () => {
     it('should fetch a single view', async () => {
       const view = { id: 'view-123' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
       const expectedResponse = mockResponses.viewResponse()
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      const result = await viewsAPI.get(tenantId, userId, view)
+      const result = await viewsAPI.get(view)
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        'https://api.test.com/views/view-123?tenantId=tenant-123&ownerUserId=user-123',
+        'https://api.test.com/views/view-123',
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
-      testCrudOperations.expectCorrectHeaders(mockFetch)
+      testCrudOperations.expectNoContentTypeHeader(mockFetch)
       expect(result).toEqual(expectedResponse)
     })
 
     it('should handle not found errors', async () => {
       const view = { id: 'nonexistent-view' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
       mockFetch.mockReturnValue(mockFetchError(404, 'Not Found'))
 
-      const result = await viewsAPI.get(tenantId, userId, view)
+      const result = await viewsAPI.get(view)
       expect(result).toMatchObject({ error: expect.any(String) })
     })
 
     it('should handle network errors', async () => {
       const view = { id: 'view-123' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
       mockFetch.mockReturnValue(mockNetworkError())
 
-      await expect(viewsAPI.get(tenantId, userId, view)).rejects.toThrow(
-        'Network error',
-      )
+      await expect(viewsAPI.get(view)).rejects.toThrow('Network error')
     })
 
     it('should handle custom options', async () => {
       const view = { id: 'view-123' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
       const expectedResponse = mockResponses.viewResponse()
       const customOptions = { signal: new AbortController().signal }
       mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-      await viewsAPI.get(tenantId, userId, view, customOptions)
+      await viewsAPI.get(view, customOptions)
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.any(String),
@@ -168,30 +166,24 @@ describe('viewsAPI', () => {
   describe('delete', () => {
     it('should delete a view', async () => {
       const view = { id: 'view-123' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
 
       mockFetch.mockReturnValue(mockFetchSuccess(null))
 
-      await viewsAPI.delete(tenantId, userId, view)
+      await viewsAPI.delete(view)
 
       testCrudOperations.expectCorrectUrl(
         mockFetch,
-        `https://api.test.com/views/${view.id}?tenantId=${tenantId}&ownerUserId=${userId}`,
+        `https://api.test.com/views/${view.id}`,
       )
       testCrudOperations.expectCorrectMethod(mockFetch, 'DELETE')
     })
 
     it('should handle not found errors on delete', async () => {
       const view = { id: 'nonexistent-view' }
-      const tenantId = 'tenant-123'
-      const userId = 'user-123'
 
       mockFetch.mockReturnValue(mockFetchError(404, 'Not Found'))
 
-      await expect(
-        viewsAPI.delete(tenantId, userId, view),
-      ).resolves.toBeUndefined()
+      await expect(viewsAPI.delete(view)).resolves.toBeUndefined()
     })
   })
 
@@ -233,11 +225,11 @@ describe('viewsAPI', () => {
 
         mockFetch.mockReturnValue(mockFetchSuccess(expectedResponse))
 
-        const result = await viewsAPI.sorts.get(view, 'tenant-123', 'user-123')
+        const result = await viewsAPI.sorts.get(view)
 
         testCrudOperations.expectCorrectUrl(
           mockFetch,
-          `https://api.test.com/views/${view.id}/sorts?tenantId=tenant-123&ownerUserId=user-123`,
+          `https://api.test.com/views/${view.id}/sorts`,
         )
         testCrudOperations.expectCorrectMethod(mockFetch, 'GET')
         testCrudOperations.expectCorrectHeaders(mockFetch)
@@ -248,7 +240,7 @@ describe('viewsAPI', () => {
         const view = { id: 'view-123' }
         mockFetch.mockReturnValue(mockFetchError(404, 'Not Found'))
 
-        const result = await viewsAPI.sorts.get(view, 'tenant-123', 'user-123')
+        const result = await viewsAPI.sorts.get(view)
         expect(result).toMatchObject({ error: expect.any(String) })
       })
     })
@@ -265,18 +257,14 @@ describe('viewsAPI', () => {
         } as Response),
       )
 
-      await expect(
-        viewsAPI.get('tenant-123', 'user-123', view),
-      ).rejects.toThrow('Unexpected token')
+      await expect(viewsAPI.get(view)).rejects.toThrow('Unexpected token')
     })
 
     it('should handle timeout errors', async () => {
       const view = { id: 'view-123' }
       mockFetch.mockReturnValue(Promise.reject(new Error('Request timeout')))
 
-      await expect(
-        viewsAPI.get('tenant-123', 'user-123', view),
-      ).rejects.toThrow('Request timeout')
+      await expect(viewsAPI.get(view)).rejects.toThrow('Request timeout')
     })
   })
 })

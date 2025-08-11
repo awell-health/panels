@@ -6,10 +6,7 @@ import { z } from 'zod'
 
 // Zod Schemas
 
-const querystringSchema = z.object({
-  tenantId: z.string(),
-  ownerUserId: z.string(),
-})
+const querystringSchema = z.object({})
 
 // Types
 type QuerystringType = z.infer<typeof querystringSchema>
@@ -27,6 +24,7 @@ export const viewDelete = async (app: FastifyInstance) => {
       querystring: querystringSchema,
       response: {
         204: z.void(),
+        401: ErrorSchema,
         404: ErrorSchema,
         400: ErrorSchema,
       },
@@ -34,7 +32,15 @@ export const viewDelete = async (app: FastifyInstance) => {
     url: '/views/:id',
     handler: async (request, reply) => {
       const { id } = request.params
-      const { tenantId } = request.query
+
+      // Extract tenantId from JWT token
+      const { tenantId } = request.authUser || {}
+
+      if (!tenantId) {
+        return reply.status(401).send({
+          message: 'Missing authentication context',
+        })
+      }
 
       // Only owner can delete their own view
       const view = await request.store.view.findOne({

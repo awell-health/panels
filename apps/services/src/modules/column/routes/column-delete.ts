@@ -10,10 +10,7 @@ const paramsSchema = z.object({
   colId: z.string(),
 })
 
-const querystringSchema = z.object({
-  tenantId: z.string(),
-  userId: z.string(),
-})
+const querystringSchema = z.object({})
 
 // Types
 type ParamsType = z.infer<typeof paramsSchema>
@@ -32,6 +29,7 @@ export const columnDelete = async (app: FastifyInstance) => {
       querystring: querystringSchema,
       response: {
         204: z.void(),
+        401: ErrorSchema,
         404: ErrorSchema,
         400: ErrorSchema,
       },
@@ -39,7 +37,15 @@ export const columnDelete = async (app: FastifyInstance) => {
     url: '/panels/:id/columns/:colId',
     handler: async (request, reply) => {
       const { id, colId } = request.params
-      const { tenantId } = request.query
+
+      // Extract tenantId from JWT token
+      const { tenantId } = request.authUser || {}
+
+      if (!tenantId) {
+        return reply.status(401).send({
+          message: 'Missing authentication context',
+        })
+      }
 
       // First verify panel exists and user has access
       const panel = await request.store.em.findOne('Panel', {

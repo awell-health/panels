@@ -11,6 +11,7 @@ export const env = createEnv({
     CLOSE_GRACE_DELAY: z.coerce.number().default(1000),
     DBSQL_URL: z.string().min(1),
     CACHE_URI: z.string().min(1),
+    JWT_SECRET: z.string().min(1).optional().default('dummy-secret'),
   },
   runtimeEnv: process.env,
 })

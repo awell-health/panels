@@ -8,6 +8,7 @@ import {
 } from '@panels/types/panels'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import type { UserContext } from '@/types/auth.js'
 
 export const panelUpdate = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
@@ -29,11 +30,17 @@ export const panelUpdate = async (app: FastifyInstance) => {
     url: '/panels/:id',
     handler: async (request, reply) => {
       const { id } = request.params as { id: string }
-      const { name, description, tenantId, metadata } = request.body
+      const { name, description, metadata } = request.body
+
+      // Get user context from JWT
+      const userContext = (request as { authUser?: UserContext }).authUser
+      if (!userContext) {
+        throw new Error('User context not found')
+      }
 
       const panel = await request.store.panel.findOne({
         id: Number(id),
-        tenantId,
+        tenantId: userContext.tenantId,
       })
 
       if (!panel) {
