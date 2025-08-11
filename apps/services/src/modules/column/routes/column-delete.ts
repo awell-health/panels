@@ -1,5 +1,5 @@
 import { NotFoundError } from '@/errors/not-found-error.js'
-import { ErrorSchema, type ErrorType } from '@panels/types'
+import { ErrorSchema } from '@panels/types'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'

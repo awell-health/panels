@@ -1,5 +1,5 @@
 import { NotFoundError } from '@/errors/not-found-error.js'
-import { ErrorSchema } from '@panels/types'
+import { ErrorSchema, type ErrorType } from '@panels/types'
 import {
   type DataSourceInfo,
   DataSourceInfoSchema,
@@ -23,7 +23,7 @@ export const datasourceUpdate = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: ParamsType
     Body: DataSourceInfo
-    Reply: DataSourceResponse
+    Reply: DataSourceResponse | ErrorType
   }>({
     method: 'PUT',
     schema: {
@@ -33,6 +33,7 @@ export const datasourceUpdate = async (app: FastifyInstance) => {
       body: DataSourceInfoSchema,
       response: {
         200: DataSourceResponseSchema,
+        401: ErrorSchema,
         404: ErrorSchema,
         400: ErrorSchema,
       },
@@ -40,7 +41,14 @@ export const datasourceUpdate = async (app: FastifyInstance) => {
     url: '/panels/:id/datasources/:dsId',
     handler: async (request, reply) => {
       const { id, dsId } = request.params
-      const { type, config, tenantId } = request.body
+      const { type, config } = request.body
+      const { tenantId } = request.authUser || {}
+
+      if (!tenantId) {
+        return reply.status(401).send({
+          message: 'Missing authentication context',
+        })
+      }
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({

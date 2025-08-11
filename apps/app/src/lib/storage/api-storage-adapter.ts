@@ -78,8 +78,6 @@ export class APIStorageAdapter implements StorageAdapter {
       await panelsAPI.dataSources.create(
         { id: createdPanel.id.toString() },
         {
-          tenantId: this.config.tenantId,
-          userId: this.config.userId,
           type: 'api',
           config: {
             endpoint: '/api/patients',
@@ -246,8 +244,6 @@ export class APIStorageAdapter implements StorageAdapter {
           type: column.type,
           sourceField: column.sourceField || column.name,
           dataSourceId,
-          tenantId: this.config.tenantId,
-          userId: this.config.userId,
           metadata: column.metadata || {},
           properties: column.properties || { display: {} },
           tags: column.tags || [],
