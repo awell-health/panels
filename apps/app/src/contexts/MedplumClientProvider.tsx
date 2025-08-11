@@ -50,6 +50,8 @@ type MedplumContextType = {
   ) => Promise<PaginatedResult<Task>>
   getPatientsFromReferences: (patientRefList: string[]) => Promise<Patient[]>
   getTasksForPatients: (patientIDs: string[]) => Promise<Task[]>
+  getPatientCount: () => Promise<number>
+  getTaskCount: () => Promise<number>
 }
 
 const MedplumContext = createContext<MedplumContextType | null>(null)
@@ -370,6 +372,26 @@ export function MedplumClientProvider({
     [medplumClient, isLoading],
   )
 
+  const getPatientCount = useCallback(async () => {
+    if (isLoading) {
+      throw new Error('Medplum client is still initializing')
+    }
+    if (!medplumClient) {
+      throw new Error('Medplum store not initialized')
+    }
+    return await medplumClient.getPatientCount()
+  }, [medplumClient, isLoading])
+
+  const getTaskCount = useCallback(async () => {
+    if (isLoading) {
+      throw new Error('Medplum client is still initializing')
+    }
+    if (!medplumClient) {
+      throw new Error('Medplum store not initialized')
+    }
+    return await medplumClient.getTaskCount()
+  }, [medplumClient, isLoading])
+
   const value = {
     store: medplumClient,
     isLoading,
@@ -386,6 +408,8 @@ export function MedplumClientProvider({
     getTasksPaginated,
     getPatientsFromReferences,
     getTasksForPatients,
+    getPatientCount,
+    getTaskCount,
   }
 
   if (!medplumClientId || !medplumSecret || isLoading) {

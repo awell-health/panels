@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import {
   LayoutGrid,
   Plus,
-  X,
   ExternalLink,
   Eye,
   Users,
@@ -13,15 +12,15 @@ import {
 } from 'lucide-react'
 import type { Panel } from '@/types/panel'
 import { DEFAULT_PANEL } from '@/utils/constants'
-import { useDateTimeFormat } from '@/hooks/use-date-time-format'
-import { useReactiveColumns, useReactiveViews } from '@/hooks/use-reactive-data'
-import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
+import { usePanelStats } from '@/hooks/use-panel-stats'
 import { cn } from '@/lib/utils'
 
 interface PanelsCardsProps {
   panels: Panel[]
   createPanel: (panel: Panel) => Promise<Panel>
 }
+
+const CARD_HEIGHT = 'h-[130px]'
 
 export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
   const router = useRouter()
@@ -59,11 +58,16 @@ export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
           <button
             type="button"
             onClick={onCreatePanel}
-            className="w-full h-[180px] border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors duration-200 bg-white"
+            className={cn(
+              'w-full border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center gap-2',
+              'text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors duration-200 bg-white cursor-pointer',
+              CARD_HEIGHT,
+              // 'h-[180px]',
+            )}
           >
-            <Plus className="h-12 w-12 mb-4 group-hover:scale-110 transition-transform duration-200" />
-            <span className="font-semibold text-lg mb-2">Create New Panel</span>
-            <span className="text-sm text-center">
+            <Plus className="h-6 w-6 group-hover:scale-110 transition-transform duration-200" />
+            <span className="font-semibold text-sm">Create New Panel</span>
+            <span className="text-xs text-center">
               Set up a new patient monitoring dashboard
             </span>
           </button>
@@ -100,34 +104,30 @@ interface PanelCardProps {
 function PanelCard({ panel }: PanelCardProps) {
   const { id, name, description } = panel
   const router = useRouter()
-  const { columns: allColumns } = useReactiveColumns(id)
-  const { views } = useReactiveViews(id)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const {
+    patients,
+    tasks,
+    views: viewsCount,
+    isLoading: isStatsLoading,
+  } = usePanelStats(id)
 
-  const patientColumns = allColumns.filter((col) =>
-    col.tags?.includes('panels:patients'),
-  )
-  const taskColumns = allColumns.filter((col) =>
-    col.tags?.includes('panels:tasks'),
-  )
-  const totalColumns = patientColumns.length + taskColumns.length
-
-  // Mock data for demonstration - in real app, this would come from the panel data
-  const mockStats = {
-    views: views?.length || Math.floor(Math.random() * 20) + 1,
-    patients: Math.floor(Math.random() * 2000) + 100,
-    sources: Math.floor(Math.random() * 8) + 1,
+  // Real stats from the panel data
+  const stats = {
+    views: viewsCount,
+    patients,
+    tasks,
   }
 
-  // Mock status - in real app, this would come from panel data
-  const isActive = Math.random() > 0.3 // 70% chance of being active
+  // Panel is active if it has any data or views
+  const isActive = patients > 0 || tasks > 0 || viewsCount > 0
 
   return (
-    <div className="group relative h-[180px]">
+    <div className="group relative h-[130px]">
       <div
         className={cn(
           'bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow duration-200',
           'cursor-pointer h-full flex flex-col gap-2 hover:border-primary',
+          CARD_HEIGHT,
         )}
         onClick={() => router.push(`/panel/${id}`)}
         onKeyDown={(e) => {
@@ -138,7 +138,7 @@ function PanelCard({ panel }: PanelCardProps) {
       >
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 text-lg mb-2">{name}</h3>
+            <h3 className="font-semibold text-gray-900 text-sm mb-2">{name}</h3>
             <div className="flex items-center gap-2">
               <span
                 className={cn(
@@ -155,20 +155,20 @@ function PanelCard({ panel }: PanelCardProps) {
             <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
           </div>
         </div>
-        <p className="text-gray-600 text-sm flex-1">{description}</p>
-        <div className="flex items-center justify-between text-sm text-gray-600">
+        <p className="text-gray-600 text-xs flex-1 truncate">{description}</p>
+        <div className="flex items-center justify-between text-xs text-gray-600">
           <div className="flex items-center gap-1">
             <Eye className="h-4 w-4" />
-            <span>{mockStats.views} views</span>
+            <span>{isStatsLoading ? '...' : `${stats.views} views`}</span>
           </div>
-          <div className="flex items-center gap-1">
+          {/* <div className="flex items-center gap-1">
             <Users className="h-4 w-4" />
-            <span>{mockStats.patients} patients</span>
+            <span>{isStatsLoading ? '...' : `${stats.patients} patients`}</span>
           </div>
           <div className="flex items-center gap-1">
             <Database className="h-4 w-4" />
-            <span>{mockStats.sources} sources</span>
-          </div>
+            <span>{isStatsLoading ? '...' : `${stats.tasks} tasks`}</span>
+          </div> */}
         </div>
       </div>
     </div>
