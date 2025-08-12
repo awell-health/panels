@@ -1,6 +1,6 @@
 'use client'
 
-import { Menu, LayoutGrid, Settings, X } from 'lucide-react'
+import { Menu, LayoutGrid, Settings, X, Users } from 'lucide-react'
 import Link from 'next/link'
 
 interface PageNavigationProps {
@@ -28,6 +28,12 @@ function PageNavigation(props: PageNavigationProps) {
       label: 'Settings',
       icon: Settings,
       path: '/settings',
+    },
+    {
+      id: 'acl-test' as const,
+      label: 'ACL Test',
+      icon: Users,
+      path: '/test-acl',
     },
   ]
 
