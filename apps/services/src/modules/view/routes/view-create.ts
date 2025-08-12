@@ -61,7 +61,10 @@ export const viewCreate = async (app: FastifyInstance) => {
         updatedAt: new Date(),
       })
 
-      // Create ACL for view owner
+      // First persist the view to get its ID
+      await request.store.em.persistAndFlush(view)
+
+      // Create ACL for view owner with the now-available view ID
       const ownerACL = request.store.acl.create({
         tenantId: userContext.tenantId,
         resourceType: ResourceType.VIEW,
@@ -72,8 +75,8 @@ export const viewCreate = async (app: FastifyInstance) => {
         updatedAt: new Date(),
       })
 
-      // Persist both the view and ACLs
-      await request.store.em.persistAndFlush([view, ownerACL])
+      // Persist the ACL
+      await request.store.em.persistAndFlush(ownerACL)
 
       // Populate the sort collection after creation
       await request.store.em.populate(view, ['sort'])

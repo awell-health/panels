@@ -46,7 +46,10 @@ export const panelCreate = async (app: FastifyInstance) => {
         metadata,
       })
 
-      // Create ACL for panel owner
+      // First persist the panel to get its ID
+      await request.store.em.persistAndFlush(panel)
+
+      // Create ACL for panel owner with the now-available panel ID
       const ownerACL = request.store.acl.create({
         tenantId: userContext.tenantId,
         resourceType: ResourceType.PANEL,
@@ -57,8 +60,8 @@ export const panelCreate = async (app: FastifyInstance) => {
         updatedAt: new Date(),
       })
 
-      // Persist both the panel and ACLs
-      await request.store.em.persistAndFlush([panel, ownerACL])
+      // Persist the ACL
+      await request.store.em.persistAndFlush(ownerACL)
 
       reply.statusCode = 201
       return {
