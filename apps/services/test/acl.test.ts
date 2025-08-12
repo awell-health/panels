@@ -1,17 +1,13 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import type { FastifyInstance } from 'fastify'
-import { createApp } from '../src/app.js'
 import { AccessControlList } from '../src/modules/acl/entities/access-control-list.entity.js'
+import { createTestApp } from './setup.js'
 
 describe('ACL Management', () => {
   let app: FastifyInstance
 
   beforeAll(async () => {
-    app = await createApp()
-  })
-
-  afterAll(async () => {
-    await app.close()
+    app = await createTestApp()
   })
 
   it('should have ACL routes registered', async () => {
