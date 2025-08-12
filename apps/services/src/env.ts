@@ -12,6 +12,9 @@ export const env = createEnv({
     DBSQL_URL: z.string().min(1),
     CACHE_URI: z.string().min(1),
     JWT_SECRET: z.string().min(1).optional().default('dummy-secret'),
+    STYTCH_SECRET_KEY: z.string().min(1).optional(),
+    STYTCH_PROJECT_ID: z.string().min(1).optional(),
+    STYTCH_BASE_URL: z.string().min(1).optional(),
   },
   runtimeEnv: process.env,
 })

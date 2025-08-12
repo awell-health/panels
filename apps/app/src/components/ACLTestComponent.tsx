@@ -2,12 +2,18 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
+import { useOrganizationMembers } from '@/hooks/use-organization-members'
 import type { ACL, ACLCreate, ACLUpdate } from '@panels/types/acls'
 import type { Panel, View } from '@/types/panel'
 
 export function ACLTestComponent() {
   const { store, getACLs, createACL, updateACL, deleteACL } =
     useReactivePanelStore()
+  const {
+    members: organizationMembers,
+    isLoading: membersLoading,
+    error: membersError,
+  } = useOrganizationMembers()
 
   // Use ref to store the latest getACLs function to avoid stale closures
   const getACLsRef = useRef(getACLs)
@@ -23,6 +29,7 @@ export function ACLTestComponent() {
 
   // Form state for creating/updating ACLs
   const [userEmail, setUserEmail] = useState('')
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('')
   const [permission, setPermission] = useState<'viewer' | 'editor' | 'owner'>(
     'viewer',
   )
@@ -104,6 +111,20 @@ export function ACLTestComponent() {
     } else {
       setResourceType('panel')
       setResourceId(Number.parseInt(selectedPanel))
+    }
+  }
+
+  const handleMemberChange = (memberId: string) => {
+    setSelectedMemberId(memberId)
+    if (memberId) {
+      const selectedMember = organizationMembers.find(
+        (m) => m.member_id === memberId,
+      )
+      if (selectedMember) {
+        setUserEmail(selectedMember.email_address)
+      }
+    } else {
+      setUserEmail('')
     }
   }
 
@@ -195,6 +216,31 @@ export function ACLTestComponent() {
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">ACL Management Test Component</h1>
 
+      {/* Organization Members Info */}
+      <div className="bg-blue-50 p-4 rounded-lg mb-6">
+        <h2 className="text-lg font-semibold mb-3">Organization Members</h2>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600">
+              Total Members:{' '}
+              {membersLoading ? 'Loading...' : organizationMembers.length}
+            </p>
+            {membersError && (
+              <p className="text-sm text-red-600 mt-1">
+                Error loading members: {membersError}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+          >
+            ↻ Refresh
+          </button>
+        </div>
+      </div>
+
       {/* Resource Selection */}
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
         <h2 className="text-lg font-semibold mb-3">Select Resource</h2>
@@ -254,6 +300,35 @@ export function ACLTestComponent() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label
+              htmlFor="member-select"
+              className="block text-sm font-medium mb-2"
+            >
+              Organization Member:
+            </label>
+            <select
+              id="member-select"
+              value={selectedMemberId}
+              onChange={(e) => handleMemberChange(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md"
+              disabled={membersLoading}
+            >
+              <option value="">Select a member...</option>
+              {organizationMembers.map((member) => (
+                <option key={member.member_id} value={member.member_id}>
+                  {member.name || member.email_address} ({member.email_address})
+                </option>
+              ))}
+            </select>
+            {membersLoading && (
+              <p className="text-sm text-gray-500 mt-1">Loading members...</p>
+            )}
+            {membersError && (
+              <p className="text-sm text-red-500 mt-1">Error: {membersError}</p>
+            )}
+          </div>
+
+          <div>
+            <label
               htmlFor="user-email"
               className="block text-sm font-medium mb-2"
             >
@@ -289,13 +364,27 @@ export function ACLTestComponent() {
               <option value="owner">Owner</option>
             </select>
           </div>
+        </div>
 
-          <div className="flex items-end">
+        <div className="mt-4 flex justify-end">
+          <div className="flex space-x-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMemberId('')
+                setUserEmail('')
+                // The hook will automatically refetch when called
+              }}
+              className="px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+              title="Clear form and refresh members list"
+            >
+              ↻ Refresh Members
+            </button>
             <button
               type="button"
               onClick={handleCreateACL}
               disabled={isLoading || !userEmail}
-              className="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Creating...' : 'Create ACL'}
             </button>
@@ -408,6 +497,60 @@ export function ACLTestComponent() {
           <p className="text-blue-800">{message}</p>
         </div>
       )}
+
+      {/* Organization Members Table */}
+      <div className="bg-white border border-gray-200 p-4 rounded-lg mb-6">
+        <h2 className="text-lg font-semibold mb-3">
+          All Organization Members
+          {membersLoading && (
+            <span className="ml-2 text-gray-500">(Loading...)</span>
+          )}
+        </h2>
+
+        {organizationMembers.length === 0 ? (
+          <p className="text-gray-500">
+            {membersLoading
+              ? 'Loading organization members...'
+              : 'No organization members found.'}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Member ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Roles
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {organizationMembers.map((member) => (
+                  <tr key={member.member_id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {member.name || 'No name'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {member.email_address}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                      {member.member_id}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
