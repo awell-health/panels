@@ -8,10 +8,17 @@ import {
 import type { ResourceType, Permission } from '@/types/auth.js'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { z } from 'zod'
+
+// Zod schema for params
+const paramsSchema = z.object({
+  resourceType: z.enum(['panel', 'view']),
+  resourceId: z.string(),
+})
 
 export const aclCreate = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
-    Params: { resourceType: string; resourceId: string }
+    Params: z.infer<typeof paramsSchema>
     Body: ACLCreate
     Reply: ACLResponse | ErrorType
   }>({
@@ -19,14 +26,7 @@ export const aclCreate = async (app: FastifyInstance) => {
     schema: {
       description: 'Create a new ACL entry',
       tags: ['acl'],
-      params: {
-        type: 'object',
-        properties: {
-          resourceType: { type: 'string', enum: ['panel', 'view'] },
-          resourceId: { type: 'string' },
-        },
-        required: ['resourceType', 'resourceId'],
-      },
+      params: paramsSchema,
       body: ACLCreateSchema,
       response: {
         201: ACLResponseSchema,

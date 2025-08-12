@@ -1,7 +1,8 @@
 import { type PanelsResponse, PanelsResponseSchema } from '@panels/types/panels'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
-import type { UserContext } from '@/types/auth.js'
+import { ResourceType, UserRole, type UserContext } from '@/types/auth.js'
+import type { Panel } from '../entities/panel.entity.js'
 
 export const panelList = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
@@ -23,10 +24,55 @@ export const panelList = async (app: FastifyInstance) => {
         throw new Error('User context not found')
       }
 
-      const panels = await request.store.panel.find(
-        { tenantId: userContext.tenantId },
-        { populate: ['dataSources', 'baseColumns', 'calculatedColumns'] },
-      )
+      const getPanelsByAcl = async (): Promise<Panel[]> => {
+        console.log('Get panels by ACL for user', userContext.userId)
+        // we need to keep this for now since before we were storing the user id in the ownerUserId field
+        const sharedACLs = await request.store.acl.find({
+          tenantId: userContext.tenantId,
+          resourceType: ResourceType.PANEL,
+          userEmail: userContext.userId,
+        })
+
+        const sharedACLsByEmail = await request.store.acl.find({
+          tenantId: userContext.tenantId,
+          resourceType: ResourceType.PANEL,
+          userEmail: userContext.userEmail,
+        })
+
+        if (sharedACLs.length > 0) {
+          // Deduplicate ACLs by resourceId to avoid duplicate panel queries
+          const uniqueACLs = [...sharedACLs, ...sharedACLsByEmail].filter(
+            (acl, index, self) =>
+              index === self.findIndex((a) => a.resourceId === acl.resourceId),
+          )
+
+          const sharedPanelIds = uniqueACLs.map((acl) => acl.resourceId)
+          return await request.store.panel.find(
+            { id: { $in: sharedPanelIds } },
+            { populate: ['dataSources', 'baseColumns', 'calculatedColumns'] },
+          )
+        }
+
+        return []
+      }
+
+      const getAllPanels = async (): Promise<Panel[]> => {
+        console.log(
+          'Get all panels for user',
+          userContext.userId,
+          userContext.role,
+        )
+
+        return await request.store.panel.find(
+          { tenantId: userContext.tenantId },
+          { populate: ['dataSources', 'baseColumns', 'calculatedColumns'] },
+        )
+      }
+
+      const panels =
+        userContext.role === UserRole.ADMIN
+          ? await getAllPanels()
+          : await getPanelsByAcl()
 
       return panels.map((panel) => ({
         id: panel.id,

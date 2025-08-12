@@ -4,6 +4,7 @@ import { type ViewsResponse, ViewsResponseSchema } from '@panels/types/views'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
+import { ResourceType, UserRole, type UserContext } from '@/types/auth.js'
 import type { View } from '../entities/view.entity.js'
 
 // Zod Schemas
@@ -36,33 +37,77 @@ export const viewList = async (app: FastifyInstance) => {
     handler: async (request, reply) => {
       const { panelId, published } = request.query
 
-      // Extract tenantId and userId from JWT token
-      const { tenantId, userId } = request.authUser || {}
-
-      if (!tenantId || !userId) {
+      // Get user context from JWT
+      const userContext = (request as { authUser?: UserContext }).authUser
+      if (!userContext) {
         return reply.status(401).send({
-          message: 'Missing authentication context',
+          message: 'User context not found',
         })
       }
 
-      const where: FilterQuery<View> = {
-        $or: [
-          { tenantId }, // User's own views
-          { isPublished: true, tenantId }, // Published views in tenant
-        ],
+      const getViewsByAcl = async (): Promise<View[]> => {
+        console.log('Get views by ACL for user', userContext.userId)
+        // Get shared views via ACLs
+
+        // we need to keep this for now since before we were storing the user id in the ownerUserId field
+        const sharedACLs = await request.store.acl.find({
+          tenantId: userContext.tenantId,
+          resourceType: ResourceType.VIEW,
+          userEmail: userContext.userId,
+        })
+
+        const sharedACLsByEmail = await request.store.acl.find({
+          tenantId: userContext.tenantId,
+          resourceType: ResourceType.VIEW,
+          userEmail: userContext.userEmail,
+        })
+
+        if (sharedACLs.length > 0) {
+          // Deduplicate ACLs by resourceId to avoid duplicate view queries
+          const uniqueACLs = [...sharedACLs, ...sharedACLsByEmail].filter(
+            (acl, index, self) =>
+              index === self.findIndex((a) => a.resourceId === acl.resourceId),
+          )
+
+          const sharedViewIds = uniqueACLs.map((acl) => acl.resourceId)
+          return await request.store.view.find(
+            { id: { $in: sharedViewIds } },
+            {
+              orderBy: { updatedAt: 'DESC' },
+              populate: ['sort'],
+            },
+          )
+        }
+
+        return []
       }
 
-      if (panelId) {
-        where.panel = { id: Number(panelId) }
-      }
-      if (published !== undefined) {
-        where.isPublished = published
+      const getAllViews = async (): Promise<View[]> => {
+        console.log(
+          'Get all views for user',
+          userContext.userId,
+          userContext.role,
+        )
+
+        const where: FilterQuery<View> = { tenantId: userContext.tenantId }
+
+        if (panelId) {
+          where.panel = { id: Number(panelId) }
+        }
+        if (published !== undefined) {
+          where.isPublished = published
+        }
+
+        return await request.store.view.find(where, {
+          orderBy: { updatedAt: 'DESC' },
+          populate: ['sort'],
+        })
       }
 
-      const views = await request.store.view.find(where, {
-        orderBy: { updatedAt: 'DESC' },
-        populate: ['sort'],
-      })
+      const views =
+        userContext.role === UserRole.ADMIN
+          ? await getAllViews()
+          : await getViewsByAcl()
 
       return {
         views: views.map((view) => ({

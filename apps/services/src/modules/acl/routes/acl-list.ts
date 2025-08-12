@@ -3,24 +3,24 @@ import { type ACLsResponse, ACLsResponseSchema } from '@panels/types/acls'
 import type { ResourceType } from '@/types/auth.js'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { z } from 'zod'
+
+// Zod schema for params
+const paramsSchema = z.object({
+  resourceType: z.enum(['panel', 'view']),
+  resourceId: z.string(),
+})
 
 export const aclList = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
-    Params: { resourceType: string; resourceId: string }
+    Params: z.infer<typeof paramsSchema>
     Reply: ACLsResponse | ErrorType
   }>({
     method: 'GET',
     schema: {
       description: 'List ACLs for a resource',
       tags: ['acl'],
-      params: {
-        type: 'object',
-        properties: {
-          resourceType: { type: 'string', enum: ['panel', 'view'] },
-          resourceId: { type: 'string' },
-        },
-        required: ['resourceType', 'resourceId'],
-      },
+      params: paramsSchema,
       response: {
         200: ACLsResponseSchema,
         401: ErrorSchema,

@@ -2,27 +2,27 @@ import { ErrorSchema, type ErrorType } from '@panels/types'
 import type { ResourceType } from '@/types/auth.js'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { z } from 'zod'
+
+// Zod schema for params
+const paramsSchema = z.object({
+  resourceType: z.enum(['panel', 'view']),
+  resourceId: z.string(),
+  userEmail: z.string(),
+})
 
 export const aclDelete = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
-    Params: { resourceType: string; resourceId: string; userEmail: string }
+    Params: z.infer<typeof paramsSchema>
     Reply: null | ErrorType
   }>({
     method: 'DELETE',
     schema: {
       description: 'Delete an ACL entry',
       tags: ['acl'],
-      params: {
-        type: 'object',
-        properties: {
-          resourceType: { type: 'string', enum: ['panel', 'view'] },
-          resourceId: { type: 'string' },
-          userEmail: { type: 'string' },
-        },
-        required: ['resourceType', 'resourceId', 'userEmail'],
-      },
+      params: paramsSchema,
       response: {
-        204: { type: 'null' },
+        204: z.null(),
         401: ErrorSchema,
         404: ErrorSchema,
         500: ErrorSchema,

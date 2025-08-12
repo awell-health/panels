@@ -8,10 +8,17 @@ import {
 import type { ResourceType, Permission } from '@/types/auth.js'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { z } from 'zod'
+
+// Zod schema for params
+const paramsSchema = z.object({
+  resourceType: z.enum(['panel', 'view']),
+  resourceId: z.string(),
+})
 
 export const aclSharePublic = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
-    Params: { resourceType: string; resourceId: string }
+    Params: z.infer<typeof paramsSchema>
     Body: ACLSharePublic
     Reply: ACLResponse | ErrorType
   }>({
@@ -19,14 +26,7 @@ export const aclSharePublic = async (app: FastifyInstance) => {
     schema: {
       description: 'Share a resource publicly',
       tags: ['acl'],
-      params: {
-        type: 'object',
-        properties: {
-          resourceType: { type: 'string', enum: ['panel', 'view'] },
-          resourceId: { type: 'string' },
-        },
-        required: ['resourceType', 'resourceId'],
-      },
+      params: paramsSchema,
       body: ACLSharePublicSchema,
       response: {
         200: ACLResponseSchema,
