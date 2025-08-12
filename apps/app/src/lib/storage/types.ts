@@ -1,4 +1,5 @@
 import type { Panel, View, Column } from '@/types/panel'
+import type { ACL, ACLCreate, ACLUpdate } from '@panels/types/acls'
 
 /**
  * Storage abstraction interface that provides a unified API
@@ -34,6 +35,25 @@ export interface StorageAdapter {
   ): Promise<Column>
   deleteColumn(panelId: string, columnId: string): Promise<void>
   getColumnsForPanel(panelId: string): Promise<Column[]>
+
+  // ACL operations
+  getACLs(resourceType: 'panel' | 'view', resourceId: number): Promise<ACL[]>
+  createACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    acl: ACLCreate,
+  ): Promise<ACL>
+  updateACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    userEmail: string,
+    acl: ACLUpdate,
+  ): Promise<ACL>
+  deleteACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    userEmail: string,
+  ): Promise<void>
 
   // Loading state
   isLoading(): boolean

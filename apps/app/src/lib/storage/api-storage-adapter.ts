@@ -1,4 +1,5 @@
 import type { Column, Panel, View, ViewType } from '@/types/panel'
+import type { ACL, ACLCreate, ACLUpdate } from '@panels/types/acls'
 import type { StorageAdapter } from './types'
 import type { ColumnsResponse } from '@panels/types/columns'
 import type { ViewsResponse } from '@panels/types/views'
@@ -540,5 +541,90 @@ export class APIStorageAdapter implements StorageAdapter {
 
   isLoading(): boolean {
     return false
+  }
+
+  // ACL operations
+  async getACLs(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+  ): Promise<ACL[]> {
+    try {
+      const { aclAPI } = await import('@/api/aclAPI')
+      const response = await aclAPI.list(resourceType, resourceId)
+      return response.acls
+    } catch (error) {
+      logger.error(
+        { error, resourceType, resourceId },
+        'Failed to fetch ACLs from API',
+      )
+      throw new Error(
+        `Failed to load ACLs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async createACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    acl: ACLCreate,
+  ): Promise<ACL> {
+    try {
+      const { aclAPI } = await import('@/api/aclAPI')
+      const response = await aclAPI.create(resourceType, resourceId, acl)
+      return response.acl
+    } catch (error) {
+      logger.error(
+        { error, resourceType, resourceId, acl },
+        'Failed to create ACL via API',
+      )
+      throw new Error(
+        `Failed to create ACL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async updateACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    userEmail: string,
+    acl: ACLUpdate,
+  ): Promise<ACL> {
+    try {
+      const { aclAPI } = await import('@/api/aclAPI')
+      const response = await aclAPI.update(
+        resourceType,
+        resourceId,
+        userEmail,
+        acl,
+      )
+      return response.acl
+    } catch (error) {
+      logger.error(
+        { error, resourceType, resourceId, userEmail, acl },
+        'Failed to update ACL via API',
+      )
+      throw new Error(
+        `Failed to update ACL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async deleteACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    userEmail: string,
+  ): Promise<void> {
+    try {
+      const { aclAPI } = await import('@/api/aclAPI')
+      await aclAPI.delete(resourceType, resourceId, userEmail)
+    } catch (error) {
+      logger.error(
+        { error, resourceType, resourceId, userEmail },
+        'Failed to delete ACL via API',
+      )
+      throw new Error(
+        `Failed to delete ACL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
   }
 }

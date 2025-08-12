@@ -1,4 +1,5 @@
 import type { Panel, View, Column } from '@/types/panel'
+import type { ACL, ACLCreate, ACLUpdate } from '@panels/types/acls'
 import type { StorageAdapter } from './types'
 import { ReactiveStore } from '../reactive/reactive-store'
 import { APIStorageAdapter } from './api-storage-adapter'
@@ -357,6 +358,113 @@ export class ReactiveStorageAdapter implements StorageAdapter {
 
   isLoading(): boolean {
     return this.reactiveStore.getLoading()
+  }
+
+  // ACL operations
+  async getACLs(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+  ): Promise<ACL[]> {
+    await this.waitForInitialization()
+    if (!this.underlyingAdapter) {
+      throw new Error('Underlying storage adapter not initialized')
+    }
+
+    try {
+      const acls = await this.underlyingAdapter.getACLs(
+        resourceType,
+        resourceId,
+      )
+      // Update reactive store with fetched ACLs
+      this.reactiveStore.setACLs(acls)
+      return acls
+    } catch (error) {
+      console.error('Failed to fetch ACLs:', error)
+      throw error
+    }
+  }
+
+  async createACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    acl: ACLCreate,
+  ): Promise<ACL> {
+    await this.waitForInitialization()
+    if (!this.underlyingAdapter) {
+      throw new Error('Underlying storage adapter not initialized')
+    }
+
+    try {
+      const createdACL = await this.underlyingAdapter.createACL(
+        resourceType,
+        resourceId,
+        acl,
+      )
+      // Update reactive store
+      this.reactiveStore.setACL(createdACL)
+      return createdACL
+    } catch (error) {
+      console.error('Failed to create ACL:', error)
+      throw error
+    }
+  }
+
+  async updateACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    userEmail: string,
+    acl: ACLUpdate,
+  ): Promise<ACL> {
+    await this.waitForInitialization()
+    if (!this.underlyingAdapter) {
+      throw new Error('Underlying storage adapter not initialized')
+    }
+
+    try {
+      const updatedACL = await this.underlyingAdapter.updateACL(
+        resourceType,
+        resourceId,
+        userEmail,
+        acl,
+      )
+      // Update reactive store
+      this.reactiveStore.setACL(updatedACL)
+      return updatedACL
+    } catch (error) {
+      console.error('Failed to update ACL:', error)
+      throw error
+    }
+  }
+
+  async deleteACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    userEmail: string,
+  ): Promise<void> {
+    await this.waitForInitialization()
+    if (!this.underlyingAdapter) {
+      throw new Error('Underlying storage adapter not initialized')
+    }
+
+    try {
+      // Find the ACL to delete from reactive store
+      const acls = this.reactiveStore.getACLs(resourceType, resourceId)
+      const aclToDelete = acls.find((acl) => acl.userEmail === userEmail)
+
+      await this.underlyingAdapter.deleteACL(
+        resourceType,
+        resourceId,
+        userEmail,
+      )
+
+      // Remove from reactive store
+      if (aclToDelete) {
+        this.reactiveStore.deleteACL(aclToDelete.id)
+      }
+    } catch (error) {
+      console.error('Failed to delete ACL:', error)
+      throw error
+    }
   }
 
   // Helper methods for reactive store access
