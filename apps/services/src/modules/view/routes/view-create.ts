@@ -9,6 +9,7 @@ import {
 
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { ResourceType, Permission } from '@/types/auth.js'
 import type { UserContext } from '@/types/auth.js'
 
 // Zod Schemas
@@ -60,7 +61,22 @@ export const viewCreate = async (app: FastifyInstance) => {
         updatedAt: new Date(),
       })
 
+      // First persist the view to get its ID
       await request.store.em.persistAndFlush(view)
+
+      // Create ACL for view owner with the now-available view ID
+      const ownerACL = request.store.acl.create({
+        tenantId: userContext.tenantId,
+        resourceType: ResourceType.VIEW,
+        resourceId: view.id,
+        userEmail: userContext.userEmail,
+        permission: Permission.OWNER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+
+      // Persist the ACL
+      await request.store.em.persistAndFlush(ownerACL)
 
       // Populate the sort collection after creation
       await request.store.em.populate(view, ['sort'])

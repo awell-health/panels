@@ -7,6 +7,7 @@ import {
 } from '@panels/types/panels'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { ResourceType, Permission } from '@/types/auth.js'
 import type { UserContext } from '@/types/auth.js'
 
 export const panelCreate = async (app: FastifyInstance) => {
@@ -45,7 +46,23 @@ export const panelCreate = async (app: FastifyInstance) => {
         metadata,
       })
 
+      // First persist the panel to get its ID
       await request.store.em.persistAndFlush(panel)
+
+      // Create ACL for panel owner with the now-available panel ID
+      const ownerACL = request.store.acl.create({
+        tenantId: userContext.tenantId,
+        resourceType: ResourceType.PANEL,
+        resourceId: panel.id,
+        userEmail: userContext.userEmail,
+        permission: Permission.OWNER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+
+      // Persist the ACL
+      await request.store.em.persistAndFlush(ownerACL)
+
       reply.statusCode = 201
       return {
         id: panel.id,

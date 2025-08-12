@@ -46,10 +46,9 @@ export default fp(
         // Verify and decode the token
         const decoded = await request.jwtDecode<JWTPayload>()
 
-        console.log('decoded', decoded)
-
         // Extract user information from Stytch JWT structure
         const userId = decoded.sub
+        const userEmail = decoded.email
         const tenantId = decoded['https://stytch.com/organization']?.slug
         const roles = decoded['https://stytch.com/session']?.roles || []
 
@@ -84,7 +83,7 @@ export default fp(
         // Create user context
         const userContext: UserContext = {
           userId,
-          userEmail: '', // Stytch JWT doesn't include email directly
+          userEmail,
           role,
           tenantId,
         }

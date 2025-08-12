@@ -73,6 +73,8 @@ export const columnCreateCalculated = async (app: FastifyInstance) => {
       reply.statusCode = 201
       return {
         ...calculatedColumn,
+        tenantId: panel.tenantId,
+        userId: panel.userId,
         tags: calculatedColumn.tags ?? [],
       }
     },

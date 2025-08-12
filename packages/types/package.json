@@ -52,13 +52,14 @@
       "require": "./dist/cjs/views.js",
       "types": "./dist/esm/views.d.ts"
     },
+    "./acls": {
+      "import": "./dist/esm/acls.js",
+      "require": "./dist/cjs/acls.js",
+      "types": "./dist/esm/acls.d.ts"
+    },
     "./package.json": "./package.json"
   },
-  "keywords": [
-    "types",
-    "api",
-    "panels-api"
-  ],
+  "keywords": ["types", "api", "panels-api"],
   "author": "Awell Health",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.11.1",

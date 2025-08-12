@@ -1,6 +1,7 @@
 'use client'
 
 import type { Column, Panel, View, ColumnChangesResponse } from '@/types/panel'
+import type { ACL, ACLCreate, ACLUpdate } from '@panels/types/acls'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -80,6 +81,10 @@ export class ReactivePanelStore {
       this.reactiveStore.setPanels(panels)
       this.reactiveStore.setViews(views)
       this.reactiveStore.setColumns(columns)
+
+      // Note: ACLs are loaded on-demand when getACLs is called
+      // This avoids loading all ACLs for all resources at startup
+
       this.reactiveStore.setLoading(false)
       this.reactiveStore.setLastSync(Date.now())
     } catch (error) {
@@ -570,6 +575,154 @@ export class ReactivePanelStore {
     // Fallback: get from reactive store
     return this.reactiveStore?.getViewsForPanel(panelId) || []
   }
+
+  // ACL operations - following the same pattern as panels, views, and columns
+  async getACLs(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+  ): Promise<ACL[]> {
+    if (!this.storage) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    // Check if this method exists on the storage adapter
+    if ('getACLs' in this.storage) {
+      const adapter = this.storage as StorageAdapter & {
+        getACLs: (
+          resourceType: 'panel' | 'view',
+          resourceId: number,
+        ) => Promise<ACL[]>
+      }
+      return await adapter.getACLs(resourceType, resourceId)
+    }
+
+    // Fallback: get from reactive store
+    return this.reactiveStore?.getACLs(resourceType, resourceId) || []
+  }
+
+  async createACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    acl: ACLCreate,
+  ): Promise<ACL> {
+    if (!this.storage) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    const operationId = `acl-${resourceType}-${resourceId}-${uuidv4()}`
+    this.setSaveState(operationId, 'saving')
+
+    try {
+      const createdACL = await this.storage.createACL(
+        resourceType,
+        resourceId,
+        acl,
+      )
+
+      // Update reactive store
+      this.reactiveStore?.setACL(createdACL)
+
+      this.setSaveState(operationId, 'saved')
+      return createdACL
+    } catch (error) {
+      this.setSaveState(operationId, 'error')
+      console.error('Failed to create ACL:', error)
+      throw new Error(
+        `Failed to create ACL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async updateACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    userEmail: string,
+    acl: ACLUpdate,
+  ): Promise<void> {
+    if (!this.storage) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    const operationId = `acl-${resourceType}-${resourceId}-${userEmail}`
+    this.setSaveState(operationId, 'saving')
+
+    // Store original state for rollback
+    const originalACL = this.reactiveStore
+      ?.getACLs(resourceType, resourceId)
+      .find((acl) => acl.userEmail === userEmail)
+
+    try {
+      // ✅ OPTIMISTIC UPDATE: Update reactive store first for immediate UI feedback
+      if (originalACL) {
+        const optimisticACL = { ...originalACL, ...acl }
+        this.reactiveStore?.setACL(optimisticACL)
+      }
+
+      // Then sync with backend API
+      const updatedACL = await this.storage.updateACL(
+        resourceType,
+        resourceId,
+        userEmail,
+        acl,
+      )
+
+      this.reactiveStore?.setACL(updatedACL)
+
+      this.setSaveState(operationId, 'saved')
+    } catch (error) {
+      // Rollback optimistic update on API failure
+      if (originalACL) {
+        this.reactiveStore?.setACL(originalACL)
+      }
+
+      this.setSaveState(operationId, 'error')
+      console.error('Failed to update ACL:', error)
+      throw new Error(
+        `Failed to update ACL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
+  async deleteACL(
+    resourceType: 'panel' | 'view',
+    resourceId: number,
+    userEmail: string,
+  ): Promise<void> {
+    if (!this.storage) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    const operationId = `acl-${resourceType}-${resourceId}-${userEmail}`
+    this.setSaveState(operationId, 'saving')
+
+    // Store original state for rollback
+    const originalACL = this.reactiveStore
+      ?.getACLs(resourceType, resourceId)
+      .find((acl) => acl.userEmail === userEmail)
+
+    try {
+      // Optimistically remove from reactive store first
+      if (originalACL) {
+        this.reactiveStore?.deleteACL(originalACL.id)
+      }
+
+      // Then sync with backend API
+      await this.storage.deleteACL(resourceType, resourceId, userEmail)
+
+      this.setSaveState(operationId, 'saved')
+    } catch (error) {
+      // Rollback optimistic update on API failure
+      if (originalACL) {
+        this.reactiveStore?.setACL(originalACL)
+      }
+
+      this.setSaveState(operationId, 'error')
+      console.error('Failed to delete ACL:', error)
+      throw new Error(
+        `Failed to delete ACL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
 }
 
 // Create context
@@ -657,5 +810,10 @@ export function useReactivePanelStore() {
     applyColumnChanges: store.applyColumnChanges.bind(store),
     getColumnsForPanel: store.getColumnsForPanel.bind(store),
     getViewsForPanel: store.getViewsForPanel.bind(store),
+    // ACL methods
+    getACLs: store.getACLs.bind(store),
+    createACL: store.createACL.bind(store),
+    updateACL: store.updateACL.bind(store),
+    deleteACL: store.deleteACL.bind(store),
   }
 }

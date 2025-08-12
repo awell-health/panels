@@ -133,8 +133,6 @@ export const ColumnInfoSchema = z.object({
   dependencies: z.array(z.string()).optional(),
   // For base columns
   sourceField: z.string().optional(),
-  tenantId: z.string(),
-  userId: z.string(),
   tags: z.array(z.string()).optional(),
 })
 

@@ -34,7 +34,7 @@ export enum ResourceType {
  */
 export interface UserContext {
   userId: string
-  userEmail?: string // Made optional since Stytch JWT doesn't include it
+  userEmail: string
   role: UserRole
   tenantId: string
 }
@@ -44,6 +44,7 @@ export interface UserContext {
  */
 export interface JWTPayload {
   aud: string[]
+  email: string
   exp: number
   'https://stytch.com/organization': {
     slug: string

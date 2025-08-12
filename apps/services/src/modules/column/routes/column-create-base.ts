@@ -89,6 +89,8 @@ export const columnCreateBase = async (app: FastifyInstance) => {
       reply.statusCode = 201
       return {
         ...baseColumn,
+        tenantId: panel.tenantId,
+        userId: panel.userId,
         tags: baseColumn.tags ?? [],
       }
     },

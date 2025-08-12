@@ -1,5 +1,5 @@
 import { NotFoundError } from '@/errors/not-found-error.js'
-import { ErrorSchema } from '@panels/types'
+import { ErrorSchema, type ErrorType } from '@panels/types'
 import {
   type ColumnInfo,
   type ColumnInfoResponse,
@@ -29,7 +29,7 @@ export const columnUpdate = async (app: FastifyInstance) => {
   app.withTypeProvider<ZodTypeProvider>().route<{
     Params: ParamsType
     Body: ColumnInfo
-    Reply: ColumnInfoResponse
+    Reply: ColumnInfoResponse | ErrorType
   }>({
     method: 'PUT',
     schema: {
@@ -39,6 +39,7 @@ export const columnUpdate = async (app: FastifyInstance) => {
       body: ColumnInfoSchema,
       response: {
         200: ColumnInfoResponseSchema,
+        401: ErrorSchema,
         404: ErrorSchema,
         400: ErrorSchema,
       },
@@ -54,9 +55,16 @@ export const columnUpdate = async (app: FastifyInstance) => {
         formula,
         dependencies,
         sourceField,
-        tenantId,
         tags,
       } = request.body
+
+      const { tenantId } = request.authUser || {}
+
+      if (!tenantId) {
+        return reply.status(401).send({
+          message: 'Unauthorized',
+        })
+      }
 
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({
@@ -129,6 +137,8 @@ export const columnUpdate = async (app: FastifyInstance) => {
       await request.store.em.persistAndFlush(column)
       return {
         ...column,
+        tenantId: panel.tenantId,
+        userId: panel.userId,
         tags: column.tags ?? [],
       }
     },
