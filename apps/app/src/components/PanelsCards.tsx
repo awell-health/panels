@@ -48,30 +48,33 @@ export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Panel Cards */}
-        {panels.map((panel) => (
-          <PanelCard key={panel.id} panel={panel} />
-        ))}
+        {panels.length > 0 && (
+          <>
+            {panels.map((panel) => (
+              <PanelCard key={panel.id} panel={panel} />
+            ))}
 
-        {/* Create New Panel Card */}
-        <div className="group">
-          <button
-            type="button"
-            onClick={onCreatePanel}
-            className={cn(
-              'w-full border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center gap-2',
-              'text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors duration-200 bg-white cursor-pointer',
-              CARD_HEIGHT,
-              // 'h-[180px]',
-            )}
-          >
-            <Plus className="h-6 w-6 group-hover:scale-110 transition-transform duration-200" />
-            <span className="font-semibold text-sm">Create New Panel</span>
-            <span className="text-xs text-center">
-              Set up a new patient monitoring dashboard
-            </span>
-          </button>
-        </div>
+            {/* Create New Panel Card */}
+            <div className="group">
+              <button
+                type="button"
+                onClick={onCreatePanel}
+                className={cn(
+                  'w-full border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center gap-2',
+                  'text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors duration-200 bg-white cursor-pointer',
+                  CARD_HEIGHT,
+                  // 'h-[180px]',
+                )}
+              >
+                <Plus className="h-6 w-6 group-hover:scale-110 transition-transform duration-200" />
+                <span className="font-semibold text-sm">Create New Panel</span>
+                <span className="text-xs text-center">
+                  Set up a new patient monitoring dashboard
+                </span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {panels.length === 0 && (

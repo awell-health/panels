@@ -1,8 +1,10 @@
 'use client'
-import { Code, Plus, Search } from 'lucide-react'
+import { Code, Plus, Search, Share2 } from 'lucide-react'
 import { ColumnsDropdown } from './ColumnsDropdown'
 import WorklistViewDropDown from './ViewTypeDropdown'
 import { FilterSortIndicators } from './FilterSortIndicators'
+import { ShareModal } from './ShareModal'
+import { useState } from 'react'
 import type {
   ViewType,
   ColumnVisibilityContext,
@@ -23,6 +25,8 @@ interface PanelToolbarProps {
   columnVisibilityContext: ColumnVisibilityContext
   onAddColumn: () => void
   isViewPage?: boolean
+  viewId?: string
+  viewName?: string
   // Filter/sort props
   filters?: Filter[]
   sort?: Sort | null
@@ -42,12 +46,15 @@ export default function PanelToolbar({
   columnVisibilityContext,
   onAddColumn,
   isViewPage = false,
+  viewId,
+  viewName,
   filters = [],
   sort,
   columns = [],
   onFiltersChange,
   onSortUpdate,
 }: PanelToolbarProps) {
+  const [isShareModalOpen, setIsShareModalOpen] = useState(true)
   return (
     <div className="border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between p-2">
@@ -116,6 +123,15 @@ export default function PanelToolbar({
             <Plus className="h-3 w-3" /> Add column
           </button>
 
+          {/* Share button */}
+          <button
+            type="button"
+            className="btn btn-sm btn-default"
+            onClick={() => setIsShareModalOpen(true)}
+          >
+            <Share2 className="h-3 w-3" /> Share
+          </button>
+
           {onEnrichData && (
             <button
               type="button"
@@ -127,6 +143,13 @@ export default function PanelToolbar({
           )}
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        viewName={viewName}
+      />
     </div>
   )
 }

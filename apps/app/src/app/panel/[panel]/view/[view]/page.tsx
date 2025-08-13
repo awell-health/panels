@@ -406,6 +406,8 @@ export default function WorklistViewPage() {
               columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
               isViewPage={true}
+              viewId={viewId}
+              viewName={view?.name}
               filters={tableFilters}
               sort={view?.metadata.sort}
               columns={visibleColumns}

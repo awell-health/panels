@@ -382,6 +382,8 @@ export default function WorklistPage() {
               setCurrentView={updatePanelViewType}
               columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
+              viewId={undefined}
+              viewName={panel?.name}
               filters={tableFilters}
               sort={panel?.metadata.sort}
               columns={visibleColumns}
