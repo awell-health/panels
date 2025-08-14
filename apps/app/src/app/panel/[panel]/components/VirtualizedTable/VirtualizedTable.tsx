@@ -36,6 +36,7 @@ import {
 } from './constants'
 import { template } from 'lodash'
 import { cn } from '@/lib/utils'
+import { Table } from 'lucide-react'
 
 interface VirtualizedTableProps {
   isLoading: boolean
@@ -484,6 +485,23 @@ export function VirtualizedTable({
     return (
       <div className="h-full w-full flex items-center justify-center">
         <div className="text-gray-500">Loading...</div>
+      </div>
+    )
+  }
+
+  // Handle empty columns state
+  if (columns.length === 0) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-400 mb-2">
+            <Table className="h-12 w-12 mx-auto" />
+          </div>
+          <p className="text-gray-500 text-sm">No columns configured</p>
+          <p className="text-gray-400 text-xs mt-1">
+            Add columns to start viewing your data
+          </p>
+        </div>
       </div>
     )
   }

@@ -27,6 +27,8 @@ export function ACLTestComponent() {
   const [resourceId, setResourceId] = useState<number>(0)
   const [acls, setAcls] = useState<ACL[]>([])
 
+  console.log('acls', acls)
+
   // Form state for creating/updating ACLs
   const [userEmail, setUserEmail] = useState('')
   const [selectedMemberId, setSelectedMemberId] = useState<string>('')
