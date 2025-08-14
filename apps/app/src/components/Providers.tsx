@@ -2,6 +2,7 @@
 
 import { MedplumClientProvider } from '@/contexts/MedplumClientProvider'
 import { ReactivePanelStoreProvider } from '@/hooks/use-reactive-panel-store'
+import { ACLProvider } from '@/contexts/ACLContext'
 import { StytchB2BProvider } from '@stytch/nextjs/b2b'
 import { CookiesProvider } from 'react-cookie'
 import { AuthenticationGuard } from './AuthenticationGuard'
@@ -74,11 +75,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             <MedplumClientProvider>
               <AwellApolloProvider>
                 <ReactivePanelStoreProvider>
-                  <ToastProvider>
-                    {children}
-                    <ToastContainer position="bottom-center" />
-                    <CaptureWidget />
-                  </ToastProvider>
+                  <ACLProvider>
+                    <ToastProvider>
+                      {children}
+                      <ToastContainer position="bottom-center" />
+                      <CaptureWidget />
+                    </ToastProvider>
+                  </ACLProvider>
                 </ReactivePanelStoreProvider>
               </AwellApolloProvider>
             </MedplumClientProvider>

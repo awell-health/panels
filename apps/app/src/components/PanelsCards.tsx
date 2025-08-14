@@ -13,6 +13,8 @@ import {
 import type { Panel } from '@/types/panel'
 import { DEFAULT_PANEL } from '@/utils/constants'
 import { usePanelStats } from '@/hooks/use-panel-stats'
+import { usePanelRole } from '@/contexts/ACLContext'
+import { RoleBadge } from '@/components/RoleBadge'
 import { cn } from '@/lib/utils'
 
 interface PanelsCardsProps {
@@ -113,6 +115,7 @@ function PanelCard({ panel }: PanelCardProps) {
     views: viewsCount,
     isLoading: isStatsLoading,
   } = usePanelStats(id)
+  const { role } = usePanelRole(id)
 
   // Real stats from the panel data
   const stats = {
@@ -151,6 +154,9 @@ function PanelCard({ panel }: PanelCardProps) {
               >
                 {isActive ? 'Active' : 'Draft'}
               </span>
+              {role && (
+                <RoleBadge role={role as 'owner' | 'editor' | 'viewer'} />
+              )}
             </div>
           </div>
 

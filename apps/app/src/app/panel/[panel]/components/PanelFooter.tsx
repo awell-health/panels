@@ -28,6 +28,7 @@ interface PanelFooterProps {
   isLoading?: boolean
   panel?: Panel
   onCardsConfigurationChange?: (cardsConfiguration: FHIRCard[]) => Promise<void>
+  canEdit: boolean
 }
 
 export default function PanelFooter({
@@ -43,6 +44,7 @@ export default function PanelFooter({
   isLoading,
   panel,
   onCardsConfigurationChange,
+  canEdit,
 }: PanelFooterProps) {
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
 
@@ -142,16 +144,18 @@ export default function PanelFooter({
           <RotateCcw className="h-3 w-3" />
         </button>
 
-        <button
-          type="button"
-          className="btn btn-xs"
-          onClick={() => {
-            setIsConfigModalOpen(true)
-          }}
-          title="Configuration"
-        >
-          <Cog className="h-3 w-3" />
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            className="btn btn-xs"
+            onClick={() => {
+              setIsConfigModalOpen(true)
+            }}
+            title="Configuration"
+          >
+            <Cog className="h-3 w-3" />
+          </button>
+        )}
 
         {/* AI Assistant Button */}
         <button

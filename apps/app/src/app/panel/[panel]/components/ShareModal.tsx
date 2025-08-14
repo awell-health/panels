@@ -13,6 +13,7 @@ import Select from 'react-select'
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
 import { useOrganizationMembers } from '../../../../hooks/use-organization-members'
 import { useReactivePanelStore } from '../../../../hooks/use-reactive-panel-store'
+import { useACL } from '../../../../contexts/ACLContext'
 import { useParams } from 'next/navigation'
 import type { ACL } from '@panels/types/acls'
 import { formatDate } from '@medplum/core'
@@ -44,6 +45,7 @@ export function ShareModal({ isOpen, onClose, viewName }: ShareModalProps) {
   const { showSuccess, showInfo } = useToastHelpers()
 
   const { getACLs, createACL, updateACL, deleteACL } = useReactivePanelStore()
+  const { refreshACL } = useACL()
 
   const { members: organizationMembers } = useOrganizationMembers()
 
@@ -74,6 +76,9 @@ export function ShareModal({ isOpen, onClose, viewName }: ShareModalProps) {
 
       setSharedUsers((prev) => [...prev, newACLUser])
 
+      // Refresh ACL context
+      await refreshACL(currentResourceType, currentResourceId)
+
       showSuccess(`User ${email} has been added to the ${currentResourceType}`)
     } catch (error) {
       console.error('Failed to add user:', error)
@@ -90,6 +95,9 @@ export function ShareModal({ isOpen, onClose, viewName }: ShareModalProps) {
       setUserToDelete(null)
 
       await deleteACL(currentResourceType, currentResourceId, userEmail)
+
+      // Refresh ACL context
+      await refreshACL(currentResourceType, currentResourceId)
 
       showInfo(
         `User ${userEmail} has been removed from the ${currentResourceType}`,
@@ -117,6 +125,9 @@ export function ShareModal({ isOpen, onClose, viewName }: ShareModalProps) {
       await updateACL(currentResourceType, currentResourceId, userEmail, {
         permission: newRole,
       })
+
+      // Refresh ACL context
+      await refreshACL(currentResourceType, currentResourceId)
 
       showSuccess(`User ${userEmail} has been updated to ${newRole}`)
     } catch (error) {
@@ -250,9 +261,6 @@ export function ShareModal({ isOpen, onClose, viewName }: ShareModalProps) {
                         { value: 'viewer' as Permission, label: 'Viewer' },
                       ]}
                       menuPosition="fixed"
-                      onInputChange={(input) => {
-                        console.log('input', input)
-                      }}
                       classNames={{
                         container: () => 'w-32', // Set width
                         control: (state) =>

@@ -10,6 +10,7 @@ import type {
   ColumnVisibilityContext,
 } from '@/types/panel'
 import { cn } from '@/lib/utils'
+import { useACL } from '../../../../contexts/ACLContext'
 
 interface FilterSortIndicatorsProps {
   filters: FilterType[]
@@ -19,6 +20,7 @@ interface FilterSortIndicatorsProps {
   onFiltersChange: (filters: FilterType[]) => void
   onSortUpdate: (sort: Sort | undefined) => void
   className?: string
+  canEdit: boolean
 }
 
 export function FilterSortIndicators({
@@ -29,6 +31,7 @@ export function FilterSortIndicators({
   onFiltersChange,
   onSortUpdate,
   className,
+  canEdit,
 }: FilterSortIndicatorsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -110,10 +113,6 @@ export function FilterSortIndicators({
     onFiltersChange(newFilters)
   }
 
-  const removeSort = () => {
-    onSortUpdate(undefined)
-  }
-
   const toggleSortDirection = () => {
     if (!sort) return
 
@@ -166,14 +165,16 @@ export function FilterSortIndicators({
                         <span className="text-gray-500">=</span>
                         <span>{displayValue}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFilter(filter)}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-600 hover:text-gray-800"
-                        aria-label={`Remove filter: ${columnName} = ${displayValue}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => removeFilter(filter)}
+                          className="p-1 hover:bg-gray-200 rounded text-gray-600 hover:text-gray-800"
+                          aria-label={`Remove filter: ${columnName} = ${displayValue}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                   )
                 })}
@@ -199,14 +200,6 @@ export function FilterSortIndicators({
                     ({sort.direction === 'asc' ? 'ascending' : 'descending'})
                   </button>
                 </div>
-                {/* <button
-                  type="button"
-                  onClick={removeSort}
-                  className="p-1 hover:bg-gray-200 rounded text-gray-600 hover:text-gray-800"
-                  aria-label={`Remove sort: ${getColumnName(sort.columnId)}`}
-                >
-                  <X className="h-3 w-3" />
-                </button> */}
               </div>
             </div>
           )}

@@ -4,6 +4,7 @@ import { ColumnsDropdown } from './ColumnsDropdown'
 import WorklistViewDropDown from './ViewTypeDropdown'
 import { FilterSortIndicators } from './FilterSortIndicators'
 import { ShareModal } from './ShareModal'
+import { ViewRoleBadge } from '@/components/ViewRoleBadge'
 import { useState } from 'react'
 import type {
   ViewType,
@@ -12,6 +13,7 @@ import type {
   Sort,
   Column,
 } from '@/types/panel'
+import { useACL } from '../../../../contexts/ACLContext'
 
 interface PanelToolbarProps {
   searchTerm: string
@@ -27,6 +29,7 @@ interface PanelToolbarProps {
   isViewPage?: boolean
   viewId?: string
   viewName?: string
+  panelId?: string
   // Filter/sort props
   filters?: Filter[]
   sort?: Sort | null
@@ -48,17 +51,25 @@ export default function PanelToolbar({
   isViewPage = false,
   viewId,
   viewName,
+  panelId,
   filters = [],
   sort,
   columns = [],
   onFiltersChange,
   onSortUpdate,
 }: PanelToolbarProps) {
-  const [isShareModalOpen, setIsShareModalOpen] = useState(true)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const { hasPermission } = useACL()
+
+  const resourceId = panelId || viewId
+  const canEdit = resourceId
+    ? hasPermission('panel', resourceId, 'editor')
+    : false
+
   return (
     <div className="border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between p-2">
-        {!isViewPage && (
+        {!isViewPage && canEdit && (
           <div className="flex items-center space-x-2 mr-2">
             {/* View dropdown - only show on panel page */}
             <WorklistViewDropDown
@@ -110,27 +121,41 @@ export default function PanelToolbar({
             onFiltersChange={onFiltersChange || (() => {})}
             onSortUpdate={onSortUpdate || (() => {})}
             allColumns={columnVisibilityContext.getAllColumns()}
+            canEdit={canEdit}
           />
 
-          <ColumnsDropdown context={columnVisibilityContext} />
+          {canEdit && <ColumnsDropdown context={columnVisibilityContext} />}
 
           {/* Column management buttons */}
-          <button
-            type="button"
-            className="btn btn-sm btn-primary btn-outline min-w-32"
-            onClick={onAddColumn}
-          >
-            <Plus className="h-3 w-3" /> Add column
-          </button>
+          {canEdit && (
+            <button
+              type="button"
+              className="btn btn-sm btn-primary btn-outline min-w-32"
+              onClick={onAddColumn}
+            >
+              <Plus className="h-3 w-3" /> Add column
+            </button>
+          )}
 
-          {/* Share button */}
-          <button
-            type="button"
-            className="btn btn-sm btn-default"
-            onClick={() => setIsShareModalOpen(true)}
-          >
-            <Share2 className="h-3 w-3" /> Share
-          </button>
+          {/* Share button and role badge */}
+          <div className="flex items-center gap-2">
+            {panelId && (
+              <ViewRoleBadge
+                panelId={panelId}
+                viewId={viewId}
+                showPanelFallback={true}
+              />
+            )}
+            {canEdit && (
+              <button
+                type="button"
+                className="btn btn-sm btn-default"
+                onClick={() => setIsShareModalOpen(true)}
+              >
+                <Share2 className="h-3 w-3" /> Share
+              </button>
+            )}
+          </div>
 
           {onEnrichData && (
             <button
