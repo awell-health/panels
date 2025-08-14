@@ -5,7 +5,6 @@ interface ViewRoleBadgeProps {
   panelId: string | number
   viewId?: string | number
   className?: string
-  size?: 'sm' | 'md' | 'lg'
   showIcon?: boolean
   showPanelFallback?: boolean // Show panel role if no view role exists
 }
@@ -14,7 +13,6 @@ export function ViewRoleBadge({
   panelId,
   viewId,
   className,
-  size = 'sm',
   showIcon = true,
   showPanelFallback = true,
 }: ViewRoleBadgeProps) {
@@ -32,7 +30,6 @@ export function ViewRoleBadge({
       <RoleBadge
         role={effectiveRole as 'owner' | 'editor' | 'viewer'}
         className={className}
-        size={size}
         showIcon={showIcon}
       />
       {viewId && viewRole && showPanelFallback && (

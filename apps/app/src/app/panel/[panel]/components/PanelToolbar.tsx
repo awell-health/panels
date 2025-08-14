@@ -139,13 +139,6 @@ export default function PanelToolbar({
 
           {/* Share button and role badge */}
           <div className="flex items-center gap-2">
-            {panelId && (
-              <ViewRoleBadge
-                panelId={panelId}
-                viewId={viewId}
-                showPanelFallback={true}
-              />
-            )}
             {canEdit && (
               <button
                 type="button"
@@ -154,6 +147,13 @@ export default function PanelToolbar({
               >
                 <Share2 className="h-3 w-3" /> Share
               </button>
+            )}
+            {panelId && (
+              <ViewRoleBadge
+                panelId={panelId}
+                viewId={viewId}
+                showPanelFallback={true}
+              />
             )}
           </div>
 
