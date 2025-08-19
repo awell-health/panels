@@ -582,7 +582,7 @@ export default function PanelNavigation({
                           }
                         }}
                       >
-                        {view.name} VIEW
+                        {view.name}
                       </span>
                       {getSaveStatusIcon(view.id)}
                       {canEdit && (
