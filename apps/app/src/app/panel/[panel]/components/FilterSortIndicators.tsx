@@ -3,13 +3,9 @@
 import { Filter, SortAsc, ChevronDown, X } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import type {
-  Filter as FilterType,
-  Sort,
-  Column,
-  ColumnVisibilityContext,
-} from '@/types/panel'
+import type { Filter as FilterType, Sort, Column } from '@/types/panel'
 import { cn } from '@/lib/utils'
+import { Tooltip } from '@/components/ui/tooltip'
 
 interface FilterSortIndicatorsProps {
   filters: FilterType[]
@@ -19,6 +15,7 @@ interface FilterSortIndicatorsProps {
   onFiltersChange: (filters: FilterType[]) => void
   onSortUpdate: (sort: Sort | undefined) => void
   className?: string
+  canEdit: boolean
 }
 
 export function FilterSortIndicators({
@@ -29,6 +26,7 @@ export function FilterSortIndicators({
   onFiltersChange,
   onSortUpdate,
   className,
+  canEdit,
 }: FilterSortIndicatorsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -110,10 +108,6 @@ export function FilterSortIndicators({
     onFiltersChange(newFilters)
   }
 
-  const removeSort = () => {
-    onSortUpdate(undefined)
-  }
-
   const toggleSortDirection = () => {
     if (!sort) return
 
@@ -125,6 +119,7 @@ export function FilterSortIndicators({
   }
 
   const toggleDropdown = () => {
+    if (!canEdit) return
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       setDropdownPosition({
@@ -166,14 +161,16 @@ export function FilterSortIndicators({
                         <span className="text-gray-500">=</span>
                         <span>{displayValue}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFilter(filter)}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-600 hover:text-gray-800"
-                        aria-label={`Remove filter: ${columnName} = ${displayValue}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => removeFilter(filter)}
+                          className="p-1 hover:bg-gray-200 rounded text-gray-600 hover:text-gray-800"
+                          aria-label={`Remove filter: ${columnName} = ${displayValue}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                   )
                 })}
@@ -199,14 +196,6 @@ export function FilterSortIndicators({
                     ({sort.direction === 'asc' ? 'ascending' : 'descending'})
                   </button>
                 </div>
-                {/* <button
-                  type="button"
-                  onClick={removeSort}
-                  className="p-1 hover:bg-gray-200 rounded text-gray-600 hover:text-gray-800"
-                  aria-label={`Remove sort: ${getColumnName(sort.columnId)}`}
-                >
-                  <X className="h-3 w-3" />
-                </button> */}
               </div>
             </div>
           )}
@@ -216,19 +205,33 @@ export function FilterSortIndicators({
 
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={toggleDropdown}
-        className={cn('btn btn-sm btn-accent min-w-32', className)}
+      <Tooltip
+        content="You don't have permissions to modify filters and sorting"
+        show={!canEdit}
+        position="left"
       >
-        {filters.length > 0 && <Filter className="h-3 w-3" />}
-        {sort && <SortAsc className="h-3 w-3" />}
-        <span>{buildButtonText()}</span>
-        <ChevronDown
-          className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')}
-        />
-      </button>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={toggleDropdown}
+          className={cn(
+            'btn btn-sm btn-accent min-w-32',
+            className,
+            !canEdit && 'opacity-50 cursor-not-allowed',
+          )}
+          disabled={!canEdit}
+        >
+          {filters.length > 0 && <Filter className="h-3 w-3" />}
+          {sort && <SortAsc className="h-3 w-3" />}
+          <span>{buildButtonText()}</span>
+          <ChevronDown
+            className={cn(
+              'h-3 w-3 transition-transform',
+              isOpen && 'rotate-180',
+            )}
+          />
+        </button>
+      </Tooltip>
       {dropdownContent && createPortal(dropdownContent, document.body)}
     </>
   )

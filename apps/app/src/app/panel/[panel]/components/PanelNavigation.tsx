@@ -21,8 +21,6 @@ import {
   CheckSquare,
   Copy,
   FileText,
-  Edit2Icon,
-  EditIcon,
   Edit3Icon,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -35,6 +33,7 @@ interface PanelNavigationProps {
   currentFilters?: Filter[]
   onPanelTitleChange?: (newTitle: string) => void
   onViewTitleChange?: (newTitle: string) => void
+  canEdit: boolean
 }
 
 type ViewCreationType = 'patient' | 'task' | 'from-panel' | 'copy-view'
@@ -46,6 +45,7 @@ export default function PanelNavigation({
   currentFilters,
   onPanelTitleChange,
   onViewTitleChange,
+  canEdit,
 }: PanelNavigationProps) {
   const { deletePanel, deleteView, updatePanel, updateView, addView } =
     useReactivePanelStore()
@@ -66,6 +66,18 @@ export default function PanelNavigation({
   const { views } = useReactiveViews(panel.id)
   const { columns } = useReactiveColumns(panel.id)
   const { view: currentView } = useReactiveView(panel.id, selectedViewId || '')
+
+  const handleSetEditingPanel = (value: boolean | null) => {
+    if (canEdit) {
+      setEditingPanel(value || false)
+    }
+  }
+
+  const handleSetEditingView = (value: string | null) => {
+    if (canEdit) {
+      setEditingViewId(value)
+    }
+  }
 
   useEffect(() => {
     setPanelTitle(panel.name)
@@ -370,7 +382,7 @@ export default function PanelNavigation({
               onClick={(e) => {
                 e.stopPropagation()
                 if (!selectedViewId) {
-                  setEditingPanel(true)
+                  handleSetEditingPanel(true)
                 } else {
                   handlePanelClick()
                 }
@@ -383,7 +395,7 @@ export default function PanelNavigation({
                   e.preventDefault()
                   e.stopPropagation()
                   if (!selectedViewId) {
-                    setEditingPanel(true)
+                    handleSetEditingPanel(true)
                   } else {
                     handlePanelClick()
                   }
@@ -456,16 +468,18 @@ export default function PanelNavigation({
                       {panel.name}
                     </span>
                     {getSaveStatusIcon(panel.id)}
-                    <button
-                      type="button"
-                      className="ml-2 text-gray-400 hover:text-gray-600"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteViewClick(panel.id, panel.name)
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className="ml-2 text-gray-400 hover:text-gray-600"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteViewClick(panel.id, panel.name)
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -523,7 +537,7 @@ export default function PanelNavigation({
                               ...prev,
                               [view.id]: view.name || '',
                             }))
-                            setEditingViewId(null)
+                            handleSetEditingPanel(null)
                           }
                         }}
                         className={tabClassesInput}
@@ -549,7 +563,7 @@ export default function PanelNavigation({
                         onClick={(e) => {
                           e.stopPropagation()
                           if (view.id === selectedViewId) {
-                            setEditingViewId(view.id)
+                            handleSetEditingView(view.id)
                           } else {
                             handleViewClick(view)
                           }
@@ -565,16 +579,18 @@ export default function PanelNavigation({
                         {view.name}
                       </span>
                       {getSaveStatusIcon(view.id)}
-                      <button
-                        type="button"
-                        className="ml-2 text-gray-400 hover:text-gray-600"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteViewClick(view.id, view.name || '')
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="ml-2 text-gray-400 hover:text-gray-600"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteViewClick(view.id, view.name || '')
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -582,6 +598,7 @@ export default function PanelNavigation({
             ))}
 
             {/* Add View Button */}
+
             <button
               type="button"
               className="ml-2 mb-[-1px] h-9 px-3 flex items-center text-sm text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-t-md border-l border-t border-r border-gray-200 whitespace-nowrap"

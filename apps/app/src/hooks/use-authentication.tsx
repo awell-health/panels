@@ -35,7 +35,17 @@ export class AuthenticationStore {
   }
 
   isAdmin = () => {
-    return this.user?.roles.map((role) => role.role_id).includes(this.adminRole)
+    return (
+      this.user?.roles.map((role) => role.role_id).includes('Panels Admin') ||
+      this.user?.roles.map((role) => role.role_id).includes('Org Admin')
+    )
+  }
+
+  isBuilder = () => {
+    return (
+      this.user?.roles.map((role) => role.role_id).includes('Panels Builder') ||
+      this.isAdmin()
+    )
   }
 
   getRoles = () => {
@@ -199,6 +209,7 @@ export function useAuthentication() {
   const currentEmail = store.getEmail()
   const currentRoles = store.getRoles()
   const currentIsAdmin = store.isAdmin()
+  const currentIsBuilder = store.isBuilder()
 
   // Use useMemo to create a stable object that only changes when the underlying data changes
   const authData = useMemo(
@@ -214,6 +225,7 @@ export function useAuthentication() {
       name: currentName,
       email: currentEmail,
       isAdmin: currentIsAdmin,
+      isBuilder: currentIsBuilder,
       roles: currentRoles,
     }),
     [
@@ -229,6 +241,7 @@ export function useAuthentication() {
       currentEmail,
       currentIsAdmin,
       currentRoles,
+      currentIsBuilder,
     ],
   )
 

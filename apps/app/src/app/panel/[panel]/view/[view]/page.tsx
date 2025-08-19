@@ -26,6 +26,7 @@ import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import type { FHIRCard } from '../../components/ModalDetails/StaticContent/FhirExpandableCard'
+import { useACL } from '../../../../../contexts/ACLContext'
 
 export default function WorklistViewPage() {
   const { updateView } = useReactivePanelStore()
@@ -50,6 +51,8 @@ export default function WorklistViewPage() {
     useReactiveColumns(panelId)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
   const { updatePanel } = useReactivePanelStore()
+  const { hasPermission } = useACL()
+  const canEdit = hasPermission('view', viewId, 'editor')
 
   const { toggleTaskOwner } = useMedplumStore()
   const {
@@ -392,6 +395,7 @@ export default function WorklistViewPage() {
                 selectedViewId={viewId}
                 currentViewType={view?.metadata.viewType}
                 onViewTitleChange={onViewTitleChange}
+                canEdit={canEdit}
               />
             )}
           </div>
@@ -406,6 +410,9 @@ export default function WorklistViewPage() {
               columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
               isViewPage={true}
+              viewId={viewId}
+              viewName={view?.name}
+              panelId={panelId}
               filters={tableFilters}
               sort={view?.metadata.sort}
               columns={visibleColumns}
@@ -473,6 +480,7 @@ export default function WorklistViewPage() {
               isLoading={isProgressiveLoading}
               panel={panel}
               onCardsConfigurationChange={onCardsConfigurationChange}
+              canEdit={canEdit}
             />
           </div>
         </>
