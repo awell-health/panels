@@ -1,9 +1,14 @@
 import { ACLTestComponent } from '@/components/ACLTestComponent'
+import PageNavigation from '../../components/PageNavigation'
 
 export default function TestACLPage() {
   return (
-    <div className="min-h-screen bg-gray-100">
+    <PageNavigation
+      title="Test ACL"
+      description="Test ACL"
+      breadcrumb={[{ label: 'Test ACL' }]}
+    >
       <ACLTestComponent />
-    </div>
+    </PageNavigation>
   )
 }

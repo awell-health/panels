@@ -1,8 +1,12 @@
 'use client'
-import { Code, Plus, Search } from 'lucide-react'
+import { Code, Plus, Search, Share2 } from 'lucide-react'
 import { ColumnsDropdown } from './ColumnsDropdown'
 import WorklistViewDropDown from './ViewTypeDropdown'
 import { FilterSortIndicators } from './FilterSortIndicators'
+import { ShareModal } from './ShareModal'
+import { ViewRoleBadge } from '@/components/ViewRoleBadge'
+import { Tooltip } from '@/components/ui/tooltip'
+import { useState } from 'react'
 import type {
   ViewType,
   ColumnVisibilityContext,
@@ -10,6 +14,7 @@ import type {
   Sort,
   Column,
 } from '@/types/panel'
+import { useACL } from '../../../../contexts/ACLContext'
 
 interface PanelToolbarProps {
   searchTerm: string
@@ -23,6 +28,9 @@ interface PanelToolbarProps {
   columnVisibilityContext: ColumnVisibilityContext
   onAddColumn: () => void
   isViewPage?: boolean
+  viewId?: string
+  viewName?: string
+  panelId?: string
   // Filter/sort props
   filters?: Filter[]
   sort?: Sort | null
@@ -42,22 +50,45 @@ export default function PanelToolbar({
   columnVisibilityContext,
   onAddColumn,
   isViewPage = false,
+  viewId,
+  viewName,
+  panelId,
   filters = [],
   sort,
   columns = [],
   onFiltersChange,
   onSortUpdate,
 }: PanelToolbarProps) {
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const { hasPermission } = useACL()
+
+  const canEditPanel = panelId
+    ? hasPermission('panel', panelId, 'editor')
+    : false
+
+  const canEditView = viewId ? hasPermission('view', viewId, 'editor') : false
+
+  const canEdit = isViewPage ? canEditView : canEditPanel
+
   return (
     <div className="border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between p-2">
         {!isViewPage && (
           <div className="flex items-center space-x-2 mr-2">
             {/* View dropdown - only show on panel page */}
-            <WorklistViewDropDown
-              currentView={currentView}
-              onViewChange={setCurrentView || (() => {})}
-            />
+            <Tooltip
+              content="You don't have permissions to change views on this panel"
+              show={!canEditPanel}
+              position="bottom"
+            >
+              <div>
+                <WorklistViewDropDown
+                  currentView={currentView}
+                  onViewChange={setCurrentView || (() => {})}
+                  disabled={!canEditPanel}
+                />
+              </div>
+            </Tooltip>
           </div>
         )}
 
@@ -103,30 +134,80 @@ export default function PanelToolbar({
             onFiltersChange={onFiltersChange || (() => {})}
             onSortUpdate={onSortUpdate || (() => {})}
             allColumns={columnVisibilityContext.getAllColumns()}
+            canEdit={canEdit}
           />
 
-          <ColumnsDropdown context={columnVisibilityContext} />
-
           {/* Column management buttons */}
-          <button
-            type="button"
-            className="btn btn-sm btn-primary btn-outline min-w-32"
-            onClick={onAddColumn}
+          <Tooltip
+            content="You don't have permissions to add columns to this panel"
+            show={!canEditPanel}
+            position="left"
           >
-            <Plus className="h-3 w-3" /> Add column
-          </button>
-
-          {onEnrichData && (
             <button
               type="button"
-              className="btn btn-sm btn-primary btn-outline"
-              onClick={onEnrichData}
+              className="btn btn-sm btn-primary btn-outline min-w-32"
+              onClick={onAddColumn}
+              disabled={!canEditPanel}
             >
-              <Plus className="mr-1 h-3 w-3" /> Enrich data
+              <Plus className="h-3 w-3" /> Add column
             </button>
+          </Tooltip>
+
+          <ColumnsDropdown
+            context={columnVisibilityContext}
+            canEdit={canEdit}
+          />
+
+          {/* Share button and role badge */}
+          <div className="flex items-center gap-2">
+            <Tooltip
+              content="You don't have permissions to share this panel/view"
+              show={!canEdit}
+              position="left"
+            >
+              <button
+                type="button"
+                className="btn btn-sm btn-default"
+                onClick={() => setIsShareModalOpen(true)}
+                disabled={!canEdit}
+              >
+                <Share2 className="h-2 w-2" /> Share
+              </button>
+            </Tooltip>
+            {panelId && (
+              <ViewRoleBadge
+                panelId={panelId}
+                viewId={viewId}
+                showPanelFallback={false}
+              />
+            )}
+          </div>
+
+          {onEnrichData && (
+            <Tooltip
+              content="You don't have permissions to enrich data"
+              position="left"
+              show={!canEdit}
+            >
+              <button
+                type="button"
+                className={`btn btn-sm btn-primary btn-outline ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={onEnrichData}
+                disabled={!canEdit}
+              >
+                <Plus className="mr-1 h-3 w-3" /> Enrich data
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        viewName={viewName}
+      />
     </div>
   )
 }

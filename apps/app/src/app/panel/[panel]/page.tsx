@@ -34,6 +34,7 @@ import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
 import type { FHIRCard } from './components/ModalDetails/StaticContent/FhirExpandableCard'
+import { useACL } from '@/contexts/ACLContext'
 
 export default function WorklistPage() {
   const params = useParams()
@@ -67,6 +68,9 @@ export default function WorklistPage() {
       panelId,
     },
   )
+
+  const { hasPermission } = useACL()
+  const canEdit = hasPermission('panel', panelId, 'editor')
 
   const patients =
     currentView === 'patient' ? (progressiveData as WorklistPatient[]) : []
@@ -369,6 +373,7 @@ export default function WorklistPage() {
                 currentViewType={currentView}
                 onPanelTitleChange={onPanelTitleChange}
                 currentFilters={tableFilters}
+                canEdit={canEdit}
               />
             )}
           </div>
@@ -382,6 +387,9 @@ export default function WorklistPage() {
               setCurrentView={updatePanelViewType}
               columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
+              viewId={undefined}
+              viewName={panel?.name}
+              panelId={panelId}
               filters={tableFilters}
               sort={panel?.metadata.sort}
               columns={visibleColumns}
@@ -457,6 +465,7 @@ export default function WorklistPage() {
               isLoading={isProgressiveLoading}
               panel={panel}
               onCardsConfigurationChange={onCardsConfigurationChange}
+              canEdit={canEdit}
             />
           </div>
         </>

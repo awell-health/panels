@@ -8,11 +8,13 @@ import type { ViewType } from '@/types/panel'
 interface ViewTypeDropdownProps {
   currentView: ViewType
   onViewChange: (view: ViewType) => void
+  disabled?: boolean
 }
 
 export default function ViewTypeDropdown({
   currentView,
   onViewChange,
+  disabled = false,
 }: ViewTypeDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -89,6 +91,7 @@ export default function ViewTypeDropdown({
   }, [isOpen])
 
   const toggleDropdown = () => {
+    if (disabled) return
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       setDropdownPosition({
@@ -100,6 +103,7 @@ export default function ViewTypeDropdown({
   }
 
   const onViewTypeSelected = (view: 'task' | 'patient') => {
+    if (disabled) return
     onViewChange(view)
     setIsOpen(false)
   }
@@ -160,7 +164,11 @@ export default function ViewTypeDropdown({
         type="button"
         ref={buttonRef}
         onClick={toggleDropdown}
-        className="btn btn-sm"
+        className={cn(
+          'btn btn-sm',
+          disabled && 'opacity-50 cursor-not-allowed',
+        )}
+        disabled={disabled}
       >
         {getViewContent(currentView)}
         <ChevronDown className="h-3.5 w-3.5 ml-2 text-gray-400" />

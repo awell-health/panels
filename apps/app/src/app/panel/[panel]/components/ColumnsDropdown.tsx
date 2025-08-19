@@ -4,12 +4,14 @@ import type { ColumnVisibilityContext } from '@/types/panel'
 import { Settings } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Tooltip } from '@/components/ui/tooltip'
 
 type ColumnsDropdownProps = {
   context: ColumnVisibilityContext
+  canEdit: boolean
 }
 
-export function ColumnsDropdown({ context }: ColumnsDropdownProps) {
+export function ColumnsDropdown({ context, canEdit }: ColumnsDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
@@ -82,6 +84,7 @@ export function ColumnsDropdown({ context }: ColumnsDropdownProps) {
   }, [isOpen])
 
   const toggleDropdown = () => {
+    if (!canEdit) return
     if (!isOpen && buttonRef.current) {
       // Set initial position when opening
       const rect = buttonRef.current.getBoundingClientRect()
@@ -127,6 +130,7 @@ export function ColumnsDropdown({ context }: ColumnsDropdownProps) {
                 <input
                   type="checkbox"
                   checked={isVisible}
+                  disabled={!canEdit}
                   onChange={(e) =>
                     handleVisibilityChange(column.id, e.target.checked)
                   }
@@ -147,15 +151,22 @@ export function ColumnsDropdown({ context }: ColumnsDropdownProps) {
 
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
-        className="btn btn-sm min-w-32"
-        onClick={toggleDropdown}
+      <Tooltip
+        content="You don't have permissions to modify column visibility"
+        show={!canEdit}
+        position="left"
       >
-        <Settings className="h-3 w-3" />
-        Columns ({visibleCount}/{totalCount})
-      </button>
+        <button
+          ref={buttonRef}
+          type="button"
+          className={`btn btn-sm min-w-32 ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+          onClick={toggleDropdown}
+          disabled={!canEdit}
+        >
+          <Settings className="h-3 w-3" />
+          Columns ({visibleCount}/{totalCount})
+        </button>
+      </Tooltip>
       {dropdownContent && createPortal(dropdownContent, document.body)}
     </>
   )

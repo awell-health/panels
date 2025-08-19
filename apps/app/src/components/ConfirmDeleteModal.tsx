@@ -62,12 +62,6 @@ export function ConfirmDeleteModal({
             <p className="text-sm text-gray-600 mt-2 leading-relaxed">
               {message}
             </p>
-            <div className="flex items-start space-x-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-              <p className="text-sm text-gray-700 font-medium">
-                This action cannot be undone.
-              </p>
-            </div>
           </div>
         </div>
 

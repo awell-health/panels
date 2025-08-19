@@ -2,18 +2,15 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  LayoutGrid,
-  Plus,
-  ExternalLink,
-  Eye,
-  Users,
-  Database,
-} from 'lucide-react'
+import { LayoutGrid, Plus, ExternalLink, Eye } from 'lucide-react'
 import type { Panel } from '@/types/panel'
 import { DEFAULT_PANEL } from '@/utils/constants'
 import { usePanelStats } from '@/hooks/use-panel-stats'
+import { usePanelRole } from '@/contexts/ACLContext'
+import { RoleBadge } from '@/components/RoleBadge'
 import { cn } from '@/lib/utils'
+import { useAuthentication } from '@/hooks/use-authentication'
+import { Tooltip } from '@/components/ui/tooltip'
 
 interface PanelsCardsProps {
   panels: Panel[]
@@ -25,6 +22,8 @@ const CARD_HEIGHT = 'h-[130px]'
 export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+
+  const { isBuilder } = useAuthentication()
 
   // Set mounted on client side
   React.useEffect(() => {
@@ -48,30 +47,50 @@ export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Panel Cards */}
-        {panels.map((panel) => (
-          <PanelCard key={panel.id} panel={panel} />
-        ))}
+        {panels.length > 0 && (
+          <>
+            {panels.map((panel) => (
+              <PanelCard key={panel.id} panel={panel} />
+            ))}
 
-        {/* Create New Panel Card */}
-        <div className="group">
-          <button
-            type="button"
-            onClick={onCreatePanel}
-            className={cn(
-              'w-full border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center gap-2',
-              'text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors duration-200 bg-white cursor-pointer',
-              CARD_HEIGHT,
-              // 'h-[180px]',
-            )}
-          >
-            <Plus className="h-6 w-6 group-hover:scale-110 transition-transform duration-200" />
-            <span className="font-semibold text-sm">Create New Panel</span>
-            <span className="text-xs text-center">
-              Set up a new patient monitoring dashboard
-            </span>
-          </button>
-        </div>
+            {/* Create New Panel Card */}
+            <Tooltip
+              content="You don't have permissions to create new panels"
+              show={!isBuilder}
+              position="top"
+            >
+              <div className="group">
+                <button
+                  type="button"
+                  onClick={onCreatePanel}
+                  disabled={!isBuilder}
+                  className={cn(
+                    'w-full border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center gap-2',
+                    'text-gray-500 transition-colors duration-200 bg-white',
+                    CARD_HEIGHT,
+                    // 'h-[180px]',
+                    isBuilder
+                      ? 'hover:border-blue-400 hover:text-blue-600 cursor-pointer'
+                      : 'opacity-50 cursor-not-allowed',
+                  )}
+                >
+                  <Plus
+                    className={cn(
+                      'h-6 w-6 transition-transform duration-200',
+                      isBuilder && 'group-hover:scale-110',
+                    )}
+                  />
+                  <span className="font-semibold text-sm">
+                    Create New Panel
+                  </span>
+                  <span className="text-xs text-center">
+                    Set up a new patient monitoring dashboard
+                  </span>
+                </button>
+              </div>
+            </Tooltip>
+          </>
+        )}
       </div>
 
       {panels.length === 0 && (
@@ -83,14 +102,24 @@ export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
           <p className="text-gray-500 mb-6">
             Create your first panel to get started
           </p>
-          <button
-            type="button"
-            onClick={onCreatePanel}
-            className="btn btn-primary"
+          <Tooltip
+            content="You don't have permissions to create new panels"
+            show={!isBuilder}
+            position="top"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Panel
-          </button>
+            <button
+              type="button"
+              onClick={onCreatePanel}
+              disabled={!isBuilder}
+              className={cn(
+                'btn btn-primary',
+                !isBuilder && 'opacity-50 cursor-not-allowed',
+              )}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Panel
+            </button>
+          </Tooltip>
         </div>
       )}
     </div>
@@ -110,6 +139,7 @@ function PanelCard({ panel }: PanelCardProps) {
     views: viewsCount,
     isLoading: isStatsLoading,
   } = usePanelStats(id)
+  const { role } = usePanelRole(id)
 
   // Real stats from the panel data
   const stats = {
@@ -148,6 +178,9 @@ function PanelCard({ panel }: PanelCardProps) {
               >
                 {isActive ? 'Active' : 'Draft'}
               </span>
+              {role && (
+                <RoleBadge role={role as 'owner' | 'editor' | 'viewer'} />
+              )}
             </div>
           </div>
 
