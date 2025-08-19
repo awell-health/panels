@@ -3,14 +3,9 @@
 import { Filter, SortAsc, ChevronDown, X } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import type {
-  Filter as FilterType,
-  Sort,
-  Column,
-  ColumnVisibilityContext,
-} from '@/types/panel'
+import type { Filter as FilterType, Sort, Column } from '@/types/panel'
 import { cn } from '@/lib/utils'
-import { useACL } from '../../../../contexts/ACLContext'
+import { Tooltip } from '@/components/ui/tooltip'
 
 interface FilterSortIndicatorsProps {
   filters: FilterType[]
@@ -124,6 +119,7 @@ export function FilterSortIndicators({
   }
 
   const toggleDropdown = () => {
+    if (!canEdit) return
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       setDropdownPosition({
@@ -209,19 +205,33 @@ export function FilterSortIndicators({
 
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={toggleDropdown}
-        className={cn('btn btn-sm btn-accent min-w-32', className)}
+      <Tooltip
+        content="You don't have permissions to modify filters and sorting"
+        show={!canEdit}
+        position="left"
       >
-        {filters.length > 0 && <Filter className="h-3 w-3" />}
-        {sort && <SortAsc className="h-3 w-3" />}
-        <span>{buildButtonText()}</span>
-        <ChevronDown
-          className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')}
-        />
-      </button>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={toggleDropdown}
+          className={cn(
+            'btn btn-sm btn-accent min-w-32',
+            className,
+            !canEdit && 'opacity-50 cursor-not-allowed',
+          )}
+          disabled={!canEdit}
+        >
+          {filters.length > 0 && <Filter className="h-3 w-3" />}
+          {sort && <SortAsc className="h-3 w-3" />}
+          <span>{buildButtonText()}</span>
+          <ChevronDown
+            className={cn(
+              'h-3 w-3 transition-transform',
+              isOpen && 'rotate-180',
+            )}
+          />
+        </button>
+      </Tooltip>
       {dropdownContent && createPortal(dropdownContent, document.body)}
     </>
   )

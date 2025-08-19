@@ -5,6 +5,7 @@ import WorklistViewDropDown from './ViewTypeDropdown'
 import { FilterSortIndicators } from './FilterSortIndicators'
 import { ShareModal } from './ShareModal'
 import { ViewRoleBadge } from '@/components/ViewRoleBadge'
+import { Tooltip } from '@/components/ui/tooltip'
 import { useState } from 'react'
 import type {
   ViewType,
@@ -61,21 +62,33 @@ export default function PanelToolbar({
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const { hasPermission } = useACL()
 
-  const resourceId = panelId || viewId
-  const canEdit = resourceId
-    ? hasPermission('panel', resourceId, 'editor')
+  const canEditPanel = panelId
+    ? hasPermission('panel', panelId, 'editor')
     : false
+
+  const canEditView = viewId ? hasPermission('view', viewId, 'editor') : false
+
+  const canEdit = isViewPage ? canEditView : canEditPanel
 
   return (
     <div className="border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between p-2">
-        {!isViewPage && canEdit && (
+        {!isViewPage && (
           <div className="flex items-center space-x-2 mr-2">
             {/* View dropdown - only show on panel page */}
-            <WorklistViewDropDown
-              currentView={currentView}
-              onViewChange={setCurrentView || (() => {})}
-            />
+            <Tooltip
+              content="You don't have permissions to change views on this panel"
+              show={!canEditPanel}
+              position="bottom"
+            >
+              <div>
+                <WorklistViewDropDown
+                  currentView={currentView}
+                  onViewChange={setCurrentView || (() => {})}
+                  disabled={!canEditPanel}
+                />
+              </div>
+            </Tooltip>
           </div>
         )}
 
@@ -124,47 +137,67 @@ export default function PanelToolbar({
             canEdit={canEdit}
           />
 
-          {canEdit && <ColumnsDropdown context={columnVisibilityContext} />}
-
           {/* Column management buttons */}
-          {canEdit && (
+          <Tooltip
+            content="You don't have permissions to add columns to this panel"
+            show={!canEditPanel}
+            position="left"
+          >
             <button
               type="button"
               className="btn btn-sm btn-primary btn-outline min-w-32"
               onClick={onAddColumn}
+              disabled={!canEditPanel}
             >
               <Plus className="h-3 w-3" /> Add column
             </button>
-          )}
+          </Tooltip>
+
+          <ColumnsDropdown
+            context={columnVisibilityContext}
+            canEdit={canEdit}
+          />
 
           {/* Share button and role badge */}
           <div className="flex items-center gap-2">
-            {canEdit && (
+            <Tooltip
+              content="You don't have permissions to share this panel/view"
+              show={!canEdit}
+              position="left"
+            >
               <button
                 type="button"
                 className="btn btn-sm btn-default"
                 onClick={() => setIsShareModalOpen(true)}
+                disabled={!canEdit}
               >
-                <Share2 className="h-3 w-3" /> Share
+                <Share2 className="h-2 w-2" /> Share
               </button>
-            )}
+            </Tooltip>
             {panelId && (
               <ViewRoleBadge
                 panelId={panelId}
                 viewId={viewId}
-                showPanelFallback={true}
+                showPanelFallback={false}
               />
             )}
           </div>
 
           {onEnrichData && (
-            <button
-              type="button"
-              className="btn btn-sm btn-primary btn-outline"
-              onClick={onEnrichData}
+            <Tooltip
+              content="You don't have permissions to enrich data"
+              position="left"
+              show={!canEdit}
             >
-              <Plus className="mr-1 h-3 w-3" /> Enrich data
-            </button>
+              <button
+                type="button"
+                className={`btn btn-sm btn-primary btn-outline ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={onEnrichData}
+                disabled={!canEdit}
+              >
+                <Plus className="mr-1 h-3 w-3" /> Enrich data
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>

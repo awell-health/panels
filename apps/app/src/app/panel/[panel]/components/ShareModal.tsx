@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { X, Search, User, Trash2, Eye, Edit } from 'lucide-react'
+import { X, User, Trash2, Eye, Edit } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Select from 'react-select'
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
@@ -18,7 +18,7 @@ import { useParams } from 'next/navigation'
 import type { ACL } from '@panels/types/acls'
 import { formatDate } from '@medplum/core'
 import { orderBy, startCase } from 'lodash'
-import { useToast, useToastHelpers } from '../../../../contexts/ToastContext'
+import { useToastHelpers } from '../../../../contexts/ToastContext'
 
 type Permission = 'viewer' | 'editor' | 'owner'
 
@@ -149,6 +149,11 @@ export function ShareModal({ isOpen, onClose, viewName }: ShareModalProps) {
     (member) =>
       !sharedUsers.some((user) => user.userEmail === member.email_address),
   )
+  filteredOrganizationMembers?.push({
+    member_id: '_all',
+    email_address: '_all',
+    name: 'Everyone',
+  })
   const organizationMembersOptions = orderBy(
     filteredOrganizationMembers?.map((member) => ({
       value: member.email_address,

@@ -21,8 +21,6 @@ import {
   CheckSquare,
   Copy,
   FileText,
-  Edit2Icon,
-  EditIcon,
   Edit3Icon,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -600,16 +598,15 @@ export default function PanelNavigation({
             ))}
 
             {/* Add View Button */}
-            {canEdit && (
-              <button
-                type="button"
-                className="ml-2 mb-[-1px] h-9 px-3 flex items-center text-sm text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-t-md border-l border-t border-r border-gray-200 whitespace-nowrap"
-                onClick={() => setShowCreateViewModal(true)}
-              >
-                <Plus className="h-3 w-3 mr-1 flex-shrink-0" />
-                <span className="text-xs">Add View</span>
-              </button>
-            )}
+
+            <button
+              type="button"
+              className="ml-2 mb-[-1px] h-9 px-3 flex items-center text-sm text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-t-md border-l border-t border-r border-gray-200 whitespace-nowrap"
+              onClick={() => setShowCreateViewModal(true)}
+            >
+              <Plus className="h-3 w-3 mr-1 flex-shrink-0" />
+              <span className="text-xs">Add View</span>
+            </button>
           </div>
         </div>
       </div>

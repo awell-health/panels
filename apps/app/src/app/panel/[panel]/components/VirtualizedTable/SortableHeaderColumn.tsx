@@ -63,11 +63,12 @@ export function SortableHeaderColumn({
 
   const { hasPermission } = useACL()
   const { view, panel } = useParams()
-  const resourceId = (view || panel) as string
 
-  const canEdit = resourceId
-    ? hasPermission('panel', resourceId, 'editor')
-    : false
+  const canEdit = view
+    ? hasPermission('view', view as string, 'editor')
+    : panel
+      ? hasPermission('panel', panel as string, 'editor')
+      : false
 
   const sortableStyle: React.CSSProperties = {
     ...style,

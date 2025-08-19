@@ -5,7 +5,6 @@ import { createContext, useContext, useEffect, useState, useMemo } from 'react'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import type { ACL } from '@panels/types/acls'
-import type { Panel } from '@/types/panel'
 
 type ResourceType = 'panel' | 'view'
 
@@ -27,7 +26,7 @@ interface ACLContextType {
     permission: 'viewer' | 'editor' | 'owner',
   ) => boolean
   // Get all ACLs for current user
-  getAllUserACLs: () => Record<string, ACL>
+  getAllUserACLs: () => Record<string, ACL | null>
   // Loading state
   isLoading: boolean
   // Refresh ACLs for a specific resource
@@ -46,9 +45,9 @@ interface ACLProviderProps {
 }
 
 export function ACLProvider({ children }: ACLProviderProps) {
-  const { email } = useAuthentication()
+  const { email, isAdmin } = useAuthentication()
   const { getACLs } = useReactivePanelStore()
-  const [acls, setAcls] = useState<Record<string, ACL>>({})
+  const [acls, setAcls] = useState<Record<string, ACL | null>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [loadedResources, setLoadedResources] = useState<Set<string>>(new Set())
 
@@ -130,6 +129,10 @@ export function ACLProvider({ children }: ACLProviderProps) {
     resourceId: string | number,
     permission: 'viewer' | 'editor' | 'owner',
   ): boolean => {
+    if (isAdmin) {
+      return true
+    }
+
     const userRole = getUserRole(resourceType, resourceId)
     if (!userRole) return false
 
@@ -146,7 +149,7 @@ export function ACLProvider({ children }: ACLProviderProps) {
   }
 
   // Get all ACLs for current user
-  const getAllUserACLs = (): Record<string, ACL> => {
+  const getAllUserACLs = (): Record<string, ACL | null> => {
     return acls
   }
 
