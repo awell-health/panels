@@ -60,6 +60,7 @@ export default function PanelNavigation({
   const [viewToDelete, setViewToDelete] = useState<{
     id: string
     title: string
+    viewType: 'panel' | 'view'
   } | null>(null)
   const [deletingViewId, setDeletingViewId] = useState<string | null>(null)
   const [creatingView, setCreatingView] = useState(false)
@@ -123,8 +124,12 @@ export default function PanelNavigation({
     setEditingViewId(null)
   }
 
-  const handleDeleteViewClick = (viewId: string, viewTitle: string) => {
-    setViewToDelete({ id: viewId, title: viewTitle })
+  const handleDeleteViewClick = (
+    viewId: string,
+    viewTitle: string,
+    viewType: 'panel' | 'view',
+  ) => {
+    setViewToDelete({ id: viewId, title: viewTitle, viewType })
     setShowDeleteModal(true)
   }
 
@@ -136,11 +141,11 @@ export default function PanelNavigation({
     setDeletingViewId(viewToDelete.id)
 
     try {
-      if (viewToDelete.id === panel.id) {
+      if (viewToDelete.viewType === 'panel' && viewToDelete.id === panel.id) {
         // Deleting the panel
         await deletePanel?.(viewToDelete.id)
         router.push('/')
-      } else {
+      } else if (viewToDelete.viewType === 'view') {
         // Deleting a view
         await deleteView?.(panel.id, viewToDelete.id)
         // Navigate to panel if we're deleting the currently selected view
@@ -471,10 +476,11 @@ export default function PanelNavigation({
                     {canEdit && (
                       <button
                         type="button"
+                        id="remove-view-id"
                         className="ml-2 text-gray-400 hover:text-gray-600"
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleDeleteViewClick(panel.id, panel.name)
+                          handleDeleteViewClick(panel.id, panel.name, 'panel')
                         }}
                       >
                         <X className="h-3 w-3" />
@@ -585,7 +591,11 @@ export default function PanelNavigation({
                           className="ml-2 text-gray-400 hover:text-gray-600"
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleDeleteViewClick(view.id, view.name || '')
+                            handleDeleteViewClick(
+                              view.id,
+                              view.name || '',
+                              'view',
+                            )
                           }}
                         >
                           <X className="h-3 w-3" />
@@ -686,8 +696,12 @@ export default function PanelNavigation({
         isOpen={showDeleteModal}
         onClose={handleDeleteModalClose}
         onConfirm={handleDeleteViewConfirm}
-        title={viewToDelete?.id === panel.id ? 'Delete Panel' : 'Delete View'}
-        message={`Are you sure you want to delete the ${viewToDelete?.id === panel.id ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
+        title={
+          viewToDelete?.id === panel.id && viewToDelete?.viewType === 'panel'
+            ? 'Delete Panel'
+            : 'Delete View'
+        }
+        message={`Are you sure you want to delete the ${viewToDelete?.viewType === 'panel' ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
         isDeleting={!!deletingViewId}
       />
     </>
