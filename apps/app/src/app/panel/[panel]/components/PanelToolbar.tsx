@@ -76,19 +76,12 @@ export default function PanelToolbar({
         {!isViewPage && (
           <div className="flex items-center space-x-2 mr-2">
             {/* View dropdown - only show on panel page */}
-            <Tooltip
-              content="You don't have permissions to change views on this panel"
-              show={!canEditPanel}
-              position="bottom"
-            >
-              <div>
-                <WorklistViewDropDown
-                  currentView={currentView}
-                  onViewChange={setCurrentView || (() => {})}
-                  disabled={!canEditPanel}
-                />
-              </div>
-            </Tooltip>
+            <div>
+              <WorklistViewDropDown
+                currentView={currentView}
+                onViewChange={setCurrentView || (() => {})}
+              />
+            </div>
           </div>
         )}
 
