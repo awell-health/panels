@@ -6,7 +6,7 @@ import { useOrganizationMembers } from '@/hooks/use-organization-members'
 import type { ACL, ACLCreate, ACLUpdate } from '@panels/types/acls'
 import type { Panel, View } from '@/types/panel'
 
-export function ACLTestComponent() {
+export function ACLManager() {
   const { store, getACLs, createACL, updateACL, deleteACL } =
     useReactivePanelStore()
   const {

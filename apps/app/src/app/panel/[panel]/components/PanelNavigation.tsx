@@ -473,7 +473,7 @@ export default function PanelNavigation({
                       {panel.name}
                     </span>
                     {getSaveStatusIcon(panel.id)}
-                    {canEdit && (
+                    {canEdit && !selectedViewId && (
                       <button
                         type="button"
                         id="remove-view-id"
@@ -585,7 +585,7 @@ export default function PanelNavigation({
                         {view.name}
                       </span>
                       {getSaveStatusIcon(view.id)}
-                      {canEdit && (
+                      {canEdit && view.id === selectedViewId && (
                         <button
                           type="button"
                           className="ml-2 text-gray-400 hover:text-gray-600"

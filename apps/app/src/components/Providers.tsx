@@ -18,6 +18,7 @@ import type {
   StytchB2BUIClient,
   StytchProjectConfiguration,
 } from '@stytch/vanilla-js/dist/b2b'
+import { PanelUserGuard } from './PanelUserGuard'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [authStytchPublicToken, setAuthStytchPublicToken] = useState<
@@ -72,19 +73,21 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }
         >
           <AuthenticationStoreProvider>
-            <MedplumClientProvider>
-              <AwellApolloProvider>
-                <ReactivePanelStoreProvider>
-                  <ACLProvider>
-                    <ToastProvider>
-                      {children}
-                      <ToastContainer position="bottom-center" />
-                      <CaptureWidget />
-                    </ToastProvider>
-                  </ACLProvider>
-                </ReactivePanelStoreProvider>
-              </AwellApolloProvider>
-            </MedplumClientProvider>
+            <PanelUserGuard>
+              <MedplumClientProvider>
+                <AwellApolloProvider>
+                  <ReactivePanelStoreProvider>
+                    <ACLProvider>
+                      <ToastProvider>
+                        {children}
+                        <ToastContainer position="bottom-center" />
+                        <CaptureWidget />
+                      </ToastProvider>
+                    </ACLProvider>
+                  </ReactivePanelStoreProvider>
+                </AwellApolloProvider>
+              </MedplumClientProvider>
+            </PanelUserGuard>
           </AuthenticationStoreProvider>
         </AuthenticationGuard>
       </CookiesProvider>

@@ -5,7 +5,6 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { Filter as FilterType, Sort, Column } from '@/types/panel'
 import { cn } from '@/lib/utils'
-import { Tooltip } from '@/components/ui/tooltip'
 
 interface FilterSortIndicatorsProps {
   filters: FilterType[]
@@ -119,7 +118,6 @@ export function FilterSortIndicators({
   }
 
   const toggleDropdown = () => {
-    if (!canEdit) return
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       setDropdownPosition({
@@ -205,33 +203,19 @@ export function FilterSortIndicators({
 
   return (
     <>
-      <Tooltip
-        content="You don't have permissions to modify filters and sorting"
-        show={!canEdit}
-        position="left"
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={toggleDropdown}
+        className={cn('btn btn-sm btn-accent min-w-32', className)}
       >
-        <button
-          ref={buttonRef}
-          type="button"
-          onClick={toggleDropdown}
-          className={cn(
-            'btn btn-sm btn-accent min-w-32',
-            className,
-            !canEdit && 'opacity-50 cursor-not-allowed',
-          )}
-          disabled={!canEdit}
-        >
-          {filters.length > 0 && <Filter className="h-3 w-3" />}
-          {sort && <SortAsc className="h-3 w-3" />}
-          <span>{buildButtonText()}</span>
-          <ChevronDown
-            className={cn(
-              'h-3 w-3 transition-transform',
-              isOpen && 'rotate-180',
-            )}
-          />
-        </button>
-      </Tooltip>
+        {filters.length > 0 && <Filter className="h-3 w-3" />}
+        {sort && <SortAsc className="h-3 w-3" />}
+        <span>{buildButtonText()}</span>
+        <ChevronDown
+          className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')}
+        />
+      </button>
       {dropdownContent && createPortal(dropdownContent, document.body)}
     </>
   )

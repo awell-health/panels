@@ -8,6 +8,13 @@ import type { ACL } from '@panels/types/acls'
 
 type ResourceType = 'panel' | 'view'
 
+// Permission hierarchy - higher numbers mean more permissions
+const PERMISSION_LEVELS = {
+  viewer: 1,
+  editor: 2,
+  owner: 3,
+} as const
+
 interface ACLContextType {
   // Get user role for a specific resource
   getUserRole: (
@@ -45,7 +52,7 @@ interface ACLProviderProps {
 }
 
 export function ACLProvider({ children }: ACLProviderProps) {
-  const { email, isAdmin } = useAuthentication()
+  const { email, user, isAdmin } = useAuthentication()
   const { getACLs } = useReactivePanelStore()
   const [acls, setAcls] = useState<Record<string, ACL | null>>({})
   const [isLoading, setIsLoading] = useState(false)
@@ -73,17 +80,40 @@ export function ACLProvider({ children }: ACLProviderProps) {
 
     try {
       const resourceACLs = await getACLs(resourceType, Number(resourceId))
+      const allACL = resourceACLs.find((acl) => acl.userEmail === '_all')
+      // We need to keep member id check for now to keep owner access to old views.
       const userACL =
-        resourceACLs.find((acl) => acl.userEmail === email) || null
+        resourceACLs.find(
+          (acl) => acl.userEmail === email || acl.userEmail === user?.member_id,
+        ) || null
+
+      // Choose the ACL with the highest permissions between user-specific and "_all"
+      let finalACL = userACL
+      if (allACL && userACL) {
+        // If both exist, choose the one with higher permissions
+        const allLevel =
+          PERMISSION_LEVELS[
+            allACL.permission as keyof typeof PERMISSION_LEVELS
+          ] || 0
+        const userLevel =
+          PERMISSION_LEVELS[
+            userACL.permission as keyof typeof PERMISSION_LEVELS
+          ] || 0
+        finalACL = allLevel > userLevel ? allACL : userACL
+      } else if (allACL) {
+        // If only "_all" exists, use it
+        finalACL = allACL
+      }
+      // If only userACL exists, finalACL is already set to userACL
 
       setAcls((prev) => ({
         ...prev,
-        [key]: userACL,
+        [key]: finalACL,
       }))
 
       setLoadedResources((prev) => new Set(prev).add(key))
 
-      return userACL
+      return finalACL
     } catch (error) {
       console.error(
         `Failed to fetch ACL for ${resourceType} ${resourceId}:`,
@@ -136,15 +166,9 @@ export function ACLProvider({ children }: ACLProviderProps) {
     const userRole = getUserRole(resourceType, resourceId)
     if (!userRole) return false
 
-    const permissionLevels = {
-      viewer: 1,
-      editor: 2,
-      owner: 3,
-    }
-
     return (
-      permissionLevels[userRole as keyof typeof permissionLevels] >=
-      permissionLevels[permission]
+      PERMISSION_LEVELS[userRole as keyof typeof PERMISSION_LEVELS] >=
+      PERMISSION_LEVELS[permission]
     )
   }
 

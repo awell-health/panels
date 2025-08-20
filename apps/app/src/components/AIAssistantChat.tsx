@@ -5,7 +5,6 @@ import { Send, MessageSquare, RotateCcw, Copy, Check } from 'lucide-react'
 import Markdown from 'react-markdown'
 import { useAIConversation } from '@/hooks/use-ai-conversation'
 import { chatWithAI } from '../app/actions/ai-chat'
-import { isValidElement, type ReactNode } from 'react'
 
 interface AIAssistantChatProps {
   currentJson: string
