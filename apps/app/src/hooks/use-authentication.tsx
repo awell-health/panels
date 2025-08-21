@@ -48,6 +48,13 @@ export class AuthenticationStore {
     )
   }
 
+  isPanelsUser = () => {
+    return (
+      this.user?.roles.map((role) => role.role_id).includes('Panels User') ||
+      this.isBuilder()
+    )
+  }
+
   getRoles = () => {
     return this.user?.roles
   }
@@ -210,6 +217,7 @@ export function useAuthentication() {
   const currentRoles = store.getRoles()
   const currentIsAdmin = store.isAdmin()
   const currentIsBuilder = store.isBuilder()
+  const currentIsPanelsUser = store.isPanelsUser()
 
   // Use useMemo to create a stable object that only changes when the underlying data changes
   const authData = useMemo(
@@ -226,6 +234,7 @@ export function useAuthentication() {
       email: currentEmail,
       isAdmin: currentIsAdmin,
       isBuilder: currentIsBuilder,
+      isPanelUser: currentIsPanelsUser,
       roles: currentRoles,
     }),
     [
@@ -240,6 +249,7 @@ export function useAuthentication() {
       currentName,
       currentEmail,
       currentIsAdmin,
+      currentIsPanelsUser,
       currentRoles,
       currentIsBuilder,
     ],

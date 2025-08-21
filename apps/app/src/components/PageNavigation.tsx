@@ -1,5 +1,6 @@
 'use client'
 
+import { useAuthentication } from '@/hooks/use-authentication'
 import { Menu, LayoutGrid, Settings, X, Users } from 'lucide-react'
 import Link from 'next/link'
 
@@ -15,6 +16,7 @@ interface PageNavigationProps {
 
 function PageNavigation(props: PageNavigationProps) {
   const { children, title, description, breadcrumb } = props
+  const { isAdmin } = useAuthentication()
 
   const navigationItems = [
     {
@@ -29,12 +31,16 @@ function PageNavigation(props: PageNavigationProps) {
       icon: Settings,
       path: '/settings',
     },
-    {
-      id: 'acl-test' as const,
-      label: 'ACL Test',
-      icon: Users,
-      path: '/test-acl',
-    },
+    ...(isAdmin
+      ? [
+          {
+            id: 'acl-test' as const,
+            label: 'Manage ACLs',
+            icon: Users,
+            path: '/manage-acls',
+          },
+        ]
+      : []),
   ]
 
   return (
