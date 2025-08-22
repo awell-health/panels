@@ -4,6 +4,7 @@ import FramePanel from '../FramePanel'
 import StaticContent from '../StaticContent'
 import ConnectorsSection from './ConnectorsSection'
 import TaskAsignment from './TaskAsignment'
+import type { CodeableConcept, Coding } from '@medplum/fhirtypes'
 
 interface TaskDetailsProps {
   task: WorklistTask
@@ -28,6 +29,16 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
     return null
   }
 
+  // Check if task has performer type PT (Physical Therapist/Patient)
+  const isPatientTask = task.performerType?.some(
+    (performerType: CodeableConcept) =>
+      performerType.coding?.some(
+        (coding: Coding) =>
+          coding.code === 'PT' &&
+          coding.system === 'http://terminology.hl7.org/CodeSystem/v3-RoleCode',
+      ),
+  )
+
   const AHP_URL = getAwellHostedPagesUrl(AHP_CODE)
 
   return (
@@ -43,11 +54,25 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
             <div className="flex flex-col h-full">
               <TaskAsignment task={task} />
               <div className="flex-1 overflow-hidden">
-                <FramePanel
-                  url={AHP_URL}
-                  status={task.status}
-                  taskName={task.description}
-                />
+                {isPatientTask ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-lg font-medium text-gray-900 mb-2">
+                        Pending Patient Task Completion
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        This task is assigned to the patient and cannot be
+                        completed through panels.
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <FramePanel
+                    url={AHP_URL}
+                    status={task.status}
+                    taskName={task.description}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -55,7 +80,10 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
             <>
               <StaticContent task={task} />
               <div className="mt-4">
-                <ConnectorsSection task={task} showAhpConnector={!!AHP_URL} />
+                <ConnectorsSection
+                  task={task}
+                  showAhpConnector={!!AHP_URL && !isPatientTask}
+                />
               </div>
             </>
           )}
