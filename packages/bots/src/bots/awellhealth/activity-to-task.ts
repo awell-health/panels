@@ -8,6 +8,7 @@
  * - Patient: Created (when patient does not exist) - Minimal record with identifier array (Awell identifier) and active status only
  * - Task: Created (when no existing task found) - Complete resource with Awell context extensions, pathway details, activity metadata, status, and subject reference
  * - Task: Updated (when existing task found) - Status and statusReason fields only
+ * - Task: Created/Updated (when PATIENT_TASKS_INGESTION_ENABLED env var is set and indirect_object.type is 'patient') - Includes owner reference to the patient
  *
  * Process Overview:
  * - Receives Awell activity webhook payload with comprehensive activity and pathway context
@@ -15,6 +16,7 @@
  * - Transforms activity data into FHIR Task resource format with proper subject, description, and status mapping
  * - Creates Awell-specific extensions including pathway context, activity details, track information, and action components
  * - Handles task status mapping from Awell activity status to FHIR Task status with proper lifecycle management
+ * - When PATIENT_TASKS_INGESTION_ENABLED environment variable is set, also processes patient activities and sets owner to the patient
  */
 
 import type { BotEvent, MedplumClient } from '@medplum/core'
@@ -277,6 +279,24 @@ async function createOrUpdateTask(
     task.statusReason = statusReason
   }
 
+  // Add performer type and owner for patient activities when enabled
+  if (activity.indirect_object?.type === 'patient') {
+    task.performerType = [
+      {
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/v3-RoleCode',
+            code: 'PT',
+            display: 'Patient',
+          },
+        ],
+        text: 'Patient',
+      },
+    ]
+    // Set the owner to reference the patient
+    task.owner = { reference: `Patient/${patientId}`, display: 'Patient' }
+  }
+
   if (existingTask?.id) {
     const freshTask = await medplum.readResource('Task', existingTask.id)
     const resultTask = await medplum.updateResource({
@@ -294,17 +314,30 @@ async function createOrUpdateTask(
 // Main handler
 export async function handler(
   medplum: MedplumClient,
-  event: BotEvent<ActivityData>,
+  event: BotEvent<ActivityData> & {
+    secrets: { PATIENT_TASKS_INGESTION_ENABLED?: { valueString?: string } }
+  },
 ): Promise<void> {
   const { activity, patient_id: awellPatientId, pathway } = event.input
 
-  if (activity.indirect_object?.type !== 'stakeholder') {
-    console.log('Not a stakeholder activity, skipping bot execution')
+  // Check if we should process patient activities
+  const isPatientActivityAndEnabled =
+    event.secrets.PATIENT_TASKS_INGESTION_ENABLED?.valueString === 'true' &&
+    activity.indirect_object?.type === 'patient'
+
+  // Only process stakeholder activities, or patient activities if enabled
+  if (
+    activity.indirect_object?.type !== 'stakeholder' &&
+    !isPatientActivityAndEnabled
+  ) {
+    console.log(
+      `Not a stakeholder or enabled patient activity, skipping bot execution (PATIENT_TASKS_INGESTION_ENABLED: ${event.secrets.PATIENT_TASKS_INGESTION_ENABLED?.valueString}) and indirect object type: ${activity.indirect_object?.type}`,
+    )
     return
   }
 
   console.log(
-    `Starting activity-to-task process for activity ${activity.id} (${event.input.event_type})`,
+    `Starting activity-to-task process for activity ${activity.id} (${event.input.event_type}) - indirect object type: ${activity.indirect_object?.type}`,
   )
 
   try {
@@ -312,7 +345,7 @@ export async function handler(
     await createOrUpdateTask(medplum, activity, patientId, pathway, event.input)
 
     console.log(
-      `Activity-to-task completed successfully for activity ${activity.id}: task processed with status '${activity.status}'`,
+      `Activity-to-task completed successfully for activity ${activity.id}: task processed with status '${activity.status}', indirect object type: '${activity.indirect_object?.type}'`,
     )
   } catch (error) {
     const errorMessage =
