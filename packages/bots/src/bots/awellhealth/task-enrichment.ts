@@ -11,7 +11,7 @@
  * Process Overview:
  * - Receives Task resource via subscription with Awell context extensions
  * - Fetches pathway data points and definitions from Awell GraphQL API
- * - Generates hosted pages link for task completion UI
+ * - Generates hosted pages link for task completion UI (skipped for tasks with performer type PT)
  * - Creates enrichment status tracking extensions
  * - Merges new extensions with existing task extensions recursively
  * - Updates Task resource with comprehensive enriched data and connector inputs
@@ -388,6 +388,7 @@ function createSingleDataPointExtensions(
 async function createConnectorInputs(
   config: ApiConfig,
   extensionData: TaskExtensionData,
+  task: Task,
 ): Promise<TaskInput[]> {
   const connectorInputs: TaskInput[] = []
 
@@ -406,8 +407,23 @@ async function createConnectorInputs(
     valueUrl: connectorUrl,
   })
 
-  // Add Awell Hosted Pages connector if stakeholder ID is available
-  if (extensionData.stakeholderId) {
+  // Check if task has performer type PT (Physical Therapist) - skip hosted pages link for these
+  const isPatientTask = task.performerType?.some((performerType) =>
+    performerType.coding?.some(
+      (coding) =>
+        coding.code === 'PT' &&
+        coding.system === 'http://terminology.hl7.org/CodeSystem/v3-RoleCode',
+    ),
+  )
+
+  if (isPatientTask) {
+    console.log(
+      `Skipping hosted pages link for task ${task.id} due to Patient performer type`,
+    )
+  }
+
+  // Add Awell Hosted Pages connector if stakeholder ID is available and not PT performer type
+  if (extensionData.stakeholderId && !isPatientTask) {
     const hostedPagesLink = await fetchHostedPagesLink(
       config,
       extensionData.pathwayId,
@@ -653,6 +669,7 @@ export async function handler(
       const newConnectorInputs = await createConnectorInputs(
         apiConfig,
         extensionData,
+        task,
       )
       updatedInputs.push(...newConnectorInputs)
     }
