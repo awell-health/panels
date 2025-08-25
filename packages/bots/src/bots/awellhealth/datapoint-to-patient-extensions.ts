@@ -6,10 +6,13 @@
  *
  * FHIR Resources Created/Updated:
  * - Patient: Updated (always) - Extensions array with datapoint extensions, replacing existing ones with matching URLs
+ *   - Creates main datapoint extension using definition_key as URL
+ *   - When label is present, creates additional extension using {definition_key}_label as URL
  *
  * Process Overview:
- * - Receives Awell datapoint webhook payload with datapoint definition_key, definition_category, and value
+ * - Receives Awell datapoint webhook payload with datapoint definition_key, definition_category, value, and label
  * - Creates FHIR extensions for the datapoint using definition_key as the extension URL
+ * - When a label is present, creates an additional extension with {definition_key}_label as the URL
  * - Updates Patient resource using atomic patch operations to avoid race conditions
  * - Handles both standard and JSON datapoints with appropriate extension structures
  * - No external API calls required - all data comes directly from the webhook payload
@@ -75,9 +78,18 @@ function createDataPointExtensions(
   }
 
   const value = dataPoint.value?.toString() || ''
-  const baseExtension = { url: dataPoint.definition_key, valueString: value }
+  const extensions: Extension[] = []
 
-  return [baseExtension]
+  // Always create the main datapoint extension
+  extensions.push({ url: dataPoint.definition_key, valueString: value })
+
+  // If a label is present, create an additional extension with {key}_label
+  if (dataPoint.label && dataPoint.label.trim() !== '') {
+    const labelKey = `${dataPoint.definition_key}_label`
+    extensions.push({ url: labelKey, valueString: dataPoint.label })
+  }
+
+  return extensions
 }
 
 function createDataPointExtensionGroups(
@@ -372,11 +384,23 @@ export async function handler(
 ): Promise<void> {
   const { data_point, pathway, patient_id } = event.input
 
+  if (
+    data_point.definition_key === 'ActivationDate' ||
+    data_point.definition_key === 'CompletionDate'
+  ) {
+    console.log(
+      'Skipping datapoint with definition_key ActivationDate or CompletionDate',
+    )
+    return
+  }
+
   console.log(
     'Bot started processing datapoint for patient storage:',
     JSON.stringify(
       {
         dataPointId: data_point.id,
+        dataPointKey: data_point.definition_key,
+        dataPointLabel: data_point.label,
         eventType: event.input.event_type,
         pathwayId: event.input.pathway_id,
         patientId: patient_id,
@@ -431,6 +455,10 @@ export async function handler(
           patientId: medplumPatientId,
           extensionGroupsCreated: dataPointExtensions.length,
           definitionKey: data_point.definition_key || 'unknown',
+          hasLabel: !!data_point.label,
+          extensionsCreated: dataPointExtensions.flatMap(
+            (group) => group.extension || [],
+          ).length,
         },
         null,
         2,
