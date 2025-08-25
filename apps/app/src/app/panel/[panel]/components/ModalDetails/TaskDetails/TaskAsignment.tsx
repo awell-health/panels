@@ -3,13 +3,17 @@ import { useAuthentication } from '../../../../../../hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import type { WorklistTask } from '@/lib/fhir-to-table-data'
 import { cn } from '../../../../../../lib/utils'
+import { Tooltip } from '@/components/ui/tooltip'
 
 type AssigneeState = {
   value: unknown
   isPending: boolean
 }
 
-const TaskAsignment = ({ task }: { task: WorklistTask }) => {
+const TaskAsignment = ({
+  task,
+  blockAssignee = false,
+}: { task: WorklistTask; blockAssignee: boolean }) => {
   const { user } = useAuthentication()
   const { toggleTaskOwner } = useMedplumStore()
   const [isPending, startTransition] = useTransition()
@@ -71,26 +75,32 @@ const TaskAsignment = ({ task }: { task: WorklistTask }) => {
           </span>
         </div>
 
-        {currentValue ? (
-          <button
-            type="button"
-            className={buttonClassNames}
-            onClick={handleAssigneeClick}
-            title={isCurrentUser ? 'Unassign' : 'Reassign to me'}
-            disabled={isPending}
-          >
-            {isPending ? loader : isCurrentUser ? 'Unassign' : 'Assign to me'}
-          </button>
-        ) : (
-          <button
-            type="button"
-            className={buttonClassNames}
-            onClick={handleAssigneeClick}
-            disabled={isPending}
-          >
-            {isPending ? loader : 'Assign to me'}
-          </button>
-        )}
+        <Tooltip
+          position="left"
+          content="A patient task cannot be assigned through panels."
+          show={blockAssignee}
+        >
+          {currentValue ? (
+            <button
+              type="button"
+              className={buttonClassNames}
+              onClick={handleAssigneeClick}
+              title={isCurrentUser ? 'Unassign' : 'Reassign to me'}
+              disabled={isPending || blockAssignee}
+            >
+              {isPending ? loader : isCurrentUser ? 'Unassign' : 'Assign to me'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={buttonClassNames}
+              onClick={handleAssigneeClick}
+              disabled={isPending || blockAssignee}
+            >
+              {isPending ? loader : 'Assign to me'}
+            </button>
+          )}
+        </Tooltip>
       </div>
     </div>
   )

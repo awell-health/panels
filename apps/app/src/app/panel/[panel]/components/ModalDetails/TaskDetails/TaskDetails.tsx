@@ -52,27 +52,14 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
         >
           {view === 'ahp' && (
             <div className="flex flex-col h-full">
-              <TaskAsignment task={task} />
+              <TaskAsignment task={task} blockAssignee={isPatientTask} />
               <div className="flex-1 overflow-hidden">
-                {isPatientTask ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <div className="text-lg font-medium text-gray-900 mb-2">
-                        Pending Patient Task Completion
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        This task is assigned to the patient and cannot be
-                        completed through panels.
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <FramePanel
-                    url={AHP_URL}
-                    status={task.status}
-                    taskName={task.description}
-                  />
-                )}
+                <FramePanel
+                  url={AHP_URL}
+                  status={task.status}
+                  taskName={task.description}
+                  isPatientTask={isPatientTask}
+                />
               </div>
             </div>
           )}
