@@ -4,6 +4,7 @@ import { useOptimistic, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { BaseCell } from './BaseCell'
 import type { InteractiveCellProps } from './types'
+import type { CodeableConcept, Coding } from '@medplum/fhirtypes'
 
 type AssigneeState = {
   value: unknown
@@ -28,7 +29,20 @@ export function AssigneeCell(props: InteractiveCellProps) {
     }
   })
 
+  const isPatientTask = props.row.performerType?.some(
+    (performerType: CodeableConcept) =>
+      performerType.coding?.some(
+        (coding: Coding) =>
+          coding.code === 'PT' &&
+          coding.system === 'http://terminology.hl7.org/CodeSystem/v3-RoleCode',
+      ),
+  )
+
   const handleClick = async () => {
+    if (isPatientTask) {
+      return
+    }
+
     const isCurrentUser =
       String(optimisticState.value || '')
         .toLowerCase()
@@ -57,7 +71,16 @@ export function AssigneeCell(props: InteractiveCellProps) {
   return (
     <BaseCell {...props}>
       <div className="flex items-center">
-        {currentValue ? (
+        {isPatientTask ? (
+          // Display as non-interactive button for patient tasks to match styling
+          <button
+            type="button"
+            className="btn btn-xs btn-ghost"
+            style={{ pointerEvents: 'none' }}
+          >
+            <span>{currentValue ? String(currentValue) : 'Patient'}</span>
+          </button>
+        ) : currentValue ? (
           <button
             type="button"
             className={cn('btn btn-xs btn-ghost group', {
