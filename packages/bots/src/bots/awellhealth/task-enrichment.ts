@@ -595,30 +595,6 @@ async function fetchDataPointsForTaskStatus(
   return []
 }
 
-async function updatePatientWithDataPointExtensions(
-  medplum: MedplumClient,
-  task: Task,
-  dataPointExtensions: Extension[],
-): Promise<void> {
-  if (dataPointExtensions.length === 0) return
-
-  const patientId = task.for?.reference?.split('/')[1]
-  if (!patientId) {
-    throw new Error('No patient reference found in task')
-  }
-
-  const patient = await medplum.readResource('Patient', patientId)
-  const mergedExtensions = mergeExtensions(
-    patient.extension || [],
-    dataPointExtensions,
-  )
-
-  await medplum.updateResource({
-    ...patient,
-    extension: mergedExtensions,
-  })
-}
-
 export async function handler(
   medplum: MedplumClient,
   event: BotEvent<Task>,
@@ -705,14 +681,6 @@ export async function handler(
         ...dataPointExtensions,
       ]),
     })
-
-    if (dataPointExtensions.length > 0) {
-      await updatePatientWithDataPointExtensions(
-        medplum,
-        freshTask,
-        dataPointExtensions,
-      )
-    }
 
     console.log(
       `Enrichment completed successfully for task ${task.id}: processed ${dataPoints.length} data points, added ${updatedInputs.length} connector inputs, updated ${dataPointExtensions.length > 0 ? 'patient' : 'task only'}`,
