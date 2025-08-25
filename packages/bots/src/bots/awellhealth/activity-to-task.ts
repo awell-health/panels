@@ -20,7 +20,7 @@
  */
 
 import type { BotEvent, MedplumClient } from '@medplum/core'
-import type { Patient, Task } from '@medplum/fhirtypes'
+import type { Extension, Patient, Task } from '@medplum/fhirtypes'
 
 interface ActivityData {
   activity: {
@@ -92,10 +92,34 @@ interface ActivityData {
   patient_id: string
 }
 
+function createPatientBotProcessedExtension(
+  eventType: string,
+  timestamp: string,
+): Extension {
+  return {
+    url: 'https://awellhealth.com/fhir/StructureDefinition/awell-patient-bot-processed',
+    extension: [
+      {
+        url: 'event-type',
+        valueString: eventType,
+      },
+      {
+        url: 'processed-at',
+        valueDateTime: timestamp,
+      },
+      {
+        url: 'bot-version',
+        valueString: '1.0.0',
+      },
+    ],
+  }
+}
+
 // Task related functions
 async function findOrCreatePatient(
   medplum: MedplumClient,
   awellPatientId: string,
+  eventType: string,
 ): Promise<string> {
   // Search for existing patient first
   const searchQuery = {
@@ -111,7 +135,7 @@ async function findOrCreatePatient(
     return existingPatient.id
   }
 
-  // Patient does not exist - create minimal patient record with only identifier
+  // Patient does not exist - create minimal patient record with only identifier and creation extension
   const minimalPatient: Patient = {
     resourceType: 'Patient',
     identifier: [
@@ -120,10 +144,16 @@ async function findOrCreatePatient(
         value: awellPatientId,
       },
     ],
+    extension: [
+      createPatientBotProcessedExtension(eventType, new Date().toISOString()),
+    ],
     active: true,
   }
 
-  const createdPatient = await medplum.createResource(minimalPatient)
+  const createdPatient = await medplum.upsertResource(
+    minimalPatient,
+    searchQuery,
+  )
 
   return createdPatient.id || ''
 }
@@ -318,7 +348,12 @@ export async function handler(
     secrets: { PATIENT_TASKS_INGESTION_ENABLED?: { valueString?: string } }
   },
 ): Promise<void> {
-  const { activity, patient_id: awellPatientId, pathway } = event.input
+  const {
+    activity,
+    patient_id: awellPatientId,
+    pathway,
+    event_type,
+  } = event.input
 
   // Check if we should process patient activities
   const isPatientActivityAndEnabled =
@@ -341,7 +376,11 @@ export async function handler(
   )
 
   try {
-    const patientId = await findOrCreatePatient(medplum, awellPatientId)
+    const patientId = await findOrCreatePatient(
+      medplum,
+      awellPatientId,
+      event_type,
+    )
     await createOrUpdateTask(medplum, activity, patientId, pathway, event.input)
 
     console.log(
