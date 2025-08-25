@@ -108,38 +108,39 @@ export default function WorklistPage() {
   const visibleColumns = columnVisibilityContext.getVisibleColumns()
 
   // Maintain separate arrays for locked and unlocked columns to preserve drag-drop order within groups
-  const { lockedColumns, unlockedColumns, allColumnsOrdered } = useMemo(() => {
-    const enhancedColumns = visibleColumns.map((column) => ({
-      ...column,
-      properties: {
-        ...column.properties,
-        display: {
-          ...column.properties?.display,
-          // Set locked state based on current context (panel-level or view-specific)
-          locked:
-            isColumnLocked(column.id) ||
-            (column.properties?.display?.locked ?? false),
+  const { lockedColumns, unlockedColumns, visibleColumnsSorted } =
+    useMemo(() => {
+      const enhancedColumns = visibleColumns.map((column) => ({
+        ...column,
+        properties: {
+          ...column.properties,
+          display: {
+            ...column.properties?.display,
+            // Set locked state based on current context (panel-level or view-specific)
+            locked:
+              isColumnLocked(column.id) ||
+              (column.properties?.display?.locked ?? false),
+          },
         },
-      },
-    }))
+      }))
 
-    // Separate into locked and unlocked arrays, preserving order within each group
-    const locked = enhancedColumns.filter(
-      (col) => col.properties?.display?.locked,
-    )
-    const unlocked = enhancedColumns.filter(
-      (col) => !col.properties?.display?.locked,
-    )
+      // Separate into locked and unlocked arrays, preserving order within each group
+      const locked = enhancedColumns.filter(
+        (col) => col.properties?.display?.locked,
+      )
+      const unlocked = enhancedColumns.filter(
+        (col) => !col.properties?.display?.locked,
+      )
 
-    // Always merge locked first, then unlocked (required for sticky positioning)
-    const allOrdered = [...locked, ...unlocked]
+      // Always merge locked first, then unlocked (required for sticky positioning)
+      const allOrdered = [...locked, ...unlocked]
 
-    return {
-      lockedColumns: locked,
-      unlockedColumns: unlocked,
-      allColumnsOrdered: allOrdered,
-    }
-  }, [visibleColumns, isColumnLocked])
+      return {
+        lockedColumns: locked,
+        unlockedColumns: unlocked,
+        visibleColumnsSorted: allOrdered,
+      }
+    }, [visibleColumns, isColumnLocked])
 
   // Set table data based on current view
   const tableData = currentView === 'patient' ? patients : tasks
@@ -313,18 +314,20 @@ export default function WorklistPage() {
       }
 
       // Find the active column's index and the over column's index
-      const oldIndex = allColumnsOrdered.findIndex(
+      const oldIndex = visibleColumnsSorted.findIndex(
         (col) => col.id === active.id,
       )
-      const newIndex = allColumnsOrdered.findIndex((col) => col.id === over.id)
+      const newIndex = visibleColumnsSorted.findIndex(
+        (col) => col.id === over.id,
+      )
 
       if (oldIndex === -1 || newIndex === -1) {
         return
       }
 
       // Get the actual column objects to check locked states
-      const activeColumn = allColumnsOrdered[oldIndex]
-      const overColumn = allColumnsOrdered[newIndex]
+      const activeColumn = visibleColumnsSorted[oldIndex]
+      const overColumn = visibleColumnsSorted[newIndex]
 
       // Check locked states - for panel context, use column-level locked state directly
       const activeIsLocked = activeColumn?.properties?.display?.locked ?? false
@@ -337,7 +340,11 @@ export default function WorklistPage() {
       }
 
       // Reorder the columns
-      const reorderedColumns = arrayMove(allColumnsOrdered, oldIndex, newIndex)
+      const reorderedColumns = arrayMove(
+        visibleColumnsSorted,
+        oldIndex,
+        newIndex,
+      )
 
       // Use the dedicated reorder method which shows only one toast
       if (panel) {
@@ -348,7 +355,7 @@ export default function WorklistPage() {
         }
       }
     },
-    [allColumnsOrdered, panel, reorderColumns],
+    [visibleColumnsSorted, panel, reorderColumns],
   )
 
   const isLoading =
@@ -403,7 +410,8 @@ export default function WorklistPage() {
                 isLoading={isProgressiveLoading}
                 selectedRows={selectedRows}
                 toggleSelectAll={() => {}}
-                columns={allColumnsOrdered}
+                allColumns={allColumnsForViewType}
+                visibleColumns={visibleColumnsSorted}
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
                 handlePDFClick={() => {}}
@@ -453,7 +461,7 @@ export default function WorklistPage() {
           )}
           <div className="footer-area">
             <PanelFooter
-              columnsCounter={allColumnsOrdered.length}
+              columnsCounter={visibleColumnsSorted.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}

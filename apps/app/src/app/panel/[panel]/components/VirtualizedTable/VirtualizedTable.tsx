@@ -42,7 +42,8 @@ interface VirtualizedTableProps {
   isLoading: boolean
   selectedRows: string[]
   toggleSelectAll: () => void
-  columns: Column[]
+  allColumns: Column[]
+  visibleColumns: Column[]
   orderColumnMode?: 'auto' | 'manual'
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   tableData: Record<string, any>[]
@@ -100,7 +101,8 @@ export function VirtualizedTable({
   isLoading,
   selectedRows,
   toggleSelectAll,
-  columns,
+  allColumns,
+  visibleColumns,
   orderColumnMode = 'auto',
   tableData,
   handlePDFClick,
@@ -172,12 +174,6 @@ export function VirtualizedTable({
   useEffect(() => {
     setSortConfig(initialSort || undefined)
   }, [initialSort])
-
-  // Column visibility and ordering
-  const visibleColumns = useMemo(() => {
-    // Just filter for visibility - page level already handles locked/unlocked ordering
-    return columns.filter((col) => col.properties?.display?.visible !== false)
-  }, [columns])
 
   // Pre-calculate all column widths to prevent recalculation during scroll
   const calculatedColumnWidths = useMemo(() => {
@@ -281,9 +277,7 @@ export function VirtualizedTable({
 
           // Handle new filter format with columnId
           if (filter.columnId) {
-            const column = visibleColumns.find(
-              (col) => col.id === filter.columnId,
-            )
+            const column = allColumns.find((col) => col.id === filter.columnId)
             if (!column) return true
 
             const cellValue = getNestedValue(row, column.sourceField)
@@ -334,7 +328,7 @@ export function VirtualizedTable({
     }
 
     return processedData
-  }, [tableData, filters, sortConfig, visibleColumns])
+  }, [tableData, filters, sortConfig, visibleColumns, allColumns])
 
   // Handle internal row hover
   const handleInternalRowHover = useCallback(
@@ -490,7 +484,7 @@ export function VirtualizedTable({
   }
 
   // Handle empty columns state
-  if (columns.length === 0) {
+  if (visibleColumns.length === 0) {
     return (
       <div className="h-full w-full flex items-center justify-center">
         <div className="text-center">
