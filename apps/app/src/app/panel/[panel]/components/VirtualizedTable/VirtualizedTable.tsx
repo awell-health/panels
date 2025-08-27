@@ -269,6 +269,45 @@ export function VirtualizedTable({
   const filteredAndSortedData = useMemo(() => {
     let processedData = [...tableData]
 
+    // Helper function to check if a date value falls within a range
+    const isDateInRange = (dateValue: string, filterValue: string): boolean => {
+      if (!dateValue || !filterValue) return false
+
+      try {
+        const cellDate = new Date(dateValue)
+        if (Number.isNaN(cellDate.getTime())) return false
+
+        // Check if filter value contains date range delimiter
+        if (filterValue.includes('#')) {
+          const [fromDate, toDate] = filterValue.split('#')
+
+          if (fromDate && toDate) {
+            const from = new Date(fromDate)
+            const to = new Date(toDate)
+            return cellDate >= from && cellDate <= to
+          }
+
+          if (fromDate) {
+            const from = new Date(fromDate)
+            return cellDate >= from
+          }
+
+          if (toDate) {
+            const to = new Date(toDate)
+            return cellDate <= to
+          }
+        }
+
+        // Fallback to string matching for non-range filters
+        return String(dateValue)
+          .toLowerCase()
+          .includes(filterValue.toLowerCase())
+      } catch (error) {
+        console.warn('Error parsing date for filtering:', error)
+        return false
+      }
+    }
+
     // Apply filters
     if (filters && filters.length > 0) {
       processedData = processedData.filter((row) => {
@@ -281,11 +320,19 @@ export function VirtualizedTable({
             if (!column) return true
 
             const cellValue = getNestedValue(row, column.sourceField)
-            const filterValue = filter.value.toLowerCase()
+            const filterValue = filter.value
 
             if (cellValue === null || cellValue === undefined) return false
 
-            return String(cellValue).toLowerCase().includes(filterValue)
+            // Handle date range filtering
+            if (column.type === 'date' || column.type === 'datetime') {
+              return isDateInRange(cellValue, filterValue)
+            }
+
+            // Default string matching for non-date columns
+            return String(cellValue)
+              .toLowerCase()
+              .includes(filterValue.toLowerCase())
           }
 
           // Handle legacy filter format with fhirPathFilter
