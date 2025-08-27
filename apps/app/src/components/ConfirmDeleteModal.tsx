@@ -42,7 +42,7 @@ export function ConfirmDeleteModal({
       onOpenChange={(open) => !open && !isDeleting && onClose()}
     >
       <DialogContent className="p-0 m-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4">
+        <DialogHeader className="p-4 pb-0">
           <div className="flex items-center space-x-4">
             <div className="flex-shrink-0">
               <div className="w-10 h-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center">
@@ -57,12 +57,10 @@ export function ConfirmDeleteModal({
           </div>
         </DialogHeader>
 
-        <div className="px-6 pb-6">
-          <div className="ml-14 space-y-4">
-            <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-              {message}
-            </p>
-          </div>
+        <div className="p-4 pt-2">
+          <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+            {message}
+          </p>
         </div>
 
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
@@ -70,7 +68,7 @@ export function ConfirmDeleteModal({
             type="button"
             onClick={handleCancel}
             disabled={isDeleting}
-            className="btn btn-xs btn-ghost"
+            className="btn btn-ghost"
           >
             Cancel
           </button>
@@ -78,7 +76,7 @@ export function ConfirmDeleteModal({
             type="button"
             onClick={handleConfirm}
             disabled={isDeleting}
-            className="btn btn-xs btn-error"
+            className="btn btn-error"
           >
             {isDeleting ? (
               <>
