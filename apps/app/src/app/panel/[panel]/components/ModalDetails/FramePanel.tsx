@@ -1,19 +1,19 @@
 import { Loader2, CheckCircle } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import TaskStatusBadge from './TaskDetails/TaskStatusBadge'
 
 interface FramePanelProps {
   url: string
   status: string
   taskName: string
-  isPatientTask: boolean
+  isNonAssignableTask: boolean
 }
 
 const FramePanel = ({
   url,
   status,
   taskName,
-  isPatientTask,
+  isNonAssignableTask,
 }: FramePanelProps) => {
   const [loadingFrame, setLoadingFrame] = useState(true)
   const isCompleted = status === 'completed'
@@ -37,12 +37,12 @@ const FramePanel = ({
           <CheckCircle className="h-8 w-8 text-gray-500" />
           <span className=" text-gray-500">Task completed</span>
         </div>
-      ) : isPatientTask ? (
+      ) : isNonAssignableTask ? (
         <div
           className={`flex items-center justify-center ${containerHeight} gap-2`}
         >
           <span className=" text-gray-500">
-            A patient task cannot be completed through panels.
+            This task cannot be completed through panels.
           </span>
         </div>
       ) : !url ? (

@@ -252,17 +252,58 @@ async function updateExistingExtensionGroup(
         },
       ])
     } else {
-      // Add new datapoint to the group
-      const patchPath = `/extension/${groupIndex}/extension/-`
-      console.log(`Patching with add operation: ${patchPath}`)
+      // Add new datapoint - but first test that the patient version hasn't changed
+      const addPath = `/extension/${groupIndex}/extension/-`
 
-      await medplum.patchResource('Patient', patientId, [
-        {
-          op: 'add',
-          path: patchPath,
-          value: newDatapoint,
-        },
-      ])
+      console.log(
+        `Testing patient version and adding new datapoint: ${newDatapoint.url}`,
+      )
+
+      try {
+        await medplum.patchResource('Patient', patientId, [
+          {
+            op: 'test',
+            path: '/meta/versionId',
+            value: patient.meta?.versionId, // Test that the version matches what we read
+          },
+          {
+            op: 'add',
+            path: addPath,
+            value: newDatapoint,
+          },
+        ])
+      } catch (error) {
+        // If the test fails, it means the patient was modified by another operation
+        console.log(
+          'Version test failed, patient was modified. Retrying with fresh state...',
+        )
+
+        // Read fresh patient state
+        const freshPatient = await medplum.readResource('Patient', patientId)
+        const freshGroup = freshPatient.extension?.[groupIndex]
+
+        if (freshGroup?.extension) {
+          // Check if the datapoint was added by another concurrent operation
+          const nowExists = freshGroup.extension.some(
+            (ext) => ext.url === newDatapoint.url,
+          )
+
+          if (!nowExists) {
+            // Still doesn't exist, try to add it with the new version
+            await medplum.patchResource('Patient', patientId, [
+              {
+                op: 'add',
+                path: addPath,
+                value: newDatapoint,
+              },
+            ])
+          } else {
+            console.log(
+              `Datapoint ${newDatapoint.url} was added by another operation, skipping`,
+            )
+          }
+        }
+      }
     }
   }
 }

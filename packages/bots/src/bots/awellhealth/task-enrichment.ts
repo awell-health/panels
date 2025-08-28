@@ -294,9 +294,18 @@ function hasEnrichmentBeenDone(task: Task, status: string): boolean {
   const enrichmentExtension = task.extension?.find(
     (ext) => ext.url === AWELL_ENRICHMENT_STATUS_EXTENSION_URL,
   )
+
   const statusExtension = enrichmentExtension?.extension?.find(
     (ext) => ext.url === status,
   )
+
+  console.log(
+    'hasEnrichmentBeenDone',
+    statusExtension,
+    enrichmentExtension,
+    status,
+  )
+
   return statusExtension?.valueBoolean === true
 }
 
@@ -411,7 +420,7 @@ async function createConnectorInputs(
   const isPatientTask = task.performerType?.some((performerType) =>
     performerType.coding?.some(
       (coding) =>
-        coding.code === 'PT' &&
+        (coding.code === 'PT' || coding.code === 'DKC') &&
         coding.system === 'http://terminology.hl7.org/CodeSystem/v3-RoleCode',
     ),
   )

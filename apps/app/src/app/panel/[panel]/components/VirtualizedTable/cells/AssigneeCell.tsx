@@ -29,17 +29,17 @@ export function AssigneeCell(props: InteractiveCellProps) {
     }
   })
 
-  const isPatientTask = props.row.performerType?.some(
+  const isNonAssignableTask = props.row.performerType?.some(
     (performerType: CodeableConcept) =>
       performerType.coding?.some(
         (coding: Coding) =>
-          coding.code === 'PT' &&
+          (coding.code === 'PT' || coding.code === 'DKC') &&
           coding.system === 'http://terminology.hl7.org/CodeSystem/v3-RoleCode',
       ),
   )
 
   const handleClick = async () => {
-    if (isPatientTask) {
+    if (isNonAssignableTask) {
       return
     }
 
@@ -71,14 +71,16 @@ export function AssigneeCell(props: InteractiveCellProps) {
   return (
     <BaseCell {...props}>
       <div className="flex items-center">
-        {isPatientTask ? (
+        {isNonAssignableTask ? (
           // Display as non-interactive button for patient tasks to match styling
           <button
             type="button"
             className="btn btn-xs btn-ghost"
             style={{ pointerEvents: 'none' }}
           >
-            <span>{currentValue ? String(currentValue) : 'Patient'}</span>
+            <span>
+              {currentValue ? String(currentValue) : 'Non-assignable'}
+            </span>
           </button>
         ) : currentValue ? (
           <button

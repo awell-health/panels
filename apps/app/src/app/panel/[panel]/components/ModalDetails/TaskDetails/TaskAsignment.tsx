@@ -77,7 +77,7 @@ const TaskAsignment = ({
 
         <Tooltip
           position="left"
-          content="A patient task cannot be assigned through panels."
+          content="This task cannot be assigned through panels."
           show={blockAssignee}
         >
           {currentValue ? (
