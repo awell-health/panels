@@ -72,11 +72,13 @@ export const columnAiAssistantMessageHandler = async (
 - If a column already exists at the panel level: use a "create" operation with the existing column's ID and full definition
 - If a column doesn't exist at the panel level: use a "create" operation with a new ID and definition
 - The system will handle adding new columns to the panel first, then referencing them in the view
+- **Important**: Columns can exist in multiple views - don't treat panel-level columns as "already present" in the current view
 
 **Example**: User asks to "add Care Flow ID column to this view"
 - Check panel columns for "Care Flow ID" 
 - If found (e.g., ID "457"): create operation with id "457" and existing definition
-- If not found: create operation with new ID and new definition`
+- If not found: create operation with new ID and new definition
+- **Always proceed with adding the column to the view, regardless of whether it exists at panel level**`
     : `**When working on a PANEL:**
 - Check existing panel columns to avoid duplicates
 - New columns added here become available to all views
