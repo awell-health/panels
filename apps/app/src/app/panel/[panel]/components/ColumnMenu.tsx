@@ -1,6 +1,6 @@
 'use client'
 
-import type { Column, Sort } from '@/types/panel'
+import type { Column, Sort, ColumnVisibilityContext } from '@/types/panel'
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
 import {
   ArrowUpDown,
@@ -28,6 +28,7 @@ type ColumnMenuProps = {
   onColumnUpdate?: (updates: Partial<Column>) => void
   onColumnDelete?: (columnId: string) => void
   isLocked?: boolean // Current locked state in the active context (view-specific or panel-level)
+  columnVisibilityContext: ColumnVisibilityContext
 }
 
 export function ColumnMenu({
@@ -42,6 +43,7 @@ export function ColumnMenu({
   onColumnUpdate,
   onColumnDelete,
   isLocked = false, // Default to false if not provided
+  columnVisibilityContext,
 }: ColumnMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [localFilterValue, setLocalFilterValue] = useState(filterValue)
@@ -328,13 +330,8 @@ export function ColumnMenu({
           <button
             type="button"
             className="btn btn-xs btn-ghost w-full justify-start"
-            onClick={() => {
-              onColumnUpdate?.({
-                id: column.id,
-                properties: {
-                  display: { visible: false },
-                },
-              })
+            onClick={async () => {
+              await columnVisibilityContext.setVisibility(column.id, false)
               onClose()
             }}
           >

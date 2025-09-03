@@ -9,7 +9,12 @@ import {
   useEffect,
 } from 'react'
 import { TableVirtuoso } from 'react-virtuoso'
-import type { Column, Filter, Sort } from '@/types/panel'
+import type {
+  Column,
+  Filter,
+  Sort,
+  ColumnVisibilityContext,
+} from '@/types/panel'
 import { getNestedValue, isMatchingFhirPathCondition } from '@/lib/fhir-path'
 import {
   DndContext,
@@ -68,6 +73,7 @@ interface VirtualizedTableProps {
   hasMore?: boolean
   onLoadMore?: () => void
   isLoadingMore?: boolean
+  columnVisibilityContext: ColumnVisibilityContext
 }
 
 // Icon helper function (same as original)
@@ -120,6 +126,7 @@ export function VirtualizedTable({
   hasMore,
   onLoadMore,
   isLoadingMore,
+  columnVisibilityContext,
 }: VirtualizedTableProps) {
   // State management (similar to original)
 
@@ -510,6 +517,7 @@ export function VirtualizedTable({
                 getColumnWidth={getColumnWidth}
                 sortConfig={sortConfig}
                 filters={filters}
+                columnVisibilityContext={columnVisibilityContext}
               />
             )}
             itemContent={(index) => RowRenderer(index)}
