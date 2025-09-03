@@ -11,7 +11,7 @@ type AssigneeState = {
 }
 
 export function AssigneeCell(props: InteractiveCellProps) {
-  const { value, onAssigneeClick, currentUserName } = props
+  const { value, onAssigneeClick, currentUserName, columnWidth } = props
   const [isPending, startTransition] = useTransition()
 
   const [optimisticState, addOptimistic] = useOptimistic<
@@ -55,7 +55,7 @@ export function AssigneeCell(props: InteractiveCellProps) {
       .trim() === currentUserName?.toLowerCase().trim()
 
   return (
-    <BaseCell {...props}>
+    <BaseCell {...props} columnWidth={columnWidth}>
       <div className="flex items-center">
         {currentValue ? (
           <button

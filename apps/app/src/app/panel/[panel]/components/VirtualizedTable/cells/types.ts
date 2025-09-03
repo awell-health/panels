@@ -9,6 +9,7 @@ export interface BaseCellProps {
   columnIndex: number
   style?: React.CSSProperties
   className?: string
+  columnWidth?: number
 }
 
 export interface InteractiveCellProps extends BaseCellProps {

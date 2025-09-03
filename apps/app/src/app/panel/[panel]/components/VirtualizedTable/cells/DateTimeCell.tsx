@@ -6,10 +6,10 @@ import type { BaseCellProps } from './types'
 
 export function DateTimeCell(props: BaseCellProps) {
   const { formatDateTime } = useDateTimeFormat()
-  const { value } = props
+  const { value, columnWidth } = props
 
   return (
-    <BaseCell {...props}>
+    <BaseCell {...props} columnWidth={columnWidth}>
       {value ? (
         formatDateTime(value as string | Date)
       ) : (

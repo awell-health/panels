@@ -4,10 +4,10 @@ import { BaseCell } from './BaseCell'
 import type { BaseCellProps } from './types'
 
 export function ArrayCell(props: BaseCellProps) {
-  const { value, rowIndex, columnIndex } = props
+  const { value, rowIndex, columnIndex, columnWidth } = props
 
   return (
-    <BaseCell {...props}>
+    <BaseCell {...props} columnWidth={columnWidth}>
       <div className="flex flex-wrap gap-1">
         {Array.isArray(value) ? (
           value.map((item: unknown, index: number) => {

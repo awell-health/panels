@@ -76,6 +76,7 @@ export function VirtualizedRow({
             row={row}
             rowIndex={index}
             columnIndex={columnIndex}
+            columnWidth={getColumnWidth(columnIndex)}
             onPDFClick={onPDFClick}
             onTaskClick={onTaskClick}
             onAssigneeClick={() => onAssigneeClick(row.id)}

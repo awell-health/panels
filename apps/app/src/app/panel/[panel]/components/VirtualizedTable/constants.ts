@@ -98,3 +98,28 @@ export const ROW_HEIGHT = 40
 // Default dimensions for initial render
 export const DEFAULT_TABLE_WIDTH = 1200
 export const DEFAULT_TABLE_HEIGHT = 600
+
+/**
+ * Determine if content should be truncated based on available column width
+ * @param content - The text content to check
+ * @param availableWidth - Available width in pixels
+ * @param padding - Padding to account for (default 32px from PADDING_WIDTH)
+ * @returns Object with shouldTruncate boolean and maxLength if truncation needed
+ */
+export function shouldTruncateContent(
+  content: string,
+  availableWidth: number,
+  padding = 32,
+): { shouldTruncate: boolean; maxLength?: number } {
+  if (!content) return { shouldTruncate: false }
+
+  const usableWidth = availableWidth - padding
+  const estimatedContentWidth = content.length * AVERAGE_CHAR_WIDTH
+
+  if (estimatedContentWidth <= usableWidth) {
+    return { shouldTruncate: false }
+  }
+
+  const maxLength = Math.floor(usableWidth / AVERAGE_CHAR_WIDTH)
+  return { shouldTruncate: true, maxLength: Math.max(maxLength, 10) }
+}

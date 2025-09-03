@@ -262,7 +262,7 @@ export function VirtualizedTable({
         // Force the browser to respect the exact width
         flexShrink: 0,
         boxSizing: 'border-box' as const,
-        whiteSpace: 'nowrap',
+        ...(isHeader && { whiteSpace: 'nowrap' }),
       }
     },
     [visibleColumns, calculatedColumnWidths, stickyPositions],
