@@ -29,6 +29,7 @@ export default fp(
             userEmail: 'test@example.com',
             role: UserRole.ADMIN,
             tenantId: 'test-tenant-123',
+            organizationId: 'test-organization-123',
           }
           ;(request as { authUser?: UserContext }).authUser = userContext
           return
@@ -50,6 +51,8 @@ export default fp(
         const userId = decoded.sub
         const userEmail = decoded.email
         const tenantId = decoded['https://stytch.com/organization']?.slug
+        const organizationId =
+          decoded['https://stytch.com/organization']?.organization_id
         const roles = decoded['https://stytch.com/session']?.roles || []
 
         // Find the highest priority role (prioritize admin, builder, then clinician)
@@ -86,6 +89,7 @@ export default fp(
           userEmail,
           role,
           tenantId,
+          organizationId,
         }
 
         // Attach user context to request using a different property name

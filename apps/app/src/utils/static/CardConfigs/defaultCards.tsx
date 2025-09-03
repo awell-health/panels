@@ -33,6 +33,12 @@ export default [
         resourceType: 'Patient',
       },
       {
+        label: 'Identifiers',
+        key: 'identifiers',
+        fhirPath: 'identifier.value',
+        resourceType: 'Patient',
+      },
+      {
         label: 'Address',
         key: 'address',
         fhirPath: 'address[0].line[0]',

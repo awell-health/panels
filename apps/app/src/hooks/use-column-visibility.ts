@@ -147,8 +147,12 @@ export function useColumnVisibility(
 
   // Get all columns for the current context
   const getAllColumns = useCallback((): Column[] => {
-    return contextColumns
-  }, [contextColumns])
+    return allColumns.filter((col) =>
+      currentViewType === 'patient'
+        ? col?.tags?.includes('panels:patients')
+        : col.tags?.includes('panels:tasks'),
+    )
+  }, [allColumns, currentViewType])
 
   return {
     type: contextType,

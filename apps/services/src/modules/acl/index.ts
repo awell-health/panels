@@ -4,6 +4,7 @@ import { aclCreate } from './routes/acl-create.js'
 import { aclUpdate } from './routes/acl-update.js'
 import { aclDelete } from './routes/acl-delete.js'
 import { aclSharePublic } from './routes/acl-share-public.js'
+import { organizationMembers } from './routes/organization-members.js'
 
 // Export all entities
 export { AccessControlList } from './entities/access-control-list.entity.js'
@@ -15,6 +16,7 @@ export default fp(
     fastify.register(aclUpdate)
     fastify.register(aclDelete)
     fastify.register(aclSharePublic)
+    fastify.register(organizationMembers)
   },
   {
     name: 'acl',

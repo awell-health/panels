@@ -37,6 +37,7 @@ export interface UserContext {
   userEmail: string
   role: UserRole
   tenantId: string
+  organizationId: string
 }
 
 /**
@@ -47,6 +48,7 @@ export interface JWTPayload {
   email: string
   exp: number
   'https://stytch.com/organization': {
+    organization_id: string
     slug: string
   }
   'https://stytch.com/session': {

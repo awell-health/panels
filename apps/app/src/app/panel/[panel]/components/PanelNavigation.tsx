@@ -21,8 +21,6 @@ import {
   CheckSquare,
   Copy,
   FileText,
-  Edit2Icon,
-  EditIcon,
   Edit3Icon,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -35,6 +33,7 @@ interface PanelNavigationProps {
   currentFilters?: Filter[]
   onPanelTitleChange?: (newTitle: string) => void
   onViewTitleChange?: (newTitle: string) => void
+  canEdit: boolean
 }
 
 type ViewCreationType = 'patient' | 'task' | 'from-panel' | 'copy-view'
@@ -46,6 +45,7 @@ export default function PanelNavigation({
   currentFilters,
   onPanelTitleChange,
   onViewTitleChange,
+  canEdit,
 }: PanelNavigationProps) {
   const { deletePanel, deleteView, updatePanel, updateView, addView } =
     useReactivePanelStore()
@@ -60,12 +60,25 @@ export default function PanelNavigation({
   const [viewToDelete, setViewToDelete] = useState<{
     id: string
     title: string
+    viewType: 'panel' | 'view'
   } | null>(null)
   const [deletingViewId, setDeletingViewId] = useState<string | null>(null)
   const [creatingView, setCreatingView] = useState(false)
   const { views } = useReactiveViews(panel.id)
   const { columns } = useReactiveColumns(panel.id)
   const { view: currentView } = useReactiveView(panel.id, selectedViewId || '')
+
+  const handleSetEditingPanel = (value: boolean | null) => {
+    if (canEdit) {
+      setEditingPanel(value || false)
+    }
+  }
+
+  const handleSetEditingView = (value: string | null) => {
+    if (canEdit) {
+      setEditingViewId(value)
+    }
+  }
 
   useEffect(() => {
     setPanelTitle(panel.name)
@@ -111,8 +124,12 @@ export default function PanelNavigation({
     setEditingViewId(null)
   }
 
-  const handleDeleteViewClick = (viewId: string, viewTitle: string) => {
-    setViewToDelete({ id: viewId, title: viewTitle })
+  const handleDeleteViewClick = (
+    viewId: string,
+    viewTitle: string,
+    viewType: 'panel' | 'view',
+  ) => {
+    setViewToDelete({ id: viewId, title: viewTitle, viewType })
     setShowDeleteModal(true)
   }
 
@@ -124,11 +141,11 @@ export default function PanelNavigation({
     setDeletingViewId(viewToDelete.id)
 
     try {
-      if (viewToDelete.id === panel.id) {
+      if (viewToDelete.viewType === 'panel' && viewToDelete.id === panel.id) {
         // Deleting the panel
         await deletePanel?.(viewToDelete.id)
         router.push('/')
-      } else {
+      } else if (viewToDelete.viewType === 'view') {
         // Deleting a view
         await deleteView?.(panel.id, viewToDelete.id)
         // Navigate to panel if we're deleting the currently selected view
@@ -370,7 +387,7 @@ export default function PanelNavigation({
               onClick={(e) => {
                 e.stopPropagation()
                 if (!selectedViewId) {
-                  setEditingPanel(true)
+                  handleSetEditingPanel(true)
                 } else {
                   handlePanelClick()
                 }
@@ -383,7 +400,7 @@ export default function PanelNavigation({
                   e.preventDefault()
                   e.stopPropagation()
                   if (!selectedViewId) {
-                    setEditingPanel(true)
+                    handleSetEditingPanel(true)
                   } else {
                     handlePanelClick()
                   }
@@ -456,16 +473,19 @@ export default function PanelNavigation({
                       {panel.name}
                     </span>
                     {getSaveStatusIcon(panel.id)}
-                    <button
-                      type="button"
-                      className="ml-2 text-gray-400 hover:text-gray-600"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteViewClick(panel.id, panel.name)
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                    {canEdit && !selectedViewId && (
+                      <button
+                        type="button"
+                        id="remove-view-id"
+                        className="ml-2 text-gray-400 hover:text-gray-600"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteViewClick(panel.id, panel.name, 'panel')
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -523,7 +543,7 @@ export default function PanelNavigation({
                               ...prev,
                               [view.id]: view.name || '',
                             }))
-                            setEditingViewId(null)
+                            handleSetEditingPanel(null)
                           }
                         }}
                         className={tabClassesInput}
@@ -549,7 +569,7 @@ export default function PanelNavigation({
                         onClick={(e) => {
                           e.stopPropagation()
                           if (view.id === selectedViewId) {
-                            setEditingViewId(view.id)
+                            handleSetEditingView(view.id)
                           } else {
                             handleViewClick(view)
                           }
@@ -565,16 +585,22 @@ export default function PanelNavigation({
                         {view.name}
                       </span>
                       {getSaveStatusIcon(view.id)}
-                      <button
-                        type="button"
-                        className="ml-2 text-gray-400 hover:text-gray-600"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteViewClick(view.id, view.name || '')
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      {canEdit && view.id === selectedViewId && (
+                        <button
+                          type="button"
+                          className="ml-2 text-gray-400 hover:text-gray-600"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteViewClick(
+                              view.id,
+                              view.name || '',
+                              'view',
+                            )
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -582,6 +608,7 @@ export default function PanelNavigation({
             ))}
 
             {/* Add View Button */}
+
             <button
               type="button"
               className="ml-2 mb-[-1px] h-9 px-3 flex items-center text-sm text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-t-md border-l border-t border-r border-gray-200 whitespace-nowrap"
@@ -669,8 +696,12 @@ export default function PanelNavigation({
         isOpen={showDeleteModal}
         onClose={handleDeleteModalClose}
         onConfirm={handleDeleteViewConfirm}
-        title={viewToDelete?.id === panel.id ? 'Delete Panel' : 'Delete View'}
-        message={`Are you sure you want to delete the ${viewToDelete?.id === panel.id ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
+        title={
+          viewToDelete?.id === panel.id && viewToDelete?.viewType === 'panel'
+            ? 'Delete Panel'
+            : 'Delete View'
+        }
+        message={`Are you sure you want to delete the ${viewToDelete?.viewType === 'panel' ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
         isDeleting={!!deletingViewId}
       />
     </>

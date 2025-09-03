@@ -4,6 +4,7 @@ import FramePanel from '../FramePanel'
 import StaticContent from '../StaticContent'
 import ConnectorsSection from './ConnectorsSection'
 import TaskAsignment from './TaskAsignment'
+import type { CodeableConcept, Coding } from '@medplum/fhirtypes'
 
 interface TaskDetailsProps {
   task: WorklistTask
@@ -28,6 +29,15 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
     return null
   }
 
+  const isNonAssignableTask = task.performerType?.some(
+    (performerType: CodeableConcept) =>
+      performerType.coding?.some(
+        (coding: Coding) =>
+          (coding.code === 'PT' || coding.code === 'DKC') &&
+          coding.system === 'http://terminology.hl7.org/CodeSystem/v3-RoleCode',
+      ),
+  )
+
   const AHP_URL = getAwellHostedPagesUrl(AHP_CODE)
 
   return (
@@ -41,12 +51,13 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
         >
           {view === 'ahp' && (
             <div className="flex flex-col h-full">
-              <TaskAsignment task={task} />
+              <TaskAsignment task={task} blockAssignee={isNonAssignableTask} />
               <div className="flex-1 overflow-hidden">
                 <FramePanel
                   url={AHP_URL}
                   status={task.status}
                   taskName={task.description}
+                  isNonAssignableTask={isNonAssignableTask}
                 />
               </div>
             </div>
@@ -55,7 +66,10 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
             <>
               <StaticContent task={task} />
               <div className="mt-4">
-                <ConnectorsSection task={task} showAhpConnector={!!AHP_URL} />
+                <ConnectorsSection
+                  task={task}
+                  showAhpConnector={!!AHP_URL && !isNonAssignableTask}
+                />
               </div>
             </>
           )}
