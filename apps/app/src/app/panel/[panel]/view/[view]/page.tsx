@@ -454,6 +454,7 @@ export default function WorklistViewPage() {
                 hasMore={hasMore}
                 onLoadMore={loadMore}
                 isLoadingMore={isLoadingMore}
+                columnVisibilityContext={columnVisibilityContext}
               />
             </div>
           </div>

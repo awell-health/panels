@@ -440,6 +440,7 @@ export default function WorklistPage() {
                 hasMore={hasMore}
                 onLoadMore={loadMore}
                 isLoadingMore={isLoadingMore}
+                columnVisibilityContext={columnVisibilityContext}
               />
               {isAddingIngestionSource && (
                 <AddIngestionModal

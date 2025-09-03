@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import type { Column, Sort } from '@/types/panel'
+import type { Column, Sort, ColumnVisibilityContext } from '@/types/panel'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
@@ -31,6 +31,7 @@ interface SortableHeaderColumnProps {
   onColumnUpdate: (updates: Partial<Column>) => void
   onColumnDelete?: (columnId: string) => void
   isLocked?: boolean // Current locked state in the active context
+  columnVisibilityContext: ColumnVisibilityContext
 }
 
 export function SortableHeaderColumn({
@@ -44,6 +45,7 @@ export function SortableHeaderColumn({
   onColumnUpdate,
   onColumnDelete,
   isLocked = false,
+  columnVisibilityContext,
 }: SortableHeaderColumnProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
@@ -265,6 +267,7 @@ export function SortableHeaderColumn({
         onColumnUpdate={onColumnUpdate}
         onColumnDelete={onColumnDelete}
         isLocked={isLocked}
+        columnVisibilityContext={columnVisibilityContext}
       />
     </div>
   )
