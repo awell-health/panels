@@ -442,17 +442,31 @@ export class ReactivePanelStore {
                 metadata: {},
               }
               const createdColumn = await this.addColumn(panelId, newColumn)
+
               if (viewId) {
+                const currentView = this.reactiveStore?.getView(panelId, viewId)
+                const currentColumnVisibility =
+                  currentView?.metadata?.columnVisibility || {}
+
                 await this.updateView(panelId, viewId, {
                   visibleColumns: [
-                    ...(this.reactiveStore?.getView(panelId, viewId)
-                      ?.visibleColumns || []),
+                    ...(currentView?.visibleColumns || []),
                     createdColumn.id,
                   ],
+                  metadata: {
+                    ...currentView?.metadata,
+                    filters: currentView?.metadata?.filters || [],
+                    viewType: currentView?.metadata?.viewType || 'patient',
+                    columnVisibility: {
+                      ...currentColumnVisibility,
+                      [createdColumn.id]: true, // Set the new column as visible in the view
+                    },
+                  },
                 })
               }
               return { operation: `create-${change.id}`, success: true }
             }
+
             return {
               operation: `create-${change.id}`,
               success: false,
