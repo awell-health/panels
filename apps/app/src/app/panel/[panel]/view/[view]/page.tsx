@@ -416,7 +416,7 @@ export default function WorklistViewPage() {
               panelId={panelId}
               filters={tableFilters}
               sort={view?.metadata.sort}
-              columns={visibleColumnsSorted}
+              columns={allColumnsForViewType}
               onFiltersChange={onFiltersChange}
               onSortUpdate={onSortUpdate}
             />
