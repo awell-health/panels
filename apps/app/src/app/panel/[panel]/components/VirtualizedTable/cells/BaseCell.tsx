@@ -26,18 +26,6 @@ export function BaseCell({
     ? shouldTruncateContent(displayValue, columnWidth)
     : { shouldTruncate: true, maxLength: 30 }
 
-  if (displayValue && displayValue.length > 20) {
-    console.log('BaseCell Debug:', {
-      displayValue:
-        displayValue.substring(0, 50) + (displayValue.length > 50 ? '...' : ''),
-      columnWidth,
-      truncationInfo,
-      contentLength: displayValue.length,
-      estimatedWidth: displayValue.length * 8,
-      usableWidth: columnWidth ? columnWidth - 32 : 'N/A',
-    })
-  }
-
   const truncateText = (text: string, maxLength: number): string => {
     if (text.length <= maxLength) return text
     return `${text.substring(0, maxLength)}...`
