@@ -56,13 +56,13 @@ const CardRowItem: FC<Props> = ({
   const displayValue = getDisplayValue()
 
   return (
-    <div className="flex justify-between">
-      <div className="text-gray-600 max-w-[32%] break-words">
+    <div className="flex justify-between gap-2">
+      <div className="text-gray-600 w-2/5 break-words">
         <RenderWithCopy text={fhirPath ?? label}>
           <HighlightText text={label} searchQuery={searchQuery} />
         </RenderWithCopy>
       </div>
-      <div className="text-gray-900 max-w-[65%] text-right pr-1.5 break-words">
+      <div className="text-gray-900 w-3/5 text-right pr-1.5 break-words flex flex-1 justify-end">
         <RenderValue value={displayValue} searchQuery={searchQuery} />
       </div>
     </div>

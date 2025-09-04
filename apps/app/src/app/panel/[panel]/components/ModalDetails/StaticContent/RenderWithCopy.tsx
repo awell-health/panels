@@ -28,11 +28,12 @@ export const RenderWithCopy: FC<{
     }
   }
 
-  const iconBaseClasses = 'absolute -right-3.5 w-3 h-3'
+  const iconBaseClasses =
+    'w-2.5 h-2.5 absolute inline-block -right-3 bottom-0.5'
 
   return (
     <span
-      className="cursor-pointer group relative flex items-center break-words"
+      className="cursor-pointer group relative"
       onClick={handleCopy}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {

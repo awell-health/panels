@@ -1,25 +1,22 @@
 import { Loader2, CheckCircle } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import TaskStatusBadge from './TaskDetails/TaskStatusBadge'
 
 interface FramePanelProps {
   url: string
   status: string
   taskName: string
+  isNonAssignableTask: boolean
 }
 
-const FramePanel = ({ url, status, taskName }: FramePanelProps) => {
+const FramePanel = ({
+  url,
+  status,
+  taskName,
+  isNonAssignableTask,
+}: FramePanelProps) => {
   const [loadingFrame, setLoadingFrame] = useState(true)
   const isCompleted = status === 'completed'
-
-  if (!url) {
-    return (
-      <div className="flex items-center justify-center h-full gap-2">
-        <span className="text-xs text-gray-500">No URL provided</span>
-      </div>
-    )
-  }
-
   const headerHeight = 'h-[45px]'
   const containerHeight = 'h-[calc(100%-45px)]'
 
@@ -39,6 +36,18 @@ const FramePanel = ({ url, status, taskName }: FramePanelProps) => {
         >
           <CheckCircle className="h-8 w-8 text-gray-500" />
           <span className=" text-gray-500">Task completed</span>
+        </div>
+      ) : isNonAssignableTask ? (
+        <div
+          className={`flex items-center justify-center ${containerHeight} gap-2`}
+        >
+          <span className=" text-gray-500">
+            This task cannot be completed through panels.
+          </span>
+        </div>
+      ) : !url ? (
+        <div className="flex items-center justify-center h-full gap-2">
+          <span className="text-xs text-gray-500">No URL provided</span>
         </div>
       ) : (
         <iframe

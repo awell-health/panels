@@ -17,6 +17,8 @@ import {
 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { ColumnMenu } from '../ColumnMenu'
+import { useACL } from '../../../../../contexts/ACLContext'
+import { useParams } from 'next/navigation'
 
 interface SortableHeaderColumnProps {
   column: Column
@@ -61,6 +63,15 @@ export function SortableHeaderColumn({
     id: column.id,
   })
 
+  const { hasPermission } = useACL()
+  const { view, panel } = useParams()
+
+  const canEdit = view
+    ? hasPermission('view', view as string, 'editor')
+    : panel
+      ? hasPermission('panel', panel as string, 'editor')
+      : false
+
   const sortableStyle: React.CSSProperties = {
     ...style,
     transform: CSS.Transform.toString(transform),
@@ -87,10 +98,11 @@ export function SortableHeaderColumn({
   // Get sort indicator
   const getSortIndicator = () => {
     if (!sortConfig || sortConfig.columnId !== column.id) return null
+    const arrowClassName = 'h-3 w-3 mr-2 text-accent'
     return sortConfig.direction === 'asc' ? (
-      <ArrowUp className="h-3 w-3 text-gray-500 mr-2" />
+      <ArrowUp className={arrowClassName} />
     ) : (
-      <ArrowDown className="h-3 w-3 text-gray-500 mr-2" />
+      <ArrowDown className={arrowClassName} />
     )
   }
 
@@ -166,7 +178,7 @@ export function SortableHeaderColumn({
                 ? 'cursor-grabbing bg-gray-100'
                 : 'cursor-grab',
           )}
-          {...(column.properties?.display?.locked ? {} : listeners)}
+          {...(column.properties?.display?.locked || !canEdit ? {} : listeners)}
           aria-label={
             column.properties?.display?.locked
               ? "Locked columns can't be dragged"
@@ -178,11 +190,10 @@ export function SortableHeaderColumn({
               : 'Drag to reorder column'
           }
         >
-          {column.properties?.display?.locked ? (
+          {column.properties?.display?.locked && (
             <Lock className="h-3 w-3 text-yellow-500" />
-          ) : (
-            <GripVertical className="h-3 w-3 text-gray-400" />
           )}
+          {canEdit && <GripVertical className="h-3 w-3 text-gray-400" />}
         </button>
 
         {/* Column content - clickable for sorting */}
@@ -192,7 +203,7 @@ export function SortableHeaderColumn({
             'btn btn-xs btn-ghost btn-header flex-1 justify-start text-xs shrink-0',
             isDragging && 'pointer-events-none',
           )}
-          onClick={isDragging ? undefined : onSort}
+          onClick={isDragging || !canEdit ? undefined : onSort}
           disabled={isDragging}
           aria-label={`Sort by ${column.name}`}
         >
@@ -214,7 +225,7 @@ export function SortableHeaderColumn({
               'btn btn-xs btn-ghost btn-header text-xs shrink-0',
               filterValue ? 'text-blue-500 bg-blue-50' : 'text-gray-500',
             )}
-            onClick={isDragging ? undefined : toggleMenu}
+            onClick={isDragging || !canEdit ? undefined : toggleMenu}
             disabled={isDragging}
             aria-label="Column options and filter"
           >
@@ -233,7 +244,7 @@ export function SortableHeaderColumn({
               <title>Column options and filter</title>
               <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
             </svg>
-            <MoreVertical className="h-3 w-3" />
+            {canEdit && <MoreVertical className="h-3 w-3" />}
           </button>
         </div>
       </div>

@@ -26,6 +26,7 @@ import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import type { FHIRCard } from '../../components/ModalDetails/StaticContent/FhirExpandableCard'
+import { useACL } from '../../../../../contexts/ACLContext'
 
 export default function WorklistViewPage() {
   const { updateView } = useReactivePanelStore()
@@ -50,6 +51,8 @@ export default function WorklistViewPage() {
     useReactiveColumns(panelId)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
   const { updatePanel } = useReactivePanelStore()
+  const { hasPermission } = useACL()
+  const canEdit = hasPermission('view', viewId, 'editor')
 
   const { toggleTaskOwner } = useMedplumStore()
   const {
@@ -106,50 +109,51 @@ export default function WorklistViewPage() {
   const visibleColumns = columnVisibilityContext.getVisibleColumns()
 
   // Maintain separate arrays for locked and unlocked columns to preserve drag-drop order within groups
-  const { lockedColumns, unlockedColumns, allColumnsOrdered } = useMemo(() => {
-    const enhancedColumns = visibleColumns.map((column) => {
-      const viewSpecificLocked = isColumnLocked(column.id)
-      const columnLevelLocked = column.properties?.display?.locked ?? false
+  const { lockedColumns, unlockedColumns, visibleColumnsSorted } =
+    useMemo(() => {
+      const enhancedColumns = visibleColumns.map((column) => {
+        const viewSpecificLocked = isColumnLocked(column.id)
+        const columnLevelLocked = column.properties?.display?.locked ?? false
 
-      // Check if there's a view-specific state for this column
-      const hasViewSpecificState =
-        view?.metadata?.columnLocked?.[column.id] !== undefined
+        // Check if there's a view-specific state for this column
+        const hasViewSpecificState =
+          view?.metadata?.columnLocked?.[column.id] !== undefined
 
-      // Priority logic: view-specific state takes precedence over column-level state
-      const finalLocked = hasViewSpecificState
-        ? viewSpecificLocked
-        : columnLevelLocked
+        // Priority logic: view-specific state takes precedence over column-level state
+        const finalLocked = hasViewSpecificState
+          ? viewSpecificLocked
+          : columnLevelLocked
+
+        return {
+          ...column,
+          properties: {
+            ...column.properties,
+            display: {
+              ...column.properties?.display,
+              // Set locked state based on priority: view-specific first, then column-level fallback
+              locked: finalLocked,
+            },
+          },
+        }
+      })
+
+      // Separate into locked and unlocked arrays, preserving order within each group
+      const locked = enhancedColumns.filter(
+        (col) => col.properties?.display?.locked,
+      )
+      const unlocked = enhancedColumns.filter(
+        (col) => !col.properties?.display?.locked,
+      )
+
+      // Always merge locked first, then unlocked (required for sticky positioning)
+      const allOrdered = [...locked, ...unlocked]
 
       return {
-        ...column,
-        properties: {
-          ...column.properties,
-          display: {
-            ...column.properties?.display,
-            // Set locked state based on priority: view-specific first, then column-level fallback
-            locked: finalLocked,
-          },
-        },
+        lockedColumns: locked,
+        unlockedColumns: unlocked,
+        visibleColumnsSorted: allOrdered,
       }
-    })
-
-    // Separate into locked and unlocked arrays, preserving order within each group
-    const locked = enhancedColumns.filter(
-      (col) => col.properties?.display?.locked,
-    )
-    const unlocked = enhancedColumns.filter(
-      (col) => !col.properties?.display?.locked,
-    )
-
-    // Always merge locked first, then unlocked (required for sticky positioning)
-    const allOrdered = [...locked, ...unlocked]
-
-    return {
-      lockedColumns: locked,
-      unlockedColumns: unlocked,
-      allColumnsOrdered: allOrdered,
-    }
-  }, [visibleColumns, isColumnLocked, view])
+    }, [visibleColumns, isColumnLocked, view])
 
   const tableData = filteredData ?? []
 
@@ -392,6 +396,7 @@ export default function WorklistViewPage() {
                 selectedViewId={viewId}
                 currentViewType={view?.metadata.viewType}
                 onViewTitleChange={onViewTitleChange}
+                canEdit={canEdit}
               />
             )}
           </div>
@@ -406,9 +411,12 @@ export default function WorklistViewPage() {
               columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
               isViewPage={true}
+              viewId={viewId}
+              viewName={view?.name}
+              panelId={panelId}
               filters={tableFilters}
               sort={view?.metadata.sort}
-              columns={visibleColumns}
+              columns={allColumnsForViewType}
               onFiltersChange={onFiltersChange}
               onSortUpdate={onSortUpdate}
             />
@@ -419,7 +427,8 @@ export default function WorklistViewPage() {
                 isLoading={isProgressiveLoading}
                 selectedRows={[]}
                 toggleSelectAll={() => {}}
-                columns={allColumnsOrdered}
+                allColumns={allColumnsForViewType}
+                visibleColumns={visibleColumnsSorted}
                 orderColumnMode="manual"
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
@@ -462,7 +471,7 @@ export default function WorklistViewPage() {
           )}
           <div className="footer-area">
             <PanelFooter
-              columnsCounter={allColumnsOrdered.length}
+              columnsCounter={visibleColumnsSorted.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}
@@ -474,6 +483,7 @@ export default function WorklistViewPage() {
               isLoading={isProgressiveLoading}
               panel={panel}
               onCardsConfigurationChange={onCardsConfigurationChange}
+              canEdit={canEdit}
             />
           </div>
         </>

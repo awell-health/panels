@@ -2,6 +2,7 @@
 
 import { MedplumClientProvider } from '@/contexts/MedplumClientProvider'
 import { ReactivePanelStoreProvider } from '@/hooks/use-reactive-panel-store'
+import { ACLProvider } from '@/contexts/ACLContext'
 import { StytchB2BProvider } from '@stytch/nextjs/b2b'
 import { CookiesProvider } from 'react-cookie'
 import { AuthenticationGuard } from './AuthenticationGuard'
@@ -17,6 +18,7 @@ import type {
   StytchB2BUIClient,
   StytchProjectConfiguration,
 } from '@stytch/vanilla-js/dist/b2b'
+import { PanelUserGuard } from './PanelUserGuard'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [authStytchPublicToken, setAuthStytchPublicToken] = useState<
@@ -71,17 +73,21 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }
         >
           <AuthenticationStoreProvider>
-            <MedplumClientProvider>
-              <AwellApolloProvider>
-                <ReactivePanelStoreProvider>
-                  <ToastProvider>
-                    {children}
-                    <ToastContainer position="bottom-center" />
-                    <CaptureWidget />
-                  </ToastProvider>
-                </ReactivePanelStoreProvider>
-              </AwellApolloProvider>
-            </MedplumClientProvider>
+            <PanelUserGuard>
+              <MedplumClientProvider>
+                <AwellApolloProvider>
+                  <ReactivePanelStoreProvider>
+                    <ACLProvider>
+                      <ToastProvider>
+                        {children}
+                        <ToastContainer position="bottom-center" />
+                        <CaptureWidget />
+                      </ToastProvider>
+                    </ACLProvider>
+                  </ReactivePanelStoreProvider>
+                </AwellApolloProvider>
+              </MedplumClientProvider>
+            </PanelUserGuard>
           </AuthenticationStoreProvider>
         </AuthenticationGuard>
       </CookiesProvider>

@@ -2,18 +2,17 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  LayoutGrid,
-  Plus,
-  ExternalLink,
-  Eye,
-  Users,
-  Database,
-} from 'lucide-react'
+import { LayoutGrid, Plus, ExternalLink, Eye, Trash2 } from 'lucide-react'
 import type { Panel } from '@/types/panel'
 import { DEFAULT_PANEL } from '@/utils/constants'
 import { usePanelStats } from '@/hooks/use-panel-stats'
+import { usePanelRole } from '@/contexts/ACLContext'
+import { RoleBadge } from '@/components/RoleBadge'
 import { cn } from '@/lib/utils'
+import { useAuthentication } from '@/hooks/use-authentication'
+import { Tooltip } from '@/components/ui/tooltip'
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal'
+import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 
 interface PanelsCardsProps {
   panels: Panel[]
@@ -25,6 +24,8 @@ const CARD_HEIGHT = 'h-[130px]'
 export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+
+  const { isBuilder } = useAuthentication()
 
   // Set mounted on client side
   React.useEffect(() => {
@@ -48,30 +49,50 @@ export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Panel Cards */}
-        {panels.map((panel) => (
-          <PanelCard key={panel.id} panel={panel} />
-        ))}
+        {panels.length > 0 && (
+          <>
+            {panels.map((panel) => (
+              <PanelCard key={panel.id} panel={panel} />
+            ))}
 
-        {/* Create New Panel Card */}
-        <div className="group">
-          <button
-            type="button"
-            onClick={onCreatePanel}
-            className={cn(
-              'w-full border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center gap-2',
-              'text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors duration-200 bg-white cursor-pointer',
-              CARD_HEIGHT,
-              // 'h-[180px]',
-            )}
-          >
-            <Plus className="h-6 w-6 group-hover:scale-110 transition-transform duration-200" />
-            <span className="font-semibold text-sm">Create New Panel</span>
-            <span className="text-xs text-center">
-              Set up a new patient monitoring dashboard
-            </span>
-          </button>
-        </div>
+            {/* Create New Panel Card */}
+            <Tooltip
+              content="You don't have permissions to create new panels"
+              show={!isBuilder}
+              position="top"
+            >
+              <div className="group">
+                <button
+                  type="button"
+                  onClick={onCreatePanel}
+                  disabled={!isBuilder}
+                  className={cn(
+                    'w-full border-2 border-dashed border-gray-300 rounded-lg p-2 flex flex-col items-center justify-center gap-2',
+                    'text-gray-500 transition-colors duration-200 bg-white',
+                    CARD_HEIGHT,
+                    // 'h-[180px]',
+                    isBuilder
+                      ? 'hover:border-blue-400 hover:text-blue-600 cursor-pointer'
+                      : 'opacity-50 cursor-not-allowed',
+                  )}
+                >
+                  <Plus
+                    className={cn(
+                      'h-6 w-6 transition-transform duration-200',
+                      isBuilder && 'group-hover:scale-110',
+                    )}
+                  />
+                  <span className="font-semibold text-sm">
+                    Create New Panel
+                  </span>
+                  <span className="text-xs text-center">
+                    Set up a new patient monitoring dashboard
+                  </span>
+                </button>
+              </div>
+            </Tooltip>
+          </>
+        )}
       </div>
 
       {panels.length === 0 && (
@@ -83,14 +104,24 @@ export default function PanelsCards({ panels, createPanel }: PanelsCardsProps) {
           <p className="text-gray-500 mb-6">
             Create your first panel to get started
           </p>
-          <button
-            type="button"
-            onClick={onCreatePanel}
-            className="btn btn-primary"
+          <Tooltip
+            content="You don't have permissions to create new panels"
+            show={!isBuilder}
+            position="top"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Panel
-          </button>
+            <button
+              type="button"
+              onClick={onCreatePanel}
+              disabled={!isBuilder}
+              className={cn(
+                'btn btn-primary',
+                !isBuilder && 'opacity-50 cursor-not-allowed',
+              )}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Panel
+            </button>
+          </Tooltip>
         </div>
       )}
     </div>
@@ -110,6 +141,12 @@ function PanelCard({ panel }: PanelCardProps) {
     views: viewsCount,
     isLoading: isStatsLoading,
   } = usePanelStats(id)
+  const { role, hasOwnerPermission } = usePanelRole(id)
+  const { deletePanel } = useReactivePanelStore()
+
+  // State for delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Real stats from the panel data
   const stats = {
@@ -121,56 +158,103 @@ function PanelCard({ panel }: PanelCardProps) {
   // Panel is active if it has any data or views
   const isActive = patients > 0 || tasks > 0 || viewsCount > 0
 
-  return (
-    <div className="group relative h-[130px]">
-      <div
-        className={cn(
-          'bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow duration-200',
-          'cursor-pointer h-full flex flex-col gap-2 hover:border-primary',
-          CARD_HEIGHT,
-        )}
-        onClick={() => router.push(`/panel/${id}`)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            router.push(`/panel/${id}`)
-          }
-        }}
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 text-sm mb-2">{name}</h3>
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'badge badge-sm badge-outline',
-                  isActive ? 'badge-primary' : 'badge-secondary',
-                )}
-              >
-                {isActive ? 'Active' : 'Draft'}
-              </span>
-            </div>
-          </div>
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click
+    setShowDeleteModal(true)
+  }
 
-          <div className="flex items-center gap-2">
-            <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true)
+    try {
+      await deletePanel(id)
+      // The panel will be removed from the list automatically via reactive store
+    } catch (error) {
+      console.error('Failed to delete panel:', error)
+      // You might want to show a toast notification here
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false)
+  }
+
+  return (
+    <>
+      <div className="group relative h-[130px]">
+        <div
+          className={cn(
+            'bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow duration-200',
+            'cursor-pointer h-full flex flex-col gap-2 hover:border-primary',
+            CARD_HEIGHT,
+          )}
+          onClick={() => router.push(`/panel/${id}`)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              router.push(`/panel/${id}`)
+            }
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 text-sm mb-2">
+                {name}
+              </h3>
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    'badge badge-sm badge-outline',
+                    isActive ? 'badge-primary' : 'badge-secondary',
+                  )}
+                >
+                  {isActive ? 'Active' : 'Draft'}
+                </span>
+                {role && (
+                  <RoleBadge role={role as 'owner' | 'editor' | 'viewer'} />
+                )}
+              </div>
+            </div>
+
+            {hasOwnerPermission && (
+              <button
+                type="button"
+                onClick={handleDeleteClick}
+                className="btn btn-xs btn-ghost btn-square text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                aria-label="Delete panel"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
-        </div>
-        <p className="text-gray-600 text-xs flex-1 truncate">{description}</p>
-        <div className="flex items-center justify-between text-xs text-gray-600">
-          <div className="flex items-center gap-1">
-            <Eye className="h-4 w-4" />
-            <span>{isStatsLoading ? '...' : `${stats.views} views`}</span>
+          <p className="text-gray-600 text-xs flex-1 truncate">{description}</p>
+          <div className="flex items-center justify-between text-xs text-gray-600">
+            <div className="flex items-center gap-1">
+              <Eye className="h-4 w-4" />
+              <span>{isStatsLoading ? '...' : `${stats.views} views`}</span>
+            </div>
+            {/* <div className="flex items-center gap-1">
+              <Users className="h-4 w-4" />
+              <span>{isStatsLoading ? '...' : `${stats.patients} patients`}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Database className="h-4 w-4" />
+              <span>{isStatsLoading ? '...' : `${stats.tasks} tasks`}</span>
+            </div> */}
           </div>
-          {/* <div className="flex items-center gap-1">
-            <Users className="h-4 w-4" />
-            <span>{isStatsLoading ? '...' : `${stats.patients} patients`}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Database className="h-4 w-4" />
-            <span>{isStatsLoading ? '...' : `${stats.tasks} tasks`}</span>
-          </div> */}
         </div>
       </div>
-    </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Panel"
+        message={`Are you sure you want to delete the panel "${name}"? This action cannot be undone and will permanently remove the panel and all its associated data.`}
+        isDeleting={isDeleting}
+      />
+    </>
   )
 }
