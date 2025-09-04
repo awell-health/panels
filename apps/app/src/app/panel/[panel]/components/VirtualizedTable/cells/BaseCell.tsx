@@ -45,13 +45,7 @@ export function BaseCell({
       )}
       title={displayValue}
     >
-      {children || (
-        <div
-          className={cn('flex-1', truncationInfo.shouldTruncate && 'truncate')}
-        >
-          {finalDisplayValue}
-        </div>
-      )}
+      {children || <div className="flex-1">{finalDisplayValue}</div>}
     </div>
   )
 }
