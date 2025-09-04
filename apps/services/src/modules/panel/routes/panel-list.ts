@@ -45,17 +45,17 @@ export const panelList = async (app: FastifyInstance) => {
           userEmail: '_all',
         })
 
-        if (sharedACLs.length > 0) {
-          // Deduplicate ACLs by resourceId to avoid duplicate panel queries
-          const uniqueACLs = [
-            ...sharedACLs,
-            ...sharedACLsByEmail,
-            ...publicACLs,
-          ].filter(
-            (acl, index, self) =>
-              index === self.findIndex((a) => a.resourceId === acl.resourceId),
-          )
+        // Deduplicate ACLs by resourceId to avoid duplicate panel queries
+        const uniqueACLs = [
+          ...sharedACLs,
+          ...sharedACLsByEmail,
+          ...publicACLs,
+        ].filter(
+          (acl, index, self) =>
+            index === self.findIndex((a) => a.resourceId === acl.resourceId),
+        )
 
+        if (uniqueACLs.length > 0) {
           const sharedPanelIds = uniqueACLs.map((acl) => acl.resourceId)
           return await request.store.panel.find(
             { id: { $in: sharedPanelIds } },

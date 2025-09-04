@@ -68,17 +68,16 @@ export const viewList = async (app: FastifyInstance) => {
           userEmail: '_all',
         })
 
-        if (sharedACLs.length > 0) {
-          // Deduplicate ACLs by resourceId to avoid duplicate view queries
-          const uniqueACLs = [
-            ...sharedACLs,
-            ...sharedACLsByEmail,
-            ...publicACLs,
-          ].filter(
-            (acl, index, self) =>
-              index === self.findIndex((a) => a.resourceId === acl.resourceId),
-          )
-
+        // Deduplicate ACLs by resourceId to avoid duplicate view queries
+        const uniqueACLs = [
+          ...sharedACLs,
+          ...sharedACLsByEmail,
+          ...publicACLs,
+        ].filter(
+          (acl, index, self) =>
+            index === self.findIndex((a) => a.resourceId === acl.resourceId),
+        )
+        if (uniqueACLs.length > 0) {
           const sharedViewIds = uniqueACLs.map((acl) => acl.resourceId)
           return await request.store.view.find(
             { id: { $in: sharedViewIds } },
