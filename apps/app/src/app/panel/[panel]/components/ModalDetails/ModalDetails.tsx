@@ -168,7 +168,11 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
       onOpenChange={onClose}
       className="max-w-[90vw] max-h-[90vh] h-full"
     >
-      <div className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0 text-xs">
+      <div
+        className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0 text-xs"
+        data-patient-id={currentPatient?.id}
+        data-task-id={selectedTask?.id}
+      >
         <div className="flex items-center gap-2 text-gray-700 pl-4">
           <User className="h-5 w-5" />
           {isLoading ? (

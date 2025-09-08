@@ -593,7 +593,10 @@ export function VirtualizedTable({
               TableHead: forwardRef<HTMLTableSectionElement>((props, ref) => (
                 <thead {...props} ref={ref} />
               )),
-              TableRow: ({ ...props }) => <tr {...props} />,
+              TableRow: ({ 'data-index': dataIndex, ...props }) => {
+                const row = filteredAndSortedData[dataIndex]
+                return <tr {...props} id={row?.id} />
+              },
               TableBody: forwardRef<HTMLTableSectionElement>((props, ref) => (
                 <tbody {...props} ref={ref} />
               )),
