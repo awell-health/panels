@@ -14,12 +14,12 @@ interface CellFactoryProps extends InteractiveCellProps {
 }
 
 export function CellFactory(props: CellFactoryProps) {
-  const { column, value, row, onPDFClick } = props
+  const { column, value, row, onPDFClick, columnWidth } = props
 
   // Handle special case for Discharge Summary column with PDF files
   if (column.name === 'Discharge Summary' && value) {
     return (
-      <BaseCell {...props}>
+      <BaseCell {...props} columnWidth={columnWidth}>
         <button
           type="button"
           className="btn btn-xs btn-primary btn-outline"
@@ -54,7 +54,7 @@ export function CellFactory(props: CellFactoryProps) {
 
     case 'boolean':
       return (
-        <BaseCell {...props}>
+        <BaseCell {...props} columnWidth={columnWidth}>
           {value !== null ? (
             <span
               className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -73,7 +73,7 @@ export function CellFactory(props: CellFactoryProps) {
 
     case 'number':
       return (
-        <BaseCell {...props} className="justify-end">
+        <BaseCell {...props} columnWidth={columnWidth} className="justify-end">
           {value !== null ? (
             String(value)
           ) : (
@@ -83,6 +83,6 @@ export function CellFactory(props: CellFactoryProps) {
       )
 
     default:
-      return <BaseCell {...props} />
+      return <BaseCell {...props} columnWidth={columnWidth} />
   }
 }
