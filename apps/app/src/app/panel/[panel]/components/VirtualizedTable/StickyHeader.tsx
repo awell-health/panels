@@ -8,7 +8,7 @@ import {
   SortableContext,
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import type { Column } from '@/types/panel'
+import type { Column, ColumnVisibilityContext } from '@/types/panel'
 import type { Sort } from '@/types/panel'
 import type { Filter } from '@/types/panel'
 
@@ -19,6 +19,7 @@ interface StickyHeaderProps {
   getColumnWidth: (columnIndex: number) => number
   sortConfig?: Sort | undefined
   filters?: Filter[]
+  columnVisibilityContext: ColumnVisibilityContext
 }
 
 export function StickyHeader({
@@ -28,6 +29,7 @@ export function StickyHeader({
   getColumnWidth,
   sortConfig,
   filters,
+  columnVisibilityContext,
 }: StickyHeaderProps) {
   const {
     columns,
@@ -87,6 +89,7 @@ export function StickyHeader({
               onColumnUpdate={onColumnUpdate || (() => {})}
               onColumnDelete={onColumnDelete}
               isLocked={!!column.properties?.display?.locked}
+              columnVisibilityContext={columnVisibilityContext}
             />
           </th>
         ))}
