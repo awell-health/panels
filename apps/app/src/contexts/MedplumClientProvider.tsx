@@ -37,6 +37,10 @@ type MedplumContextType = {
   // Data access methods (delegated to store)
   addNotesToTask: (taskId: string, notes: string) => Promise<Task>
   toggleTaskOwner: (taskId: string) => Promise<Task>
+  updateTaskStatus: (
+    taskId: string,
+    status: 'completed' | 'cancelled',
+  ) => Promise<Task>
   getPatientObservations: (patientId: string) => Promise<Observation[]>
   getPatientCompositions: (patientId: string) => Promise<Composition[]>
   getPatientEncounters: (patientId: string) => Promise<Encounter[]>
@@ -306,6 +310,19 @@ export function MedplumClientProvider({
     [medplumClient, practitioner?.id, isLoading],
   )
 
+  const updateTaskStatus = useCallback(
+    async (taskId: string, status: 'completed' | 'cancelled') => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.updateTaskStatus(taskId, status)
+    },
+    [medplumClient, isLoading],
+  )
+
   const deletePatient = useCallback(
     async (patientId: string) => {
       if (isLoading) {
@@ -399,6 +416,7 @@ export function MedplumClientProvider({
     practitioner,
     addNotesToTask,
     toggleTaskOwner,
+    updateTaskStatus,
     getPatientObservations,
     getPatientEncounters,
     getPatientDetectedIssues,
