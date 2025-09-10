@@ -505,6 +505,27 @@ export class MedplumStoreClient {
     }
   }
 
+  async updateTaskStatus(
+    taskId: string,
+    status: 'completed' | 'cancelled',
+  ): Promise<Task> {
+    try {
+      const task = (await this.client.readResource('Task', taskId)) as Task
+
+      const updatedTask = {
+        ...task,
+        resourceType: 'Task',
+        status: status,
+        lastModified: new Date().toISOString(),
+      } as Task
+
+      return await this.client.updateResource(updatedTask)
+    } catch (error) {
+      console.error('Error updating task status:', error)
+      throw error
+    }
+  }
+
   async deletePatient(patientId: string): Promise<void> {
     try {
       // First, get all tasks for this patient
