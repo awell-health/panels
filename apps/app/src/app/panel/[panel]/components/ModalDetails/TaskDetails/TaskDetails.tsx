@@ -4,7 +4,6 @@ import StaticContent from '../StaticContent'
 import ConnectorsSection from './ConnectorsSection'
 import TaskAsignment from './TaskAsignment'
 import type { CodeableConcept, Coding } from '@medplum/fhirtypes'
-import { useState, useEffect } from 'react'
 import AHPFrame from './AHPFrame'
 import ApproveRejectTask from './ApproveRejectTask'
 
@@ -35,21 +34,22 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
     (performerType: CodeableConcept) =>
       performerType.coding?.some(
         (coding: Coding) =>
-          (coding.code === 'PT' || coding.code === 'DKC') &&
-          coding.system === 'http://terminology.hl7.org/CodeSystem/v3-RoleCode',
+          (coding?.code === 'PT' || coding?.code === 'DKC') &&
+          coding?.system ===
+            'http://terminology.hl7.org/CodeSystem/v3-RoleCode',
       ),
   )
 
-  const isAHPTask = task?.code.coding.find(
+  const isAHPTask = task?.code?.coding.find(
     (c: Coding) =>
-      c.system === 'http://terminology.hl7.org/CodeSystem/task-code' &&
-      c.code === 'approve',
+      c?.system === 'http://terminology.hl7.org/CodeSystem/task-code' &&
+      c?.code === 'approve',
   )
 
-  const isDavitaApprovalRejectTask = task?.code.coding.find(
+  const isDavitaApprovalRejectTask = task?.code?.coding.find(
     (c: Coding) =>
-      c.system === 'http://davita.com/fhir/task-code' &&
-      (c.code === 'approval-reject' || c.code === 'approve-reject'),
+      c?.system === 'http://davita.com/fhir/task-code' &&
+      (c?.code === 'approval-reject' || c?.code === 'approve-reject'),
   )
 
   const AHP_URL = getAwellHostedPagesUrl(AHP_CODE)
