@@ -4,8 +4,9 @@ import StaticContent from '../StaticContent'
 import ConnectorsSection from './ConnectorsSection'
 import TaskAsignment from './TaskAsignment'
 import type { CodeableConcept, Coding } from '@medplum/fhirtypes'
-import AHPFrame from './AHPFrame'
 import ApproveRejectTask from './ApproveRejectTask'
+import TaskStatusBadge from './TaskStatusBadge'
+import FramePanel from '../FramePanel'
 
 interface TaskDetailsProps {
   task: WorklistTask
@@ -66,16 +67,31 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
           {view === 'resolve-task' && (
             <div className="flex flex-col h-full">
               <TaskAsignment task={task} blockAssignee={isNonAssignableTask} />
+              <div className="flex justify-between items-center border-b border-gray-200 pb-2 mb-2">
+                <div className="font-medium text-gray-900">
+                  {task.description}
+                </div>
+                <div className="flex items-center gap-2">
+                  <TaskStatusBadge status={task.status} />
+                </div>
+              </div>
               <div className="flex-1 overflow-hidden">
-                {isAHPTask && (
-                  <AHPFrame
-                    task={task}
-                    url={AHP_URL}
-                    isNonAssignableTask={isNonAssignableTask}
-                  />
+                {!isNonAssignableTask && (
+                  <>
+                    {isAHPTask && (
+                      <FramePanel url={AHP_URL} status={task.status} />
+                    )}
+                    {isDavitaApprovalRejectTask && (
+                      <ApproveRejectTask task={task} />
+                    )}
+                  </>
                 )}
-                {isDavitaApprovalRejectTask && (
-                  <ApproveRejectTask task={task} />
+                {isNonAssignableTask && (
+                  <div className="flex items-center justify-center h-full gap-2">
+                    <span className=" text-gray-500">
+                      This task cannot be completed through panels.
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
