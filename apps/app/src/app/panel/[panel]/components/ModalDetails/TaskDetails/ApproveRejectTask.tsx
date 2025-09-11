@@ -105,14 +105,7 @@ const ApproveRejectTask = ({ task }: ApproveRejectTaskProps) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-        <div className="font-medium text-gray-900">{task.description}</div>
-        <div className="flex items-center gap-2">
-          <TaskStatusBadge status={task.status} />
-        </div>
-      </div>
       {renderData('Incoming Data', incomingData, Object.keys(matchedData))}
-
       <div className="flex items-center justify-center">
         <ArrowDown className="h-4 w-4 text-accent" />
       </div>
