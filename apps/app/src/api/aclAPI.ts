@@ -25,6 +25,31 @@ export const aclAPI = {
     return response.json() as Promise<ACLsResponse>
   },
 
+  listByUser: async (
+    userEmail: string,
+    resourceType?: 'panel' | 'view',
+    options?: Record<string, unknown>,
+  ): Promise<ACLsResponse> => {
+    const { apiConfig } = await import('./config/apiConfig')
+    const defaultOptions = await apiConfig.getDefaultOptionsNoBody()
+
+    const queryParams = new URLSearchParams()
+    if (resourceType) {
+      queryParams.append('resourceType', resourceType)
+    }
+
+    const url = `/acls/user/${encodeURIComponent(userEmail)}${
+      queryParams.toString() ? `?${queryParams.toString()}` : ''
+    }`
+
+    const response = await fetch(await apiConfig.buildUrl(url), {
+      method: 'GET',
+      ...defaultOptions,
+      ...(options || {}),
+    })
+    return response.json() as Promise<ACLsResponse>
+  },
+
   create: async (
     resourceType: 'panel' | 'view',
     resourceId: number,
