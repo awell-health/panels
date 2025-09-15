@@ -336,7 +336,6 @@ thead .sticky-column {
 
 tbody .sticky-column {
   overflow: hidden !important;
-  white-space: nowrap !important;
 }
 
 /* Pure CSS hover effects - no JavaScript needed */
