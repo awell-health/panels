@@ -1,5 +1,4 @@
 import { useToastHelpers } from '@/contexts/ToastContext'
-import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { logger } from '@/lib/logger'
 import { Trash2Icon, User, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -8,93 +7,64 @@ import TaskDetails from './TaskDetails/TaskDetails'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
 import { useDateTimeFormat } from '@/hooks/use-date-time-format'
-import type { Identifier, Resource } from '@medplum/fhirtypes'
-import { Dialog, DialogContent } from '../../../../../components/ui/dialog'
-import { getNestedProperty } from '@medplum/core'
-import {
-  getNestedValue,
-  getNestedValueFromBundle,
-} from '../../../../../lib/fhir-path'
+import type { Resource } from '@medplum/fhirtypes'
+import { Dialog } from '../../../../../components/ui/dialog'
+import { getNestedValueFromBundle } from '../../../../../lib/fhir-path'
 import { useReactivePanel } from '../../../../../hooks/use-reactive-data'
 import { getCardConfigs } from '../../../../../utils/static/CardConfigs'
 import type { FHIRCard } from './StaticContent/FhirExpandableCard'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 
-interface ModalDetailsProps {
-  patient?: WorklistPatient
-  task?: WorklistTask
+interface Props {
+  patientId?: string
+  taskId?: string
+  pathname: string
   onClose: () => void
 }
 
-const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
+const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
   const { patients, tasks, deletePatient } = useMedplumStore()
   const { isAdmin } = useAuthentication()
   const { showSuccess, showError } = useToastHelpers()
   const { formatDate } = useDateTimeFormat()
   const modalRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   const { organizationSlug } = useAuthentication()
   const params = useParams()
   const panelId = params.panel as string
   const { panel } = useReactivePanel(panelId)
 
+  const task = taskId ? tasks.find((t) => t.id === taskId) : null
+  const patient = patients.find((p) => {
+    if (patientId) {
+      return p.id === patientId
+    }
+
+    if (taskId && task) {
+      return p.id === task.patientId
+    }
+
+    return false
+  })
+
   const contentCards =
     (panel?.metadata?.cardsConfiguration as FHIRCard[]) ??
     getCardConfigs(organizationSlug ?? 'default')
 
-  // Internal state management
-  const [currentPatient, setCurrentPatient] = useState<WorklistPatient | null>(
-    null,
-  )
-  const [selectedTask, setSelectedTask] = useState<WorklistTask | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (patient) {
-      setCurrentPatient(patient)
       setIsLoading(false)
     }
   }, [patient])
 
-  useEffect(() => {
-    if (task) {
-      setSelectedTask(task)
-      const resolvedPatient = patients.find((p) => p.id === task.patientId)
-      if (resolvedPatient) {
-        setCurrentPatient(resolvedPatient)
-        setSelectedTask(task)
-        setIsLoading(false)
-      } else {
-        setCurrentPatient(null)
-        setIsLoading(false)
-        logger.error(
-          {
-            operationType: 'resolve-patient',
-            component: 'modal-details',
-            action: 'initialize-state',
-          },
-          'Failed to resolve patient for task',
-          new Error(`Patient with ID ${task.patientId} not found in store`),
-        )
-      }
-    }
-  }, [task, patients])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: This hook needs to refresh the selected task when it's been updated in medplum
-  useEffect(() => {
-    if (selectedTask) {
-      const updatedTask = tasks.find((t) => t.id === selectedTask.id)
-      if (updatedTask) {
-        setSelectedTask(updatedTask)
-      }
-    }
-  }, [tasks])
-
   const handleDeleteRequest = async () => {
-    if (!currentPatient) return
+    if (!patient) return
 
     try {
-      await deletePatient(currentPatient.id)
+      await deletePatient(patient.id)
       showSuccess(
         'Patient deleted',
         'Patient and all associated tasks have been deleted.',
@@ -139,9 +109,9 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
   }, [onClose])
 
   // Get patient name and DOB for header
-  const patientName = currentPatient?.name || ''
-  const dateOfBirth = currentPatient?.birthDate || ''
-  const gender = currentPatient?.gender || ''
+  const patientName = patient?.name || ''
+  const dateOfBirth = patient?.birthDate || ''
+  const gender = patient?.gender || ''
 
   const fhirPathForMrn = contentCards
     .find((card) => {
@@ -155,7 +125,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
       type: 'searchset',
       entry: [
         {
-          resource: currentPatient as unknown as Resource,
+          resource: patient as unknown as Resource,
         },
       ],
     },
@@ -170,8 +140,8 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
     >
       <div
         className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0 text-xs"
-        data-patient-id={currentPatient?.id}
-        data-task-id={selectedTask?.id}
+        data-patient-id={patient?.id}
+        data-task-id={task?.id}
       >
         <div className="flex items-center gap-2 text-gray-700 pl-4">
           <User className="h-5 w-5" />
@@ -179,22 +149,24 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
             <span className="font-medium text-gray-500">
               Loading patient...
             </span>
-          ) : !currentPatient ? (
+          ) : !patient ? (
             <span className="font-medium text-red-600">
               Error loading patient
             </span>
-          ) : selectedTask ? (
+          ) : task ? (
             <button
               type="button"
               className="btn btn-sm btn-link text-blue-600 hover:underline px-1"
-              onClick={() => setSelectedTask(null)}
+              onClick={() =>
+                router.push(`${pathname}?patientId=${patient?.id}`)
+              }
             >
               {patientName}
             </button>
           ) : (
             <span className="font-medium">{patientName}</span>
           )}
-          {currentPatient && (
+          {patient && (
             <>
               {dateOfBirth && (
                 <>
@@ -214,7 +186,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
                   <span>Gender {gender}</span>
                 </>
               )}
-              {currentPatient && !selectedTask && isAdmin && (
+              {patient && !task && isAdmin && (
                 <button
                   type="button"
                   onClick={handleDeleteRequest}
@@ -245,7 +217,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
               Loading patient details...
             </div>
           </div>
-        ) : !currentPatient ? (
+        ) : !patient ? (
           <div className="flex-1 flex items-center justify-center p-8">
             <div className="text-center">
               <div className="text-red-500 text-lg font-medium mb-2">
@@ -256,12 +228,14 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
               </div>
             </div>
           </div>
-        ) : selectedTask ? (
-          <TaskDetails task={selectedTask} />
+        ) : task ? (
+          <TaskDetails task={task} />
         ) : (
           <PatientDetails
-            patient={currentPatient}
-            setSelectedTask={setSelectedTask}
+            patient={patient}
+            setSelectedTask={(item) => {
+              router.push(`${pathname}?taskId=${item?.id}`)
+            }}
           />
         )}
       </div>
