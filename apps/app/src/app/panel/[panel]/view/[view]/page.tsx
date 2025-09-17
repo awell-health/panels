@@ -19,8 +19,14 @@ import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
 import type { Column, ColumnChangesResponse, Filter, Sort } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
-import { useParams, useRouter } from 'next/navigation'
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from 'next/navigation'
 import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useModalUrlParams } from '@/lib/url-params'
 import ModalDetails from '../../components/ModalDetails/ModalDetails'
 import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
@@ -35,7 +41,11 @@ export default function WorklistViewPage() {
   const params = useParams()
   const panelId = params.panel as string
   const viewId = params.view as string
+  const searchParams = useSearchParams()
   const router = useRouter()
+  const pathname = usePathname()
+
+  const { handleRowClick, handleModalClose } = useModalUrlParams()
   const { user } = useAuthentication()
   const {
     panel,
@@ -72,6 +82,9 @@ export default function WorklistViewPage() {
       panelId,
     },
   )
+
+  const patientId = searchParams.get('patientId')
+  const taskId = searchParams.get('taskId')
 
   // Get the appropriate data based on view type
   const patients =
@@ -188,12 +201,6 @@ export default function WorklistViewPage() {
   // Handle column updates - with view-specific locking support
   const onColumnUpdate = async (updates: Partial<Column>) => {
     if (!updates.id) return
-
-    console.log('🔄 onColumnUpdate called:', {
-      columnId: updates.id,
-      locked: updates.properties?.display?.locked,
-      isLockingOperation: updates.properties?.display?.locked !== undefined,
-    })
 
     // Check if this is a locking/unlocking operation
     if (updates.properties?.display?.locked !== undefined) {
@@ -331,14 +338,11 @@ export default function WorklistViewPage() {
     }
   }
 
-  // Centralized row click handler - optimized with useCallback
-  const handleRowClick = useCallback(
+  const onRowClick =
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
-      setSelectedItem(row as WorklistPatient | WorklistTask)
-    },
-    [],
-  )
+      handleRowClick(row.resourceType, row.id)
+    }
 
   const onViewTitleChange = async (newTitle: string) => {
     if (!view) {
@@ -445,7 +449,7 @@ export default function WorklistViewPage() {
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}
                 initialSort={view?.metadata.sort || null}
-                onRowClick={handleRowClick}
+                onRowClick={onRowClick}
                 handleDragEnd={handleDragEnd}
                 hasMore={hasMore}
                 onLoadMore={loadMore}
@@ -453,21 +457,16 @@ export default function WorklistViewPage() {
               />
             </div>
           </div>
-          {selectedItem && (
+
+          {(patientId || taskId) && (
             <ModalDetails
-              patient={
-                selectedItem.resourceType === 'Patient'
-                  ? (selectedItem as WorklistPatient)
-                  : undefined
-              }
-              task={
-                selectedItem.resourceType === 'Task'
-                  ? (selectedItem as WorklistTask)
-                  : undefined
-              }
-              onClose={() => setSelectedItem(null)}
+              patientId={patientId || undefined}
+              taskId={taskId || undefined}
+              onClose={handleModalClose}
+              pathname={pathname}
             />
           )}
+
           <div className="footer-area">
             <PanelFooter
               columnsCounter={visibleColumnsSorted.length}

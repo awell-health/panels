@@ -15,7 +15,6 @@ import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { useReactivePanel } from '../../../../../../../hooks/use-reactive-data'
 import { useParams } from 'next/navigation'
 import { getCardConfigs } from '../../../../../../../utils/static/CardConfigs'
-import { handleError } from '../utils'
 
 interface Props {
   task?: WorklistTask
@@ -47,58 +46,32 @@ const ContentCards: React.FC<Props> = ({
   const [observations, setObservations] = useState<Observation[]>([])
   const [compositions, setCompositions] = useState<Composition[]>([])
   const [encounters, setEncounters] = useState<Encounter[]>([])
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const fetchEncounters = async () => {
+    if (!patient?.id) return
+    const encounters = await getPatientEncounters(patient.id)
+    setEncounters(encounters)
+  }
+
+  const fetchCompositions = async () => {
+    if (!patient?.id) return
+    const compositions = await getPatientCompositions(patient.id)
+    setCompositions(compositions)
+  }
+
+  const fetchObservations = async () => {
+    if (!patient?.id) return
+    const observations = await getPatientObservations(patient.id)
+    setObservations(observations)
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
-    const fetchData = async () => {
-      if (!patient?.id) return
-
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        const [observationsData, encountersData, compositionsData] =
-          await Promise.allSettled([
-            getPatientObservations(patient.id),
-            getPatientEncounters(patient.id),
-            getPatientCompositions(patient.id),
-          ])
-
-        if (observationsData.status === 'fulfilled') {
-          setObservations(observationsData.value || [])
-        } else {
-          handleError(observationsData.reason, 'ContentCards.fetchObservations')
-        }
-
-        if (encountersData.status === 'fulfilled') {
-          setEncounters(encountersData.value || [])
-        } else {
-          handleError(encountersData.reason, 'ContentCards.fetchEncounters')
-        }
-
-        if (compositionsData.status === 'fulfilled') {
-          setCompositions(compositionsData.value || [])
-        } else {
-          handleError(compositionsData.reason, 'ContentCards.fetchCompositions')
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Unknown error occurred'
-        handleError(err, 'ContentCards.fetchData')
-        setError(errorMessage)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [
-    patient?.id,
-    getPatientCompositions,
-    getPatientObservations,
-    getPatientEncounters,
-  ])
+    fetchEncounters()
+    fetchCompositions()
+    fetchObservations()
+  }, [patient?.id])
 
   // Create bundle with proper type safety
   const createBundle = (): Bundle => {

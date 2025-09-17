@@ -26,8 +26,14 @@ import type {
 } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Loader2 } from 'lucide-react'
-import { useParams, useRouter } from 'next/navigation'
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from 'next/navigation'
 import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useModalUrlParams } from '@/lib/url-params'
 import { AddIngestionModal } from './components/AddIngestionModal'
 import { ModalDetails } from './components/ModalDetails'
 import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
@@ -39,13 +45,18 @@ import { useACL } from '@/contexts/ACLContext'
 export default function WorklistPage() {
   const params = useParams()
   const panelId = params.panel as string
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const { handleRowClick, handleModalClose } = useModalUrlParams()
+
   const [currentView, setCurrentView] = useState<ViewType>('patient')
   const [isAddingIngestionSource, setIsAddingIngestionSource] = useState(false)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
 
-  const [selectedItem, setSelectedItem] = useState<
-    WorklistPatient | WorklistTask | null
-  >(null)
+  // Get query parameters
+  const patientId = searchParams.get('patientId')
+  const taskId = searchParams.get('taskId')
 
   const [selectedRows] = useState<string[]>([])
   const { user } = useAuthentication()
@@ -94,8 +105,6 @@ export default function WorklistPage() {
 
   // Create column locking context for panel (no viewId, so uses panel-level locking)
   const { setColumnLocked, isColumnLocked } = useColumnLocking(panelId)
-
-  const router = useRouter()
 
   // Get columns for current view type using tag-based filtering
   const allColumnsForViewType = allColumns.filter((col) =>
@@ -298,13 +307,11 @@ export default function WorklistPage() {
   }
 
   // Centralized row click handler
-  const handleRowClick = useCallback(
+  const onRowClick =
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
-      setSelectedItem(row as WorklistPatient | WorklistTask)
-    },
-    [],
-  )
+      handleRowClick(row.resourceType, row.id)
+    }
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -428,7 +435,7 @@ export default function WorklistPage() {
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}
                 initialSort={panel.metadata.sort || null}
-                onRowClick={handleRowClick}
+                onRowClick={onRowClick}
                 handleDragEnd={handleDragEnd}
                 hasMore={hasMore}
                 onLoadMore={loadMore}
@@ -444,19 +451,12 @@ export default function WorklistPage() {
               )}
             </div>
           </div>
-          {selectedItem && (
+          {(patientId || taskId) && (
             <ModalDetails
-              patient={
-                selectedItem.resourceType === 'Patient'
-                  ? (selectedItem as WorklistPatient)
-                  : undefined
-              }
-              task={
-                selectedItem.resourceType === 'Task'
-                  ? (selectedItem as WorklistTask)
-                  : undefined
-              }
-              onClose={() => setSelectedItem(null)}
+              patientId={patientId || undefined}
+              taskId={taskId || undefined}
+              onClose={handleModalClose}
+              pathname={pathname}
             />
           )}
           <div className="footer-area">
