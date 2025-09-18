@@ -384,6 +384,33 @@ export class ReactiveStorageAdapter implements StorageAdapter {
     }
   }
 
+  async getACLsByUser(
+    userEmail: string,
+    resourceType?: 'panel' | 'view',
+  ): Promise<ACL[]> {
+    await this.waitForInitialization()
+    if (!this.underlyingAdapter) {
+      throw new Error('Underlying storage adapter not initialized')
+    }
+
+    try {
+      const acls = await (
+        this.underlyingAdapter as StorageAdapter & {
+          getACLsByUser: (
+            userEmail: string,
+            resourceType?: 'panel' | 'view',
+          ) => Promise<ACL[]>
+        }
+      ).getACLsByUser(userEmail, resourceType)
+      // Update reactive store with fetched ACLs
+      this.reactiveStore.setACLs(acls)
+      return acls
+    } catch (error) {
+      console.error('Failed to fetch ACLs by user:', error)
+      throw error
+    }
+  }
+
   async createACL(
     resourceType: 'panel' | 'view',
     resourceId: number,

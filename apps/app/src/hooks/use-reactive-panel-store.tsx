@@ -614,6 +614,29 @@ export class ReactivePanelStore {
     return this.reactiveStore?.getACLs(resourceType, resourceId) || []
   }
 
+  async getACLsByUser(
+    userEmail: string,
+    resourceType?: 'panel' | 'view',
+  ): Promise<ACL[]> {
+    if (!this.storage) {
+      throw new Error('Storage adapter not initialized')
+    }
+
+    // Check if this method exists on the storage adapter
+    if ('getACLsByUser' in this.storage) {
+      const adapter = this.storage as StorageAdapter & {
+        getACLsByUser: (
+          userEmail: string,
+          resourceType?: 'panel' | 'view',
+        ) => Promise<ACL[]>
+      }
+      return await adapter.getACLsByUser(userEmail, resourceType)
+    }
+
+    // Fallback: get from reactive store
+    return this.reactiveStore?.getACLsByUser(userEmail, resourceType) || []
+  }
+
   async createACL(
     resourceType: 'panel' | 'view',
     resourceId: number,
@@ -826,6 +849,7 @@ export function useReactivePanelStore() {
     getViewsForPanel: store.getViewsForPanel.bind(store),
     // ACL methods
     getACLs: store.getACLs.bind(store),
+    getACLsByUser: store.getACLsByUser.bind(store),
     createACL: store.createACL.bind(store),
     updateACL: store.updateACL.bind(store),
     deleteACL: store.deleteACL.bind(store),

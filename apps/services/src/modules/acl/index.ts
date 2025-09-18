@@ -1,5 +1,6 @@
 import fp from 'fastify-plugin'
 import { aclList } from './routes/acl-list.js'
+import { aclListByUser } from './routes/acl-list-by-user.js'
 import { aclCreate } from './routes/acl-create.js'
 import { aclUpdate } from './routes/acl-update.js'
 import { aclDelete } from './routes/acl-delete.js'
@@ -12,6 +13,7 @@ export { AccessControlList } from './entities/access-control-list.entity.js'
 export default fp(
   async (fastify) => {
     fastify.register(aclList)
+    fastify.register(aclListByUser)
     fastify.register(aclCreate)
     fastify.register(aclUpdate)
     fastify.register(aclDelete)

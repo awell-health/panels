@@ -38,6 +38,10 @@ export interface StorageAdapter {
 
   // ACL operations
   getACLs(resourceType: 'panel' | 'view', resourceId: number): Promise<ACL[]>
+  getACLsByUser(
+    userEmail: string,
+    resourceType?: 'panel' | 'view',
+  ): Promise<ACL[]>
   createACL(
     resourceType: 'panel' | 'view',
     resourceId: number,

@@ -227,6 +227,22 @@ export class ReactiveStore {
       )
   }
 
+  getACLsByUser(userEmail: string, resourceType?: 'panel' | 'view'): ACL[] {
+    const acls = this.store.getTable('acls')
+    return Object.entries(acls)
+      .map(([, acl]) => {
+        const aclData = acl as Record<string, string | number | boolean>
+        return this.deserializeACL(aclData)
+      })
+      .filter((acl) => {
+        const matchesUser =
+          acl.userEmail === userEmail || acl.userEmail === '_all'
+        const matchesResourceType =
+          !resourceType || acl.resourceType === resourceType
+        return matchesUser && matchesResourceType
+      })
+  }
+
   getACL(id: number): ACL | undefined {
     const acl = this.store.getRow('acls', id.toString())
     if (!acl) return undefined

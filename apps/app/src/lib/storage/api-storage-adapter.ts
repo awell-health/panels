@@ -563,6 +563,25 @@ export class APIStorageAdapter implements StorageAdapter {
     }
   }
 
+  async getACLsByUser(
+    userEmail: string,
+    resourceType?: 'panel' | 'view',
+  ): Promise<ACL[]> {
+    try {
+      const { aclAPI } = await import('@/api/aclAPI')
+      const response = await aclAPI.listByUser(userEmail, resourceType)
+      return response.acls
+    } catch (error) {
+      logger.error(
+        { error, userEmail, resourceType },
+        'Failed to fetch ACLs by user from API',
+      )
+      throw new Error(
+        `Failed to load ACLs by user: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
+
   async createACL(
     resourceType: 'panel' | 'view',
     resourceId: number,
