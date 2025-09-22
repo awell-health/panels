@@ -83,7 +83,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                         {children}
                         <ToastContainer position="bottom-center" />
                         <CaptureWidget />
-                        <MemoryDebugWindowZustand />
                       </ToastProvider>
                     </ACLProvider>
                   </ReactivePanelStoreProvider>
