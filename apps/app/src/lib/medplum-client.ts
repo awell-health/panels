@@ -575,7 +575,10 @@ export class MedplumStoreClient {
     return (response.entry ?? []).map((e) => e.resource as Patient)
   }
 
-  async getTasksForPatients(patientIDs: string[]): Promise<Task[]> {
+  async getTasksForPatients(
+    patientIDs: string[],
+    limit = 500,
+  ): Promise<Task[]> {
     const uniqueIDs = [...new Set(patientIDs)]
 
     if (uniqueIDs.length === 0) {
@@ -588,7 +591,7 @@ export class MedplumStoreClient {
       entry: uniqueIDs.map((id) => ({
         request: {
           method: 'GET',
-          url: `Task?patient=Patient/${id}`,
+          url: `Task?patient=Patient/${id}&_count=${limit}`,
         },
       })),
     }

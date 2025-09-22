@@ -333,24 +333,15 @@ export function ColumnMenu({
             type="button"
             className="btn btn-xs btn-ghost w-full justify-start"
             onClick={async () => {
-              console.log('Hide column clicked for:', column.id)
-              console.log(
-                'columnVisibilityContext available:',
-                !!columnVisibilityContext,
-              )
-
               if (columnVisibilityContext) {
                 // Use the proper column visibility context (handles both panel and view contexts)
-                console.log('Using columnVisibilityContext.setVisibility')
                 try {
                   await columnVisibilityContext.setVisibility(column.id, false)
-                  console.log('Column visibility updated successfully')
                 } catch (error) {
                   console.error('Error updating column visibility:', error)
                 }
               } else if (onColumnUpdate) {
                 // Fallback to the old approach for backward compatibility
-                console.log('Using fallback onColumnUpdate')
                 onColumnUpdate({
                   id: column.id,
                   properties: {

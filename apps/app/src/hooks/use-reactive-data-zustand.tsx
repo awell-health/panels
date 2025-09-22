@@ -26,14 +26,8 @@ export function useReactivePanels() {
 
   const panelsArray = useMemo(() => {
     const result = Object.values(panels)
-    console.log('useReactivePanels: panels data:', {
-      panelsCount: result.length,
-      isLoading,
-      error,
-      panels: result.map((p) => ({ id: p.id, name: p.name })),
-    })
     return result
-  }, [panels, isLoading, error])
+  }, [panels])
 
   return {
     panels: panelsArray,

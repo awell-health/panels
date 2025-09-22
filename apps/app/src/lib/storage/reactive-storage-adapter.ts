@@ -56,12 +56,6 @@ export class ReactiveStorageAdapter implements StorageAdapter {
         this.underlyingAdapter.getColumns(),
       ])
 
-      console.log('ReactiveStorageAdapter: Loaded data:', {
-        panels: panels.length,
-        views: views.length,
-        columns: columns.length,
-      })
-
       this.reactiveStore.setPanels(panels)
       this.reactiveStore.setViews(views)
       this.reactiveStore.setColumns(columns)
@@ -248,32 +242,21 @@ export class ReactiveStorageAdapter implements StorageAdapter {
     columnId: string,
     updates: Partial<Column>,
   ): Promise<Column> {
-    console.log('ReactiveStorageAdapter.updateColumn called:', {
-      panelId,
-      columnId,
-      updates,
-    })
-
     if (!this.underlyingAdapter) {
       throw new Error('Storage adapter not initialized')
     }
 
     try {
       // Update in underlying adapter
-      console.log('Calling underlyingAdapter.updateColumn...')
       const updatedColumn = await this.underlyingAdapter.updateColumn(
         panelId,
         columnId,
         updates,
       )
-      console.log('Underlying adapter returned:', updatedColumn)
 
       // Update in reactive store
-      console.log('About to call reactiveStore.setColumn with:', updatedColumn)
       this.reactiveStore.setColumn(updatedColumn)
-      console.log('reactiveStore.setColumn completed')
 
-      console.log('ReactiveStorageAdapter returning:', updatedColumn)
       return updatedColumn
     } catch (error) {
       console.error('Failed to update column:', error)
