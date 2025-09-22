@@ -1,4 +1,4 @@
-import { take } from 'lodash'
+import { isString, take } from 'lodash'
 import { isValid, parseISO } from 'date-fns'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 
@@ -20,7 +20,7 @@ export const createSearchFilter = (searchQuery: string) => {
 
     matchesAnyText: (...texts: (string | undefined | null)[]): boolean => {
       return texts.some((text) => {
-        if (!text || !normalizedQuery) return false
+        if (!text || !normalizedQuery || !isString(text)) return false
         return text.toLowerCase().includes(normalizedQuery)
       })
     },

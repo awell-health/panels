@@ -13,7 +13,7 @@ import {
   useReactiveColumns,
   useReactivePanel,
   useReactiveViews,
-} from '@/hooks/use-reactive-data'
+} from '@/hooks/use-reactive-data-zustand'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
@@ -431,6 +431,7 @@ export default function WorklistPage() {
                 currentView={currentView}
                 currentUserName={user?.name}
                 onColumnUpdate={onColumnUpdate}
+                columnVisibilityContext={columnVisibilityContext}
                 onColumnDelete={onColumnDelete}
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}
@@ -451,14 +452,12 @@ export default function WorklistPage() {
               )}
             </div>
           </div>
-          {(patientId || taskId) && (
-            <ModalDetails
-              patientId={patientId || undefined}
-              taskId={taskId || undefined}
-              onClose={handleModalClose}
-              pathname={pathname}
-            />
-          )}
+          <ModalDetails
+            patientId={patientId || undefined}
+            taskId={taskId || undefined}
+            onClose={handleModalClose}
+            pathname={pathname}
+          />
           <div className="footer-area">
             <PanelFooter
               columnsCounter={visibleColumnsSorted.length}

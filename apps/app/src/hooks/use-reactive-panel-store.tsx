@@ -6,7 +6,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 
 import { getRuntimeConfig } from '@/lib/config'
-import { ReactiveStore } from '@/lib/reactive/reactive-store'
+import { ReactiveStoreZustand } from '@/lib/reactive/reactive-store-zustand'
 import {
   getStorageAdapter,
   type StorageMode,
@@ -18,16 +18,10 @@ import { Loader2 } from 'lucide-react'
 
 export class ReactivePanelStore {
   private storage: StorageAdapter | null = null
-  private reactiveStore: ReactiveStore | null = null
+  private reactiveStore: ReactiveStoreZustand | null = null
   private initializationPromise: Promise<void> | null = null
 
   constructor(userId?: string, organizationSlug?: string, mode?: StorageMode) {
-    console.log(
-      'Initializing ReactivePanelStore with',
-      userId,
-      organizationSlug,
-      mode,
-    )
     this.initializationPromise = this.initializeStorage(
       userId,
       organizationSlug,
@@ -46,54 +40,18 @@ export class ReactivePanelStore {
       // Get the reactive store from the storage adapter if it's a ReactiveStorageAdapter
       if (this.storage && 'getReactiveStore' in this.storage) {
         const reactiveAdapter = this.storage as {
-          getReactiveStore(): ReactiveStore
+          getReactiveStore(): ReactiveStoreZustand
         }
         this.reactiveStore = reactiveAdapter.getReactiveStore()
       } else {
         // Fallback: create our own reactive store
-        this.reactiveStore = new ReactiveStore()
+        this.reactiveStore = new ReactiveStoreZustand()
       }
 
-      // Load initial data into reactive store
-      await this.loadInitialData()
+      // Data loading is handled by the storage adapter
     } catch (error) {
       console.error('Failed to initialize storage adapter:', error)
       throw error
-    }
-  }
-
-  private async loadInitialData() {
-    if (!this.storage || !this.reactiveStore) {
-      console.log(
-        'ReactivePanelStore: storage or reactive store not ready, skipping initial data load',
-      )
-      return
-    }
-
-    try {
-      this.reactiveStore.setLoading(true)
-
-      const [panels, views, columns] = await Promise.all([
-        this.storage.getPanels(),
-        this.storage.getViews(),
-        this.storage.getColumns(),
-      ])
-      this.reactiveStore.setPanels(panels)
-      this.reactiveStore.setViews(views)
-      this.reactiveStore.setColumns(columns)
-
-      // Note: ACLs are loaded on-demand when getACLs is called
-      // This avoids loading all ACLs for all resources at startup
-
-      this.reactiveStore.setLoading(false)
-      this.reactiveStore.setLastSync(Date.now())
-    } catch (error) {
-      if (this.reactiveStore) {
-        this.reactiveStore.setError(
-          error instanceof Error ? error.message : 'Failed to load data',
-        )
-        this.reactiveStore.setLoading(false)
-      }
     }
   }
 
@@ -110,17 +68,14 @@ export class ReactivePanelStore {
   }
 
   // Get the reactive store
-  getReactiveStore(): ReactiveStore | null {
+  getReactiveStore(): ReactiveStoreZustand | null {
     return this.reactiveStore
   }
 
   // Get current save state for an operation
   getSaveState(operationId: string): 'saving' | 'saved' | 'error' | undefined {
-    const store = this.reactiveStore?.getStore()
-    if (!store) return undefined
-
-    const value = store.getValue(`saveState_${operationId}`)
-    return value as 'saving' | 'saved' | 'error' | undefined
+    if (!this.reactiveStore) return undefined
+    return this.reactiveStore.getSaveState(operationId)
   }
 
   // Set save state for an operation
@@ -128,9 +83,8 @@ export class ReactivePanelStore {
     operationId: string,
     state: 'saving' | 'saved' | 'error',
   ) {
-    const store = this.reactiveStore?.getStore()
-    if (store) {
-      store.setValue(`saveState_${operationId}`, state)
+    if (this.reactiveStore) {
+      this.reactiveStore.setSaveState(operationId, state)
     }
   }
 
@@ -356,7 +310,11 @@ export class ReactivePanelStore {
         updates,
       )
 
-      this.reactiveStore?.setColumn(updatedColumn)
+      if (updatedColumn) {
+        this.reactiveStore?.setColumn(updatedColumn)
+      } else {
+        console.error('Updated column is null/undefined, cannot set in store')
+      }
 
       this.setSaveState(operationId, 'saved')
     } catch (error) {
@@ -633,8 +591,8 @@ export class ReactivePanelStore {
       return await adapter.getACLsByUser(userEmail, resourceType)
     }
 
-    // Fallback: get from reactive store
-    return this.reactiveStore?.getACLsByUser(userEmail, resourceType) || []
+    // Fallback: return empty array if no adapter
+    return []
   }
 
   async createACL(
@@ -847,6 +805,11 @@ export function useReactivePanelStore() {
     applyColumnChanges: store.applyColumnChanges.bind(store),
     getColumnsForPanel: store.getColumnsForPanel.bind(store),
     getViewsForPanel: store.getViewsForPanel.bind(store),
+    // Panel methods
+    getPanels: () => store.getReactiveStore()?.getPanels() || [],
+    // Synchronous reactive store methods
+    getViewsForPanelSync: (panelId: string) =>
+      store.getReactiveStore()?.getViewsForPanel(panelId) || [],
     // ACL methods
     getACLs: store.getACLs.bind(store),
     getACLsByUser: store.getACLsByUser.bind(store),

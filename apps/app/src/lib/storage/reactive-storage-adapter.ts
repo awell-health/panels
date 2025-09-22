@@ -1,21 +1,21 @@
 import type { Panel, View, Column } from '@/types/panel'
 import type { ACL, ACLCreate, ACLUpdate } from '@panels/types/acls'
 import type { StorageAdapter } from './types'
-import { ReactiveStore } from '../reactive/reactive-store'
+import { ReactiveStoreZustand } from '../reactive/reactive-store-zustand'
 import { APIStorageAdapter } from './api-storage-adapter'
 
 /**
- * Reactive Storage Adapter - Integrates TinyBase with existing storage system
+ * Reactive Storage Adapter - Integrates Zustand with existing storage system
  * Provides reactive updates while maintaining compatibility with existing APIs
  * Now handles panels, views, and columns as separate entities
  */
 export class ReactiveStorageAdapter implements StorageAdapter {
-  private reactiveStore: ReactiveStore
+  private reactiveStore: ReactiveStoreZustand
   private underlyingAdapter: StorageAdapter | null = null
   private isInitialized = false
 
   constructor(userId?: string, organizationSlug?: string) {
-    this.reactiveStore = new ReactiveStore()
+    this.reactiveStore = new ReactiveStoreZustand()
     this.initializeUnderlyingAdapter(userId, organizationSlug)
   }
 
@@ -26,10 +26,12 @@ export class ReactiveStorageAdapter implements StorageAdapter {
     try {
       // Use API adapter directly to avoid circular dependency
       this.underlyingAdapter = new APIStorageAdapter(userId, organizationSlug)
-      this.isInitialized = true
 
       // Load initial data from underlying adapter
       await this.loadInitialData()
+
+      // Mark as initialized only after data is loaded
+      this.isInitialized = true
     } catch (error) {
       console.error(
         'ReactiveStorageAdapter: Failed to initialize underlying storage adapter:',
@@ -47,9 +49,16 @@ export class ReactiveStorageAdapter implements StorageAdapter {
     try {
       this.reactiveStore.setLoading(true)
 
-      // Load panels from underlying adapter
-      const panels = await this.underlyingAdapter.getPanels()
+      // Load all data from underlying adapter
+      const [panels, views, columns] = await Promise.all([
+        this.underlyingAdapter.getPanels(),
+        this.underlyingAdapter.getViews(),
+        this.underlyingAdapter.getColumns(),
+      ])
+
       this.reactiveStore.setPanels(panels)
+      this.reactiveStore.setViews(views)
+      this.reactiveStore.setColumns(columns)
 
       this.reactiveStore.setLastSync(Date.now())
     } catch (error) {
@@ -495,7 +504,7 @@ export class ReactiveStorageAdapter implements StorageAdapter {
   }
 
   // Helper methods for reactive store access
-  getReactiveStore(): ReactiveStore {
+  getReactiveStore(): ReactiveStoreZustand {
     return this.reactiveStore
   }
 

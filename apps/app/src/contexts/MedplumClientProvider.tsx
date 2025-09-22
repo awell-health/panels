@@ -7,7 +7,7 @@ import {
   type PaginatedResult,
   type PaginationOptions,
 } from '@/lib/medplum-client'
-import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
+import { panelDataStoreZustand as panelDataStore } from '@/lib/reactive/panel-medplum-data-store-zustand'
 import { MedplumClient } from '@medplum/core'
 import type {
   Composition,
@@ -53,7 +53,7 @@ type MedplumContextType = {
     options: PaginationOptions,
   ) => Promise<PaginatedResult<Task>>
   getPatientsFromReferences: (patientRefList: string[]) => Promise<Patient[]>
-  getTasksForPatients: (patientIDs: string[]) => Promise<Task[]>
+  getTasksForPatients: (patientIDs: string[], limit?: number) => Promise<Task[]>
   getPatientCount: () => Promise<number>
   getTaskCount: () => Promise<number>
 }
@@ -377,14 +377,14 @@ export function MedplumClientProvider({
   )
 
   const getTasksForPatients = useCallback(
-    async (patientIDs: string[]) => {
+    async (patientIDs: string[], limit?: number) => {
       if (isLoading) {
         throw new Error('Medplum client is still initializing')
       }
       if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      return await medplumClient.getTasksForPatients(patientIDs)
+      return await medplumClient.getTasksForPatients(patientIDs, limit)
     },
     [medplumClient, isLoading],
   )

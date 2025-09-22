@@ -29,6 +29,9 @@ interface SortableHeaderColumnProps {
   filterValue: string
   onFilter: (value: string) => void
   onColumnUpdate: (updates: Partial<Column>) => void
+  columnVisibilityContext?: {
+    setVisibility: (columnId: string, visible: boolean) => Promise<void>
+  }
   onColumnDelete?: (columnId: string) => void
   isLocked?: boolean // Current locked state in the active context
 }
@@ -42,6 +45,7 @@ export function SortableHeaderColumn({
   filterValue,
   onFilter,
   onColumnUpdate,
+  columnVisibilityContext,
   onColumnDelete,
   isLocked = false,
 }: SortableHeaderColumnProps) {
@@ -263,6 +267,7 @@ export function SortableHeaderColumn({
         filterValue={filterValue}
         onFilter={onFilter}
         onColumnUpdate={onColumnUpdate}
+        columnVisibilityContext={columnVisibilityContext}
         onColumnDelete={onColumnDelete}
         isLocked={isLocked}
       />

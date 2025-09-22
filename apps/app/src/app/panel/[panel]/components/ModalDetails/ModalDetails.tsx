@@ -6,11 +6,12 @@ import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
+import { useWorklistPatient, useWorklistTask } from '@/hooks/use-zustand-store'
 import { useDateTimeFormat } from '@/hooks/use-date-time-format'
 import type { Resource } from '@medplum/fhirtypes'
 import { Dialog } from '../../../../../components/ui/dialog'
 import { getNestedValueFromBundle } from '../../../../../lib/fhir-path'
-import { useReactivePanel } from '../../../../../hooks/use-reactive-data'
+import { useReactivePanel } from '../../../../../hooks/use-reactive-data-zustand'
 import { getCardConfigs } from '../../../../../utils/static/CardConfigs'
 import type { FHIRCard } from './StaticContent/FhirExpandableCard'
 import { useParams, useRouter } from 'next/navigation'
@@ -23,7 +24,7 @@ interface Props {
 }
 
 const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
-  const { patients, tasks, deletePatient } = useMedplumStore()
+  const { deletePatient } = useMedplumStore()
   const { isAdmin } = useAuthentication()
   const { showSuccess, showError } = useToastHelpers()
   const { formatDate } = useDateTimeFormat()
@@ -35,18 +36,9 @@ const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
   const panelId = params.panel as string
   const { panel } = useReactivePanel(panelId)
 
-  const task = taskId ? tasks.find((t) => t.id === taskId) : null
-  const patient = patients.find((p) => {
-    if (patientId) {
-      return p.id === patientId
-    }
-
-    if (taskId && task) {
-      return p.id === task.patientId
-    }
-
-    return false
-  })
+  // Use Zustand hooks for reactive data updates
+  const task = useWorklistTask(taskId || '')
+  const patient = useWorklistPatient(patientId || task?.patientId || '')
 
   const contentCards =
     (panel?.metadata?.cardsConfiguration as FHIRCard[]) ??
@@ -59,30 +51,6 @@ const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
       setIsLoading(false)
     }
   }, [patient])
-
-  const handleDeleteRequest = async () => {
-    if (!patient) return
-
-    try {
-      await deletePatient(patient.id)
-      showSuccess(
-        'Patient deleted',
-        'Patient and all associated tasks have been deleted.',
-      )
-      onClose() // Close the modal after successful deletion
-    } catch (error) {
-      logger.error(
-        {
-          operationType: 'delete-patient',
-          component: 'modal-details',
-          action: 'delete-patient',
-        },
-        'Failed to delete patient',
-        error instanceof Error ? error : new Error(String(error)),
-      )
-      showError('Delete failed', 'Failed to delete patient. Please try again.')
-    }
-  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -108,6 +76,10 @@ const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
     }
   }, [onClose])
 
+  if (!patient) {
+    return null
+  }
+
   // Get patient name and DOB for header
   const patientName = patient?.name || ''
   const dateOfBirth = patient?.birthDate || ''
@@ -131,6 +103,30 @@ const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
     },
     fhirPathForMrn ?? '',
   )
+
+  const handleDeleteRequest = async () => {
+    if (!patient) return
+
+    try {
+      await deletePatient(patient.id)
+      showSuccess(
+        'Patient deleted',
+        'Patient and all associated tasks have been deleted.',
+      )
+      onClose() // Close the modal after successful deletion
+    } catch (error) {
+      logger.error(
+        {
+          operationType: 'delete-patient',
+          component: 'modal-details',
+          action: 'delete-patient',
+        },
+        'Failed to delete patient',
+        error instanceof Error ? error : new Error(String(error)),
+      )
+      showError('Delete failed', 'Failed to delete patient. Please try again.')
+    }
+  }
 
   return (
     <Dialog

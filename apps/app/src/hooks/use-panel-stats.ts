@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
-import { useReactiveViews } from '@/hooks/use-reactive-data'
+import { useReactiveViews } from '@/hooks/use-reactive-data-zustand'
 
 interface PanelStats {
   patients: number

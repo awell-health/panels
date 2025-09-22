@@ -4,7 +4,7 @@ import {
   useReactiveColumns,
   useReactivePanel,
   useReactiveView,
-} from './use-reactive-data'
+} from './use-reactive-data-zustand'
 import { useReactivePanelStore } from './use-reactive-panel-store'
 import { useColumnOperations } from './use-column-operations'
 import { useColumnLocking } from './use-column-locking'

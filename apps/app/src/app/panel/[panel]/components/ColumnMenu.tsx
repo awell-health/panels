@@ -26,6 +26,9 @@ type ColumnMenuProps = {
   filterValue: string
   onFilter: (value: string) => void
   onColumnUpdate?: (updates: Partial<Column>) => void
+  columnVisibilityContext?: {
+    setVisibility: (columnId: string, visible: boolean) => Promise<void>
+  }
   onColumnDelete?: (columnId: string) => void
   isLocked?: boolean // Current locked state in the active context (view-specific or panel-level)
 }
@@ -40,6 +43,7 @@ export function ColumnMenu({
   filterValue,
   onFilter,
   onColumnUpdate,
+  columnVisibilityContext,
   onColumnDelete,
   isLocked = false, // Default to false if not provided
 }: ColumnMenuProps) {
@@ -328,13 +332,25 @@ export function ColumnMenu({
           <button
             type="button"
             className="btn btn-xs btn-ghost w-full justify-start"
-            onClick={() => {
-              onColumnUpdate?.({
-                id: column.id,
-                properties: {
-                  display: { visible: false },
-                },
-              })
+            onClick={async () => {
+              if (columnVisibilityContext) {
+                // Use the proper column visibility context (handles both panel and view contexts)
+                try {
+                  await columnVisibilityContext.setVisibility(column.id, false)
+                } catch (error) {
+                  console.error('Error updating column visibility:', error)
+                }
+              } else if (onColumnUpdate) {
+                // Fallback to the old approach for backward compatibility
+                onColumnUpdate({
+                  id: column.id,
+                  properties: {
+                    display: { visible: false },
+                  },
+                })
+              } else {
+                console.error('No column visibility method available')
+              }
               onClose()
             }}
           >
