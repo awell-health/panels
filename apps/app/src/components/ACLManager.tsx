@@ -1,21 +1,16 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useOrganizationMembers } from '@/hooks/use-organization-members'
 import type { ACL, ACLCreate, ACLUpdate } from '@panels/types/acls'
 import type { Panel, View } from '@/types/panel'
 
 export function ACLManager() {
-  
   const {
     store,
     getACLs,
     getACLsByUser,
-    createACL,
-    updateACL,
-    deleteACL,
-    getACLs,
     createACL,
     updateACL,
     deleteACL,

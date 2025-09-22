@@ -19,7 +19,6 @@ import type {
   StytchProjectConfiguration,
 } from '@stytch/vanilla-js/dist/b2b'
 import { PanelUserGuard } from './PanelUserGuard'
-import { MemoryDebugWindowZustand } from './MemoryDebugWindowZustand'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [authStytchPublicToken, setAuthStytchPublicToken] = useState<

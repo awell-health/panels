@@ -591,8 +591,8 @@ export class ReactivePanelStore {
       return await adapter.getACLsByUser(userEmail, resourceType)
     }
 
-    // Fallback: get from reactive store
-    return this.reactiveStore?.getACLsByUser(userEmail, resourceType) || []
+    // Fallback: return empty array if no adapter
+    return []
   }
 
   async createACL(
