@@ -19,6 +19,7 @@ import type {
   StytchProjectConfiguration,
 } from '@stytch/vanilla-js/dist/b2b'
 import { PanelUserGuard } from './PanelUserGuard'
+import { MemoryDebugWindowZustand } from './MemoryDebugWindowZustand'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [authStytchPublicToken, setAuthStytchPublicToken] = useState<
@@ -82,6 +83,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                         {children}
                         <ToastContainer position="bottom-center" />
                         <CaptureWidget />
+                        <MemoryDebugWindowZustand />
                       </ToastProvider>
                     </ACLProvider>
                   </ReactivePanelStoreProvider>

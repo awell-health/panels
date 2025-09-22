@@ -7,8 +7,21 @@ import type { ACL, ACLCreate, ACLUpdate } from '@panels/types/acls'
 import type { Panel, View } from '@/types/panel'
 
 export function ACLManager() {
-  const { store, getACLs, getACLsByUser, createACL, updateACL, deleteACL } =
-    useReactivePanelStore()
+  
+  const {
+    store,
+    getACLs,
+    getACLsByUser,
+    createACL,
+    updateACL,
+    deleteACL,
+    getACLs,
+    createACL,
+    updateACL,
+    deleteACL,
+    getViewsForPanelSync,
+    getPanels,
+  } = useReactivePanelStore()
   const {
     members: organizationMembers,
     isLoading: membersLoading,
@@ -57,48 +70,25 @@ export function ACLManager() {
   // Load panels from the store
   useEffect(() => {
     if (store) {
-      const panelsTable = store.getTable('panels')
-      const panelsData = Object.values(panelsTable).map(
-        (panel: Record<string, string | number | boolean>) => ({
-          id: panel.id as string,
-          name: panel.name as string,
-          description: panel.description as string,
-          metadata: panel.metadata ? JSON.parse(panel.metadata as string) : {},
-          createdAt: new Date(panel.createdAt as string),
-        }),
-      )
+      const panelsData = getPanels()
       setPanels(panelsData)
       if (panelsData.length > 0) {
         setSelectedPanel(panelsData[0].id)
         setResourceId(Number.parseInt(panelsData[0].id))
       }
     }
-  }, [store])
+  }, [store, getPanels])
 
   // Load views when panel changes
   useEffect(() => {
     if (!selectedPanel || !store) return
 
-    const viewsTable = store.getTable('views')
-    const viewsData = Object.values(viewsTable)
-      .map((view: Record<string, string | number | boolean>) => ({
-        id: view.id as string,
-        name: view.name as string,
-        panelId: view.panelId as string,
-        visibleColumns: view.visibleColumns
-          ? JSON.parse(view.visibleColumns as string)
-          : [],
-        isPublished: Boolean(view.isPublished),
-        metadata: view.metadata ? JSON.parse(view.metadata as string) : {},
-        createdAt: new Date(view.createdAt as string),
-      }))
-      .filter((view: View) => view.panelId === selectedPanel)
-
+    const viewsData = getViewsForPanelSync(selectedPanel)
     setViews(viewsData)
     setSelectedView('')
     setResourceType('panel')
     setResourceId(Number.parseInt(selectedPanel))
-  }, [selectedPanel, store])
+  }, [selectedPanel, store, getViewsForPanelSync])
 
   // Load ACLs when resource changes - removed getACLs from dependencies
   useEffect(() => {
@@ -201,8 +191,9 @@ export function ACLManager() {
           }
           if (acl.resourceType === 'view') {
             // Find the view
-            const allViews = Object.values(store.getTable('views')).map(
-              (view: Record<string, string | number | boolean>) => ({
+            const allViews = Object.values(store.getState().views).map(
+              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+              (view: any) => ({
                 id: view.id as string,
                 name: view.name as string,
                 panelId: view.panelId as string,

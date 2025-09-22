@@ -57,6 +57,9 @@ interface VirtualizedTableProps {
   toggleSelectRow: (rowId: string) => void
   handleAssigneeClick: (taskId: string) => Promise<void>
   onColumnUpdate?: (updates: Partial<Column>) => void
+  columnVisibilityContext?: {
+    setVisibility: (columnId: string, visible: boolean) => Promise<void>
+  }
   onColumnDelete?: (columnId: string) => void
   onSortUpdate?: (sort: Sort | undefined) => void
   currentView: string
@@ -111,6 +114,7 @@ export function VirtualizedTable({
   toggleSelectRow,
   handleAssigneeClick,
   onColumnUpdate,
+  columnVisibilityContext,
   onColumnDelete,
   onSortUpdate,
   currentView,
@@ -569,6 +573,7 @@ export function VirtualizedTable({
                 getColumnWidth={getColumnWidth}
                 sortConfig={sortConfig}
                 filters={filters}
+                columnVisibilityContext={columnVisibilityContext}
               />
             )}
             itemContent={(index) => RowRenderer(index)}

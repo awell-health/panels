@@ -10,7 +10,7 @@ import {
   useReactiveViews,
   useReactiveColumns,
   useReactiveView,
-} from '@/hooks/use-reactive-data'
+} from '@/hooks/use-reactive-data-zustand'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import type { Panel, View, Filter } from '@/types/panel'
 import {

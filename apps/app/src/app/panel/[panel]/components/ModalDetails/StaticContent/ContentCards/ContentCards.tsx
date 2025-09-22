@@ -12,7 +12,7 @@ import ExpandableCard from '../ExpandableCard'
 import RenderValue from '../RenderValue'
 import { useAuthentication } from '../../../../../../../hooks/use-authentication'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
-import { useReactivePanel } from '../../../../../../../hooks/use-reactive-data'
+import { useReactivePanel } from '../../../../../../../hooks/use-reactive-data-zustand'
 import { useParams } from 'next/navigation'
 import { getCardConfigs } from '../../../../../../../utils/static/CardConfigs'
 

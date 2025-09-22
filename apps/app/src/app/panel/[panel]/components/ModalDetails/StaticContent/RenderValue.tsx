@@ -33,15 +33,15 @@ interface Props {
 const RenderValue: FC<Props> = ({ value, searchQuery = '' }) => {
   const emptyValue = <span>-</span>
 
-  if (!value) {
-    return emptyValue
-  }
-
   const { formatDateTime } = useDateTimeFormat()
 
   const searchFilter = createSearchFilter(searchQuery)
   const hasSearchTerm =
     searchQuery.length > 0 && searchFilter.matchesText(JSON.stringify(value))
+
+  if (!value) {
+    return emptyValue
+  }
 
   const renderArrayValue = (value: RenderableValue[]) => {
     return (

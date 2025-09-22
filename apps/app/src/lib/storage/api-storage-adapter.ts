@@ -340,13 +340,20 @@ export class APIStorageAdapter implements StorageAdapter {
         'API call parameters',
       )
 
+      console.log('Calling panelsAPI.columns.update with:', {
+        updatePayload,
+        panelId,
+      })
       const updatedColumn = await panelsAPI.columns.update(updatePayload, {
         id: panelId,
       })
 
+      console.log('API response received:', updatedColumn)
       logger.debug({ updatedColumn }, 'API response received')
 
-      return mapBackendColumnToFrontend(updatedColumn, panelId)
+      const mappedColumn = mapBackendColumnToFrontend(updatedColumn, panelId)
+      console.log('Mapped column result:', mappedColumn)
+      return mappedColumn
     } catch (error) {
       logger.error(
         {

@@ -7,7 +7,7 @@ import {
   type PaginatedResult,
   type PaginationOptions,
 } from '@/lib/medplum-client'
-import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
+import { panelDataStoreZustand as panelDataStore } from '@/lib/reactive/panel-medplum-data-store-zustand'
 import { MedplumClient } from '@medplum/core'
 import type {
   Composition,

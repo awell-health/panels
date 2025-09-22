@@ -6,6 +6,7 @@ import { useMedplumStore } from '@/hooks/use-medplum-store'
 import { useEffect, useState } from 'react'
 import StaticContent from '../StaticContent'
 import PatientTasks from './PatientTasks'
+import { useWorklistTasks } from '../../../../../../hooks/use-zustand-store'
 
 interface PatientDetailsProps {
   patient: WorklistPatient
@@ -14,7 +15,7 @@ interface PatientDetailsProps {
 
 const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
   const VIEWS = ['content', 'tasks', 'timeline']
-  const { tasks } = useMedplumStore()
+  const tasks = useWorklistTasks()
 
   // State for patient-specific tasks
   const [patientTasks, setPatientTasks] = useState<WorklistTask[]>([])

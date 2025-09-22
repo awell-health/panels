@@ -2,8 +2,12 @@ import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
 import type { PaginationOptions } from '@/lib/medplum-client'
 import type { WorklistTask, WorklistPatient } from '@/lib/fhir-to-table-data'
-import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
-import { useTable } from 'tinybase/ui-react'
+import { panelDataStoreZustand as panelDataStore } from '@/lib/reactive/panel-medplum-data-store-zustand'
+import {
+  usePatientsArray,
+  useTasksArray,
+  usePaginationState,
+} from './use-zustand-store'
 import type { Patient, Task } from '@medplum/fhirtypes'
 
 export interface ProgressiveLoadingOptions {
@@ -48,38 +52,23 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
   const abortControllerRef = useRef<AbortController | null>(null)
   const previousResourceTypeRef = useRef<T>(resourceType)
 
-  const {
-    store: paginationStore,
-    table: paginationTable,
-    key: paginationKey,
-  } = useMemo(() => {
-    return panelDataStore.getPaginationReactiveSubscription(resourceType)
-  }, [resourceType])
-
-  const { store: patientStore, table: patientTable } =
-    panelDataStore.getDataReactiveTableSubscription('Patient')
-  const { store: taskStore, table: taskTable } =
-    panelDataStore.getDataReactiveTableSubscription('Task')
-  const patientTableData = useTable(patientTable, patientStore)
-  const taskTableData = useTable(taskTable, taskStore)
-
-  const paginationTableData = useTable(paginationTable, paginationStore)
+  // Use Zustand hooks for reactive data
+  const patientsArray = usePatientsArray()
+  const tasksArray = useTasksArray()
+  const patientPagination = usePaginationState('Patient')
+  const taskPagination = usePaginationState('Task')
 
   // Parse the cached data from the store
   const cachedData = useMemo(() => {
-    if (!patientTableData && !taskTableData) {
-      return null
+    if (resourceType === 'Patient') {
+      return patientsArray.length > 0 ? { data: patientsArray } : null
     }
-    return panelDataStore.getData(resourceType)
-  }, [patientTableData, taskTableData, resourceType])
+    return tasksArray.length > 0 ? { data: tasksArray } : null
+  }, [patientsArray, tasksArray, resourceType])
 
   const pagination = useMemo(() => {
-    if (!paginationTableData || !paginationKey) {
-      return null
-    }
-
-    return panelDataStore.getPagination(resourceType)
-  }, [paginationTableData, paginationKey, resourceType])
+    return resourceType === 'Patient' ? patientPagination : taskPagination
+  }, [patientPagination, taskPagination, resourceType])
 
   const hasMore = pagination?.hasMore ?? true
   const nextCursor = pagination?.nextCursor
@@ -87,11 +76,15 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
   // Use local state for loading states and additional data management
 
   const data = useMemo(() => {
-    if (!cachedData) {
-      return []
+    if (resourceType === 'Patient') {
+      return patientsArray.length > 0
+        ? (panelDataStore.getWorklistDataByResourceType('Patient') ?? [])
+        : []
     }
-    return panelDataStore.getWorklistDataByResourceType(resourceType) ?? []
-  }, [resourceType, cachedData])
+    return tasksArray.length > 0
+      ? (panelDataStore.getWorklistDataByResourceType('Task') ?? [])
+      : []
+  }, [resourceType, patientsArray, tasksArray])
 
   // Get the appropriate paginated method
   const fetchAndUpdateCachedData = useCallback(
