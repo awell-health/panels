@@ -75,14 +75,18 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
                   <TaskStatusBadge status={task.status} />
                 </div>
               </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1">
                 {!isNonAssignableTask && (
                   <>
                     {isAHPTask && (
-                      <FramePanel url={AHP_URL} status={task.status} />
+                      <div className="flex-1 overflow-hidden">
+                        <FramePanel url={AHP_URL} status={task.status} />
+                      </div>
                     )}
                     {isDavitaApprovalRejectTask && (
-                      <ApproveRejectTask task={task} />
+                      <div className="flex-1 overflow-auto">
+                        <ApproveRejectTask task={task} />
+                      </div>
                     )}
                   </>
                 )}

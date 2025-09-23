@@ -12,6 +12,7 @@ import { MedplumClient } from '@medplum/core'
 import type {
   Composition,
   DetectedIssue,
+  DocumentReference,
   Encounter,
   Observation,
   Patient,
@@ -45,6 +46,9 @@ type MedplumContextType = {
   getPatientCompositions: (patientId: string) => Promise<Composition[]>
   getPatientEncounters: (patientId: string) => Promise<Encounter[]>
   getPatientDetectedIssues: (patientId: string) => Promise<DetectedIssue[]>
+  readDocumentReference: (
+    documentReferenceId: string,
+  ) => Promise<DocumentReference>
   deletePatient: (patientId: string) => Promise<void>
   getPatientsPaginated: (
     options: PaginationOptions,
@@ -409,6 +413,19 @@ export function MedplumClientProvider({
     return await medplumClient.getTaskCount()
   }, [medplumClient, isLoading])
 
+  const readDocumentReference = useCallback(
+    async (documentReferenceId: string) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.readDocumentReference(documentReferenceId)
+    },
+    [medplumClient, isLoading],
+  )
+
   const value = {
     store: medplumClient,
     isLoading,
@@ -421,6 +438,7 @@ export function MedplumClientProvider({
     getPatientEncounters,
     getPatientDetectedIssues,
     getPatientCompositions,
+    readDocumentReference,
     deletePatient,
     getPatientsPaginated,
     getTasksPaginated,

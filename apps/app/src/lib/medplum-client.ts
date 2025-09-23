@@ -4,6 +4,7 @@ import type {
   Bundle,
   Composition,
   DetectedIssue,
+  DocumentReference,
   Encounter,
   Observation,
   Parameters,
@@ -606,5 +607,19 @@ export class MedplumStoreClient {
           .filter((task) => task !== undefined)
       })
     return tasks
+  }
+
+  async readDocumentReference(
+    documentReferenceId: string,
+  ): Promise<DocumentReference> {
+    try {
+      return await this.client.readResource(
+        'DocumentReference',
+        documentReferenceId,
+      )
+    } catch (error) {
+      console.error('Error reading DocumentReference:', error)
+      throw error
+    }
   }
 }
