@@ -12,6 +12,7 @@ interface Props {
 }
 
 const MatchData = ({ task }: Props) => {
+  console.log(task.input)
   const matchedDataPayload = task.input?.find((input: TaskInput) =>
     input.type?.coding?.some(
       (coding: Coding) => coding.code === 'matched-patient-summary',

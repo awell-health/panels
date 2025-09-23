@@ -65,6 +65,8 @@ const ApproveRejectTask = ({ task }: ApproveRejectTaskProps) => {
 
   const isRequested = task.status === 'requested'
 
+  console.log(task)
+
   return (
     <div className="flex flex-1 flex-col gap-2 overflow-auto">
       <GenericData task={task} />
