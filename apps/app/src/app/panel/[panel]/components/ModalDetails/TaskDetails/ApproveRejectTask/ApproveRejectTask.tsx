@@ -1,21 +1,10 @@
 import type { WorklistTask } from '@/lib/fhir-to-table-data'
-import type { TaskInput, Coding, HumanName, Quantity } from '@medplum/fhirtypes'
-import RenderValue, {
-  type RenderableValue,
-} from '../../StaticContent/RenderValue'
-import {
-  ArrowDown,
-  Check,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ExternalLink,
-} from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
 import { useState } from 'react'
-import clsx from 'clsx'
-import Link from 'next/link'
 import MatchData from './MatchData'
 import GenericData from './GenericData'
+import type { Coding, TaskInput } from '@medplum/fhirtypes'
 
 interface ApproveRejectTaskProps {
   task: WorklistTask
@@ -64,13 +53,16 @@ const ApproveRejectTask = ({ task }: ApproveRejectTaskProps) => {
   }
 
   const isRequested = task.status === 'requested'
-
-  console.log(task)
+  const isMatchingDataTask = task.input?.find((input: TaskInput) =>
+    input.type?.coding?.some(
+      (coding: Coding) => coding.code === 'matched-patient-summary',
+    ),
+  )
 
   return (
     <div className="flex flex-1 flex-col gap-2 overflow-auto">
-      <GenericData task={task} />
-      <MatchData task={task} />
+      {!isMatchingDataTask && <GenericData task={task} />}
+      {isMatchingDataTask && <MatchData task={task} />}
       {error && (
         <div className="alert alert-error text-sm">
           <span>{error}</span>

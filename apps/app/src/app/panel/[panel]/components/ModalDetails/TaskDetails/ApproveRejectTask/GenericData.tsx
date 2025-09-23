@@ -14,16 +14,14 @@ const GenericData = (props: Props) => {
   const { task } = props
 
   const renderSourceDocument = (): React.ReactNode => {
-    console.log(task.input)
     const data = task.input?.find((input: TaskInput) =>
       input.type?.coding?.some(
         (coding: Coding) => coding.code === 'source-document',
       ),
     )
 
-    const { reference } = data.valueReference
+    const { reference } = data?.valueReference || {}
     const isDocument = reference?.includes('DocumentReference')
-    console.log(isDocument)
 
     if (!reference || !isDocument) return null
 
@@ -138,12 +136,12 @@ const GenericData = (props: Props) => {
   }
 
   const renderParsedMedicalData = (
-    data: Record<string, unknown>,
+    data: Record<string, unknown> | undefined,
   ): React.ReactNode => {
     const sections: React.ReactNode[] = []
 
     // Patient info
-    if (data.patient) {
+    if (data?.patient) {
       const patient = data.patient as Record<string, unknown>
       const patientName = patient.name
         ? `${(patient.name as HumanName).given?.join(' ')} ${(patient.name as HumanName).family}`
@@ -162,7 +160,7 @@ const GenericData = (props: Props) => {
     }
 
     // Practitioner info
-    if (data.practitioner) {
+    if (data?.practitioner) {
       const practitioner = data.practitioner as Record<string, unknown>
       sections.push(
         renderDataBox(
@@ -176,7 +174,7 @@ const GenericData = (props: Props) => {
     }
 
     // Encounter info
-    if (data.encounter) {
+    if (data?.encounter) {
       const encounter = data.encounter as Record<string, unknown>
       sections.push(
         renderDataBox(
@@ -190,7 +188,7 @@ const GenericData = (props: Props) => {
     }
 
     // Conditions
-    if (data.conditions && Array.isArray(data.conditions)) {
+    if (data?.conditions && Array.isArray(data.conditions)) {
       const conditions = data.conditions as Array<Record<string, unknown>>
       const conditionPairs = conditions.map((condition) => [
         condition.display as string,
@@ -206,7 +204,7 @@ const GenericData = (props: Props) => {
     }
 
     // Allergies
-    if (data.allergies && Array.isArray(data.allergies)) {
+    if (data?.allergies && Array.isArray(data.allergies)) {
       const allergies = data.allergies as Array<Record<string, unknown>>
       const allergyPairs = allergies.map((allergy) => [
         allergy.substance as string,
@@ -222,7 +220,7 @@ const GenericData = (props: Props) => {
     }
 
     // Medications
-    if (data.medications && Array.isArray(data.medications)) {
+    if (data?.medications && Array.isArray(data.medications)) {
       const medications = data.medications as Array<Record<string, unknown>>
       const medicationPairs = medications.map((med) => [
         med.medication as string,
@@ -238,7 +236,7 @@ const GenericData = (props: Props) => {
     }
 
     // Observations
-    if (data.observations && Array.isArray(data.observations)) {
+    if (data?.observations && Array.isArray(data.observations)) {
       const observations = data.observations as Array<Record<string, unknown>>
       const observationPairs = observations.map((obs) => {
         const value = obs.valueQuantity
@@ -256,7 +254,7 @@ const GenericData = (props: Props) => {
     }
 
     // Service Requests
-    if (data.serviceRequests && Array.isArray(data.serviceRequests)) {
+    if (data?.serviceRequests && Array.isArray(data.serviceRequests)) {
       const serviceRequests = data.serviceRequests as Array<
         Record<string, unknown>
       >
@@ -274,7 +272,7 @@ const GenericData = (props: Props) => {
     }
 
     // Future Appointments
-    if (data.futureAppointments && Array.isArray(data.futureAppointments)) {
+    if (data?.futureAppointments && Array.isArray(data.futureAppointments)) {
       const appointments = data.futureAppointments as Array<
         Record<string, unknown>
       >
