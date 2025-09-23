@@ -38,6 +38,11 @@ export const panelUpdate = async (app: FastifyInstance) => {
         throw new Error('User context not found')
       }
 
+      request.log.info(
+        { id, name, description, metadata, userContext },
+        `Updating panel with id ${id}`,
+      )
+
       const panel = await request.store.panel.findOne({
         id: Number(id),
         tenantId: userContext.tenantId,

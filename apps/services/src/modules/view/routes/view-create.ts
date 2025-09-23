@@ -39,6 +39,11 @@ export const viewCreate = async (app: FastifyInstance) => {
         throw new Error('User context not found')
       }
 
+      request.log.info(
+        { name, panelId, visibleColumns, metadata, userContext },
+        'Creating view',
+      )
+
       // First verify panel exists and user has access
       const panel = await request.store.panel.findOne({
         id: panelId,
