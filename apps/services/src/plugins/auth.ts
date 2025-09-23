@@ -94,17 +94,6 @@ export default fp(
 
         // Attach user context to request using a different property name
         ;(request as { authUser?: UserContext }).authUser = userContext
-
-        // Log successful authentication (in development)
-        if (fastify.configuration.NODE_ENV === 'development') {
-          request.log.info({
-            msg: 'User authenticated',
-            userId: userContext.userId,
-            userEmail: userContext.userEmail,
-            role: userContext.role,
-            tenantId: userContext.tenantId,
-          })
-        }
       } catch (error) {
         // Handle JWT verification errors
         if (error && typeof error === 'object' && 'code' in error) {

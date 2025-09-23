@@ -36,6 +36,8 @@ export const panelDelete = async (app: FastifyInstance) => {
         throw new Error('User context not found')
       }
 
+      request.log.info({ id, userContext }, `Deleting panel with id ${id}`)
+
       const panel = await request.store.em.findOne('Panel', {
         id: Number(id),
         tenantId: userContext.tenantId,

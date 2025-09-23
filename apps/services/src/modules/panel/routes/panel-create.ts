@@ -35,6 +35,11 @@ export const panelCreate = async (app: FastifyInstance) => {
         throw new Error('User context not found')
       }
 
+      request.log.info(
+        { name, description, metadata, userContext },
+        'Creating panel',
+      )
+
       const panel = request.store.panel.create({
         name: name ?? 'New Panel',
         description,
