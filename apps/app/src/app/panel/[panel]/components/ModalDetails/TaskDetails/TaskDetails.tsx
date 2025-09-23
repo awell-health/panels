@@ -55,6 +55,8 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
 
   const AHP_URL = getAwellHostedPagesUrl(AHP_CODE)
 
+  console.log(task)
+
   return (
     <>
       {VIEWS.map((view) => (
@@ -75,25 +77,28 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
                   <TaskStatusBadge status={task.status} />
                 </div>
               </div>
-              <div className="flex-1 overflow-hidden">
-                {!isNonAssignableTask && (
-                  <>
-                    {isAHPTask && (
+              {!isNonAssignableTask && (
+                <>
+                  {isAHPTask && (
+                    <div className="flex-1 overflow-hidden">
                       <FramePanel url={AHP_URL} status={task.status} />
-                    )}
-                    {isDavitaApprovalRejectTask && (
+                    </div>
+                  )}
+                  {isDavitaApprovalRejectTask && (
+                    <div className="flex-1">
                       <ApproveRejectTask task={task} />
-                    )}
-                  </>
-                )}
-                {isNonAssignableTask && (
-                  <div className="flex items-center justify-center h-full gap-2">
-                    <span className=" text-gray-500">
-                      This task cannot be completed through panels.
-                    </span>
-                  </div>
-                )}
-              </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {isNonAssignableTask && (
+                <div className="flex flex-1 items-center justify-center h-full gap-2">
+                  <span className=" text-gray-500">
+                    This task cannot be completed through panels.
+                  </span>
+                </div>
+              )}
             </div>
           )}
           {view === 'content' && (
