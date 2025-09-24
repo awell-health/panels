@@ -63,7 +63,7 @@ export function FilterSortIndicators({
 
   const getColumnName = (columnId: string): string => {
     const column = allColumns.find((col) => col.id === columnId)
-    return column?.name || columnId
+    return column?.name || `Unknown Column (${columnId})`
   }
 
   const formatFilterValue = (filter: FilterType): string => {
