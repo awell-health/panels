@@ -4,6 +4,7 @@ import { CheckSquare, ChevronDown, Users } from 'lucide-react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ViewType } from '@/types/panel'
+import clsx from 'clsx'
 
 interface ViewTypeDropdownProps {
   currentView: ViewType
@@ -29,11 +30,23 @@ export default function ViewTypeDropdown({
   const getViewContent = (view: ViewType) => {
     return view === 'patient' ? (
       <>
-        <Users className="h-3.5 w-3.5 mr-2 text-gray-500" /> Patient View{' '}
+        <Users
+          className={clsx(
+            'h-3.5 w-3.5 mr-2',
+            currentView === 'patient' ? 'text-blue-500' : 'text-gray-500',
+          )}
+        />{' '}
+        Patient View{' '}
       </>
     ) : (
       <>
-        <CheckSquare className="h-3.5 w-3.5 mr-2 text-gray-500" /> Task View
+        <CheckSquare
+          className={clsx(
+            'h-3.5 w-3.5 mr-2',
+            currentView === 'task' ? 'text-blue-500' : 'text-gray-500',
+          )}
+        />{' '}
+        Task View
       </>
     )
   }
@@ -113,6 +126,7 @@ export default function ViewTypeDropdown({
   const dropdownContent = isOpen ? (
     <div
       ref={dropdownRef}
+      data-testid="view-type-dropdown"
       className="fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg w-52"
       style={{
         top: `${dropdownPosition.top}px`,

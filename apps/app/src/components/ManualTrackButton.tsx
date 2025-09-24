@@ -7,14 +7,12 @@ import {
   type TrackWithPathway,
 } from '@/hooks/use-manual-track-activation'
 import { useToastHelpers } from '@/contexts/ToastContext'
-import { useAuthentication } from '@/hooks/use-authentication'
 
 interface ManualTrackButtonProps {
   patientId: string
 }
 
 export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
-  const { organizationSlug } = useAuthentication()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isOptimisticUpdate, setIsOptimisticUpdate] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -72,9 +70,6 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
 
   // Don't render if no Awell care flow context
   if (!hasAwellCareFlowContext) {
-    return null
-  }
-  if (!['awell-dev', 'encompass-health'].includes(organizationSlug ?? '')) {
     return null
   }
 
