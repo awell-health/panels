@@ -256,7 +256,38 @@ export const useReactiveStore = create<ReactiveStore>()(
       set((state) => {
         const newColumns = { ...state.columns }
         delete newColumns[columnId]
-        return { columns: newColumns }
+
+        const newPanels = { ...state.panels }
+        for (const [panelId, panel] of Object.entries(newPanels)) {
+          if (panel.metadata?.sort?.columnId === columnId) {
+            newPanels[panelId] = {
+              ...panel,
+              metadata: {
+                ...panel.metadata,
+                sort: undefined,
+              },
+            }
+          }
+        }
+
+        const newViews = { ...state.views }
+        for (const [viewId, view] of Object.entries(newViews)) {
+          if (view.metadata?.sort?.columnId === columnId) {
+            newViews[viewId] = {
+              ...view,
+              metadata: {
+                ...view.metadata,
+                sort: undefined,
+              },
+            }
+          }
+        }
+
+        return {
+          columns: newColumns,
+          panels: newPanels,
+          views: newViews,
+        }
       })
     },
 

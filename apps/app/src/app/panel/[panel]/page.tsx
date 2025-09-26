@@ -262,6 +262,11 @@ export default function WorklistPage() {
       return
     }
 
+    if (sort && !allColumns.find((col) => col.id === sort.columnId)) {
+      console.warn(`Cannot sort by column ${sort.columnId}: column not found`)
+      return
+    }
+
     try {
       await updatePanel?.(panel.id, {
         metadata: {
