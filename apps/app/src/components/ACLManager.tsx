@@ -2,38 +2,32 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
+import {
+  useReactivePanels,
+  useReactiveViews,
+} from '@/hooks/use-reactive-data-zustand'
 import { useOrganizationMembers } from '@/hooks/use-organization-members'
 import type { ACL, ACLCreate, ACLUpdate } from '@panels/types/acls'
 import type { Panel, View } from '@/types/panel'
 
 export function ACLManager() {
-  const {
-    store,
-    getACLs,
-    getACLsByUser,
-    createACL,
-    updateACL,
-    deleteACL,
-    getViewsForPanelSync,
-    getPanels,
-  } = useReactivePanelStore()
+  const { store, getACLs, createACL, updateACL, deleteACL, getACLsByUser } =
+    useReactivePanelStore()
+
+  // Use ref to store the latest getACLs function to avoid stale closures
+  const getACLsRef = useRef(getACLs)
+  getACLsRef.current = getACLs
+
   const {
     members: organizationMembers,
     isLoading: membersLoading,
     error: membersError,
   } = useOrganizationMembers()
 
-  // Use ref to store the latest getACLs function to avoid stale closures
-  const getACLsRef = useRef(getACLs)
-  getACLsRef.current = getACLs
-
-  // Use ref to store the latest getACLsByUser function to avoid stale closures
-  const getACLsByUserRef = useRef(getACLsByUser)
-  getACLsByUserRef.current = getACLsByUser
-
-  const [panels, setPanels] = useState<Panel[]>([])
+  // Use reactive hooks for data that automatically updates
+  const { panels, isLoading: panelsLoading } = useReactivePanels()
   const [selectedPanel, setSelectedPanel] = useState<string>('')
-  const [views, setViews] = useState<View[]>([])
+  const { views, isLoading: viewsLoading } = useReactiveViews(selectedPanel)
   const [selectedView, setSelectedView] = useState<string>('')
   const [resourceType, setResourceType] = useState<'panel' | 'view'>('panel')
   const [resourceId, setResourceId] = useState<number>(0)
@@ -50,8 +44,9 @@ export function ACLManager() {
     Array<ACL & { resourceName: string }>
   >([])
 
-  console.log('acls', acls)
-  console.log('userAcls', userAcls)
+  // Use ref to store the latest getACLsByUser function to avoid stale closures
+  const getACLsByUserRef = useRef(getACLsByUser)
+  getACLsByUserRef.current = getACLsByUser
 
   // Form state for creating/updating ACLs
   const [userEmail, setUserEmail] = useState('')
@@ -62,36 +57,29 @@ export function ACLManager() {
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState('')
 
-  // Load panels from the store
+  // Initialize selected panel when panels are loaded
   useEffect(() => {
-    if (store) {
-      const panelsData = getPanels()
-      setPanels(panelsData)
-      if (panelsData.length > 0) {
-        setSelectedPanel(panelsData[0].id)
-        setResourceId(Number.parseInt(panelsData[0].id))
-      }
+    if (panels.length > 0 && !selectedPanel) {
+      setSelectedPanel(panels[0].id)
+      setResourceId(Number.parseInt(panels[0].id))
     }
-  }, [store, getPanels])
+  }, [panels, selectedPanel])
 
-  // Load views when panel changes
+  // Update resource when panel changes
   useEffect(() => {
-    if (!selectedPanel || !store) return
+    if (selectedPanel) {
+      setSelectedView('')
+      setResourceType('panel')
+      setResourceId(Number.parseInt(selectedPanel))
+    }
+  }, [selectedPanel])
 
-    const viewsData = getViewsForPanelSync(selectedPanel)
-    setViews(viewsData)
-    setSelectedView('')
-    setResourceType('panel')
-    setResourceId(Number.parseInt(selectedPanel))
-  }, [selectedPanel, store, getViewsForPanelSync])
-
-  // Load ACLs when resource changes - removed getACLs from dependencies
+  // Load ACLs when resource changes
   useEffect(() => {
     const loadACLs = async () => {
       if (!resourceId) return
       try {
         setIsLoading(true)
-        // Use the ref to get the latest function
         const aclsData = await getACLsRef.current(resourceType, resourceId)
         setAcls(aclsData)
         setMessage(
@@ -104,10 +92,74 @@ export function ACLManager() {
       }
     }
     loadACLs()
-  }, [resourceType, resourceId]) // Removed getACLs from dependencies
+  }, [resourceType, resourceId])
 
   // Load ACLs by user when user email or filter changes
   useEffect(() => {
+    const enrichACLsWithNames = async (
+      acls: ACL[],
+    ): Promise<Array<ACL & { resourceName: string }>> => {
+      if (!store)
+        return acls.map((acl) => ({
+          ...acl,
+          resourceName: `ID: ${acl.resourceId}`,
+        }))
+
+      const enrichedACLs = await Promise.all(
+        acls.map(async (acl) => {
+          try {
+            if (acl.resourceType === 'panel') {
+              const panel = panels.find(
+                (p) => p.id === acl.resourceId.toString(),
+              )
+              return {
+                ...acl,
+                resourceName: panel
+                  ? panel.name
+                  : `Panel ID: ${acl.resourceId}`,
+              }
+            }
+            if (acl.resourceType === 'view') {
+              // Find the view
+              const allViews = Object.values(store.getState().views).map(
+                // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+                (view: any) => ({
+                  id: view.id as string,
+                  name: view.name as string,
+                  panelId: view.panelId as string,
+                }),
+              )
+
+              const view = allViews.find(
+                (v) => v.id === acl.resourceId.toString(),
+              )
+              if (view) {
+                // Find the panel for this view
+                const panel = panels.find((p) => p.id === view.panelId)
+                const panelName = panel
+                  ? panel.name
+                  : `Panel ID: ${view.panelId}`
+                return {
+                  ...acl,
+                  resourceName: `${view.name} (${panelName})`,
+                }
+              }
+              return {
+                ...acl,
+                resourceName: `View ID: ${acl.resourceId}`,
+              }
+            }
+            return { ...acl, resourceName: `ID: ${acl.resourceId}` }
+          } catch (error) {
+            console.error('Error enriching ACL with name:', error)
+            return { ...acl, resourceName: `ID: ${acl.resourceId}` }
+          }
+        }),
+      )
+
+      return enrichedACLs
+    }
+
     const loadUserACLs = async () => {
       if (!selectedUserEmail) return
       try {
@@ -134,7 +186,7 @@ export function ACLManager() {
       }
     }
     loadUserACLs()
-  }, [selectedUserEmail, userResourceTypeFilter])
+  }, [selectedUserEmail, userResourceTypeFilter, panels, store]) // Now all dependencies are properly included
 
   const handleViewChange = (viewId: string) => {
     setSelectedView(viewId)
@@ -163,64 +215,6 @@ export function ACLManager() {
 
   const handleUserSelection = (userEmail: string) => {
     setSelectedUserEmail(userEmail)
-  }
-
-  const enrichACLsWithNames = async (
-    acls: ACL[],
-  ): Promise<Array<ACL & { resourceName: string }>> => {
-    if (!store)
-      return acls.map((acl) => ({
-        ...acl,
-        resourceName: `ID: ${acl.resourceId}`,
-      }))
-
-    const enrichedACLs = await Promise.all(
-      acls.map(async (acl) => {
-        try {
-          if (acl.resourceType === 'panel') {
-            const panel = panels.find((p) => p.id === acl.resourceId.toString())
-            return {
-              ...acl,
-              resourceName: panel ? panel.name : `Panel ID: ${acl.resourceId}`,
-            }
-          }
-          if (acl.resourceType === 'view') {
-            // Find the view
-            const allViews = Object.values(store.getState().views).map(
-              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-              (view: any) => ({
-                id: view.id as string,
-                name: view.name as string,
-                panelId: view.panelId as string,
-              }),
-            )
-
-            const view = allViews.find(
-              (v) => v.id === acl.resourceId.toString(),
-            )
-            if (view) {
-              // Find the panel for this view
-              const panel = panels.find((p) => p.id === view.panelId)
-              const panelName = panel ? panel.name : `Panel ID: ${view.panelId}`
-              return {
-                ...acl,
-                resourceName: `${view.name} (${panelName})`,
-              }
-            }
-            return {
-              ...acl,
-              resourceName: `View ID: ${acl.resourceId}`,
-            }
-          }
-          return { ...acl, resourceName: `ID: ${acl.resourceId}` }
-        } catch (error) {
-          console.error('Error enriching ACL with name:', error)
-          return { ...acl, resourceName: `ID: ${acl.resourceId}` }
-        }
-      }),
-    )
-
-    return enrichedACLs
   }
 
   const handleCreateACL = async () => {
