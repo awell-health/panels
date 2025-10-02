@@ -1,11 +1,13 @@
 import type { MedplumClient } from '@medplum/core'
 import type {
+  Appointment,
   Bot,
   Bundle,
   Composition,
   DetectedIssue,
   DocumentReference,
   Encounter,
+  Location,
   Observation,
   Parameters,
   Patient,
@@ -64,7 +66,7 @@ export class MedplumStoreClient {
   }
 
   async initializeWebSocket() {
-    // Create subscriptions for both Task and Patient
+    // Create subscriptions for Task, Patient, and Appointment
     const taskSubscription = await this.client.createResource<Subscription>({
       resourceType: 'Subscription',
       criteria: 'Task',
@@ -85,7 +87,18 @@ export class MedplumStoreClient {
       },
     })
 
-    // Get binding tokens for both subscriptions
+    const appointmentSubscription =
+      await this.client.createResource<Subscription>({
+        resourceType: 'Subscription',
+        criteria: 'Appointment',
+        status: 'active',
+        reason: 'Watch for appointments',
+        channel: {
+          type: 'websocket',
+        },
+      })
+
+    // Get binding tokens for all subscriptions
     const taskBinding = (await this.client.get(
       `/fhir/R4/Subscription/${taskSubscription.id}/$get-ws-binding-token`,
     )) as Parameters
@@ -94,17 +107,24 @@ export class MedplumStoreClient {
       `/fhir/R4/Subscription/${patientSubscription.id}/$get-ws-binding-token`,
     )) as Parameters
 
+    const appointmentBinding = (await this.client.get(
+      `/fhir/R4/Subscription/${appointmentSubscription.id}/$get-ws-binding-token`,
+    )) as Parameters
+
     const taskToken =
       taskBinding.parameter?.find((p) => p.name === 'token')?.valueString || ''
     const patientToken =
       patientBinding.parameter?.find((p) => p.name === 'token')?.valueString ||
       ''
+    const appointmentToken =
+      appointmentBinding.parameter?.find((p) => p.name === 'token')
+        ?.valueString || ''
 
     // Initialize WebSocket connection
     const ws = new WebSocket(`${this.socketsBaseUrl}/ws/subscriptions-r4`)
     ws.addEventListener('open', () => {
       console.log('WebSocket open')
-      // Bind both tokens
+      // Bind all tokens
       ws?.send(
         JSON.stringify({
           type: 'bind-with-token',
@@ -115,6 +135,12 @@ export class MedplumStoreClient {
         JSON.stringify({
           type: 'bind-with-token',
           payload: { token: patientToken },
+        }),
+      )
+      ws?.send(
+        JSON.stringify({
+          type: 'bind-with-token',
+          payload: { token: appointmentToken },
         }),
       )
     })
@@ -168,9 +194,15 @@ export class MedplumStoreClient {
     return this.subscribe('Patient', handler)
   }
 
+  async subscribeToAppointments(
+    handler: (appointment: Appointment) => void,
+  ): Promise<() => void> {
+    return this.subscribe('Appointment', handler)
+  }
+
   // Internal subscription method
   private subscribe(
-    resourceType: 'Task' | 'Patient',
+    resourceType: 'Task' | 'Patient' | 'Appointment',
     handler: ResourceHandler,
   ): () => void {
     if (!this.resourceHandlers.has(resourceType)) {
@@ -186,9 +218,9 @@ export class MedplumStoreClient {
 
   async getPatients(): Promise<Patient[]> {
     try {
-      // Search for patients in Medplum with a limit of 1000
+      // Search for patients in Medplum with a limit of 100
       const bundle = await this.client.search('Patient', {
-        _count: 1000,
+        _count: 100,
         _sort: '-_lastUpdated',
       })
 
@@ -202,9 +234,9 @@ export class MedplumStoreClient {
 
   async getTasks(): Promise<Task[]> {
     try {
-      // Search for tasks in Medplum with a limit of 1000
+      // Search for tasks in Medplum with a limit of 100
       const bundle = await this.client.search('Task', {
-        _count: 1000,
+        _count: 100,
         _sort: '-_lastUpdated',
       })
 
@@ -212,6 +244,35 @@ export class MedplumStoreClient {
       return (bundle.entry || []).map((entry) => entry.resource as Task)
     } catch (error) {
       console.error('Error fetching tasks:', error)
+      throw error
+    }
+  }
+
+  async getAppointments(): Promise<Appointment[]> {
+    try {
+      // Search for appointments in Medplum with a limit of 100
+      const bundle = await this.client.search('Appointment', {
+        _count: 100,
+        _sort: '-_lastUpdated',
+      })
+
+      // Return the actual FHIR Appointment resources
+      return (bundle.entry || []).map((entry) => entry.resource as Appointment)
+    } catch (error) {
+      console.error('Error fetching appointments:', error)
+      throw error
+    }
+  }
+
+  async getPatientAppointments(patientId: string): Promise<Appointment[]> {
+    try {
+      const bundle = await this.client.search('Appointment', {
+        patient: `Patient/${patientId}`,
+        _count: 100,
+      })
+      return (bundle.entry || []).map((entry) => entry.resource as Appointment)
+    } catch (error) {
+      console.error('Error fetching patient appointments:', error)
       throw error
     }
   }
@@ -308,6 +369,53 @@ export class MedplumStoreClient {
     }
   }
 
+  async getAppointmentsPaginated(
+    options: PaginationOptions = {},
+  ): Promise<PaginatedResult<Appointment>> {
+    try {
+      const pageSize = options.pageSize || 1000
+
+      const searchParams: Record<string, string> = {
+        _count: String(pageSize),
+        _sort: '-_lastUpdated',
+      }
+
+      if (options.lastUpdated) {
+        searchParams._lastUpdated = `lt${options.lastUpdated}`
+      }
+
+      const bundle = await this.client.search('Appointment', searchParams)
+
+      const data = (bundle.entry || []).map(
+        (entry) => entry.resource as Appointment,
+      )
+      const hasMore = data.length === pageSize
+
+      let nextCursor: string | undefined
+      if (hasMore && data.length > 0) {
+        const lastRecord = data[data.length - 1]
+        nextCursor = lastRecord.meta?.lastUpdated
+      }
+
+      // Try to get total count from bundle, fallback to data length if not available
+      let totalCount = bundle.total
+      if (totalCount === undefined && data.length > 0) {
+        // If we have data but no total count, estimate based on current page
+        totalCount = hasMore ? data.length + 1 : data.length
+      }
+
+      return {
+        data,
+        hasMore,
+        nextCursor,
+        totalCount,
+      }
+    } catch (error) {
+      console.error('Error fetching paginated appointments:', error)
+      throw error
+    }
+  }
+
   async getPatientCount(): Promise<number> {
     try {
       // Try to get count with _summary=count first
@@ -350,6 +458,29 @@ export class MedplumStoreClient {
       return bundle.total ?? 0
     } catch (error) {
       console.error('Error fetching task count:', error)
+      return 0
+    }
+  }
+
+  async getAppointmentCount(): Promise<number> {
+    try {
+      // Try to get count with _summary=count first
+      const countBundle = await this.client.search('Appointment', {
+        _summary: 'count',
+      })
+
+      if (countBundle.total !== undefined) {
+        return countBundle.total
+      }
+
+      // Fallback to regular search
+      const bundle = await this.client.search('Appointment', {
+        _count: 1,
+      })
+
+      return bundle.total ?? 0
+    } catch (error) {
+      console.error('Error fetching appointment count:', error)
       return 0
     }
   }
@@ -620,6 +751,126 @@ export class MedplumStoreClient {
     } catch (error) {
       console.error('Error reading DocumentReference:', error)
       throw error
+    }
+  }
+
+  async getLocations(): Promise<Location[]> {
+    try {
+      // Search for locations in Medplum with a limit of 100
+      const bundle = await this.client.search('Location', {
+        _count: 100,
+        _sort: '-_lastUpdated',
+      })
+
+      // Return the actual FHIR Location resources
+      return (bundle.entry || []).map((entry) => entry.resource as Location)
+    } catch (error) {
+      console.error('Error fetching locations:', error)
+      throw error
+    }
+  }
+
+  async getLocationsPaginated(
+    options: PaginationOptions = {},
+  ): Promise<PaginatedResult<Location>> {
+    try {
+      const pageSize = options.pageSize || 1000
+
+      const searchParams: Record<string, string> = {
+        _count: String(pageSize),
+        _sort: '-_lastUpdated',
+      }
+
+      if (options.lastUpdated) {
+        searchParams._lastUpdated = `lt${options.lastUpdated}`
+      }
+
+      const bundle = await this.client.search('Location', searchParams)
+
+      const data = (bundle.entry || []).map(
+        (entry) => entry.resource as Location,
+      )
+      const hasMore = data.length === pageSize
+
+      let nextCursor: string | undefined
+      if (hasMore && data.length > 0) {
+        const lastRecord = data[data.length - 1]
+        nextCursor = lastRecord.meta?.lastUpdated
+      }
+
+      // Try to get total count from bundle, fallback to data length if not available
+      let totalCount = bundle.total
+      if (totalCount === undefined && data.length > 0) {
+        // If we have data but no total count, estimate based on current page
+        totalCount = hasMore ? data.length + 1 : data.length
+      }
+
+      return {
+        data,
+        hasMore,
+        nextCursor,
+        totalCount,
+      }
+    } catch (error) {
+      console.error('Error fetching paginated locations:', error)
+      throw error
+    }
+  }
+
+  async getLocationsFromReferences(
+    locationRefs: string[],
+  ): Promise<Location[]> {
+    const uniqueRefs = [...new Set(locationRefs)]
+
+    if (uniqueRefs.length === 0) {
+      return []
+    }
+
+    const bundle: Bundle = {
+      resourceType: 'Bundle',
+      type: 'batch',
+      entry: uniqueRefs.map((ref) => ({
+        request: {
+          method: 'GET',
+          url: ref,
+        },
+      })),
+    }
+    const response = (await this.client.executeBatch(
+      bundle,
+    )) as Bundle<Location>
+    return (response.entry ?? []).map((e) => e.resource as Location)
+  }
+
+  async getLocation(locationId: string): Promise<Location> {
+    try {
+      return await this.client.readResource('Location', locationId)
+    } catch (error) {
+      console.error('Error reading Location:', error)
+      throw error
+    }
+  }
+
+  async getLocationCount(): Promise<number> {
+    try {
+      // Try to get count with _summary=count first
+      const countBundle = await this.client.search('Location', {
+        _summary: 'count',
+      })
+
+      if (countBundle.total !== undefined) {
+        return countBundle.total
+      }
+
+      // Fallback to regular search
+      const bundle = await this.client.search('Location', {
+        _count: 1,
+      })
+
+      return bundle.total ?? 0
+    } catch (error) {
+      console.error('Error fetching location count:', error)
+      return 0
     }
   }
 }

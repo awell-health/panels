@@ -6,16 +6,21 @@ import {
 } from '@/app/actions/ai-chat'
 import AIConversationDrawer from '@/components/AIConversationDrawer'
 import { useDrawer } from '@/contexts/DrawerContext'
-import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import type {
+  WorklistPatient,
+  WorklistTask,
+  WorklistAppointment,
+} from '@/lib/fhir-to-table-data'
 import { logger } from '@/lib/logger'
 import type { Column, ColumnChangesResponse, Panel } from '@/types/panel'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useAuthentication } from './use-authentication'
 
 interface UseColumnCreatorProps {
-  currentViewType: 'patient' | 'task'
+  currentViewType: 'patient' | 'task' | 'appointment'
   patients: WorklistPatient[]
   tasks: WorklistTask[]
+  appointments: WorklistAppointment[]
   panel: Panel | null
   columns: Column[]
   currentViewId?: string
@@ -26,6 +31,7 @@ export function useColumnCreator({
   currentViewType,
   patients,
   tasks,
+  appointments,
   panel,
   columns,
   currentViewId,
@@ -33,7 +39,12 @@ export function useColumnCreator({
 }: UseColumnCreatorProps) {
   const { openDrawer, closeDrawer } = useDrawer()
   const { user } = useAuthentication()
-  const sourceData = currentViewType === 'patient' ? patients : tasks
+  const sourceData =
+    currentViewType === 'patient'
+      ? patients
+      : currentViewType === 'task'
+        ? tasks
+        : appointments
 
   // Calculate column statistics using the provided columns
   const columnStats = useMemo(() => {

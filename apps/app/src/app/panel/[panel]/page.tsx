@@ -37,7 +37,11 @@ import { useModalUrlParams } from '@/lib/url-params'
 import { AddIngestionModal } from './components/AddIngestionModal'
 import { ModalDetails } from './components/ModalDetails'
 import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
-import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import type {
+  WorklistPatient,
+  WorklistTask,
+  WorklistAppointment,
+} from '@/lib/fhir-to-table-data'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
 import type { FHIRCard } from './components/ModalDetails/StaticContent/FhirExpandableCard'
 import { useACL } from '@/contexts/ACLContext'
@@ -57,6 +61,7 @@ export default function WorklistPage() {
   // Get query parameters
   const patientId = searchParams.get('patientId')
   const taskId = searchParams.get('taskId')
+  const appointmentId = searchParams.get('appointmentId')
 
   const [selectedRows] = useState<string[]>([])
   const { user } = useAuthentication()
@@ -72,7 +77,11 @@ export default function WorklistPage() {
     refresh,
     dataAfter,
   } = useProgressiveMedplumData(
-    currentView === 'patient' ? 'Patient' : 'Task',
+    currentView === 'patient'
+      ? 'Patient'
+      : currentView === 'task'
+        ? 'Task'
+        : 'Appointment',
     {
       pageSize: 100,
       maxRecords: 50000,
@@ -87,6 +96,10 @@ export default function WorklistPage() {
     currentView === 'patient' ? (progressiveData as WorklistPatient[]) : []
   const tasks =
     currentView === 'task' ? (progressiveData as WorklistTask[]) : []
+  const appointments =
+    currentView === 'appointment'
+      ? (progressiveData as WorklistAppointment[])
+      : []
 
   const { updatePanel } = useReactivePanelStore()
   const { updateColumn, deleteColumn, applyColumnChanges, reorderColumns } =
@@ -152,7 +165,12 @@ export default function WorklistPage() {
     }, [visibleColumns, isColumnLocked])
 
   // Set table data based on current view
-  const tableData = currentView === 'patient' ? patients : tasks
+  const tableData =
+    currentView === 'patient'
+      ? patients
+      : currentView === 'task'
+        ? tasks
+        : appointments
   const { searchTerm, setSearchTerm, searchMode, setSearchMode, filteredData } =
     // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
     useSearch(tableData)
@@ -205,6 +223,7 @@ export default function WorklistPage() {
     currentViewType: currentView,
     patients,
     tasks,
+    appointments,
     panel,
     columns: allColumns,
     onColumnChanges: handleColumnChanges,
@@ -460,6 +479,7 @@ export default function WorklistPage() {
           <ModalDetails
             patientId={patientId || undefined}
             taskId={taskId || undefined}
+            appointmentId={appointmentId || undefined}
             onClose={handleModalClose}
             pathname={pathname}
           />

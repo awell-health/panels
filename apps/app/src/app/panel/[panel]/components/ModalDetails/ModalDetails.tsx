@@ -4,9 +4,14 @@ import { Trash2Icon, User, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
+import { AppointmentDetails } from './AppointmentDetails'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
-import { useWorklistPatient, useWorklistTask } from '@/hooks/use-zustand-store'
+import {
+  useWorklistPatient,
+  useWorklistTask,
+  useWorklistAppointments,
+} from '@/hooks/use-zustand-store'
 import { useDateTimeFormat } from '@/hooks/use-date-time-format'
 import type { Resource } from '@medplum/fhirtypes'
 import { Dialog } from '../../../../../components/ui/dialog'
@@ -19,11 +24,18 @@ import { useParams, useRouter } from 'next/navigation'
 interface Props {
   patientId?: string
   taskId?: string
+  appointmentId?: string
   pathname: string
   onClose: () => void
 }
 
-const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
+const ModalDetails = ({
+  patientId,
+  taskId,
+  appointmentId,
+  pathname,
+  onClose,
+}: Props) => {
   const { deletePatient } = useMedplumStore()
   const { isAdmin } = useAuthentication()
   const { showSuccess, showError } = useToastHelpers()
@@ -38,7 +50,13 @@ const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
 
   // Use Zustand hooks for reactive data updates
   const task = useWorklistTask(taskId || '')
-  const patient = useWorklistPatient(patientId || task?.patientId || '')
+  const appointments = useWorklistAppointments()
+  const appointment = appointmentId
+    ? appointments.find((apt) => apt.id === appointmentId)
+    : undefined
+  const patient = useWorklistPatient(
+    patientId || task?.patientId || appointment?.patientId || '',
+  )
 
   const contentCards =
     (panel?.metadata?.cardsConfiguration as FHIRCard[]) ??
@@ -149,7 +167,7 @@ const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
             <span className="font-medium text-red-600">
               Error loading patient
             </span>
-          ) : task ? (
+          ) : task || appointment ? (
             <button
               type="button"
               className="btn btn-sm btn-link text-blue-600 hover:underline px-1"
@@ -182,7 +200,7 @@ const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
                   <span>Gender {gender}</span>
                 </>
               )}
-              {patient && !task && isAdmin && (
+              {patient && !task && !appointment && isAdmin && (
                 <button
                   type="button"
                   onClick={handleDeleteRequest}
@@ -227,6 +245,8 @@ const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
           </div>
         ) : task ? (
           <TaskDetails task={task} />
+        ) : appointment && appointmentId ? (
+          <AppointmentDetails appointmentId={appointmentId} patient={patient} />
         ) : (
           <PatientDetails
             patient={patient}

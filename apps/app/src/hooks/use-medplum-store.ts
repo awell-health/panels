@@ -11,7 +11,10 @@ export function useMedplumStore() {
     getPatientEncounters,
     getPatientDetectedIssues,
     getPatientCompositions,
+    getPatientAppointments,
     deletePatient,
+    getLocations,
+    getLocationsFromReferences,
   } = useMedplum()
 
   // Use Zustand hooks for reactive data
@@ -28,7 +31,10 @@ export function useMedplumStore() {
     getPatientObservations,
     getPatientEncounters,
     getPatientDetectedIssues,
-    deletePatient,
     getPatientCompositions,
+    getPatientAppointments,
+    deletePatient,
+    getLocations,
+    getLocationsFromReferences,
   }
 }

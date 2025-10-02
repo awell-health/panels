@@ -22,6 +22,7 @@ import {
   Copy,
   FileText,
   Edit3Icon,
+  Calendar,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -36,7 +37,12 @@ interface PanelNavigationProps {
   canEdit: boolean
 }
 
-type ViewCreationType = 'patient' | 'task' | 'from-panel' | 'copy-view'
+type ViewCreationType =
+  | 'patient'
+  | 'task'
+  | 'appointment'
+  | 'from-panel'
+  | 'copy-view'
 
 export default function PanelNavigation({
   panel,
@@ -233,14 +239,50 @@ export default function PanelNavigation({
           })
           break
         }
+        case 'appointment': {
+          // Create new appointment view with all appointment columns
+          const appointmentColumns = columns.filter((col) =>
+            col.tags?.includes('panels:appointments'),
+          )
+
+          // Create columnVisibility with all columns visible
+          const columnVisibility = appointmentColumns.reduce(
+            (acc, col) => {
+              acc[col.id] = true
+              return acc
+            },
+            {} as Record<string, boolean>,
+          )
+
+          newView = await addView(panel.id, {
+            name: 'New Appointment View',
+            panelId: panel.id,
+            visibleColumns: appointmentColumns.map((col) => col.id),
+            createdAt: new Date(),
+            isPublished: false,
+            metadata: {
+              filters: [],
+              viewType: 'appointment',
+              columnVisibility,
+            },
+          })
+          break
+        }
         case 'from-panel': {
           // Create view from current panel - use current applied filters and current view type
           const viewType = currentViewType || 'patient'
-          const relevantColumns = columns.filter((col) =>
-            viewType === 'patient'
-              ? col.tags?.includes('panels:patients')
-              : col.tags?.includes('panels:tasks'),
-          )
+          const relevantColumns = columns.filter((col) => {
+            if (viewType === 'patient') {
+              return col.tags?.includes('panels:patients')
+            }
+            if (viewType === 'task') {
+              return col.tags?.includes('panels:tasks')
+            }
+            if (viewType === 'appointment') {
+              return col.tags?.includes('panels:appointments')
+            }
+            return false
+          })
 
           // Only include visible columns from the panel
           const visibleColumns = relevantColumns
@@ -279,11 +321,18 @@ export default function PanelNavigation({
           let columnVisibility = currentView.metadata.columnVisibility
           if (!columnVisibility) {
             const viewType = currentView.metadata.viewType
-            const relevantColumns = columns.filter((col) =>
-              viewType === 'patient'
-                ? col.tags?.includes('panels:patients')
-                : col.tags?.includes('panels:tasks'),
-            )
+            const relevantColumns = columns.filter((col) => {
+              if (viewType === 'patient') {
+                return col.tags?.includes('panels:patients')
+              }
+              if (viewType === 'task') {
+                return col.tags?.includes('panels:tasks')
+              }
+              if (viewType === 'appointment') {
+                return col.tags?.includes('panels:appointments')
+              }
+              return false
+            })
             columnVisibility = relevantColumns.reduce(
               (acc, col) => {
                 acc[col.id] = currentView.visibleColumns.includes(col.id)
@@ -343,6 +392,14 @@ export default function PanelNavigation({
         description:
           'Start fresh with a task-focused view showing all task data',
         icon: CheckSquare,
+        available: true,
+      },
+      {
+        type: 'appointment' as ViewCreationType,
+        title: 'New Appointment View',
+        description:
+          'Start fresh with an appointment-focused view showing all appointment data',
+        icon: Calendar,
         available: true,
       },
       {
@@ -649,26 +706,26 @@ export default function PanelNavigation({
           </DialogHeader>
 
           <div className="px-6 pb-6">
-            <div className="space-y-3">
+            <div className="space-y-2">
               {getViewCreationOptions().map((option) => {
                 const Icon = option.icon
                 return (
                   <button
                     key={option.type}
                     type="button"
-                    className="w-full text-left p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => handleCreateView(option.type)}
                     disabled={creatingView}
                   >
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 mt-1">
-                        <Icon className="h-5 w-5 text-gray-600" />
+                    <div className="flex items-start space-x-2">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <Icon className="h-4 w-4 text-gray-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900">
                           {option.title}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-xs text-gray-600 mt-0.5">
                           {option.description}
                         </div>
                       </div>
@@ -679,12 +736,12 @@ export default function PanelNavigation({
             </div>
           </div>
 
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-end">
             <button
               type="button"
               onClick={() => setShowCreateViewModal(false)}
               disabled={creatingView}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               Cancel
             </button>

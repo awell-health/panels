@@ -1,10 +1,15 @@
 'use client'
 
-import { Filter, SortAsc, ChevronDown, X } from 'lucide-react'
+import { Filter, SortAsc, ChevronDown, X, RefreshCw } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { Filter as FilterType, Sort, Column } from '@/types/panel'
 import { cn } from '@/lib/utils'
+import {
+  isDynamicDateFilter,
+  getDynamicDateLabel,
+  type DynamicDateReference,
+} from '@/lib/dynamic-date-filter'
 
 interface FilterSortIndicatorsProps {
   filters: FilterType[]
@@ -67,6 +72,12 @@ export function FilterSortIndicators({
   }
 
   const formatFilterValue = (filter: FilterType): string => {
+    // Handle dynamic date filters
+    if (isDynamicDateFilter(filter.value)) {
+      const reference = filter.value.substring(1) as DynamicDateReference // Remove @ prefix
+      return getDynamicDateLabel(reference)
+    }
+
     if (filter.value.includes('#') || filter.value.includes(' - ')) {
       const delimiter = filter.value.includes('#') ? '#' : ' - '
       const [from, to] = filter.value.split(delimiter)
@@ -157,7 +168,15 @@ export function FilterSortIndicators({
                         <Filter className="h-3 w-3" />
                         <span className="font-medium">{columnName}</span>
                         <span className="text-gray-500">=</span>
-                        <span>{displayValue}</span>
+                        <span className="flex items-center gap-1">
+                          {isDynamicDateFilter(filter.value) && (
+                            <RefreshCw
+                              className="h-3 w-3 text-blue-500"
+                              aria-label="Dynamic filter - updates automatically"
+                            />
+                          )}
+                          <span>{displayValue}</span>
+                        </span>
                       </div>
                       {canEdit && (
                         <button

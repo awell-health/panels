@@ -15,8 +15,13 @@ import {
   differenceInYears,
   parseISO,
   isValid,
+  format,
 } from 'date-fns'
 import fhirpath from 'fhirpath'
+
+const env = {
+  today: new Date().toISOString().split('T')[0],
+}
 
 /**
  * Gets a nested value from a FHIR resource using a FHIRPath expression.
@@ -73,6 +78,22 @@ const toMilliseconds = {
 
     if (date) {
       return [date.getTime()]
+    }
+    return [input] // fallback
+  },
+  arity: {
+    1: ['String' as const],
+  },
+}
+
+const toDateFormat = {
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  fn: (_: any[], input: any) => {
+    const dateStr = String(input)
+    const date = parseDate(dateStr)
+
+    if (date) {
+      return [format(date, 'yyyy-MM-dd')]
     }
     return [input] // fallback
   },
@@ -190,6 +211,7 @@ const toDateLiteral = {
 const userInvocationTable = {
   addSeconds,
   toMilliseconds,
+  toDateFormat,
   subtractDates,
   addToDate,
   toDateLiteral,
@@ -204,7 +226,7 @@ export const getNestedValue = (
   if (!path) return undefined
 
   try {
-    const result = fhirpath.evaluate(obj, path, undefined, undefined, {
+    const result = fhirpath.evaluate(obj, path, env, undefined, {
       userInvocationTable,
     })
     if (result?.length === 1) {
@@ -212,7 +234,7 @@ export const getNestedValue = (
     }
     return result.length === 0 ? undefined : result
   } catch (error) {
-    // console.error('Error evaluating FHIRPath:', error)
+    console.error('Error evaluating FHIRPath:', error)
     return ''
   }
 }
@@ -223,7 +245,7 @@ export const isMatchingFhirPathCondition = (
   path: string,
 ): boolean => {
   try {
-    const result = fhirpath.evaluate(obj, path, undefined, undefined, {
+    const result = fhirpath.evaluate(obj, path, env, undefined, {
       userInvocationTable,
     })
     if (result.length === 0) return false
