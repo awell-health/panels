@@ -30,7 +30,7 @@ import { useEffect, useState } from 'react'
 interface PanelNavigationProps {
   panel: Panel
   selectedViewId?: string
-  currentViewType?: 'patient' | 'task'
+  currentViewType?: 'patient' | 'task' | 'appointment'
   currentFilters?: Filter[]
   onPanelTitleChange?: (newTitle: string) => void
   onViewTitleChange?: (newTitle: string) => void
