@@ -11,10 +11,10 @@ interface SelectCellProps extends InteractiveCellProps {
 }
 
 export function SelectCell(props: SelectCellProps) {
-  const { value } = props
+  const { value, columnWidth } = props
 
   return (
-    <BaseCell {...props}>
+    <BaseCell {...props} columnWidth={columnWidth}>
       {value !== null && value !== undefined && value !== '' ? (
         isTaskStatus(String(value)) ? (
           <TaskStatusBadge status={String(value).toLowerCase()} />
