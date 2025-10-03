@@ -1,11 +1,16 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
-import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import type {
+  WorklistPatient,
+  WorklistTask,
+  WorklistAppointment,
+} from '@/lib/fhir-to-table-data'
 import {
   mapPatientsToWorklistPatients,
   mapTasksToWorklistTasks,
+  mapAppointmentsToWorklistAppointments,
 } from '@/lib/fhir-to-table-data'
-import type { Patient, Task } from '@medplum/fhirtypes'
+import type { Appointment, Location, Patient, Task } from '@medplum/fhirtypes'
 import type { MedplumStoreClient } from '@/lib/medplum-client'
 
 interface PaginationState {
@@ -15,16 +20,16 @@ interface PaginationState {
 
 interface PaginationInfo {
   panelId: string
-  resourceType: 'Patient' | 'Task'
+  resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location'
   pagination: PaginationState
   lastUpdated: string
   itemCount: number
 }
 
 interface StoredItem {
-  data: Patient | Task
+  data: Patient | Task | Appointment | Location
   panelId: string
-  resourceType: 'Patient' | 'Task'
+  resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location'
   itemId: string
   lastUpdated: string
 }
@@ -33,45 +38,63 @@ interface PanelMedplumDataState {
   // Data storage
   patients: Map<string, StoredItem>
   tasks: Map<string, StoredItem>
+  appointments: Map<string, StoredItem>
+  locations: Map<string, StoredItem>
   pagination: Map<string, PaginationInfo>
 
   // Unsubscribe functions for MedplumStore
-  unsubscribeFunctions: { patients?: () => void; tasks?: () => void }
+  unsubscribeFunctions: {
+    patients?: () => void
+    tasks?: () => void
+    appointments?: () => void
+    locations?: () => void
+  }
 
   // Actions
-  setItem: <T extends Patient | Task>(
-    resourceType: 'Patient' | 'Task',
+  setItem: <T extends Patient | Task | Appointment | Location>(
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
     item: T,
   ) => void
   getItem: (
-    resourceType: 'Patient' | 'Task',
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
     itemId: string,
-  ) => Patient | Task | null
-  removeItem: (resourceType: 'Patient' | 'Task', itemId: string) => void
-  setData: (resourceType: 'Patient' | 'Task', data: Patient[] | Task[]) => void
+  ) => Patient | Task | Appointment | Location | null
+  removeItem: (
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+    itemId: string,
+  ) => void
+  setData: (
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+    data: Patient[] | Task[] | Appointment[] | Location[],
+  ) => void
   updateData: (
-    resourceType: 'Patient' | 'Task',
-    newData: Patient[] | Task[],
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+    newData: Patient[] | Task[] | Appointment[] | Location[],
   ) => void
   getData: (
-    resourceType: 'Patient' | 'Task',
-  ) => { data: Patient[] | Task[] } | null
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+  ) => { data: Patient[] | Task[] | Appointment[] | Location[] } | null
   updatePagination: (
-    resourceType: 'Patient' | 'Task',
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
     pagination: PaginationState,
   ) => void
-  getPagination: (resourceType: 'Patient' | 'Task') => PaginationState | null
-  clearData: (resourceType: 'Patient' | 'Task') => void
+  getPagination: (
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+  ) => PaginationState | null
+  clearData: (
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+  ) => void
   clearAllData: () => void
 
   // Worklist data methods
   getWorklistData: () => {
     patients: WorklistPatient[]
     tasks: WorklistTask[]
+    appointments: WorklistAppointment[]
   } | null
   getWorklistDataByResourceType: (
-    resourceType: 'Patient' | 'Task',
-  ) => WorklistPatient[] | WorklistTask[] | null
+    resourceType: 'Patient' | 'Task' | 'Appointment',
+  ) => WorklistPatient[] | WorklistTask[] | WorklistAppointment[] | null
 
   // MedplumStore integration
   registerAsListener: (medplumStoreClient: MedplumStoreClient) => void
@@ -80,12 +103,20 @@ interface PanelMedplumDataState {
   getAllData: () => {
     patients: Map<string, StoredItem>
     tasks: Map<string, StoredItem>
+    appointments: Map<string, StoredItem>
     pagination: Map<string, PaginationInfo>
   }
-  getDataSize: () => { patients: number; tasks: number; pagination: number }
+  getDataSize: () => {
+    patients: number
+    tasks: number
+    appointments: number
+    pagination: number
+  }
 }
 
-const generatePaginationKey = (resourceType: 'Patient' | 'Task'): string => {
+const generatePaginationKey = (
+  resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+): string => {
   return `default:${resourceType}`
 }
 
@@ -98,12 +129,14 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
     // Initial state
     patients: new Map(),
     tasks: new Map(),
+    appointments: new Map(),
+    locations: new Map(),
     pagination: new Map(),
     unsubscribeFunctions: {},
 
     // Set a single item
-    setItem: <T extends Patient | Task>(
-      resourceType: 'Patient' | 'Task',
+    setItem: <T extends Patient | Task | Appointment | Location>(
+      resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
       item: T,
     ) => {
       if (!item || !item.id) {
@@ -129,41 +162,69 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
         if (resourceType === 'Patient') {
           newState.patients = new Map(state.patients)
           newState.patients.set(itemKey, storedItem)
-        } else {
+        } else if (resourceType === 'Task') {
           newState.tasks = new Map(state.tasks)
           newState.tasks.set(itemKey, storedItem)
+        } else if (resourceType === 'Appointment') {
+          newState.appointments = new Map(state.appointments)
+          newState.appointments.set(itemKey, storedItem)
+        } else if (resourceType === 'Location') {
+          newState.locations = new Map(state.locations)
+          newState.locations.set(itemKey, storedItem)
         }
         return newState
       })
     },
 
     // Get a single item
-    getItem: (resourceType: 'Patient' | 'Task', itemId: string) => {
+    getItem: (
+      resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+      itemId: string,
+    ) => {
       const state = get()
       const itemKey = generateItemKey(itemId)
-      const dataMap = resourceType === 'Patient' ? state.patients : state.tasks
+      const dataMap =
+        resourceType === 'Patient'
+          ? state.patients
+          : resourceType === 'Task'
+            ? state.tasks
+            : resourceType === 'Appointment'
+              ? state.appointments
+              : state.locations
       const storedItem = dataMap.get(itemKey)
       return storedItem ? storedItem.data : null
     },
 
     // Remove a single item
-    removeItem: (resourceType: 'Patient' | 'Task', itemId: string) => {
+    removeItem: (
+      resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+      itemId: string,
+    ) => {
       const itemKey = generateItemKey(itemId)
       set((state) => {
         const newState = { ...state }
         if (resourceType === 'Patient') {
           newState.patients = new Map(state.patients)
           newState.patients.delete(itemKey)
-        } else {
+        } else if (resourceType === 'Task') {
           newState.tasks = new Map(state.tasks)
           newState.tasks.delete(itemKey)
+        } else if (resourceType === 'Appointment') {
+          newState.appointments = new Map(state.appointments)
+          newState.appointments.delete(itemKey)
+        } else if (resourceType === 'Location') {
+          newState.locations = new Map(state.locations)
+          newState.locations.delete(itemKey)
         }
         return newState
       })
     },
 
     // Set data (replaces existing data)
-    setData: (resourceType: 'Patient' | 'Task', data: Patient[] | Task[]) => {
+    setData: (
+      resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+      data: Patient[] | Task[] | Appointment[] | Location[],
+    ) => {
       if (!data || !Array.isArray(data)) {
         console.warn('Invalid data provided to setData:', {
           resourceType,
@@ -185,8 +246,8 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
 
     // Update data (adds to existing data)
     updateData: (
-      resourceType: 'Patient' | 'Task',
-      newData: Patient[] | Task[],
+      resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+      newData: Patient[] | Task[] | Appointment[] | Location[],
     ) => {
       for (const item of newData) {
         if (item?.id) {
@@ -196,21 +257,30 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
     },
 
     // Get data
-    getData: (resourceType: 'Patient' | 'Task') => {
+    getData: (
+      resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+    ) => {
       const state = get()
-      const dataMap = resourceType === 'Patient' ? state.patients : state.tasks
-      const items: (Patient | Task)[] = []
+      const dataMap =
+        resourceType === 'Patient'
+          ? state.patients
+          : resourceType === 'Task'
+            ? state.tasks
+            : resourceType === 'Appointment'
+              ? state.appointments
+              : state.locations
+      const items: (Patient | Task | Appointment | Location)[] = []
 
       for (const [_, storedItem] of dataMap) {
         items.push(storedItem.data)
       }
 
-      return { data: items as Patient[] | Task[] }
+      return { data: items as Patient[] | Task[] | Appointment[] | Location[] }
     },
 
     // Update pagination
     updatePagination: (
-      resourceType: 'Patient' | 'Task',
+      resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
       pagination: PaginationState,
     ) => {
       const paginationKey = generatePaginationKey(resourceType)
@@ -244,7 +314,9 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
     },
 
     // Get pagination
-    getPagination: (resourceType: 'Patient' | 'Task') => {
+    getPagination: (
+      resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+    ) => {
       const state = get()
       const paginationKey = generatePaginationKey(resourceType)
       const entry = state.pagination.get(paginationKey)
@@ -252,13 +324,19 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
     },
 
     // Clear data for a resource type
-    clearData: (resourceType: 'Patient' | 'Task') => {
+    clearData: (
+      resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+    ) => {
       set((state) => {
         const newState = { ...state }
         if (resourceType === 'Patient') {
           newState.patients = new Map()
-        } else {
+        } else if (resourceType === 'Task') {
           newState.tasks = new Map()
+        } else if (resourceType === 'Appointment') {
+          newState.appointments = new Map()
+        } else if (resourceType === 'Location') {
+          newState.locations = new Map()
         }
 
         // Also clear pagination for this resource type
@@ -276,6 +354,7 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
         ...state,
         patients: new Map(),
         tasks: new Map(),
+        appointments: new Map(),
         pagination: new Map(),
       }))
     },
@@ -285,31 +364,47 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
       const state = get()
       const patientsData = state.getData('Patient')
       const tasksData = state.getData('Task')
+      const appointmentsData = state.getData('Appointment')
 
-      if (!patientsData && !tasksData) {
+      if (!patientsData && !tasksData && !appointmentsData) {
         return null
       }
 
       const patients = (patientsData?.data as Patient[]) || []
       const tasks = (tasksData?.data as Task[]) || []
+      const appointments = (appointmentsData?.data as Appointment[]) || []
+      const locations = (get().getData('Location')?.data as Location[]) || []
 
       const worklistPatients = mapPatientsToWorklistPatients(patients, tasks)
       const worklistTasks = mapTasksToWorklistTasks(patients, tasks)
+      const worklistAppointments = mapAppointmentsToWorklistAppointments(
+        patients,
+        appointments,
+        locations,
+      )
 
       return {
         patients: worklistPatients,
         tasks: worklistTasks,
+        appointments: worklistAppointments,
       }
     },
 
     // Get worklist data by resource type
-    getWorklistDataByResourceType: (resourceType: 'Patient' | 'Task') => {
+    getWorklistDataByResourceType: (
+      resourceType: 'Patient' | 'Task' | 'Appointment',
+    ) => {
       const state = get()
       const patientsData = state.getData('Patient')
       const tasksData = state.getData('Task')
+      const appointmentsData = state.getData('Appointment')
 
       const requestedData =
-        resourceType === 'Patient' ? patientsData : tasksData
+        resourceType === 'Patient'
+          ? patientsData
+          : resourceType === 'Task'
+            ? tasksData
+            : appointmentsData
       if (!requestedData) {
         return null
       }
@@ -317,9 +412,24 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
       const patients = (patientsData?.data as Patient[]) || []
       const tasks = (tasksData?.data as Task[]) || []
 
-      return resourceType === 'Patient'
-        ? mapPatientsToWorklistPatients(patients, tasks)
-        : mapTasksToWorklistTasks(patients, tasks)
+      if (resourceType === 'Patient') {
+        return mapPatientsToWorklistPatients(patients, tasks)
+      }
+
+      if (resourceType === 'Task') {
+        return mapTasksToWorklistTasks(patients, tasks)
+      }
+
+      if (resourceType === 'Appointment') {
+        const appointments = (appointmentsData?.data as Appointment[]) || []
+        const locations = (get().getData('Location')?.data as Location[]) || []
+        return mapAppointmentsToWorklistAppointments(
+          patients,
+          appointments,
+          locations,
+        )
+      }
+      return null
     },
 
     // Register as listener to MedplumStore
@@ -353,6 +463,21 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
             },
           }))
         })
+
+      // Subscribe to appointment updates
+      medplumStoreClient
+        .subscribeToAppointments((updatedAppointment: Appointment) => {
+          get().setItem('Appointment', updatedAppointment)
+        })
+        .then((unsubscribe) => {
+          set((state) => ({
+            ...state,
+            unsubscribeFunctions: {
+              ...state.unsubscribeFunctions,
+              appointments: unsubscribe,
+            },
+          }))
+        })
     },
 
     // Debug methods
@@ -361,6 +486,7 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
       return {
         patients: new Map(state.patients),
         tasks: new Map(state.tasks),
+        appointments: new Map(state.appointments),
         pagination: new Map(state.pagination),
       }
     },
@@ -370,6 +496,7 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
       return {
         patients: state.patients.size,
         tasks: state.tasks.size,
+        appointments: state.appointments.size,
         pagination: state.pagination.size,
       }
     },
@@ -379,40 +506,49 @@ export const usePanelMedplumDataStore = create<PanelMedplumDataState>()(
 // Export the store instance for direct access (similar to the old API)
 export const panelDataStoreZustand = {
   // Data methods
-  setItem: <T extends Patient | Task>(
-    resourceType: 'Patient' | 'Task',
+  setItem: <T extends Patient | Task | Appointment | Location>(
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
     item: T,
   ) => usePanelMedplumDataStore.getState().setItem(resourceType, item),
 
-  getItem: (resourceType: 'Patient' | 'Task', itemId: string) =>
-    usePanelMedplumDataStore.getState().getItem(resourceType, itemId),
+  getItem: (
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+    itemId: string,
+  ) => usePanelMedplumDataStore.getState().getItem(resourceType, itemId),
 
-  removeItem: (resourceType: 'Patient' | 'Task', itemId: string) =>
-    usePanelMedplumDataStore.getState().removeItem(resourceType, itemId),
+  removeItem: (
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+    itemId: string,
+  ) => usePanelMedplumDataStore.getState().removeItem(resourceType, itemId),
 
-  setData: (resourceType: 'Patient' | 'Task', data: Patient[] | Task[]) =>
-    usePanelMedplumDataStore.getState().setData(resourceType, data),
+  setData: (
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+    data: Patient[] | Task[] | Appointment[] | Location[],
+  ) => usePanelMedplumDataStore.getState().setData(resourceType, data),
 
-  updateData: (resourceType: 'Patient' | 'Task', newData: Patient[] | Task[]) =>
-    usePanelMedplumDataStore.getState().updateData(resourceType, newData),
+  updateData: (
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+    newData: Patient[] | Task[] | Appointment[] | Location[],
+  ) => usePanelMedplumDataStore.getState().updateData(resourceType, newData),
 
-  getData: (resourceType: 'Patient' | 'Task') =>
+  getData: (resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location') =>
     usePanelMedplumDataStore.getState().getData(resourceType),
 
   // Pagination methods
   updatePagination: (
-    resourceType: 'Patient' | 'Task',
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
     pagination: PaginationState,
   ) =>
     usePanelMedplumDataStore
       .getState()
       .updatePagination(resourceType, pagination),
 
-  getPagination: (resourceType: 'Patient' | 'Task') =>
-    usePanelMedplumDataStore.getState().getPagination(resourceType),
+  getPagination: (
+    resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location',
+  ) => usePanelMedplumDataStore.getState().getPagination(resourceType),
 
   // Utility methods
-  clearData: (resourceType: 'Patient' | 'Task') =>
+  clearData: (resourceType: 'Patient' | 'Task' | 'Appointment' | 'Location') =>
     usePanelMedplumDataStore.getState().clearData(resourceType),
 
   clearAllData: () => usePanelMedplumDataStore.getState().clearAllData(),
@@ -420,7 +556,9 @@ export const panelDataStoreZustand = {
   // Worklist methods
   getWorklistData: () => usePanelMedplumDataStore.getState().getWorklistData(),
 
-  getWorklistDataByResourceType: (resourceType: 'Patient' | 'Task') =>
+  getWorklistDataByResourceType: (
+    resourceType: 'Patient' | 'Task' | 'Appointment',
+  ) =>
     usePanelMedplumDataStore
       .getState()
       .getWorklistDataByResourceType(resourceType),

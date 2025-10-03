@@ -30,7 +30,7 @@ export const columnAiAssistantMessageHandler = async (
   userName?: string,
   context?: {
     currentViewId?: string
-    currentViewType: 'patient' | 'task'
+    currentViewType: 'patient' | 'task' | 'appointment'
     panel?: Panel
     columns?: Column[]
   },

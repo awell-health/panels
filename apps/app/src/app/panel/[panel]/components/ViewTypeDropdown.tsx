@@ -1,6 +1,6 @@
 'use client'
 import { cn } from '@/lib/utils'
-import { CheckSquare, ChevronDown, Users } from 'lucide-react'
+import { CheckSquare, ChevronDown, Users, Calendar } from 'lucide-react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ViewType } from '@/types/panel'
@@ -28,27 +28,46 @@ export default function ViewTypeDropdown({
   }, [])
 
   const getViewContent = (view: ViewType) => {
-    return view === 'patient' ? (
-      <>
-        <Users
-          className={clsx(
-            'h-3.5 w-3.5 mr-2',
-            currentView === 'patient' ? 'text-blue-500' : 'text-gray-500',
-          )}
-        />{' '}
-        Patient View{' '}
-      </>
-    ) : (
-      <>
-        <CheckSquare
-          className={clsx(
-            'h-3.5 w-3.5 mr-2',
-            currentView === 'task' ? 'text-blue-500' : 'text-gray-500',
-          )}
-        />{' '}
-        Task View
-      </>
-    )
+    if (view === 'patient') {
+      return (
+        <>
+          <Users
+            className={clsx(
+              'h-3.5 w-3.5 mr-2',
+              currentView === 'patient' ? 'text-blue-500' : 'text-gray-500',
+            )}
+          />{' '}
+          Patient View{' '}
+        </>
+      )
+    }
+    if (view === 'task') {
+      return (
+        <>
+          <CheckSquare
+            className={clsx(
+              'h-3.5 w-3.5 mr-2',
+              currentView === 'task' ? 'text-blue-500' : 'text-gray-500',
+            )}
+          />{' '}
+          Task View
+        </>
+      )
+    }
+    if (view === 'appointment') {
+      return (
+        <>
+          <Calendar
+            className={clsx(
+              'h-3.5 w-3.5 mr-2',
+              currentView === 'appointment' ? 'text-blue-500' : 'text-gray-500',
+            )}
+          />{' '}
+          Appointment View
+        </>
+      )
+    }
+    return null
   }
 
   const updateDropdownPosition = useCallback(() => {
@@ -115,7 +134,7 @@ export default function ViewTypeDropdown({
     setIsOpen(!isOpen)
   }
 
-  const onViewTypeSelected = (view: 'task' | 'patient') => {
+  const onViewTypeSelected = (view: ViewType) => {
     if (disabled) return
     onViewChange(view)
     setIsOpen(false)
@@ -167,6 +186,23 @@ export default function ViewTypeDropdown({
           }}
         >
           {getViewContent('task')}
+        </div>
+        <div
+          className={cn(
+            'flex items-center w-full px-3 py-2 text-xs font-normal text-left hover:bg-gray-50 cursor-pointer rounded',
+            currentView === 'appointment'
+              ? 'bg-gray-50 text-blue-500'
+              : 'text-gray-700',
+          )}
+          onClick={() => onViewTypeSelected('appointment')}
+          onKeyDown={(e) => {
+            if (e.key === ' ') {
+              e.stopPropagation()
+              onViewTypeSelected('appointment')
+            }
+          }}
+        >
+          {getViewContent('appointment')}
         </div>
       </div>
     </div>

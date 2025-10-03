@@ -181,3 +181,111 @@ export const DEFAULT_TASK_COLUMNS = [
     },
   },
 ]
+
+export const DEFAULT_APPOINTMENT_COLUMNS = [
+  {
+    name: 'Appointment ID',
+    type: 'text' as const,
+    sourceField: 'id',
+    tags: ['panels:appointments'],
+    properties: {
+      display: {
+        visible: true,
+        order: 0,
+      },
+    },
+    metadata: {
+      description: 'Appointment ID',
+    },
+  },
+  {
+    name: 'Patient Name',
+    type: 'text' as const,
+    sourceField: 'patientName',
+    tags: ['panels:appointments'],
+    properties: {
+      display: {
+        visible: true,
+        order: 1,
+      },
+    },
+    metadata: {
+      description: "Patient's full name",
+    },
+  },
+  {
+    name: 'Status',
+    type: 'text' as const,
+    sourceField: 'status',
+    tags: ['panels:appointments'],
+    properties: {
+      display: {
+        visible: true,
+        order: 2,
+      },
+    },
+    metadata: {
+      description: 'Appointment status',
+    },
+  },
+  {
+    name: 'Start Time',
+    type: 'datetime' as const,
+    sourceField: 'start',
+    tags: ['panels:appointments'],
+    properties: {
+      display: {
+        visible: true,
+        order: 3,
+      },
+    },
+    metadata: {
+      description: 'Appointment start time',
+    },
+  },
+  {
+    name: 'End Time',
+    type: 'datetime' as const,
+    sourceField: 'end',
+    tags: ['panels:appointments'],
+    properties: {
+      display: {
+        visible: true,
+        order: 4,
+      },
+    },
+    metadata: {
+      description: 'Appointment end time',
+    },
+  },
+  {
+    name: 'Location',
+    type: 'text' as const,
+    sourceField: 'locationName',
+    tags: ['panels:appointments'],
+    properties: {
+      display: {
+        visible: true,
+        order: 5,
+      },
+    },
+    metadata: {
+      description: 'Appointment location',
+    },
+  },
+  {
+    name: 'Description',
+    type: 'text' as const,
+    sourceField: 'description',
+    tags: ['panels:appointments'],
+    properties: {
+      display: {
+        visible: true,
+        order: 6,
+      },
+    },
+    metadata: {
+      description: 'Appointment description',
+    },
+  },
+]

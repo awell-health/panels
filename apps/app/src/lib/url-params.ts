@@ -26,11 +26,20 @@ export const handleRowClick = (
   if (resourceType === 'Patient') {
     currentParams.set('patientId', resourceId)
     currentParams.delete('taskId')
+    currentParams.delete('appointmentId')
   }
 
   if (resourceType === 'Task') {
     currentParams.delete('patientId')
     currentParams.set('taskId', resourceId)
+    currentParams.delete('appointmentId')
+  }
+
+  if (resourceType === 'Appointment') {
+    // For appointments, show the appointment modal
+    currentParams.delete('patientId')
+    currentParams.delete('taskId')
+    currentParams.set('appointmentId', resourceId)
   }
 
   router.push(`${pathname}?${currentParams.toString()}`)
@@ -48,6 +57,7 @@ export const handleModalClose = ({
   const currentParams = new URLSearchParams(searchParams.toString())
   currentParams.delete('patientId')
   currentParams.delete('taskId')
+  currentParams.delete('appointmentId')
   router.push(pathname)
 }
 

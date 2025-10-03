@@ -57,6 +57,7 @@ const TaskComment = ({ task }: TaskCommentProps) => {
       type: 'task',
       title: 'Task created',
       datetime: task.authoredOn,
+      id: `created - ${task.id ?? ''}`,
     },
   ]
 
@@ -65,6 +66,7 @@ const TaskComment = ({ task }: TaskCommentProps) => {
       type: 'task',
       title: 'Task completed',
       datetime: task.lastModified,
+      id: `completed - ${task.id ?? ''}`,
     })
   }
 

@@ -43,7 +43,7 @@ export type Column = {
   }
 }
 
-export type ViewType = 'patient' | 'task'
+export type ViewType = 'patient' | 'task' | 'appointment'
 
 export type View = {
   id: string

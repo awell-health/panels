@@ -30,7 +30,12 @@ import { useModalUrlParams } from '@/lib/url-params'
 import ModalDetails from '../../components/ModalDetails/ModalDetails'
 import PanelNavigation from '../../components/PanelNavigation'
 import PanelToolbar from '../../components/PanelToolbar'
-import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import type {
+  WorklistPatient,
+  WorklistTask,
+  WorklistAppointment,
+} from '@/lib/fhir-to-table-data'
+import type { ViewType } from '@/types/panel'
 import type { FHIRCard } from '../../components/ModalDetails/StaticContent/FhirExpandableCard'
 import { useACL } from '../../../../../contexts/ACLContext'
 
@@ -75,7 +80,11 @@ export default function WorklistViewPage() {
     refresh,
     dataAfter,
   } = useProgressiveMedplumData(
-    view?.metadata.viewType === 'patient' ? 'Patient' : 'Task',
+    view?.metadata.viewType === 'patient'
+      ? 'Patient'
+      : view?.metadata.viewType === 'task'
+        ? 'Task'
+        : 'Appointment',
     {
       pageSize: 100,
       maxRecords: 50000,
@@ -85,6 +94,7 @@ export default function WorklistViewPage() {
 
   const patientId = searchParams.get('patientId')
   const taskId = searchParams.get('taskId')
+  const appointmentId = searchParams.get('appointmentId')
 
   // Get the appropriate data based on view type
   const patients =
@@ -95,6 +105,10 @@ export default function WorklistViewPage() {
     view?.metadata.viewType === 'task'
       ? (progressiveData as WorklistTask[])
       : []
+  const appointments =
+    view?.metadata.viewType === 'appointment'
+      ? (progressiveData as WorklistAppointment[])
+      : []
 
   // Create column visibility context for view
   const columnVisibilityContext = useColumnVisibility(panelId, viewId)
@@ -102,7 +116,12 @@ export default function WorklistViewPage() {
   // Create column locking context for view
   const { setColumnLocked, isColumnLocked } = useColumnLocking(panelId, viewId)
 
-  const searchData = view?.metadata.viewType === 'patient' ? patients : tasks
+  const searchData =
+    view?.metadata.viewType === 'patient'
+      ? patients
+      : view?.metadata.viewType === 'task'
+        ? tasks
+        : appointments
   const { searchTerm, setSearchTerm, searchMode, setSearchMode, filteredData } =
     // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
     useSearch(searchData)
@@ -315,6 +334,7 @@ export default function WorklistViewPage() {
     currentViewType: view?.metadata.viewType ?? 'patient',
     patients,
     tasks,
+    appointments,
     panel,
     columns: allColumnsForViewType,
     currentViewId: viewId,
@@ -361,7 +381,7 @@ export default function WorklistViewPage() {
     }
   }
 
-  const onViewTypeChange = async (newViewType: 'patient' | 'task') => {
+  const onViewTypeChange = async (newViewType: ViewType) => {
     if (!view || view.metadata.viewType === newViewType) {
       return
     }
@@ -467,6 +487,7 @@ export default function WorklistViewPage() {
           <ModalDetails
             patientId={patientId || undefined}
             taskId={taskId || undefined}
+            appointmentId={appointmentId || undefined}
             onClose={handleModalClose}
             pathname={pathname}
           />

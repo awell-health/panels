@@ -42,6 +42,7 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
         type: 'task',
         title: `Task created: ${task.description}`,
         datetime: task.authoredOn ?? '',
+        id: `created - ${task.id ?? ''}`,
       })
 
       if (task.status === 'completed') {
@@ -49,6 +50,7 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
           type: 'task',
           title: `Task completed: ${task.description}`,
           datetime: task.lastModified ?? '',
+          id: `completed - ${task.id ?? ''}`,
         })
       }
     }

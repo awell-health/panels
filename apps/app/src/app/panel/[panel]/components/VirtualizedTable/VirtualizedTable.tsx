@@ -11,6 +11,7 @@ import {
 import { TableVirtuoso } from 'react-virtuoso'
 import type { Column, Filter, Sort } from '@/types/panel'
 import { getNestedValue, isMatchingFhirPathCondition } from '@/lib/fhir-path'
+import { resolveDateFilter } from '@/lib/dynamic-date-filter'
 import {
   DndContext,
   type DragEndEvent,
@@ -281,13 +282,23 @@ export function VirtualizedTable({
         const cellDate = new Date(dateValue)
         if (Number.isNaN(cellDate.getTime())) return false
 
+        // Resolve dynamic date filters to static date ranges
+        const resolvedFilterValue = resolveDateFilter(filterValue)
+
         // Check if filter value contains date range delimiter
-        if (filterValue.includes('#')) {
-          const [fromDate, toDate] = filterValue.split('#')
+        if (resolvedFilterValue.includes('#')) {
+          const [fromDate, toDate] = resolvedFilterValue.split('#')
 
           if (fromDate && toDate) {
+            // Handle date-only filters (YYYY-MM-DD format)
             const from = new Date(fromDate)
             const to = new Date(toDate)
+
+            // If both dates are the same (single day filter), extend 'to' to end of day
+            if (fromDate === toDate) {
+              to.setHours(23, 59, 59, 999) // End of day
+            }
+
             return cellDate >= from && cellDate <= to
           }
 
@@ -298,6 +309,10 @@ export function VirtualizedTable({
 
           if (toDate) {
             const to = new Date(toDate)
+            // If it's a date-only filter, extend to end of day
+            if (toDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              to.setHours(23, 59, 59, 999)
+            }
             return cellDate <= to
           }
         }
@@ -305,7 +320,7 @@ export function VirtualizedTable({
         // Fallback to string matching for non-range filters
         return String(dateValue)
           .toLowerCase()
-          .includes(filterValue.toLowerCase())
+          .includes(resolvedFilterValue.toLowerCase())
       } catch (error) {
         console.warn('Error parsing date for filtering:', error)
         return false

@@ -1,7 +1,11 @@
 import { useCallback, useMemo } from 'react'
 import { usePanelMedplumDataStore } from '@/lib/reactive/panel-medplum-data-store-zustand'
-import type { Patient, Task } from '@medplum/fhirtypes'
-import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import type { Patient, Task, Location, Appointment } from '@medplum/fhirtypes'
+import type {
+  WorklistPatient,
+  WorklistTask,
+  WorklistAppointment,
+} from '@/lib/fhir-to-table-data'
 
 /**
  * Hook to get patients data with reactive updates
@@ -15,6 +19,13 @@ export function usePatients() {
  */
 export function useTasks() {
   return usePanelMedplumDataStore((state) => state.tasks)
+}
+
+/**
+ * Hook to get appointments data with reactive updates
+ */
+export function useAppointments() {
+  return usePanelMedplumDataStore((state) => state.appointments)
 }
 
 /**
@@ -41,21 +52,49 @@ export function useTasksArray(): Task[] {
 }
 
 /**
+ * Hook to get appointments as array with reactive updates
+ */
+export function useAppointmentsArray(): Appointment[] {
+  const appointments = useAppointments()
+  return Array.from(appointments.values()).map(
+    (item) => item.data as Appointment,
+  )
+}
+
+/**
+ * Hook to get locations with reactive updates
+ */
+export function useLocations() {
+  return usePanelMedplumDataStore((state) => state.locations)
+}
+
+export function useLocationsArray(): Location[] {
+  const locations = useLocations()
+  return Array.from(locations.values()).map((item) => item.data as Location)
+}
+
+/**
  * Hook to get worklist data with reactive updates
  */
 export function useWorklistData(): {
   patients: WorklistPatient[]
   tasks: WorklistTask[]
+  appointments: WorklistAppointment[]
 } | null {
   const patients = usePatientsArray()
   const tasks = useTasksArray()
+  const appointments = useAppointmentsArray()
 
   return useMemo(() => {
-    if (patients.length === 0 && tasks.length === 0) {
+    if (
+      patients.length === 0 &&
+      tasks.length === 0 &&
+      appointments.length === 0
+    ) {
       return null
     }
     return usePanelMedplumDataStore.getState().getWorklistData()
-  }, [patients.length, tasks.length])
+  }, [patients.length, tasks.length, appointments.length])
 }
 
 /**
@@ -72,6 +111,14 @@ export function useWorklistPatients(): WorklistPatient[] {
 export function useWorklistTasks(): WorklistTask[] {
   const worklistData = useWorklistData()
   return worklistData?.tasks || []
+}
+
+/**
+ * Hook to get worklist appointments with reactive updates
+ */
+export function useWorklistAppointments(): WorklistAppointment[] {
+  const worklistData = useWorklistData()
+  return worklistData?.appointments || []
 }
 
 /**
@@ -120,7 +167,9 @@ export function useWorklistTask(taskId: string): WorklistTask | null {
 /**
  * Hook to get pagination state for a specific resource type
  */
-export function usePaginationState(resourceType: 'Patient' | 'Task') {
+export function usePaginationState(
+  resourceType: 'Patient' | 'Task' | 'Appointment',
+) {
   return usePanelMedplumDataStore((state) => state.getPagination(resourceType))
 }
 
@@ -218,6 +267,7 @@ export function useStoreDebug() {
 export function useMedplumStoreZustand() {
   const patients = useWorklistPatients()
   const tasks = useWorklistTasks()
+  const locations = useLocations()
   const actions = useStoreActions()
 
   // These would need to be passed from the MedplumClientProvider
@@ -225,6 +275,7 @@ export function useMedplumStoreZustand() {
   return {
     patients,
     tasks,
+    locations,
     isLoading: false,
     error: null,
     addNotesToTask: () => {},

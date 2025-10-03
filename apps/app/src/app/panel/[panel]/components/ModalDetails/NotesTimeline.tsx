@@ -2,17 +2,29 @@ import { useEffect, useState, type FC } from 'react'
 import { useMedplumStore } from '../../../../../hooks/use-medplum-store'
 import type { WorklistTask } from '@/lib/fhir-to-table-data'
 import { useDateTimeFormat } from '../../../../../hooks/use-date-time-format'
-import type { DetectedIssue, Encounter, Observation } from '@medplum/fhirtypes'
+import type {
+  Appointment,
+  DetectedIssue,
+  Encounter,
+  Observation,
+} from '@medplum/fhirtypes'
 import { Loader2 } from 'lucide-react'
-import { sortBy } from 'lodash'
+import { sortBy, uniqBy } from 'lodash'
 
 export interface TimelineDatItem {
-  type: 'observation' | 'encounter' | 'note' | 'detected-issue' | 'task'
+  type:
+    | 'observation'
+    | 'encounter'
+    | 'note'
+    | 'detected-issue'
+    | 'task'
+    | 'appointment'
   title: string
   datetime: string
   description?: string
   author?: string
   notes?: WorklistTask['note']
+  id: string
 }
 interface Props {
   notes: WorklistTask['note']
@@ -27,6 +39,7 @@ const mapNotes = (data: WorklistTask['note']): TimelineDatItem[] => {
       title: `Note: ${item.text}`,
       datetime: item.time ?? '',
       author: item.authorString ?? '  ',
+      id: item.id ?? '',
     }
   })
 }
@@ -37,6 +50,20 @@ const mapDetectedIssues = (data: DetectedIssue[]): TimelineDatItem[] => {
       type: 'detected-issue',
       title: `Issue detected: ${item.code?.text} [${item.severity}]`,
       datetime: item.identifiedDateTime ?? '',
+      id: item.id ?? '',
+    }
+  })
+}
+
+const mapTimelineAppointments = (data: Appointment[]): TimelineDatItem[] => {
+  return data.map((item) => {
+    return {
+      type: 'appointment',
+      title: item.description
+        ? `Appointment: ${item.description}`
+        : 'Appointment',
+      datetime: item.start ?? '',
+      id: item.id ?? '',
     }
   })
 }
@@ -64,6 +91,7 @@ const mapTimelineObservations = (data: Observation[]): TimelineDatItem[] => {
       title: `Observation: ${itemsToDisplay.join(', ')}`,
       datetime: item.effectiveDateTime ?? '',
       description: value,
+      id: item.id ?? '',
     }
   })
 }
@@ -74,6 +102,7 @@ const mapTimelineEncounters = (data: Encounter[]): TimelineDatItem[] => {
       type: 'encounter',
       title: `Encounter: ${item.type?.[0]?.text}`,
       datetime: item.period?.start ?? '',
+      id: item.id ?? '',
     }
   })
 }
@@ -84,6 +113,7 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
     getPatientObservations,
     getPatientEncounters,
     getPatientDetectedIssues,
+    getPatientAppointments,
   } = useMedplumStore()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -115,15 +145,17 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
       const encounters = await getPatientEncounters(patientId)
       const observations = await getPatientObservations(patientId)
       const detectedIssues = await getPatientDetectedIssues(patientId)
+      const appointments = await getPatientAppointments(patientId)
 
       const updatedTimelineData = [
         ...mapTimelineObservations(observations),
         ...mapTimelineEncounters(encounters),
         ...mapDetectedIssues(detectedIssues),
+        ...mapTimelineAppointments(appointments),
       ]
 
       setTimelineData((prev) => {
-        return [...prev, ...updatedTimelineData]
+        return uniqBy([...prev, ...updatedTimelineData], 'id')
       })
       setIsLoading(false)
     }
@@ -133,6 +165,7 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
     getPatientObservations,
     getPatientEncounters,
     getPatientDetectedIssues,
+    getPatientAppointments,
     patientId,
   ])
 
@@ -144,6 +177,8 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
         return 'bg-warning'
       case 'detected-issue':
         return 'bg-error'
+      case 'appointment':
+        return 'bg-cyan-400'
       case 'task':
         if (title?.toLowerCase().includes('completed')) {
           return 'bg-accent'
@@ -153,7 +188,6 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
         return 'bg-neutral'
     }
   }
-
   const sortedTimelineData = sortBy(timelineData, 'datetime')
 
   return (

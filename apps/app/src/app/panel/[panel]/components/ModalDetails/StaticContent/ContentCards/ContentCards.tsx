@@ -7,6 +7,7 @@ import type {
   Observation,
   Resource,
   Bundle,
+  Appointment,
 } from '@medplum/fhirtypes'
 import ExpandableCard from '../ExpandableCard'
 import RenderValue from '../RenderValue'
@@ -15,6 +16,10 @@ import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { useReactivePanel } from '../../../../../../../hooks/use-reactive-data-zustand'
 import { useParams } from 'next/navigation'
 import { getCardConfigs } from '../../../../../../../utils/static/CardConfigs'
+import { RenderWithCopy } from '../RenderWithCopy'
+import HighlightText from '../HighlightContent'
+import { formatDateTime } from '@medplum/core'
+import AppointmentsCard from './AppointmentsCard'
 
 interface Props {
   task?: WorklistTask
@@ -42,10 +47,12 @@ const ContentCards: React.FC<Props> = ({
     getPatientObservations,
     getPatientCompositions,
     getPatientEncounters,
+    getPatientAppointments,
   } = useMedplumStore()
   const [observations, setObservations] = useState<Observation[]>([])
   const [compositions, setCompositions] = useState<Composition[]>([])
   const [encounters, setEncounters] = useState<Encounter[]>([])
+  const [appointments, setAppointments] = useState<Appointment[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const fetchEncounters = async () => {
@@ -66,11 +73,18 @@ const ContentCards: React.FC<Props> = ({
     setObservations(observations)
   }
 
+  const fetchAppointments = async () => {
+    if (!patient?.id) return
+    const appointments = await getPatientAppointments(patient.id)
+    setAppointments(appointments)
+  }
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     fetchEncounters()
     fetchCompositions()
     fetchObservations()
+    fetchAppointments()
   }, [patient?.id])
 
   // Create bundle with proper type safety
@@ -129,6 +143,9 @@ const ContentCards: React.FC<Props> = ({
           bundle={bundle}
         />
       ))}
+      {appointments.length > 0 && (
+        <AppointmentsCard appointments={appointments} expanded={expanded} />
+      )}
       {compositions?.map((composition) =>
         composition.section?.map((section) => {
           if (!section.id || !section.title) return null
