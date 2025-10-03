@@ -684,7 +684,7 @@ async function createPatient(
     ),
   )
 
-  const createdPatient = await medplum.createResource(newPatient)
+  const createdPatient = await medplum.upsertResource(newPatient, searchQuery)
 
   console.log(
     'Patient created successfully:',
@@ -738,7 +738,9 @@ async function updateExistingPatient(
         2,
       ),
     )
-    return undefined
+    throw new Error(
+      `Patient with Awell ID ${awellPatientId} not found for update`,
+    )
   }
 
   // Patient exists - update with profile data
