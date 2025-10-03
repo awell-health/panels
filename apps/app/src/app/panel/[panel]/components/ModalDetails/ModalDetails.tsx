@@ -200,6 +200,7 @@ const ModalDetails = ({ patientId, taskId, pathname, onClose }: Props) => {
             onClick={onClose}
             className="btn btn-square btn-ghost btn-sm"
             type="button"
+            aria-label="Close modal"
           >
             <X className="h-6 w-6 cursor-pointer hover:text-gray-800" />
           </button>

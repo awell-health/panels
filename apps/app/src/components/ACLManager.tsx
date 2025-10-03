@@ -731,19 +731,39 @@ export function ACLManager() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      id="acl-resource-type"
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Resource Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      id="acl-resource-name"
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Resource Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      id="acl-permission"
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Permission
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      id="acl-access-type"
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Access Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      id="acl-created"
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Created
                     </th>
                   </tr>
@@ -755,18 +775,30 @@ export function ACLManager() {
                       <tr
                         key={`${acl.resourceType}-${acl.resourceId}-${acl.userEmail}`}
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td
+                          headers="acl-resource-type"
+                          className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+                        >
                           {acl.resourceType}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td
+                          headers="acl-resource-name"
+                          className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                        >
                           {acl.resourceName}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td
+                          headers="acl-permission"
+                          className="px-6 py-4 whitespace-nowrap text-sm"
+                        >
                           <span className={getPermissionColor(acl.permission)}>
                             {acl.permission}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td
+                          headers="acl-access-type"
+                          className="px-6 py-4 whitespace-nowrap text-sm"
+                        >
                           <span
                             className={accessTypeInfo.color}
                             title={accessTypeInfo.description}
@@ -774,7 +806,10 @@ export function ACLManager() {
                             {accessTypeInfo.type}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td
+                          headers="acl-created"
+                          className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                        >
                           {new Date(acl.createdAt).toLocaleDateString()}
                         </td>
                       </tr>

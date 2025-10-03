@@ -22,6 +22,7 @@ const ExpandableCard: FC<Props> = (props) => {
         onClick={() => setIsExpanded(!isExpanded)}
         className="btn btn-sm btn-ghost w-full justify-between h-auto min-h-8 p-3"
         type="button"
+        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${title}`}
       >
         <div className="flex-1 text-left cursor-pointer">
           <h4 className="font-medium text-medium text-gray-900 truncate">

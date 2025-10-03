@@ -96,6 +96,7 @@ export const HighlightedJsonViewer: React.FC<HighlightedJsonProps> = ({
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
               className="btn btn-xs btn-ghost btn-square"
+              aria-label={`${isExpanded ? 'Collapse' : 'Expand'} JSON section`}
             >
               {isExpanded ? (
                 <ChevronDown className="h-3 w-3 text-gray-500" />
@@ -156,6 +157,7 @@ export const HighlightedJsonViewer: React.FC<HighlightedJsonProps> = ({
               type="button"
               onClick={() => setIsExpanded(!isExpanded)}
               className="btn btn-xs btn-ghost btn-square"
+              aria-label={`${isExpanded ? 'Collapse' : 'Expand'} JSON section`}
             >
               {isExpanded ? (
                 <ChevronDown className="h-3 w-3 text-gray-500" />
