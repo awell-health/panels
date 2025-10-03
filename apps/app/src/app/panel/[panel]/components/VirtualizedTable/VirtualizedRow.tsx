@@ -49,6 +49,7 @@ export function VirtualizedRow({
       {columns.map((column, columnIndex) => (
         <td
           key={column.id}
+          headers={`header-${column.id}`}
           className={cn(
             'border-r border-b border-gray-200 cursor-pointer p-2 bg-white',
             // Sticky columns get their background from CSS hover effects

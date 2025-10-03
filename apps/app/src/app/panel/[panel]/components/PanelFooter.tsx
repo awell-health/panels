@@ -133,6 +133,7 @@ export default function PanelFooter({
           disabled={true}
           type="button"
           className="btn btn-xs btn-disabled"
+          aria-label="View table history (disabled)"
         >
           <History className="mr-1 h-3 w-3" /> View table history
         </button>
@@ -140,6 +141,7 @@ export default function PanelFooter({
           disabled={true}
           type="button"
           className="btn btn-xs btn-disabled"
+          aria-label="Reset view (disabled)"
         >
           <RotateCcw className="h-3 w-3" />
         </button>

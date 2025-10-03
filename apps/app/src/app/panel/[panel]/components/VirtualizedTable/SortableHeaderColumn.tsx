@@ -156,7 +156,7 @@ export function SortableHeaderColumn({
       }}
       style={sortableStyle}
       className={cn(
-        'absolute top-0 bg-white text-xs font-normal text-gray-700 p-2 select-none flex items-center',
+        'absolute top-0 bg-white text-xs font-normal text-gray-700 px-2 py-3 select-none flex items-center min-h-[44px]',
         isDragging && 'bg-blue-50 border-blue-200 shadow-lg',
         isOver && !isDragging && 'bg-blue-25 border-blue-100',
         'transition-colors duration-150',
@@ -173,7 +173,7 @@ export function SortableHeaderColumn({
         <button
           type="button"
           className={cn(
-            'btn btn-xs btn-ghost btn-header mr-2 ml-1 text-xs',
+            'btn btn-sm btn-ghost btn-header mr-2 ml-1 text-xs flex items-center justify-center',
             column.properties?.display?.locked
               ? 'cursor-default'
               : isDragging
@@ -202,7 +202,7 @@ export function SortableHeaderColumn({
         <button
           type="button"
           className={cn(
-            'btn btn-xs btn-ghost btn-header flex-1 justify-start text-xs shrink-0',
+            'btn btn-sm btn-ghost btn-header flex-1 justify-start text-xs shrink-0 px-2',
             isDragging && 'pointer-events-none',
           )}
           onClick={isDragging || !canEdit ? undefined : onSort}
@@ -224,7 +224,7 @@ export function SortableHeaderColumn({
           <button
             type="button"
             className={cn(
-              'btn btn-xs btn-ghost btn-header text-xs shrink-0',
+              'btn btn-sm btn-ghost btn-header text-xs shrink-0 flex items-center justify-center',
               filterValue ? 'text-blue-500 bg-blue-50' : 'text-gray-500',
             )}
             onClick={isDragging || !canEdit ? undefined : toggleMenu}

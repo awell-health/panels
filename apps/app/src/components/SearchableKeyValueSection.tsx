@@ -163,7 +163,8 @@ export function SearchableKeyValueSection({
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="btn btn-xs btn-ghost"
+                  className="btn btn-sm btn-ghost px-3 py-2"
+                  aria-label="Search mode options"
                 >
                   {SEARCH_MODE_LABELS[searchMode]}
                   <ChevronDown className="ml-1 h-3 w-3" />

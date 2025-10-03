@@ -97,8 +97,13 @@ export default function PanelToolbar({
                     searchMode === 'text' ? 'fhirpath' : 'text',
                   )
                 }
-                className="text-xs text-gray-500 hover:text-gray-700"
+                className="text-xs text-gray-500 hover:text-gray-700 flex items-center justify-center p-2 rounded-md hover:bg-gray-100"
                 title={
+                  searchMode === 'text'
+                    ? 'Switch to FHIRPath search'
+                    : 'Switch to text search'
+                }
+                aria-label={
                   searchMode === 'text'
                     ? 'Switch to FHIRPath search'
                     : 'Switch to text search'

@@ -65,6 +65,8 @@ export function StickyHeader({
         {columns.map((column, index) => (
           <th
             key={column.id}
+            id={`header-${column.id}`}
+            scope="col"
             style={{
               width: getColumnWidth(index),
               minWidth: getColumnWidth(index),

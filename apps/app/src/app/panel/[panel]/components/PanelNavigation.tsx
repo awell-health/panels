@@ -478,6 +478,7 @@ export default function PanelNavigation({
                         type="button"
                         id="remove-view-id"
                         className="ml-2 text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove panel "${panel.name}"`}
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDeleteViewClick(panel.id, panel.name, 'panel')

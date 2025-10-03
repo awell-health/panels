@@ -53,6 +53,7 @@ function ChatInput({
           onClick={handleSubmit}
           disabled={!inputValue.trim() || disabled}
           className="btn btn-sm btn-primary btn-square"
+          aria-label="Send message"
         >
           <Send className="h-3 w-3" />
         </button>
