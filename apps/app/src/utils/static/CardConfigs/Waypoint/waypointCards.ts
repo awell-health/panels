@@ -5,7 +5,7 @@ export default [
       {
         label: 'Full name',
         key: 'name',
-        fhirPath: 'name',
+        fhirPath: "name.family & ' ' & name.given",
       },
       {
         label: 'Date of birth',
