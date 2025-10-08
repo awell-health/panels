@@ -3,6 +3,8 @@ import { useDateTimeFormat } from '@/hooks/use-date-time-format'
 import { Calendar, Clock, MapPin, User } from 'lucide-react'
 import StaticContent from '../StaticContent'
 import type { WorklistPatient } from '../../../../../../lib/fhir-to-table-data'
+import { getPatientName } from '@/lib/patient-utils'
+import { Patient } from '@medplum/fhirtypes'
 
 interface AppointmentDetailsProps {
   appointmentId: string
@@ -41,6 +43,8 @@ export default function AppointmentDetails({
     }
   }
 
+  const patientName = getPatientName(appointment.patient as WorklistPatient)
+
   return (
     <div className="flex flex-1 h-full">
       {VIEWS.map((view) => (
@@ -68,9 +72,7 @@ export default function AppointmentDetails({
                       </div>
                       <div className="mt-1 flex items-center gap-2">
                         <User className="h-4 w-4 text-gray-400" />
-                        <span className="font-medium">
-                          {appointment.patientName}
-                        </span>
+                        <span className="font-medium">{patientName}</span>
                       </div>
                     </div>
                     <div>

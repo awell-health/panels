@@ -5,7 +5,7 @@ export default [
       {
         label: 'Full Name',
         key: 'fullName',
-        fhirPath: 'name',
+        fhirPath: "name.family & ' ' & name.given",
         resourceType: 'Patient',
       },
       {

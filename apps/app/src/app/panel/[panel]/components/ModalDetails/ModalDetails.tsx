@@ -20,6 +20,8 @@ import { useReactivePanel } from '../../../../../hooks/use-reactive-data-zustand
 import { getCardConfigs } from '../../../../../utils/static/CardConfigs'
 import type { FHIRCard } from './StaticContent/FhirExpandableCard'
 import { useParams, useRouter } from 'next/navigation'
+import type { WorklistPatient } from '@/lib/fhir-to-table-data'
+import { getPatientName } from '@/lib/patient-utils'
 
 interface Props {
   patientId?: string
@@ -99,7 +101,7 @@ const ModalDetails = ({
   }
 
   // Get patient name and DOB for header
-  const patientName = patient?.name || ''
+  const patientName = getPatientName(patient as WorklistPatient)
   const dateOfBirth = patient?.birthDate || ''
   const gender = patient?.gender || ''
 
