@@ -131,7 +131,6 @@ export const mapPatientsToWorklistPatients = (
     return {
       ...rawPatient,
       id: patient.id || '',
-      name: getPatientName(patient),
       taskDescriptionsSummary: taskDescriptions,
       tasks: patientTasks.map((task) => taskToWorklistData(patient, task)),
     }
