@@ -7,7 +7,6 @@ import type {
 
 export type WorklistPatient = {
   id: string
-  name: string
   tasks: WorklistTask[]
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   [key: string]: any // For dynamic columns
@@ -20,7 +19,6 @@ export type WorklistTask = {
   priority?: string
   dueDate?: string
   patientId: string
-  patientName: string
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   [key: string]: any // For dynamic columns
   // we shouldnt pass the worklist tasks inside the patient
@@ -33,7 +31,6 @@ export type WorklistAppointment = {
   start?: string
   end?: string
   patientId: string
-  patientName: string
   locationId?: string
   locationName?: string
   description?: string
@@ -44,11 +41,6 @@ export type WorklistAppointment = {
 }
 
 // Helper methods
-function getPatientName(patient: Patient): string {
-  if (!patient.name || patient.name.length === 0) return 'Unknown'
-  const name = patient.name[0]
-  return `${name.given?.join(' ') || ''} ${name.family || ''}`.trim()
-}
 
 const taskToWorklistData = (
   patient: Patient | undefined,
@@ -61,12 +53,10 @@ const taskToWorklistData = (
     priority: task.priority,
     description: task.description || '',
     patientId: patient?.id || '',
-    patientName: patient ? getPatientName(patient) : '',
     patient: patient
       ? {
           ...patient,
           id: patient.id || '',
-          name: getPatientName(patient),
           tasks: [],
         }
       : undefined,
@@ -105,7 +95,6 @@ const appointmentToWorklistData = (
     end: appointment.end,
     description: appointment.description,
     patientId: patient?.id || '',
-    patientName: patient ? getPatientName(patient) : '',
     locationId,
     locationName,
     location: location
@@ -119,7 +108,6 @@ const appointmentToWorklistData = (
       ? {
           ...patient,
           id: patient.id || '',
-          name: getPatientName(patient),
           tasks: [],
         }
       : undefined,
@@ -143,7 +131,6 @@ export const mapPatientsToWorklistPatients = (
     return {
       ...rawPatient,
       id: patient.id || '',
-      name: getPatientName(patient),
       taskDescriptionsSummary: taskDescriptions,
       tasks: patientTasks.map((task) => taskToWorklistData(patient, task)),
     }
