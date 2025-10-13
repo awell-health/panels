@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { type FC, useEffect, useState } from 'react'
-import { formatDateTime } from '@medplum/core'
+import { useDateTimeFormat } from '../../../../../../hooks/use-date-time-format'
 
 interface Props {
   title: string
@@ -13,6 +13,7 @@ interface Props {
 const ExpandableCard: FC<Props> = (props) => {
   const { title, children, defaultExpanded = false, summary, date } = props
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+  const { formatDateTime } = useDateTimeFormat()
 
   useEffect(() => {
     setIsExpanded(defaultExpanded)
