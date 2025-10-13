@@ -18,7 +18,6 @@ import { useParams } from 'next/navigation'
 import { getCardConfigs } from '../../../../../../../utils/static/CardConfigs'
 import { RenderWithCopy } from '../RenderWithCopy'
 import HighlightText from '../HighlightContent'
-import { formatDateTime } from '@medplum/core'
 import AppointmentsCard from './AppointmentsCard'
 
 interface Props {
@@ -154,6 +153,7 @@ const ContentCards: React.FC<Props> = ({
             <ExpandableCard
               key={`${composition.id}-${section.id}-${section.title}`}
               title={`${composition.title ?? 'Untitled'} - ${section.title}`}
+              date={composition.date}
               defaultExpanded={expanded}
             >
               <RenderValue
