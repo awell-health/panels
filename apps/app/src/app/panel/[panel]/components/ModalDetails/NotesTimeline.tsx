@@ -113,7 +113,6 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
     getPatientObservations,
     getPatientEncounters,
     getPatientDetectedIssues,
-    getPatientAppointments,
   } = useMedplumStore()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -145,13 +144,11 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
       const encounters = await getPatientEncounters(patientId)
       const observations = await getPatientObservations(patientId)
       const detectedIssues = await getPatientDetectedIssues(patientId)
-      const appointments = await getPatientAppointments(patientId)
 
       const updatedTimelineData = [
         ...mapTimelineObservations(observations),
         ...mapTimelineEncounters(encounters),
         ...mapDetectedIssues(detectedIssues),
-        ...mapTimelineAppointments(appointments),
       ]
 
       setTimelineData((prev) => {
@@ -165,7 +162,6 @@ const NotesTimeline: FC<Props> = ({ notes, patientId, timelineItems = [] }) => {
     getPatientObservations,
     getPatientEncounters,
     getPatientDetectedIssues,
-    getPatientAppointments,
     patientId,
   ])
 
