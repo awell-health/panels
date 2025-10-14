@@ -74,6 +74,8 @@ const AWELL_PATIENT_CONNECTORS_EXTENSION_URL =
   'https://awellhealth.com/fhir/StructureDefinition/awell-patient-connectors'
 const AWELL_PATIENT_TIMEZONE_EXTENSION_URL =
   'https://awellhealth.com/fhir/StructureDefinition/patient-timezone'
+const AWELL_PATIENT_BOT_PROCESSED_EXTENSION_URL =
+  'https://awellhealth.com/fhir/StructureDefinition/patient-bot-processed'
 
 interface Config {
   environment: string
@@ -296,9 +298,34 @@ function mergeExtensions(
   return mergedExtensions
 }
 
+function createPatientBotProcessedExtension(
+  eventType: string,
+  timestamp: string,
+): Extension {
+  return {
+    url: AWELL_PATIENT_BOT_PROCESSED_EXTENSION_URL,
+    extension: [
+      {
+        url: 'event-type',
+        valueString: eventType,
+      },
+      {
+        url: 'processed-at',
+        valueDateTime: timestamp,
+      },
+      {
+        url: 'bot-version',
+        valueString: '1.0.0',
+      },
+    ],
+  }
+}
+
 function createFhirPatient(
   awellPatientId: string,
   profile: PatientProfile,
+  eventType: string,
+  timestamp: string,
   config?: Config,
 ): Patient {
   const name = createPatientName(profile)
@@ -361,6 +388,15 @@ function createFhirPatient(
     extensions.push(timezoneExtension)
   }
 
+  // Add bot processed extension
+  const botProcessedExtension = createPatientBotProcessedExtension(
+    eventType,
+    timestamp,
+  )
+  if (botProcessedExtension) {
+    extensions.push(botProcessedExtension)
+  }
+
   if (extensions.length > 0) {
     patient.extension = extensions
   }
@@ -391,6 +427,15 @@ function createPatientIdentifiers(
       value: awellPatientId,
     },
   ]
+
+  // Add patient_code as Awell legacy identifier if it exists
+  const patientCode = safeStringTrim(profile.patient_code)
+  if (patientCode) {
+    identifiers.push({
+      system: 'https://awellhealth.com/patients/patient_code',
+      value: patientCode,
+    })
+  }
 
   if (profile.identifier?.length) {
     for (const id of profile.identifier) {
@@ -484,6 +529,8 @@ function convertSexToGender(
 function createPatientUpdates(
   profile: PatientProfile,
   awellPatientId: string,
+  eventType: string,
+  timestamp: string,
   existingExtensions: Extension[] = [],
   config?: Config,
 ): Partial<Patient> {
@@ -559,6 +606,15 @@ function createPatientUpdates(
     newExtensions.push(timezoneExtension)
   }
 
+  // Add bot processed extension
+  const botProcessedExtension = createPatientBotProcessedExtension(
+    eventType,
+    timestamp,
+  )
+  if (botProcessedExtension) {
+    newExtensions.push(botProcessedExtension)
+  }
+
   // Merge extensions if we have any new ones
   if (newExtensions.length > 0) {
     const mergedExtensions = mergeExtensions(existingExtensions, newExtensions)
@@ -609,7 +665,13 @@ async function createPatient(
   }
 
   // Patient does not exist - create new patient
-  const newPatient = createFhirPatient(awellPatientId, profile, config)
+  const newPatient = createFhirPatient(
+    awellPatientId,
+    profile,
+    'patient.created',
+    new Date().toISOString(),
+    config,
+  )
 
   console.log(
     'Creating new patient:',
@@ -622,7 +684,7 @@ async function createPatient(
     ),
   )
 
-  const createdPatient = await medplum.createResource(newPatient)
+  const createdPatient = await medplum.upsertResource(newPatient, searchQuery)
 
   console.log(
     'Patient created successfully:',
@@ -676,7 +738,9 @@ async function updateExistingPatient(
         2,
       ),
     )
-    return undefined
+    throw new Error(
+      `Patient with Awell ID ${awellPatientId} not found for update`,
+    )
   }
 
   // Patient exists - update with profile data
@@ -701,6 +765,8 @@ async function updateExistingPatient(
   const patientUpdates = createPatientUpdates(
     profile,
     awellPatientId,
+    'patient.updated',
+    new Date().toISOString(),
     existingPatient.extension || [],
     config,
   )

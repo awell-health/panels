@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { Column } from '@/types/panel'
-import { useReactiveView, useReactivePanel } from './use-reactive-data'
+import { useReactiveView, useReactivePanel } from './use-reactive-data-zustand'
 import { useReactivePanelStore } from './use-reactive-panel-store'
 import { useColumnOperations } from './use-column-operations'
 

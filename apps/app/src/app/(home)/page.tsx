@@ -1,7 +1,7 @@
 'use client'
 
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
-import { useReactivePanels } from '@/hooks/use-reactive-data'
+import { useReactivePanels } from '@/hooks/use-reactive-data-zustand'
 import { Loader2 } from 'lucide-react'
 import PanelsCards from '@/components/PanelsCards'
 import PageNavigation from '../../components/PageNavigation'

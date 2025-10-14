@@ -1,8 +1,5 @@
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
-import { ChevronRightIcon } from 'lucide-react'
-import TaskStatusBadge from '../TaskDetails/TaskStatusBadge'
 import PatientConnectorsSection from '../TaskDetails/PatientConnectorsSection'
-import { ManualTrackButton } from '@/components/ManualTrackButton'
 
 import NotesTimeline, { type TimelineDatItem } from '../NotesTimeline'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
@@ -10,6 +7,7 @@ import { useEffect, useState } from 'react'
 import StaticContent from '../StaticContent'
 import PatientTasks from './PatientTasks'
 import { useToastHelpers } from '@/contexts/ToastContext'
+import { useWorklistTasks } from '../../../../../../hooks/use-zustand-store'
 
 interface PatientDetailsProps {
   patient: WorklistPatient
@@ -18,10 +16,12 @@ interface PatientDetailsProps {
 
 const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
   const VIEWS = ['content', 'tasks', 'timeline']
-  const { tasks, createTask } = useMedplumStore()
+  const { createTask } = useMedplumStore()
   const { showError } = useToastHelpers()
+  const tasks = useWorklistTasks()
 
   const [patientTasks, setPatientTasks] = useState<WorklistTask[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   const handleCreateNonCareFlowTask = async () => {
     try {
@@ -56,6 +56,7 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
   useEffect(() => {
     const filteredTasks = tasks.filter((task) => task.patientId === patient.id)
     setPatientTasks(filteredTasks)
+    setIsLoading(false)
   }, [tasks, patient.id])
 
   const getTimelineItems = (taskList: WorklistTask[]) => {
@@ -72,6 +73,7 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
         type: 'task',
         title: `Task created: ${task.description}`,
         datetime: task.authoredOn ?? '',
+        id: `created - ${task.id ?? ''}`,
       })
 
       if (task.status === 'completed') {
@@ -79,6 +81,7 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
           type: 'task',
           title: `Task completed: ${task.description}`,
           datetime: task.lastModified ?? '',
+          id: `completed - ${task.id ?? ''}`,
         })
       }
     }
@@ -109,13 +112,24 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
               {...getTimelineItems(patientTasks)}
             />
           )}
-          {view === 'tasks' && (
-            <PatientTasks
-              patientId={patient.id}
-              tasks={patientTasks}
-              setSelectedTask={setSelectedTask}
-              onCreateNonCareFlowTask={handleCreateNonCareFlowTask}
-            />
+          {view === 'tasks' && !isLoading && (
+            <>
+              {patientTasks.length === 0 && (
+                <div className="w-full p-8 flex items-center justify-center">
+                  <div className="font-medium text-gray-900">
+                    No tasks found
+                  </div>
+                </div>
+              )}
+              {patientTasks.length > 0 && (
+                <PatientTasks
+                  patientId={patient.id}
+                  tasks={patientTasks}
+                  setSelectedTask={setSelectedTask}
+                  onCreateNonCareFlowTask={handleCreateNonCareFlowTask}
+                />
+              )}
+            </>
           )}
         </div>
       ))}

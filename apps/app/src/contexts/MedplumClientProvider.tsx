@@ -7,12 +7,15 @@ import {
   type PaginatedResult,
   type PaginationOptions,
 } from '@/lib/medplum-client'
-import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
+import { panelDataStoreZustand as panelDataStore } from '@/lib/reactive/panel-medplum-data-store-zustand'
 import { MedplumClient } from '@medplum/core'
 import type {
+  Appointment,
   Composition,
   DetectedIssue,
+  DocumentReference,
   Encounter,
+  Location,
   Observation,
   Patient,
   Practitioner,
@@ -37,10 +40,17 @@ type MedplumContextType = {
   // Data access methods (delegated to store)
   addNotesToTask: (taskId: string, notes: string) => Promise<Task>
   toggleTaskOwner: (taskId: string) => Promise<Task>
+  updateTaskStatus: (
+    taskId: string,
+    status: 'completed' | 'cancelled',
+  ) => Promise<Task>
   getPatientObservations: (patientId: string) => Promise<Observation[]>
   getPatientCompositions: (patientId: string) => Promise<Composition[]>
   getPatientEncounters: (patientId: string) => Promise<Encounter[]>
   getPatientDetectedIssues: (patientId: string) => Promise<DetectedIssue[]>
+  readDocumentReference: (
+    documentReferenceId: string,
+  ) => Promise<DocumentReference>
   deletePatient: (patientId: string) => Promise<void>
   createTask: (
     patientId: string,
@@ -55,9 +65,22 @@ type MedplumContextType = {
     options: PaginationOptions,
   ) => Promise<PaginatedResult<Task>>
   getPatientsFromReferences: (patientRefList: string[]) => Promise<Patient[]>
-  getTasksForPatients: (patientIDs: string[]) => Promise<Task[]>
+  getTasksForPatients: (patientIDs: string[], limit?: number) => Promise<Task[]>
   getPatientCount: () => Promise<number>
   getTaskCount: () => Promise<number>
+  getAppointments: () => Promise<Appointment[]>
+  getAppointmentsPaginated: (
+    options: PaginationOptions,
+  ) => Promise<PaginatedResult<Appointment>>
+  getPatientAppointments: (patientId: string) => Promise<Appointment[]>
+  getAppointmentCount: () => Promise<number>
+  getLocations: () => Promise<Location[]>
+  getLocationsPaginated: (
+    options: PaginationOptions,
+  ) => Promise<PaginatedResult<Location>>
+  getLocationsFromReferences: (locationRefs: string[]) => Promise<Location[]>
+  getLocation: (locationId: string) => Promise<Location>
+  getLocationCount: () => Promise<number>
 }
 
 const MedplumContext = createContext<MedplumContextType | null>(null)
@@ -312,6 +335,19 @@ export function MedplumClientProvider({
     [medplumClient, practitioner?.id, isLoading],
   )
 
+  const updateTaskStatus = useCallback(
+    async (taskId: string, status: 'completed' | 'cancelled') => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.updateTaskStatus(taskId, status)
+    },
+    [medplumClient, isLoading],
+  )
+
   const deletePatient = useCallback(
     async (patientId: string) => {
       if (isLoading) {
@@ -396,14 +432,14 @@ export function MedplumClientProvider({
   )
 
   const getTasksForPatients = useCallback(
-    async (patientIDs: string[]) => {
+    async (patientIDs: string[], limit?: number) => {
       if (isLoading) {
         throw new Error('Medplum client is still initializing')
       }
       if (!medplumClient) {
         throw new Error('Medplum store not initialized')
       }
-      return await medplumClient.getTasksForPatients(patientIDs)
+      return await medplumClient.getTasksForPatients(patientIDs, limit)
     },
     [medplumClient, isLoading],
   )
@@ -428,6 +464,124 @@ export function MedplumClientProvider({
     return await medplumClient.getTaskCount()
   }, [medplumClient, isLoading])
 
+  const getAppointments = useCallback(async () => {
+    if (isLoading) {
+      throw new Error('Medplum client is still initializing')
+    }
+    if (!medplumClient) {
+      throw new Error('Medplum store not initialized')
+    }
+    return await medplumClient.getAppointments()
+  }, [medplumClient, isLoading])
+
+  const getAppointmentsPaginated = useCallback(
+    async (options: PaginationOptions) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.getAppointmentsPaginated(options)
+    },
+    [medplumClient, isLoading],
+  )
+
+  const getPatientAppointments = useCallback(
+    async (patientId: string) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.getPatientAppointments(patientId)
+    },
+    [medplumClient, isLoading],
+  )
+
+  const getAppointmentCount = useCallback(async () => {
+    if (isLoading) {
+      throw new Error('Medplum client is still initializing')
+    }
+    if (!medplumClient) {
+      throw new Error('Medplum store not initialized')
+    }
+    return await medplumClient.getAppointmentCount()
+  }, [medplumClient, isLoading])
+
+  const getLocations = useCallback(async () => {
+    if (isLoading) {
+      throw new Error('Medplum client is still initializing')
+    }
+    if (!medplumClient) {
+      throw new Error('Medplum store not initialized')
+    }
+    return await medplumClient.getLocations()
+  }, [medplumClient, isLoading])
+
+  const getLocationsPaginated = useCallback(
+    async (options: PaginationOptions) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.getLocationsPaginated(options)
+    },
+    [medplumClient, isLoading],
+  )
+
+  const getLocationsFromReferences = useCallback(
+    async (locationRefs: string[]) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.getLocationsFromReferences(locationRefs)
+    },
+    [medplumClient, isLoading],
+  )
+
+  const getLocation = useCallback(
+    async (locationId: string) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.getLocation(locationId)
+    },
+    [medplumClient, isLoading],
+  )
+
+  const getLocationCount = useCallback(async () => {
+    if (isLoading) {
+      throw new Error('Medplum client is still initializing')
+    }
+    if (!medplumClient) {
+      throw new Error('Medplum store not initialized')
+    }
+    return await medplumClient.getLocationCount()
+  }, [medplumClient, isLoading])
+
+  const readDocumentReference = useCallback(
+    async (documentReferenceId: string) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.readDocumentReference(documentReferenceId)
+    },
+    [medplumClient, isLoading],
+  )
+
   const value = {
     store: medplumClient,
     isLoading,
@@ -435,10 +589,12 @@ export function MedplumClientProvider({
     practitioner,
     addNotesToTask,
     toggleTaskOwner,
+    updateTaskStatus,
     getPatientObservations,
     getPatientEncounters,
     getPatientDetectedIssues,
     getPatientCompositions,
+    readDocumentReference,
     deletePatient,
     createTask,
     updateTask,
@@ -448,6 +604,15 @@ export function MedplumClientProvider({
     getTasksForPatients,
     getPatientCount,
     getTaskCount,
+    getAppointments,
+    getAppointmentsPaginated,
+    getPatientAppointments,
+    getAppointmentCount,
+    getLocations,
+    getLocationsPaginated,
+    getLocationsFromReferences,
+    getLocation,
+    getLocationCount,
   }
 
   if (!medplumClientId || !medplumSecret || isLoading) {

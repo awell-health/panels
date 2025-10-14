@@ -17,6 +17,9 @@ importers:
       yaml:
         specifier: ^2.6.1
         version: 2.8.0
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.8(@types/react@19.1.6)(react@19.1.0)
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.4
@@ -174,12 +177,12 @@ importers:
       tailwind-merge:
         specifier: ^3.3.0
         version: 3.3.0
-      tinybase:
-        specifier: ^6.3.0
-        version: 6.3.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(ws@8.18.2)
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
+      zustand:
+        specifier: ^5.0.8
+        version: 5.0.8(@types/react@19.1.6)(react@19.1.0)
     devDependencies:
       '@biomejs/biome':
         specifier: 1.9.4
@@ -250,10 +253,10 @@ importers:
         version: 11.7.0
       vitepress:
         specifier: ^1.6.3
-        version: 1.6.3(@algolia/client-search@5.30.0)(@types/node@22.15.29)(lightningcss@1.30.1)(postcss@8.5.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.8.3)
+        version: 1.6.3(@algolia/client-search@5.30.0)(@types/node@22.15.29)(@types/react@19.1.6)(lightningcss@1.30.1)(postcss@8.5.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.8.3)
       vitepress-plugin-mermaid:
         specifier: ^2.0.17
-        version: 2.0.17(mermaid@11.7.0)(vitepress@1.6.3(@algolia/client-search@5.30.0)(@types/node@22.15.29)(lightningcss@1.30.1)(postcss@8.5.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.8.3))
+        version: 2.0.17(mermaid@11.7.0)(vitepress@1.6.3(@algolia/client-search@5.30.0)(@types/node@22.15.29)(@types/react@19.1.6)(lightningcss@1.30.1)(postcss@8.5.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.8.3))
 
   apps/services:
     dependencies:
@@ -6191,68 +6194,6 @@ packages:
     resolution: {integrity: sha512-Cc+OraorugtXNfs50hU9KS369rFXCfgGLpfCfvlc+Ud5u6VWmUQsOAa9HbTvheQdYnrdJqqv1e5oIqXppMYnSw==}
     engines: {node: '>=8'}
 
-  tinybase@6.3.0:
-    resolution: {integrity: sha512-DwPCWpfkJKaYXOE2nX6O8N5ugk4emqi/TOn4t8Xvjk8mj+2FUlatM3z/ylwg5fs6OCZrenzohvncqRm7JLnVdw==}
-    peerDependencies:
-      '@automerge/automerge-repo': ^1.2.1
-      '@cloudflare/workers-types': ^4.20250619.0
-      '@electric-sql/pglite': ^0.2.17
-      '@libsql/client': ^0.15.9
-      '@powersync/common': ^1.33.0
-      '@sqlite.org/sqlite-wasm': ^3.50.1-build1
-      '@vlcn.io/crsqlite-wasm': ^0.16.0
-      bun: ^1.2.16
-      electric-sql: ^0.12.1
-      expo: ^53.0.9
-      expo-sqlite: ^15.2.12
-      partykit: ^0.0.115
-      partysocket: ^1.1.4
-      postgres: ^3.4.7
-      react: ^19.0.0
-      react-dom: ^19.0.0
-      sqlite3: ^5.1.7
-      ws: ^8.18.2
-      yjs: ^13.6.27
-    peerDependenciesMeta:
-      '@automerge/automerge-repo':
-        optional: true
-      '@cloudflare/workers-types':
-        optional: true
-      '@electric-sql/pglite':
-        optional: true
-      '@libsql/client':
-        optional: true
-      '@powersync/common':
-        optional: true
-      '@sqlite.org/sqlite-wasm':
-        optional: true
-      '@vlcn.io/crsqlite-wasm':
-        optional: true
-      bun:
-        optional: true
-      electric-sql:
-        optional: true
-      expo:
-        optional: true
-      expo-sqlite:
-        optional: true
-      partykit:
-        optional: true
-      partysocket:
-        optional: true
-      postgres:
-        optional: true
-      react:
-        optional: true
-      react-dom:
-        optional: true
-      sqlite3:
-        optional: true
-      ws:
-        optional: true
-      yjs:
-        optional: true
-
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
 
@@ -6903,6 +6844,24 @@ packages:
   zod@3.25.67:
     resolution: {integrity: sha512-idA2YXwpCdqUSKRCACDE6ItZD9TZzy3OZMtpfLoh6oPR47lipysRrJfjzMqFxQ3uJuUPyUeWe1r9vLH33xO/Qw==}
 
+  zustand@5.0.8:
+    resolution: {integrity: sha512-gyPKpIaxY9XcO2vSMrLbiER7QMAMGOQZVRdJ6Zi782jkbzZygq5GI9nG8g+sMgitRtndwaBSl7uiqC49o1SSiw==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      immer: '>=9.0.6'
+      react: '>=18.0.0'
+      use-sync-external-store: '>=1.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+      use-sync-external-store:
+        optional: true
+
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
@@ -7426,9 +7385,9 @@ snapshots:
 
   '@docsearch/css@3.8.2': {}
 
-  '@docsearch/js@3.8.2(@algolia/client-search@5.30.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)':
+  '@docsearch/js@3.8.2(@algolia/client-search@5.30.0)(@types/react@19.1.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)':
     dependencies:
-      '@docsearch/react': 3.8.2(@algolia/client-search@5.30.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)
+      '@docsearch/react': 3.8.2(@algolia/client-search@5.30.0)(@types/react@19.1.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)
       preact: 10.26.9
     transitivePeerDependencies:
       - '@algolia/client-search'
@@ -7437,13 +7396,14 @@ snapshots:
       - react-dom
       - search-insights
 
-  '@docsearch/react@3.8.2(@algolia/client-search@5.30.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)':
+  '@docsearch/react@3.8.2(@algolia/client-search@5.30.0)(@types/react@19.1.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)':
     dependencies:
       '@algolia/autocomplete-core': 1.17.7(@algolia/client-search@5.30.0)(algoliasearch@5.30.0)(search-insights@2.17.3)
       '@algolia/autocomplete-preset-algolia': 1.17.7(@algolia/client-search@5.30.0)(algoliasearch@5.30.0)
       '@docsearch/css': 3.8.2
       algoliasearch: 5.30.0
     optionalDependencies:
+      '@types/react': 19.1.6
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       search-insights: 2.17.3
@@ -13243,12 +13203,6 @@ snapshots:
 
   tildify@2.0.0: {}
 
-  tinybase@6.3.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(ws@8.18.2):
-    optionalDependencies:
-      react: 19.1.0
-      react-dom: 19.1.0(react@19.1.0)
-      ws: 8.18.2
-
   tinybench@2.9.0: {}
 
   tinyexec@0.3.2: {}
@@ -13627,17 +13581,17 @@ snapshots:
       tsx: 4.20.3
       yaml: 2.8.0
 
-  vitepress-plugin-mermaid@2.0.17(mermaid@11.7.0)(vitepress@1.6.3(@algolia/client-search@5.30.0)(@types/node@22.15.29)(lightningcss@1.30.1)(postcss@8.5.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.8.3)):
+  vitepress-plugin-mermaid@2.0.17(mermaid@11.7.0)(vitepress@1.6.3(@algolia/client-search@5.30.0)(@types/node@22.15.29)(@types/react@19.1.6)(lightningcss@1.30.1)(postcss@8.5.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.8.3)):
     dependencies:
       mermaid: 11.7.0
-      vitepress: 1.6.3(@algolia/client-search@5.30.0)(@types/node@22.15.29)(lightningcss@1.30.1)(postcss@8.5.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.8.3)
+      vitepress: 1.6.3(@algolia/client-search@5.30.0)(@types/node@22.15.29)(@types/react@19.1.6)(lightningcss@1.30.1)(postcss@8.5.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.8.3)
     optionalDependencies:
       '@mermaid-js/mermaid-mindmap': 9.3.0
 
-  vitepress@1.6.3(@algolia/client-search@5.30.0)(@types/node@22.15.29)(lightningcss@1.30.1)(postcss@8.5.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.8.3):
+  vitepress@1.6.3(@algolia/client-search@5.30.0)(@types/node@22.15.29)(@types/react@19.1.6)(lightningcss@1.30.1)(postcss@8.5.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@5.8.3):
     dependencies:
       '@docsearch/css': 3.8.2
-      '@docsearch/js': 3.8.2(@algolia/client-search@5.30.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)
+      '@docsearch/js': 3.8.2(@algolia/client-search@5.30.0)(@types/react@19.1.6)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)
       '@iconify-json/simple-icons': 1.2.41
       '@shikijs/core': 2.5.0
       '@shikijs/transformers': 2.5.0
@@ -13931,5 +13885,10 @@ snapshots:
       zod: 3.25.67
 
   zod@3.25.67: {}
+
+  zustand@5.0.8(@types/react@19.1.6)(react@19.1.0):
+    optionalDependencies:
+      '@types/react': 19.1.6
+      react: 19.1.0
 
   zwitch@2.0.4: {}

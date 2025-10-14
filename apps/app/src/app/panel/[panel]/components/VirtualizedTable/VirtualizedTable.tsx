@@ -11,6 +11,7 @@ import {
 import { TableVirtuoso } from 'react-virtuoso'
 import type { Column, Filter, Sort } from '@/types/panel'
 import { getNestedValue, isMatchingFhirPathCondition } from '@/lib/fhir-path'
+import { resolveDateFilter } from '@/lib/dynamic-date-filter'
 import {
   DndContext,
   type DragEndEvent,
@@ -36,12 +37,14 @@ import {
 } from './constants'
 import { template } from 'lodash'
 import { cn } from '@/lib/utils'
+import { Table } from 'lucide-react'
 
 interface VirtualizedTableProps {
   isLoading: boolean
   selectedRows: string[]
   toggleSelectAll: () => void
-  columns: Column[]
+  allColumns: Column[]
+  visibleColumns: Column[]
   orderColumnMode?: 'auto' | 'manual'
   // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
   tableData: Record<string, any>[]
@@ -55,6 +58,9 @@ interface VirtualizedTableProps {
   toggleSelectRow: (rowId: string) => void
   handleAssigneeClick: (taskId: string) => Promise<void>
   onColumnUpdate?: (updates: Partial<Column>) => void
+  columnVisibilityContext?: {
+    setVisibility: (columnId: string, visible: boolean) => Promise<void>
+  }
   onColumnDelete?: (columnId: string) => void
   onSortUpdate?: (sort: Sort | undefined) => void
   currentView: string
@@ -99,7 +105,8 @@ export function VirtualizedTable({
   isLoading,
   selectedRows,
   toggleSelectAll,
-  columns,
+  allColumns,
+  visibleColumns,
   orderColumnMode = 'auto',
   tableData,
   handlePDFClick,
@@ -108,6 +115,7 @@ export function VirtualizedTable({
   toggleSelectRow,
   handleAssigneeClick,
   onColumnUpdate,
+  columnVisibilityContext,
   onColumnDelete,
   onSortUpdate,
   currentView,
@@ -171,12 +179,6 @@ export function VirtualizedTable({
   useEffect(() => {
     setSortConfig(initialSort || undefined)
   }, [initialSort])
-
-  // Column visibility and ordering
-  const visibleColumns = useMemo(() => {
-    // Just filter for visibility - page level already handles locked/unlocked ordering
-    return columns.filter((col) => col.properties?.display?.visible !== false)
-  }, [columns])
 
   // Pre-calculate all column widths to prevent recalculation during scroll
   const calculatedColumnWidths = useMemo(() => {
@@ -272,6 +274,59 @@ export function VirtualizedTable({
   const filteredAndSortedData = useMemo(() => {
     let processedData = [...tableData]
 
+    // Helper function to check if a date value falls within a range
+    const isDateInRange = (dateValue: string, filterValue: string): boolean => {
+      if (!dateValue || !filterValue) return false
+
+      try {
+        const cellDate = new Date(dateValue)
+        if (Number.isNaN(cellDate.getTime())) return false
+
+        // Resolve dynamic date filters to static date ranges
+        const resolvedFilterValue = resolveDateFilter(filterValue)
+
+        // Check if filter value contains date range delimiter
+        if (resolvedFilterValue.includes('#')) {
+          const [fromDate, toDate] = resolvedFilterValue.split('#')
+
+          if (fromDate && toDate) {
+            // Handle date-only filters (YYYY-MM-DD format)
+            const from = new Date(fromDate)
+            const to = new Date(toDate)
+
+            // If both dates are the same (single day filter), extend 'to' to end of day
+            if (fromDate === toDate) {
+              to.setHours(23, 59, 59, 999) // End of day
+            }
+
+            return cellDate >= from && cellDate <= to
+          }
+
+          if (fromDate) {
+            const from = new Date(fromDate)
+            return cellDate >= from
+          }
+
+          if (toDate) {
+            const to = new Date(toDate)
+            // If it's a date-only filter, extend to end of day
+            if (toDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              to.setHours(23, 59, 59, 999)
+            }
+            return cellDate <= to
+          }
+        }
+
+        // Fallback to string matching for non-range filters
+        return String(dateValue)
+          .toLowerCase()
+          .includes(resolvedFilterValue.toLowerCase())
+      } catch (error) {
+        console.warn('Error parsing date for filtering:', error)
+        return false
+      }
+    }
+
     // Apply filters
     if (filters && filters.length > 0) {
       processedData = processedData.filter((row) => {
@@ -280,17 +335,23 @@ export function VirtualizedTable({
 
           // Handle new filter format with columnId
           if (filter.columnId) {
-            const column = visibleColumns.find(
-              (col) => col.id === filter.columnId,
-            )
+            const column = allColumns.find((col) => col.id === filter.columnId)
             if (!column) return true
 
             const cellValue = getNestedValue(row, column.sourceField)
-            const filterValue = filter.value.toLowerCase()
+            const filterValue = filter.value
 
             if (cellValue === null || cellValue === undefined) return false
 
-            return String(cellValue).toLowerCase().includes(filterValue)
+            // Handle date range filtering
+            if (column.type === 'date' || column.type === 'datetime') {
+              return isDateInRange(cellValue, filterValue)
+            }
+
+            // Default string matching for non-date columns
+            return String(cellValue)
+              .toLowerCase()
+              .includes(filterValue.toLowerCase())
           }
 
           // Handle legacy filter format with fhirPathFilter
@@ -333,7 +394,7 @@ export function VirtualizedTable({
     }
 
     return processedData
-  }, [tableData, filters, sortConfig, visibleColumns])
+  }, [tableData, filters, sortConfig, visibleColumns, allColumns])
 
   // Handle internal row hover
   const handleInternalRowHover = useCallback(
@@ -488,6 +549,23 @@ export function VirtualizedTable({
     )
   }
 
+  // Handle empty columns state
+  if (visibleColumns.length === 0) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-400 mb-2">
+            <Table className="h-12 w-12 mx-auto" />
+          </div>
+          <p className="text-gray-500 text-sm">No columns configured</p>
+          <p className="text-gray-400 text-xs mt-1">
+            Add columns to start viewing your data
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -510,6 +588,7 @@ export function VirtualizedTable({
                 getColumnWidth={getColumnWidth}
                 sortConfig={sortConfig}
                 filters={filters}
+                columnVisibilityContext={columnVisibilityContext}
               />
             )}
             itemContent={(index) => RowRenderer(index)}

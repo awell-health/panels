@@ -521,6 +521,7 @@ export function SearchableExtensionDetails({
                   type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center px-2 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
+                  aria-label="Search mode options"
                 >
                   {SEARCH_MODE_LABELS[searchMode]}
                   <ChevronDown className="ml-1 h-3 w-3" />

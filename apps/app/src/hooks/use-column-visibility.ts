@@ -4,7 +4,7 @@ import {
   useReactiveColumns,
   useReactivePanel,
   useReactiveView,
-} from './use-reactive-data'
+} from './use-reactive-data-zustand'
 import { useReactivePanelStore } from './use-reactive-panel-store'
 import { useColumnOperations } from './use-column-operations'
 import { useColumnLocking } from './use-column-locking'
@@ -147,8 +147,12 @@ export function useColumnVisibility(
 
   // Get all columns for the current context
   const getAllColumns = useCallback((): Column[] => {
-    return contextColumns
-  }, [contextColumns])
+    return allColumns.filter((col) =>
+      currentViewType === 'patient'
+        ? col?.tags?.includes('panels:patients')
+        : col.tags?.includes('panels:tasks'),
+    )
+  }, [allColumns, currentViewType])
 
   return {
     type: contextType,

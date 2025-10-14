@@ -19,6 +19,9 @@ interface StickyHeaderProps {
   getColumnWidth: (columnIndex: number) => number
   sortConfig?: Sort | undefined
   filters?: Filter[]
+  columnVisibilityContext?: {
+    setVisibility: (columnId: string, visible: boolean) => Promise<void>
+  }
 }
 
 export function StickyHeader({
@@ -28,6 +31,7 @@ export function StickyHeader({
   getColumnWidth,
   sortConfig,
   filters,
+  columnVisibilityContext,
 }: StickyHeaderProps) {
   const {
     columns,
@@ -61,6 +65,8 @@ export function StickyHeader({
         {columns.map((column, index) => (
           <th
             key={column.id}
+            id={`header-${column.id}`}
+            scope="col"
             style={{
               width: getColumnWidth(index),
               minWidth: getColumnWidth(index),
@@ -85,6 +91,7 @@ export function StickyHeader({
               filterValue={getFilterValue(column)}
               onFilter={(value: string) => onFilter?.(column.id, value)}
               onColumnUpdate={onColumnUpdate || (() => {})}
+              columnVisibilityContext={columnVisibilityContext}
               onColumnDelete={onColumnDelete}
               isLocked={!!column.properties?.display?.locked}
             />

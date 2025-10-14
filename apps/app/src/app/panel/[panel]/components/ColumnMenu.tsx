@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { DynamicDateFilters } from './DynamicDateFilters'
 import { createPortal } from 'react-dom'
 import { format } from 'date-fns'
 
@@ -26,6 +27,9 @@ type ColumnMenuProps = {
   filterValue: string
   onFilter: (value: string) => void
   onColumnUpdate?: (updates: Partial<Column>) => void
+  columnVisibilityContext?: {
+    setVisibility: (columnId: string, visible: boolean) => Promise<void>
+  }
   onColumnDelete?: (columnId: string) => void
   isLocked?: boolean // Current locked state in the active context (view-specific or panel-level)
 }
@@ -40,6 +44,7 @@ export function ColumnMenu({
   filterValue,
   onFilter,
   onColumnUpdate,
+  columnVisibilityContext,
   onColumnDelete,
   isLocked = false, // Default to false if not provided
 }: ColumnMenuProps) {
@@ -183,85 +188,101 @@ export function ColumnMenu({
   if (!isOpen && !showDeleteConfirm) return null
 
   const renderFilterInput = () => {
+    const applyButton = (
+      <button
+        type="button"
+        className="btn btn-xs btn-primary"
+        onClick={handleFilterApply}
+      >
+        Apply
+      </button>
+    )
+
     let input = (
-      <input
-        type="text"
-        value={localFilterValue}
-        onChange={handleFilterChange}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            handleFilterApply()
-          }
-        }}
-        onClick={(e) => e.stopPropagation()}
-        className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-        placeholder="Filter..."
-      />
+      <div className="flex gap-2 items-end">
+        <input
+          type="text"
+          value={localFilterValue}
+          onChange={handleFilterChange}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleFilterApply()
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Filter..."
+        />
+        {applyButton}
+      </div>
     )
 
     if (column.type === 'date') {
+      // Helper function to handle dynamic filter selection
+      const handleDynamicFilterSelect = (filterValue: string) => {
+        onFilter(filterValue)
+        onClose()
+      }
+
       input = (
-        <div className="flex flex-col gap-2 w-full">
-          <div className="flex gap-2 items-center">
-            <label htmlFor="from" className="text-xs text-gray-500 w-10">
-              From
-            </label>
-            <input
-              type="date"
-              name="from"
-              className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              value={localDateFilterValue?.from}
-              onChange={(e) =>
-                setLocalDateFilterValue({
-                  ...localDateFilterValue,
-                  from: e.target.value,
-                })
-              }
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleFilterApply()
+        <div className="flex flex-col w-full">
+          <div className="flex flex-col justify-end gap-2">
+            <div className="flex gap-2 items-center">
+              <label htmlFor="from" className="text-xs text-gray-500 w-10">
+                From
+              </label>
+              <input
+                type="date"
+                name="from"
+                className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                value={localDateFilterValue?.from}
+                onChange={(e) =>
+                  setLocalDateFilterValue({
+                    ...localDateFilterValue,
+                    from: e.target.value,
+                  })
                 }
-              }}
-            />
-          </div>
-          <div className="flex gap-2 items-center">
-            <label htmlFor="to" className="text-xs text-gray-500 w-10">
-              To
-            </label>
-            <input
-              type="date"
-              name="to"
-              className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              value={localDateFilterValue?.to}
-              onChange={(e) =>
-                setLocalDateFilterValue({
-                  ...localDateFilterValue,
-                  to: e.target.value,
-                })
-              }
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleFilterApply()
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleFilterApply()
+                  }
+                }}
+              />
+            </div>
+            <div className="flex gap-2 items-center">
+              <label htmlFor="to" className="text-xs text-gray-500 w-10">
+                To
+              </label>
+              <input
+                type="date"
+                name="to"
+                className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                value={localDateFilterValue?.to}
+                onChange={(e) =>
+                  setLocalDateFilterValue({
+                    ...localDateFilterValue,
+                    to: e.target.value,
+                  })
                 }
-              }}
-            />
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleFilterApply()
+                  }
+                }}
+              />
+            </div>
+            <div className="flex justify-end">{applyButton}</div>
           </div>
+          {/* Dynamic date filter buttons */}
+          <DynamicDateFilters
+            currentFilterValue={filterValue}
+            onFilterSelect={handleDynamicFilterSelect}
+          />
         </div>
       )
     }
 
-    return (
-      <div className="flex gap-2 items-end">
-        {input}
-        <button
-          type="button"
-          className="btn btn-xs btn-primary"
-          onClick={handleFilterApply}
-        >
-          Apply
-        </button>
-      </div>
-    )
+    return <div className="flex">{input}</div>
   }
 
   const menuContent = (
@@ -328,13 +349,25 @@ export function ColumnMenu({
           <button
             type="button"
             className="btn btn-xs btn-ghost w-full justify-start"
-            onClick={() => {
-              onColumnUpdate?.({
-                id: column.id,
-                properties: {
-                  display: { visible: false },
-                },
-              })
+            onClick={async () => {
+              if (columnVisibilityContext) {
+                // Use the proper column visibility context (handles both panel and view contexts)
+                try {
+                  await columnVisibilityContext.setVisibility(column.id, false)
+                } catch (error) {
+                  console.error('Error updating column visibility:', error)
+                }
+              } else if (onColumnUpdate) {
+                // Fallback to the old approach for backward compatibility
+                onColumnUpdate({
+                  id: column.id,
+                  properties: {
+                    display: { visible: false },
+                  },
+                })
+              } else {
+                console.error('No column visibility method available')
+              }
               onClose()
             }}
           >

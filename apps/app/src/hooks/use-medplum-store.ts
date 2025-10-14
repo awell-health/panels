@@ -1,7 +1,5 @@
 import { useMedplum } from '@/contexts/MedplumClientProvider'
-import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
-import { useMemo } from 'react'
-import { useTable } from 'tinybase/ui-react'
+import { useWorklistPatients, useWorklistTasks } from './use-zustand-store'
 
 export function useMedplumStore() {
   const {
@@ -18,37 +16,9 @@ export function useMedplumStore() {
     updateTask,
   } = useMedplum()
 
-  // Get the reactive subscription from the store
-  const { store: patientStore, table: patientTable } = useMemo(() => {
-    return panelDataStore.getDataReactiveTableSubscription('Patient')
-  }, [])
-
-  const { store: taskStore, table: taskTable } = useMemo(() => {
-    return panelDataStore.getDataReactiveTableSubscription('Task')
-  }, [])
-
-  // Use TinyBase's reactive hook to subscribe to changes
-  const patientData = useTable(patientTable, patientStore)
-  const taskData = useTable(taskTable, taskStore)
-
-  // Get worklist data from the store
-  const worklistData = useMemo(() => {
-    if (!patientData && !taskData) {
-      return {
-        patients: [],
-        tasks: [],
-      }
-    }
-    return panelDataStore.getWorklistData()
-  }, [patientData, taskData])
-
-  const patients = useMemo(() => {
-    return worklistData?.patients || []
-  }, [worklistData])
-
-  const tasks = useMemo(() => {
-    return worklistData?.tasks || []
-  }, [worklistData])
+  // Use Zustand hooks for reactive data
+  const patients = useWorklistPatients()
+  const tasks = useWorklistTasks()
 
   return {
     patients,
@@ -60,8 +30,8 @@ export function useMedplumStore() {
     getPatientObservations,
     getPatientEncounters,
     getPatientDetectedIssues,
-    deletePatient,
     getPatientCompositions,
+    deletePatient,
     createTask,
     updateTask,
   }

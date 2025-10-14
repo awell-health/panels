@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
 import type { PaginationOptions } from '@/lib/medplum-client'
-import type { WorklistTask, WorklistPatient } from '@/lib/fhir-to-table-data'
-import { panelDataStore } from '@/lib/reactive/panel-medplum-data-store'
-import { useTable } from 'tinybase/ui-react'
-import type { Patient, Task } from '@medplum/fhirtypes'
+import type {
+  WorklistTask,
+  WorklistPatient,
+  WorklistAppointment,
+} from '@/lib/fhir-to-table-data'
+import { panelDataStoreZustand as panelDataStore } from '@/lib/reactive/panel-medplum-data-store-zustand'
+import {
+  usePatientsArray,
+  useTasksArray,
+  useAppointmentsArray,
+  usePaginationState,
+} from './use-zustand-store'
+import type { Patient, Task, Appointment, Location } from '@medplum/fhirtypes'
 
 export interface ProgressiveLoadingOptions {
   pageSize: number
@@ -25,19 +34,28 @@ export interface ProgressiveLoadingState<T> {
   reset: () => void
 }
 
-export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
+export function useProgressiveMedplumData<
+  T extends 'Patient' | 'Task' | 'Appointment',
+>(
   resourceType: T,
   options: ProgressiveLoadingOptions,
 ): ProgressiveLoadingState<
-  T extends 'Patient' ? WorklistPatient : WorklistTask
+  T extends 'Patient'
+    ? WorklistPatient
+    : T extends 'Task'
+      ? WorklistTask
+      : WorklistAppointment
 > {
   const { pageSize = 1000, maxRecords = 100000 } = options
 
   const {
     getPatientsPaginated,
     getTasksPaginated,
+    getAppointmentsPaginated,
     getPatientsFromReferences,
     getTasksForPatients,
+    getAppointments,
+    getLocations,
     isLoading: isMedplumLoading,
   } = useMedplum()
 
@@ -48,38 +66,40 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
   const abortControllerRef = useRef<AbortController | null>(null)
   const previousResourceTypeRef = useRef<T>(resourceType)
 
-  const {
-    store: paginationStore,
-    table: paginationTable,
-    key: paginationKey,
-  } = useMemo(() => {
-    return panelDataStore.getPaginationReactiveSubscription(resourceType)
-  }, [resourceType])
-
-  const { store: patientStore, table: patientTable } =
-    panelDataStore.getDataReactiveTableSubscription('Patient')
-  const { store: taskStore, table: taskTable } =
-    panelDataStore.getDataReactiveTableSubscription('Task')
-  const patientTableData = useTable(patientTable, patientStore)
-  const taskTableData = useTable(taskTable, taskStore)
-
-  const paginationTableData = useTable(paginationTable, paginationStore)
+  // Use Zustand hooks for reactive data
+  const patientsArray = usePatientsArray()
+  const tasksArray = useTasksArray()
+  const appointmentsArray = useAppointmentsArray()
+  const patientPagination = usePaginationState('Patient')
+  const taskPagination = usePaginationState('Task')
+  const appointmentPagination = usePaginationState('Appointment')
 
   // Parse the cached data from the store
   const cachedData = useMemo(() => {
-    if (!patientTableData && !taskTableData) {
-      return null
+    if (resourceType === 'Patient') {
+      return patientsArray.length > 0 ? { data: patientsArray } : null
     }
-    return panelDataStore.getData(resourceType)
-  }, [patientTableData, taskTableData, resourceType])
+    if (resourceType === 'Task') {
+      return tasksArray.length > 0 ? { data: tasksArray } : null
+    }
+    if (resourceType === 'Appointment') {
+      return appointmentsArray.length > 0 ? { data: appointmentsArray } : null
+    }
+    return null
+  }, [patientsArray, tasksArray, appointmentsArray, resourceType])
 
   const pagination = useMemo(() => {
-    if (!paginationTableData || !paginationKey) {
-      return null
+    if (resourceType === 'Patient') {
+      return patientPagination
     }
-
-    return panelDataStore.getPagination(resourceType)
-  }, [paginationTableData, paginationKey, resourceType])
+    if (resourceType === 'Task') {
+      return taskPagination
+    }
+    if (resourceType === 'Appointment') {
+      return appointmentPagination
+    }
+    return null
+  }, [patientPagination, taskPagination, appointmentPagination, resourceType])
 
   const hasMore = pagination?.hasMore ?? true
   const nextCursor = pagination?.nextCursor
@@ -87,11 +107,23 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
   // Use local state for loading states and additional data management
 
   const data = useMemo(() => {
-    if (!cachedData) {
-      return []
+    if (resourceType === 'Patient') {
+      return patientsArray.length > 0
+        ? (panelDataStore.getWorklistDataByResourceType('Patient') ?? [])
+        : []
     }
-    return panelDataStore.getWorklistDataByResourceType(resourceType) ?? []
-  }, [resourceType, cachedData])
+    if (resourceType === 'Task') {
+      return tasksArray.length > 0
+        ? (panelDataStore.getWorklistDataByResourceType('Task') ?? [])
+        : []
+    }
+    if (resourceType === 'Appointment') {
+      return appointmentsArray.length > 0
+        ? (panelDataStore.getWorklistDataByResourceType('Appointment') ?? [])
+        : []
+    }
+    return []
+  }, [resourceType, patientsArray, tasksArray, appointmentsArray])
 
   // Get the appropriate paginated method
   const fetchAndUpdateCachedData = useCallback(
@@ -103,7 +135,23 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
       totalCount?: number
       patients: Patient[]
       tasks: Task[]
+      appointments: Appointment[]
     }> => {
+      // Load appointments and locations only for appointment view
+      let appointments: Appointment[] = []
+      let locations: Location[] = []
+
+      if (resourceType === 'Appointment') {
+        const [appointmentsData, locationsData] = await Promise.all([
+          getAppointments(),
+          getLocations(),
+        ])
+        appointments = appointmentsData
+        locations = locationsData
+        panelDataStore.setData('Appointment', appointments)
+        panelDataStore.setData('Location', locations)
+      }
+
       if (resourceType === 'Patient') {
         const patients = await getPatientsPaginated(paginationOptions)
         panelDataStore.updateData('Patient', patients.data)
@@ -122,32 +170,76 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
           totalCount: patients.totalCount,
           patients: patients.data,
           tasks,
+          appointments,
         }
       }
-      const tasks = await getTasksPaginated(paginationOptions)
-      panelDataStore.updateData('Task', tasks.data)
-      panelDataStore.updatePagination('Task', {
-        nextCursor: tasks.nextCursor,
-        hasMore: tasks.hasMore,
-      })
-      const patients = await getPatientsFromReferences(
-        tasks.data.map((task) => task.for?.reference ?? ''),
-      )
-      panelDataStore.updateData('Patient', patients)
+      if (resourceType === 'Task') {
+        const tasks = await getTasksPaginated(paginationOptions)
+        panelDataStore.updateData('Task', tasks.data)
+        panelDataStore.updatePagination('Task', {
+          nextCursor: tasks.nextCursor,
+          hasMore: tasks.hasMore,
+        })
+        const patients = await getPatientsFromReferences(
+          tasks.data.map((task) => task.for?.reference ?? ''),
+        )
+        panelDataStore.updateData('Patient', patients)
+        return {
+          hasMore: tasks.hasMore,
+          nextCursor: tasks.nextCursor,
+          totalCount: tasks.totalCount,
+          patients,
+          tasks: tasks.data,
+          appointments,
+        }
+      }
+      if (resourceType === 'Appointment') {
+        const appointments = await getAppointmentsPaginated(paginationOptions)
+        panelDataStore.updateData('Appointment', appointments.data)
+        panelDataStore.updatePagination('Appointment', {
+          nextCursor: appointments.nextCursor,
+          hasMore: appointments.hasMore,
+        })
+
+        // Get patients from appointment participants
+        const patientRefs = appointments.data
+          .flatMap(
+            (appointment) =>
+              appointment.participant?.map((p) => p.actor?.reference ?? '') ??
+              [],
+          )
+          .filter((ref) => ref.startsWith('Patient/'))
+
+        const patients = await getPatientsFromReferences(patientRefs)
+        panelDataStore.updateData('Patient', patients)
+
+        return {
+          hasMore: appointments.hasMore,
+          nextCursor: appointments.nextCursor,
+          totalCount: appointments.totalCount,
+          patients,
+          tasks: [],
+          appointments: appointments.data,
+        }
+      }
+
+      // Fallback return
       return {
-        hasMore: tasks.hasMore,
-        nextCursor: tasks.nextCursor,
-        totalCount: tasks.totalCount,
-        patients,
-        tasks: tasks.data,
+        hasMore: false,
+        patients: [],
+        tasks: [],
+        appointments: [],
       }
     },
     [
       resourceType,
       getPatientsPaginated,
       getTasksPaginated,
+      getAppointmentsPaginated,
       getPatientsFromReferences,
       getTasksForPatients,
+      getAppointments,
+      getLocations,
     ],
   )
 
@@ -298,7 +390,11 @@ export function useProgressiveMedplumData<T extends 'Patient' | 'Task'>(
     }
   }, [])
   return {
-    data: data as (T extends 'Patient' ? WorklistPatient : WorklistTask)[],
+    data: data as (T extends 'Patient'
+      ? WorklistPatient
+      : T extends 'Task'
+        ? WorklistTask
+        : WorklistAppointment)[],
     isLoading: isMedplumLoading,
     isLoadingMore,
     hasMore,

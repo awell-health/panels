@@ -10,7 +10,7 @@ import {
   useReactiveViews,
   useReactiveColumns,
   useReactiveView,
-} from '@/hooks/use-reactive-data'
+} from '@/hooks/use-reactive-data-zustand'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import type { Panel, View, Filter } from '@/types/panel'
 import {
@@ -21,9 +21,8 @@ import {
   CheckSquare,
   Copy,
   FileText,
-  Edit2Icon,
-  EditIcon,
   Edit3Icon,
+  Calendar,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -31,13 +30,19 @@ import { useEffect, useState } from 'react'
 interface PanelNavigationProps {
   panel: Panel
   selectedViewId?: string
-  currentViewType?: 'patient' | 'task'
+  currentViewType?: 'patient' | 'task' | 'appointment'
   currentFilters?: Filter[]
   onPanelTitleChange?: (newTitle: string) => void
   onViewTitleChange?: (newTitle: string) => void
+  canEdit: boolean
 }
 
-type ViewCreationType = 'patient' | 'task' | 'from-panel' | 'copy-view'
+type ViewCreationType =
+  | 'patient'
+  | 'task'
+  | 'appointment'
+  | 'from-panel'
+  | 'copy-view'
 
 export default function PanelNavigation({
   panel,
@@ -46,6 +51,7 @@ export default function PanelNavigation({
   currentFilters,
   onPanelTitleChange,
   onViewTitleChange,
+  canEdit,
 }: PanelNavigationProps) {
   const { deletePanel, deleteView, updatePanel, updateView, addView } =
     useReactivePanelStore()
@@ -60,12 +66,25 @@ export default function PanelNavigation({
   const [viewToDelete, setViewToDelete] = useState<{
     id: string
     title: string
+    viewType: 'panel' | 'view'
   } | null>(null)
   const [deletingViewId, setDeletingViewId] = useState<string | null>(null)
   const [creatingView, setCreatingView] = useState(false)
   const { views } = useReactiveViews(panel.id)
   const { columns } = useReactiveColumns(panel.id)
   const { view: currentView } = useReactiveView(panel.id, selectedViewId || '')
+
+  const handleSetEditingPanel = (value: boolean | null) => {
+    if (canEdit) {
+      setEditingPanel(value || false)
+    }
+  }
+
+  const handleSetEditingView = (value: string | null) => {
+    if (canEdit) {
+      setEditingViewId(value)
+    }
+  }
 
   useEffect(() => {
     setPanelTitle(panel.name)
@@ -111,8 +130,12 @@ export default function PanelNavigation({
     setEditingViewId(null)
   }
 
-  const handleDeleteViewClick = (viewId: string, viewTitle: string) => {
-    setViewToDelete({ id: viewId, title: viewTitle })
+  const handleDeleteViewClick = (
+    viewId: string,
+    viewTitle: string,
+    viewType: 'panel' | 'view',
+  ) => {
+    setViewToDelete({ id: viewId, title: viewTitle, viewType })
     setShowDeleteModal(true)
   }
 
@@ -124,11 +147,11 @@ export default function PanelNavigation({
     setDeletingViewId(viewToDelete.id)
 
     try {
-      if (viewToDelete.id === panel.id) {
+      if (viewToDelete.viewType === 'panel' && viewToDelete.id === panel.id) {
         // Deleting the panel
         await deletePanel?.(viewToDelete.id)
         router.push('/')
-      } else {
+      } else if (viewToDelete.viewType === 'view') {
         // Deleting a view
         await deleteView?.(panel.id, viewToDelete.id)
         // Navigate to panel if we're deleting the currently selected view
@@ -216,14 +239,50 @@ export default function PanelNavigation({
           })
           break
         }
+        case 'appointment': {
+          // Create new appointment view with all appointment columns
+          const appointmentColumns = columns.filter((col) =>
+            col.tags?.includes('panels:appointments'),
+          )
+
+          // Create columnVisibility with all columns visible
+          const columnVisibility = appointmentColumns.reduce(
+            (acc, col) => {
+              acc[col.id] = true
+              return acc
+            },
+            {} as Record<string, boolean>,
+          )
+
+          newView = await addView(panel.id, {
+            name: 'New Appointment View',
+            panelId: panel.id,
+            visibleColumns: appointmentColumns.map((col) => col.id),
+            createdAt: new Date(),
+            isPublished: false,
+            metadata: {
+              filters: [],
+              viewType: 'appointment',
+              columnVisibility,
+            },
+          })
+          break
+        }
         case 'from-panel': {
           // Create view from current panel - use current applied filters and current view type
           const viewType = currentViewType || 'patient'
-          const relevantColumns = columns.filter((col) =>
-            viewType === 'patient'
-              ? col.tags?.includes('panels:patients')
-              : col.tags?.includes('panels:tasks'),
-          )
+          const relevantColumns = columns.filter((col) => {
+            if (viewType === 'patient') {
+              return col.tags?.includes('panels:patients')
+            }
+            if (viewType === 'task') {
+              return col.tags?.includes('panels:tasks')
+            }
+            if (viewType === 'appointment') {
+              return col.tags?.includes('panels:appointments')
+            }
+            return false
+          })
 
           // Only include visible columns from the panel
           const visibleColumns = relevantColumns
@@ -262,11 +321,18 @@ export default function PanelNavigation({
           let columnVisibility = currentView.metadata.columnVisibility
           if (!columnVisibility) {
             const viewType = currentView.metadata.viewType
-            const relevantColumns = columns.filter((col) =>
-              viewType === 'patient'
-                ? col.tags?.includes('panels:patients')
-                : col.tags?.includes('panels:tasks'),
-            )
+            const relevantColumns = columns.filter((col) => {
+              if (viewType === 'patient') {
+                return col.tags?.includes('panels:patients')
+              }
+              if (viewType === 'task') {
+                return col.tags?.includes('panels:tasks')
+              }
+              if (viewType === 'appointment') {
+                return col.tags?.includes('panels:appointments')
+              }
+              return false
+            })
             columnVisibility = relevantColumns.reduce(
               (acc, col) => {
                 acc[col.id] = currentView.visibleColumns.includes(col.id)
@@ -329,6 +395,14 @@ export default function PanelNavigation({
         available: true,
       },
       {
+        type: 'appointment' as ViewCreationType,
+        title: 'New Appointment View',
+        description:
+          'Start fresh with an appointment-focused view showing all appointment data',
+        icon: Calendar,
+        available: true,
+      },
+      {
         type: 'from-panel' as ViewCreationType,
         title: 'View from Current Panel',
         description:
@@ -370,7 +444,7 @@ export default function PanelNavigation({
               onClick={(e) => {
                 e.stopPropagation()
                 if (!selectedViewId) {
-                  setEditingPanel(true)
+                  handleSetEditingPanel(true)
                 } else {
                   handlePanelClick()
                 }
@@ -383,7 +457,7 @@ export default function PanelNavigation({
                   e.preventDefault()
                   e.stopPropagation()
                   if (!selectedViewId) {
-                    setEditingPanel(true)
+                    handleSetEditingPanel(true)
                   } else {
                     handlePanelClick()
                   }
@@ -456,16 +530,20 @@ export default function PanelNavigation({
                       {panel.name}
                     </span>
                     {getSaveStatusIcon(panel.id)}
-                    <button
-                      type="button"
-                      className="ml-2 text-gray-400 hover:text-gray-600"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteViewClick(panel.id, panel.name)
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
+                    {canEdit && !selectedViewId && (
+                      <button
+                        type="button"
+                        id="remove-view-id"
+                        className="ml-2 text-gray-400 hover:text-gray-600"
+                        aria-label={`Remove panel "${panel.name}"`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteViewClick(panel.id, panel.name, 'panel')
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -523,7 +601,7 @@ export default function PanelNavigation({
                               ...prev,
                               [view.id]: view.name || '',
                             }))
-                            setEditingViewId(null)
+                            handleSetEditingPanel(null)
                           }
                         }}
                         className={tabClassesInput}
@@ -549,7 +627,7 @@ export default function PanelNavigation({
                         onClick={(e) => {
                           e.stopPropagation()
                           if (view.id === selectedViewId) {
-                            setEditingViewId(view.id)
+                            handleSetEditingView(view.id)
                           } else {
                             handleViewClick(view)
                           }
@@ -565,16 +643,22 @@ export default function PanelNavigation({
                         {view.name}
                       </span>
                       {getSaveStatusIcon(view.id)}
-                      <button
-                        type="button"
-                        className="ml-2 text-gray-400 hover:text-gray-600"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteViewClick(view.id, view.name || '')
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      {canEdit && view.id === selectedViewId && (
+                        <button
+                          type="button"
+                          className="ml-2 text-gray-400 hover:text-gray-600"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteViewClick(
+                              view.id,
+                              view.name || '',
+                              'view',
+                            )
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -582,6 +666,7 @@ export default function PanelNavigation({
             ))}
 
             {/* Add View Button */}
+
             <button
               type="button"
               className="ml-2 mb-[-1px] h-9 px-3 flex items-center text-sm text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-t-md border-l border-t border-r border-gray-200 whitespace-nowrap"
@@ -621,26 +706,26 @@ export default function PanelNavigation({
           </DialogHeader>
 
           <div className="px-6 pb-6">
-            <div className="space-y-3">
+            <div className="space-y-2">
               {getViewCreationOptions().map((option) => {
                 const Icon = option.icon
                 return (
                   <button
                     key={option.type}
                     type="button"
-                    className="w-full text-left p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => handleCreateView(option.type)}
                     disabled={creatingView}
                   >
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 mt-1">
-                        <Icon className="h-5 w-5 text-gray-600" />
+                    <div className="flex items-start space-x-2">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <Icon className="h-4 w-4 text-gray-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900">
                           {option.title}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-xs text-gray-600 mt-0.5">
                           {option.description}
                         </div>
                       </div>
@@ -651,12 +736,12 @@ export default function PanelNavigation({
             </div>
           </div>
 
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-end">
             <button
               type="button"
               onClick={() => setShowCreateViewModal(false)}
               disabled={creatingView}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
               Cancel
             </button>
@@ -669,8 +754,12 @@ export default function PanelNavigation({
         isOpen={showDeleteModal}
         onClose={handleDeleteModalClose}
         onConfirm={handleDeleteViewConfirm}
-        title={viewToDelete?.id === panel.id ? 'Delete Panel' : 'Delete View'}
-        message={`Are you sure you want to delete the ${viewToDelete?.id === panel.id ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
+        title={
+          viewToDelete?.id === panel.id && viewToDelete?.viewType === 'panel'
+            ? 'Delete Panel'
+            : 'Delete View'
+        }
+        message={`Are you sure you want to delete the ${viewToDelete?.viewType === 'panel' ? 'panel' : 'view'} "${viewToDelete?.title}"? This action cannot be undone.`}
         isDeleting={!!deletingViewId}
       />
     </>

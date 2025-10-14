@@ -36,6 +36,11 @@ export const viewDelete = async (app: FastifyInstance) => {
       // Extract tenantId from JWT token
       const { tenantId } = request.authUser || {}
 
+      request.log.info(
+        { id, userContext: request.authUser },
+        `Deleting view with id ${id}`,
+      )
+
       if (!tenantId) {
         return reply.status(401).send({
           message: 'Missing authentication context',

@@ -1,18 +1,21 @@
 'use client'
 import { cn } from '@/lib/utils'
-import { CheckSquare, ChevronDown, Users } from 'lucide-react'
+import { CheckSquare, ChevronDown, Users, Calendar } from 'lucide-react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ViewType } from '@/types/panel'
+import clsx from 'clsx'
 
 interface ViewTypeDropdownProps {
   currentView: ViewType
   onViewChange: (view: ViewType) => void
+  disabled?: boolean
 }
 
 export default function ViewTypeDropdown({
   currentView,
   onViewChange,
+  disabled = false,
 }: ViewTypeDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -25,15 +28,46 @@ export default function ViewTypeDropdown({
   }, [])
 
   const getViewContent = (view: ViewType) => {
-    return view === 'patient' ? (
-      <>
-        <Users className="h-3.5 w-3.5 mr-2 text-gray-500" /> Patient View{' '}
-      </>
-    ) : (
-      <>
-        <CheckSquare className="h-3.5 w-3.5 mr-2 text-gray-500" /> Task View
-      </>
-    )
+    if (view === 'patient') {
+      return (
+        <>
+          <Users
+            className={clsx(
+              'h-3.5 w-3.5 mr-2',
+              currentView === 'patient' ? 'text-blue-500' : 'text-gray-500',
+            )}
+          />{' '}
+          Patient View{' '}
+        </>
+      )
+    }
+    if (view === 'task') {
+      return (
+        <>
+          <CheckSquare
+            className={clsx(
+              'h-3.5 w-3.5 mr-2',
+              currentView === 'task' ? 'text-blue-500' : 'text-gray-500',
+            )}
+          />{' '}
+          Task View
+        </>
+      )
+    }
+    if (view === 'appointment') {
+      return (
+        <>
+          <Calendar
+            className={clsx(
+              'h-3.5 w-3.5 mr-2',
+              currentView === 'appointment' ? 'text-blue-500' : 'text-gray-500',
+            )}
+          />{' '}
+          Appointment View
+        </>
+      )
+    }
+    return null
   }
 
   const updateDropdownPosition = useCallback(() => {
@@ -89,6 +123,7 @@ export default function ViewTypeDropdown({
   }, [isOpen])
 
   const toggleDropdown = () => {
+    if (disabled) return
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       setDropdownPosition({
@@ -99,7 +134,8 @@ export default function ViewTypeDropdown({
     setIsOpen(!isOpen)
   }
 
-  const onViewTypeSelected = (view: 'task' | 'patient') => {
+  const onViewTypeSelected = (view: ViewType) => {
+    if (disabled) return
     onViewChange(view)
     setIsOpen(false)
   }
@@ -109,6 +145,7 @@ export default function ViewTypeDropdown({
   const dropdownContent = isOpen ? (
     <div
       ref={dropdownRef}
+      data-testid="view-type-dropdown"
       className="fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg w-52"
       style={{
         top: `${dropdownPosition.top}px`,
@@ -150,6 +187,23 @@ export default function ViewTypeDropdown({
         >
           {getViewContent('task')}
         </div>
+        <div
+          className={cn(
+            'flex items-center w-full px-3 py-2 text-xs font-normal text-left hover:bg-gray-50 cursor-pointer rounded',
+            currentView === 'appointment'
+              ? 'bg-gray-50 text-blue-500'
+              : 'text-gray-700',
+          )}
+          onClick={() => onViewTypeSelected('appointment')}
+          onKeyDown={(e) => {
+            if (e.key === ' ') {
+              e.stopPropagation()
+              onViewTypeSelected('appointment')
+            }
+          }}
+        >
+          {getViewContent('appointment')}
+        </div>
       </div>
     </div>
   ) : null
@@ -160,7 +214,11 @@ export default function ViewTypeDropdown({
         type="button"
         ref={buttonRef}
         onClick={toggleDropdown}
-        className="btn btn-sm"
+        className={cn(
+          'btn btn-sm',
+          disabled && 'opacity-50 cursor-not-allowed',
+        )}
+        disabled={disabled}
       >
         {getViewContent(currentView)}
         <ChevronDown className="h-3.5 w-3.5 ml-2 text-gray-400" />

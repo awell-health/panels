@@ -1,15 +1,15 @@
 'use client'
 
-import { Filter, SortAsc, ChevronDown, X } from 'lucide-react'
+import { Filter, SortAsc, ChevronDown, X, RefreshCw } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import type {
-  Filter as FilterType,
-  Sort,
-  Column,
-  ColumnVisibilityContext,
-} from '@/types/panel'
+import type { Filter as FilterType, Sort, Column } from '@/types/panel'
 import { cn } from '@/lib/utils'
+import {
+  isDynamicDateFilter,
+  getDynamicDateLabel,
+  type DynamicDateReference,
+} from '@/lib/dynamic-date-filter'
 
 interface FilterSortIndicatorsProps {
   filters: FilterType[]
@@ -19,6 +19,7 @@ interface FilterSortIndicatorsProps {
   onFiltersChange: (filters: FilterType[]) => void
   onSortUpdate: (sort: Sort | undefined) => void
   className?: string
+  canEdit: boolean
 }
 
 export function FilterSortIndicators({
@@ -29,6 +30,7 @@ export function FilterSortIndicators({
   onFiltersChange,
   onSortUpdate,
   className,
+  canEdit,
 }: FilterSortIndicatorsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -66,10 +68,16 @@ export function FilterSortIndicators({
 
   const getColumnName = (columnId: string): string => {
     const column = allColumns.find((col) => col.id === columnId)
-    return column?.name || columnId
+    return column?.name || `Unknown Column (${columnId})`
   }
 
   const formatFilterValue = (filter: FilterType): string => {
+    // Handle dynamic date filters
+    if (isDynamicDateFilter(filter.value)) {
+      const reference = filter.value.substring(1) as DynamicDateReference // Remove @ prefix
+      return getDynamicDateLabel(reference)
+    }
+
     if (filter.value.includes('#') || filter.value.includes(' - ')) {
       const delimiter = filter.value.includes('#') ? '#' : ' - '
       const [from, to] = filter.value.split(delimiter)
@@ -108,10 +116,6 @@ export function FilterSortIndicators({
         filter.value !== filterToRemove.value,
     )
     onFiltersChange(newFilters)
-  }
-
-  const removeSort = () => {
-    onSortUpdate(undefined)
   }
 
   const toggleSortDirection = () => {
@@ -164,16 +168,26 @@ export function FilterSortIndicators({
                         <Filter className="h-3 w-3" />
                         <span className="font-medium">{columnName}</span>
                         <span className="text-gray-500">=</span>
-                        <span>{displayValue}</span>
+                        <span className="flex items-center gap-1">
+                          {isDynamicDateFilter(filter.value) && (
+                            <RefreshCw
+                              className="h-3 w-3 text-blue-500"
+                              aria-label="Dynamic filter - updates automatically"
+                            />
+                          )}
+                          <span>{displayValue}</span>
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFilter(filter)}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-600 hover:text-gray-800"
-                        aria-label={`Remove filter: ${columnName} = ${displayValue}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => removeFilter(filter)}
+                          className="p-1 hover:bg-gray-200 rounded text-gray-600 hover:text-gray-800"
+                          aria-label={`Remove filter: ${columnName} = ${displayValue}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                   )
                 })}
@@ -199,14 +213,6 @@ export function FilterSortIndicators({
                     ({sort.direction === 'asc' ? 'ascending' : 'descending'})
                   </button>
                 </div>
-                {/* <button
-                  type="button"
-                  onClick={removeSort}
-                  className="p-1 hover:bg-gray-200 rounded text-gray-600 hover:text-gray-800"
-                  aria-label={`Remove sort: ${getColumnName(sort.columnId)}`}
-                >
-                  <X className="h-3 w-3" />
-                </button> */}
               </div>
             </div>
           )}

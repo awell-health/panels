@@ -11,9 +11,8 @@ import {
   User,
 } from 'lucide-react'
 import { formatDateTime } from '../../../../../../hooks/use-date-time-format'
-import { orderBy, sortBy, startCase } from 'lodash'
+import { orderBy, startCase } from 'lodash'
 import { useState } from 'react'
-import type { Task } from '@medplum/fhirtypes'
 
 interface PatientTasksProps {
   patientId: string
@@ -55,18 +54,12 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
     return isSelected ? <Check className="w-3 h-3" /> : <span className="w-3" />
   }
 
-  if (tasks.length === 0) {
-    return (
-      <div className="w-full p-8 flex items-center justify-center">
-        <div className="font-medium text-gray-900">No tasks found</div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
-        <div className="font-medium text-gray-900">Tasks list</div>
+        <div className="font-medium text-gray-900">
+          Tasks list ({tasks.length})
+        </div>
         <ManualTrackButton
           patientId={patientId}
           onCreateNonCareFlowTask={onCreateNonCareFlowTask}

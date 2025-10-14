@@ -13,7 +13,7 @@ import {
   useReactiveColumns,
   useReactivePanel,
   useReactiveViews,
-} from '@/hooks/use-reactive-data'
+} from '@/hooks/use-reactive-data-zustand'
 import { useReactivePanelStore } from '@/hooks/use-reactive-panel-store'
 import { useSearch } from '@/hooks/use-search'
 import { arrayMove } from '@/lib/utils'
@@ -26,25 +26,42 @@ import type {
 } from '@/types/panel'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { Loader2 } from 'lucide-react'
-import { useParams, useRouter } from 'next/navigation'
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from 'next/navigation'
 import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useModalUrlParams } from '@/lib/url-params'
 import { AddIngestionModal } from './components/AddIngestionModal'
 import { ModalDetails } from './components/ModalDetails'
 import { useProgressiveMedplumData } from '@/hooks/use-progressive-medplum-data'
-import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
+import type {
+  WorklistPatient,
+  WorklistTask,
+  WorklistAppointment,
+} from '@/lib/fhir-to-table-data'
 import { useMedplum } from '@/contexts/MedplumClientProvider'
 import type { FHIRCard } from './components/ModalDetails/StaticContent/FhirExpandableCard'
+import { useACL } from '@/contexts/ACLContext'
 
 export default function WorklistPage() {
   const params = useParams()
   const panelId = params.panel as string
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  const { handleRowClick, handleModalClose } = useModalUrlParams()
+
   const [currentView, setCurrentView] = useState<ViewType>('patient')
   const [isAddingIngestionSource, setIsAddingIngestionSource] = useState(false)
   const [tableFilters, setTableFilters] = useState<Filter[]>([])
 
-  const [selectedItem, setSelectedItem] = useState<
-    WorklistPatient | WorklistTask | null
-  >(null)
+  // Get query parameters
+  const patientId = searchParams.get('patientId')
+  const taskId = searchParams.get('taskId')
+  const appointmentId = searchParams.get('appointmentId')
 
   const [selectedRows] = useState<string[]>([])
   const { user } = useAuthentication()
@@ -60,7 +77,11 @@ export default function WorklistPage() {
     refresh,
     dataAfter,
   } = useProgressiveMedplumData(
-    currentView === 'patient' ? 'Patient' : 'Task',
+    currentView === 'patient'
+      ? 'Patient'
+      : currentView === 'task'
+        ? 'Task'
+        : 'Appointment',
     {
       pageSize: 100,
       maxRecords: 50000,
@@ -68,10 +89,17 @@ export default function WorklistPage() {
     },
   )
 
+  const { hasPermission } = useACL()
+  const canEdit = hasPermission('panel', panelId, 'editor')
+
   const patients =
     currentView === 'patient' ? (progressiveData as WorklistPatient[]) : []
   const tasks =
     currentView === 'task' ? (progressiveData as WorklistTask[]) : []
+  const appointments =
+    currentView === 'appointment'
+      ? (progressiveData as WorklistAppointment[])
+      : []
 
   const { updatePanel } = useReactivePanelStore()
   const { updateColumn, deleteColumn, applyColumnChanges, reorderColumns } =
@@ -91,8 +119,6 @@ export default function WorklistPage() {
   // Create column locking context for panel (no viewId, so uses panel-level locking)
   const { setColumnLocked, isColumnLocked } = useColumnLocking(panelId)
 
-  const router = useRouter()
-
   // Get columns for current view type using tag-based filtering
   const allColumnsForViewType = allColumns.filter((col) =>
     currentView === 'patient'
@@ -104,41 +130,47 @@ export default function WorklistPage() {
   const visibleColumns = columnVisibilityContext.getVisibleColumns()
 
   // Maintain separate arrays for locked and unlocked columns to preserve drag-drop order within groups
-  const { lockedColumns, unlockedColumns, allColumnsOrdered } = useMemo(() => {
-    const enhancedColumns = visibleColumns.map((column) => ({
-      ...column,
-      properties: {
-        ...column.properties,
-        display: {
-          ...column.properties?.display,
-          // Set locked state based on current context (panel-level or view-specific)
-          locked:
-            isColumnLocked(column.id) ||
-            (column.properties?.display?.locked ?? false),
+  const { lockedColumns, unlockedColumns, visibleColumnsSorted } =
+    useMemo(() => {
+      const enhancedColumns = visibleColumns.map((column) => ({
+        ...column,
+        properties: {
+          ...column.properties,
+          display: {
+            ...column.properties?.display,
+            // Set locked state based on current context (panel-level or view-specific)
+            locked:
+              isColumnLocked(column.id) ||
+              (column.properties?.display?.locked ?? false),
+          },
         },
-      },
-    }))
+      }))
 
-    // Separate into locked and unlocked arrays, preserving order within each group
-    const locked = enhancedColumns.filter(
-      (col) => col.properties?.display?.locked,
-    )
-    const unlocked = enhancedColumns.filter(
-      (col) => !col.properties?.display?.locked,
-    )
+      // Separate into locked and unlocked arrays, preserving order within each group
+      const locked = enhancedColumns.filter(
+        (col) => col.properties?.display?.locked,
+      )
+      const unlocked = enhancedColumns.filter(
+        (col) => !col.properties?.display?.locked,
+      )
 
-    // Always merge locked first, then unlocked (required for sticky positioning)
-    const allOrdered = [...locked, ...unlocked]
+      // Always merge locked first, then unlocked (required for sticky positioning)
+      const allOrdered = [...locked, ...unlocked]
 
-    return {
-      lockedColumns: locked,
-      unlockedColumns: unlocked,
-      allColumnsOrdered: allOrdered,
-    }
-  }, [visibleColumns, isColumnLocked])
+      return {
+        lockedColumns: locked,
+        unlockedColumns: unlocked,
+        visibleColumnsSorted: allOrdered,
+      }
+    }, [visibleColumns, isColumnLocked])
 
   // Set table data based on current view
-  const tableData = currentView === 'patient' ? patients : tasks
+  const tableData =
+    currentView === 'patient'
+      ? patients
+      : currentView === 'task'
+        ? tasks
+        : appointments
   const { searchTerm, setSearchTerm, searchMode, setSearchMode, filteredData } =
     // @ts-ignore - Type mismatch between patient/task arrays but useSearch handles both
     useSearch(tableData)
@@ -191,6 +223,7 @@ export default function WorklistPage() {
     currentViewType: currentView,
     patients,
     tasks,
+    appointments,
     panel,
     columns: allColumns,
     onColumnChanges: handleColumnChanges,
@@ -248,6 +281,11 @@ export default function WorklistPage() {
       return
     }
 
+    if (sort && !allColumns.find((col) => col.id === sort.columnId)) {
+      console.warn(`Cannot sort by column ${sort.columnId}: column not found`)
+      return
+    }
+
     try {
       await updatePanel?.(panel.id, {
         metadata: {
@@ -293,13 +331,11 @@ export default function WorklistPage() {
   }
 
   // Centralized row click handler
-  const handleRowClick = useCallback(
+  const onRowClick =
     // biome-ignore lint/suspicious/noExplicitAny: Not sure if we have a better type
     (row: Record<string, any>) => {
-      setSelectedItem(row as WorklistPatient | WorklistTask)
-    },
-    [],
-  )
+      handleRowClick(row.resourceType, row.id)
+    }
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -309,18 +345,20 @@ export default function WorklistPage() {
       }
 
       // Find the active column's index and the over column's index
-      const oldIndex = allColumnsOrdered.findIndex(
+      const oldIndex = visibleColumnsSorted.findIndex(
         (col) => col.id === active.id,
       )
-      const newIndex = allColumnsOrdered.findIndex((col) => col.id === over.id)
+      const newIndex = visibleColumnsSorted.findIndex(
+        (col) => col.id === over.id,
+      )
 
       if (oldIndex === -1 || newIndex === -1) {
         return
       }
 
       // Get the actual column objects to check locked states
-      const activeColumn = allColumnsOrdered[oldIndex]
-      const overColumn = allColumnsOrdered[newIndex]
+      const activeColumn = visibleColumnsSorted[oldIndex]
+      const overColumn = visibleColumnsSorted[newIndex]
 
       // Check locked states - for panel context, use column-level locked state directly
       const activeIsLocked = activeColumn?.properties?.display?.locked ?? false
@@ -333,7 +371,11 @@ export default function WorklistPage() {
       }
 
       // Reorder the columns
-      const reorderedColumns = arrayMove(allColumnsOrdered, oldIndex, newIndex)
+      const reorderedColumns = arrayMove(
+        visibleColumnsSorted,
+        oldIndex,
+        newIndex,
+      )
 
       // Use the dedicated reorder method which shows only one toast
       if (panel) {
@@ -344,7 +386,7 @@ export default function WorklistPage() {
         }
       }
     },
-    [allColumnsOrdered, panel, reorderColumns],
+    [visibleColumnsSorted, panel, reorderColumns],
   )
 
   const isLoading =
@@ -369,6 +411,7 @@ export default function WorklistPage() {
                 currentViewType={currentView}
                 onPanelTitleChange={onPanelTitleChange}
                 currentFilters={tableFilters}
+                canEdit={canEdit}
               />
             )}
           </div>
@@ -382,6 +425,9 @@ export default function WorklistPage() {
               setCurrentView={updatePanelViewType}
               columnVisibilityContext={columnVisibilityContext}
               onAddColumn={onAddColumn}
+              viewId={undefined}
+              viewName={panel?.name}
+              panelId={panelId}
               filters={tableFilters}
               sort={panel?.metadata.sort}
               columns={visibleColumns}
@@ -395,7 +441,8 @@ export default function WorklistPage() {
                 isLoading={isProgressiveLoading}
                 selectedRows={selectedRows}
                 toggleSelectAll={() => {}}
-                columns={allColumnsOrdered}
+                allColumns={allColumnsForViewType}
+                visibleColumns={visibleColumnsSorted}
                 onSortUpdate={onSortUpdate}
                 tableData={filteredData}
                 handlePDFClick={() => {}}
@@ -408,11 +455,12 @@ export default function WorklistPage() {
                 currentView={currentView}
                 currentUserName={user?.name}
                 onColumnUpdate={onColumnUpdate}
+                columnVisibilityContext={columnVisibilityContext}
                 onColumnDelete={onColumnDelete}
                 filters={tableFilters}
                 onFiltersChange={onFiltersChange}
                 initialSort={panel.metadata.sort || null}
-                onRowClick={handleRowClick}
+                onRowClick={onRowClick}
                 handleDragEnd={handleDragEnd}
                 hasMore={hasMore}
                 onLoadMore={loadMore}
@@ -428,24 +476,16 @@ export default function WorklistPage() {
               )}
             </div>
           </div>
-          {selectedItem && (
-            <ModalDetails
-              patient={
-                selectedItem.resourceType === 'Patient'
-                  ? (selectedItem as WorklistPatient)
-                  : undefined
-              }
-              task={
-                selectedItem.resourceType === 'Task'
-                  ? (selectedItem as WorklistTask)
-                  : undefined
-              }
-              onClose={() => setSelectedItem(null)}
-            />
-          )}
+          <ModalDetails
+            patientId={patientId || undefined}
+            taskId={taskId || undefined}
+            appointmentId={appointmentId || undefined}
+            onClose={handleModalClose}
+            pathname={pathname}
+          />
           <div className="footer-area">
             <PanelFooter
-              columnsCounter={allColumnsOrdered.length}
+              columnsCounter={visibleColumnsSorted.length}
               rowsCounter={tableData.length}
               navigateToHome={() => router.push('/')}
               isAISidebarOpen={false}
@@ -457,6 +497,7 @@ export default function WorklistPage() {
               isLoading={isProgressiveLoading}
               panel={panel}
               onCardsConfigurationChange={onCardsConfigurationChange}
+              canEdit={canEdit}
             />
           </div>
         </>

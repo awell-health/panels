@@ -7,15 +7,18 @@ import type {
   Observation,
   Resource,
   Bundle,
+  Appointment,
 } from '@medplum/fhirtypes'
 import ExpandableCard from '../ExpandableCard'
 import RenderValue from '../RenderValue'
 import { useAuthentication } from '../../../../../../../hooks/use-authentication'
 import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
-import { useReactivePanel } from '../../../../../../../hooks/use-reactive-data'
+import { useReactivePanel } from '../../../../../../../hooks/use-reactive-data-zustand'
 import { useParams } from 'next/navigation'
 import { getCardConfigs } from '../../../../../../../utils/static/CardConfigs'
-import { handleError } from '../utils'
+import { RenderWithCopy } from '../RenderWithCopy'
+import HighlightText from '../HighlightContent'
+import AppointmentsCard from './AppointmentsCard'
 
 interface Props {
   task?: WorklistTask
@@ -43,62 +46,45 @@ const ContentCards: React.FC<Props> = ({
     getPatientObservations,
     getPatientCompositions,
     getPatientEncounters,
+    getPatientAppointments,
   } = useMedplumStore()
   const [observations, setObservations] = useState<Observation[]>([])
   const [compositions, setCompositions] = useState<Composition[]>([])
   const [encounters, setEncounters] = useState<Encounter[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [appointments, setAppointments] = useState<Appointment[]>([])
   const [error, setError] = useState<string | null>(null)
 
+  const fetchEncounters = async () => {
+    if (!patient?.id) return
+    const encounters = await getPatientEncounters(patient.id)
+    setEncounters(encounters)
+  }
+
+  const fetchCompositions = async () => {
+    if (!patient?.id) return
+    const compositions = await getPatientCompositions(patient.id)
+    setCompositions(compositions)
+  }
+
+  const fetchObservations = async () => {
+    if (!patient?.id) return
+    const observations = await getPatientObservations(patient.id)
+    setObservations(observations)
+  }
+
+  const fetchAppointments = async () => {
+    if (!patient?.id) return
+    const appointments = await getPatientAppointments(patient.id)
+    setAppointments(appointments)
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
-    const fetchData = async () => {
-      if (!patient?.id) return
-
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        const [observationsData, encountersData, compositionsData] =
-          await Promise.allSettled([
-            getPatientObservations(patient.id),
-            getPatientEncounters(patient.id),
-            getPatientCompositions(patient.id),
-          ])
-
-        if (observationsData.status === 'fulfilled') {
-          setObservations(observationsData.value || [])
-        } else {
-          handleError(observationsData.reason, 'ContentCards.fetchObservations')
-        }
-
-        if (encountersData.status === 'fulfilled') {
-          setEncounters(encountersData.value || [])
-        } else {
-          handleError(encountersData.reason, 'ContentCards.fetchEncounters')
-        }
-
-        if (compositionsData.status === 'fulfilled') {
-          setCompositions(compositionsData.value || [])
-        } else {
-          handleError(compositionsData.reason, 'ContentCards.fetchCompositions')
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Unknown error occurred'
-        handleError(err, 'ContentCards.fetchData')
-        setError(errorMessage)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [
-    patient?.id,
-    getPatientCompositions,
-    getPatientObservations,
-    getPatientEncounters,
-  ])
+    fetchEncounters()
+    fetchCompositions()
+    fetchObservations()
+    fetchAppointments()
+  }, [patient?.id])
 
   // Create bundle with proper type safety
   const createBundle = (): Bundle => {
@@ -156,6 +142,9 @@ const ContentCards: React.FC<Props> = ({
           bundle={bundle}
         />
       ))}
+      {appointments.length > 0 && (
+        <AppointmentsCard appointments={appointments} expanded={expanded} />
+      )}
       {compositions?.map((composition) =>
         composition.section?.map((section) => {
           if (!section.id || !section.title) return null
@@ -164,6 +153,7 @@ const ContentCards: React.FC<Props> = ({
             <ExpandableCard
               key={`${composition.id}-${section.id}-${section.title}`}
               title={`${composition.title ?? 'Untitled'} - ${section.title}`}
+              date={composition.date}
               defaultExpanded={expanded}
             >
               <RenderValue

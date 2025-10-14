@@ -39,6 +39,11 @@ export const viewUpdate = async (app: FastifyInstance) => {
         throw new Error('User context not found')
       }
 
+      request.log.info(
+        { id, name, visibleColumns, metadata, userContext },
+        `Updating view with id ${id}`,
+      )
+
       const view = await request.store.view.findOne(
         {
           id: Number(id),

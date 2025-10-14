@@ -1,118 +1,76 @@
 import { useToastHelpers } from '@/contexts/ToastContext'
-import type { WorklistPatient, WorklistTask } from '@/lib/fhir-to-table-data'
 import { logger } from '@/lib/logger'
 import { Trash2Icon, User, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import PatientDetails from './PatientDetails/PatientDetails'
 import TaskDetails from './TaskDetails/TaskDetails'
+import { AppointmentDetails } from './AppointmentDetails'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
-import { useDateTimeFormat } from '@/hooks/use-date-time-format'
-import type { Identifier, Resource } from '@medplum/fhirtypes'
-import { Dialog, DialogContent } from '../../../../../components/ui/dialog'
-import { getNestedProperty } from '@medplum/core'
 import {
-  getNestedValue,
-  getNestedValueFromBundle,
-} from '../../../../../lib/fhir-path'
-import { useReactivePanel } from '../../../../../hooks/use-reactive-data'
+  useWorklistPatient,
+  useWorklistTask,
+  useWorklistAppointments,
+} from '@/hooks/use-zustand-store'
+import { useDateTimeFormat } from '@/hooks/use-date-time-format'
+import type { Resource } from '@medplum/fhirtypes'
+import { Dialog } from '../../../../../components/ui/dialog'
+import { getNestedValueFromBundle } from '../../../../../lib/fhir-path'
+import { useReactivePanel } from '../../../../../hooks/use-reactive-data-zustand'
 import { getCardConfigs } from '../../../../../utils/static/CardConfigs'
 import type { FHIRCard } from './StaticContent/FhirExpandableCard'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
+import type { WorklistPatient } from '@/lib/fhir-to-table-data'
+import { getPatientName } from '@/lib/patient-utils'
 
-interface ModalDetailsProps {
-  patient?: WorklistPatient
-  task?: WorklistTask
+interface Props {
+  patientId?: string
+  taskId?: string
+  appointmentId?: string
+  pathname: string
   onClose: () => void
 }
 
-const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
-  const { patients, tasks, deletePatient } = useMedplumStore()
+const ModalDetails = ({
+  patientId,
+  taskId,
+  appointmentId,
+  pathname,
+  onClose,
+}: Props) => {
+  const { deletePatient } = useMedplumStore()
   const { isAdmin } = useAuthentication()
   const { showSuccess, showError } = useToastHelpers()
   const { formatDate } = useDateTimeFormat()
   const modalRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   const { organizationSlug } = useAuthentication()
   const params = useParams()
   const panelId = params.panel as string
   const { panel } = useReactivePanel(panelId)
 
+  // Use Zustand hooks for reactive data updates
+  const task = useWorklistTask(taskId || '')
+  const appointments = useWorklistAppointments()
+  const appointment = appointmentId
+    ? appointments.find((apt) => apt.id === appointmentId)
+    : undefined
+  const patient = useWorklistPatient(
+    patientId || task?.patientId || appointment?.patientId || '',
+  )
+
   const contentCards =
     (panel?.metadata?.cardsConfiguration as FHIRCard[]) ??
     getCardConfigs(organizationSlug ?? 'default')
 
-  // Internal state management
-  const [currentPatient, setCurrentPatient] = useState<WorklistPatient | null>(
-    null,
-  )
-  const [selectedTask, setSelectedTask] = useState<WorklistTask | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (patient) {
-      setCurrentPatient(patient)
       setIsLoading(false)
     }
   }, [patient])
-
-  useEffect(() => {
-    if (task) {
-      setSelectedTask(task)
-      const resolvedPatient = patients.find((p) => p.id === task.patientId)
-      if (resolvedPatient) {
-        setCurrentPatient(resolvedPatient)
-        setSelectedTask(task)
-        setIsLoading(false)
-      } else {
-        setCurrentPatient(null)
-        setIsLoading(false)
-        logger.error(
-          {
-            operationType: 'resolve-patient',
-            component: 'modal-details',
-            action: 'initialize-state',
-          },
-          'Failed to resolve patient for task',
-          new Error(`Patient with ID ${task.patientId} not found in store`),
-        )
-      }
-    }
-  }, [task, patients])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: This hook needs to refresh the selected task when it's been updated in medplum
-  useEffect(() => {
-    if (selectedTask) {
-      const updatedTask = tasks.find((t) => t.id === selectedTask.id)
-      if (updatedTask) {
-        setSelectedTask(updatedTask)
-      }
-    }
-  }, [tasks])
-
-  const handleDeleteRequest = async () => {
-    if (!currentPatient) return
-
-    try {
-      await deletePatient(currentPatient.id)
-      showSuccess(
-        'Patient deleted',
-        'Patient and all associated tasks have been deleted.',
-      )
-      onClose() // Close the modal after successful deletion
-    } catch (error) {
-      logger.error(
-        {
-          operationType: 'delete-patient',
-          component: 'modal-details',
-          action: 'delete-patient',
-        },
-        'Failed to delete patient',
-        error instanceof Error ? error : new Error(String(error)),
-      )
-      showError('Delete failed', 'Failed to delete patient. Please try again.')
-    }
-  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -138,10 +96,14 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
     }
   }, [onClose])
 
+  if (!patient) {
+    return null
+  }
+
   // Get patient name and DOB for header
-  const patientName = currentPatient?.name || ''
-  const dateOfBirth = currentPatient?.birthDate || ''
-  const gender = currentPatient?.gender || ''
+  const patientName = getPatientName(patient as WorklistPatient)
+  const dateOfBirth = patient?.birthDate || ''
+  const gender = patient?.gender || ''
 
   const fhirPathForMrn = contentCards
     .find((card) => {
@@ -155,12 +117,36 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
       type: 'searchset',
       entry: [
         {
-          resource: currentPatient as unknown as Resource,
+          resource: patient as unknown as Resource,
         },
       ],
     },
     fhirPathForMrn ?? '',
   )
+
+  const handleDeleteRequest = async () => {
+    if (!patient) return
+
+    try {
+      await deletePatient(patient.id)
+      showSuccess(
+        'Patient deleted',
+        'Patient and all associated tasks have been deleted.',
+      )
+      onClose() // Close the modal after successful deletion
+    } catch (error) {
+      logger.error(
+        {
+          operationType: 'delete-patient',
+          component: 'modal-details',
+          action: 'delete-patient',
+        },
+        'Failed to delete patient',
+        error instanceof Error ? error : new Error(String(error)),
+      )
+      showError('Delete failed', 'Failed to delete patient. Please try again.')
+    }
+  }
 
   return (
     <Dialog
@@ -168,29 +154,35 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
       onOpenChange={onClose}
       className="max-w-[90vw] max-h-[90vh] h-full"
     >
-      <div className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0 text-xs">
+      <div
+        className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0 text-xs"
+        data-patient-id={patient?.id}
+        data-task-id={task?.id}
+      >
         <div className="flex items-center gap-2 text-gray-700 pl-4">
           <User className="h-5 w-5" />
           {isLoading ? (
             <span className="font-medium text-gray-500">
               Loading patient...
             </span>
-          ) : !currentPatient ? (
+          ) : !patient ? (
             <span className="font-medium text-red-600">
               Error loading patient
             </span>
-          ) : selectedTask ? (
+          ) : task || appointment ? (
             <button
               type="button"
               className="btn btn-sm btn-link text-blue-600 hover:underline px-1"
-              onClick={() => setSelectedTask(null)}
+              onClick={() =>
+                router.push(`${pathname}?patientId=${patient?.id}`)
+              }
             >
               {patientName}
             </button>
           ) : (
             <span className="font-medium">{patientName}</span>
           )}
-          {currentPatient && (
+          {patient && (
             <>
               {dateOfBirth && (
                 <>
@@ -210,7 +202,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
                   <span>Gender {gender}</span>
                 </>
               )}
-              {currentPatient && !selectedTask && isAdmin && (
+              {patient && !task && !appointment && isAdmin && (
                 <button
                   type="button"
                   onClick={handleDeleteRequest}
@@ -228,6 +220,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
             onClick={onClose}
             className="btn btn-square btn-ghost btn-sm"
             type="button"
+            aria-label="Close modal"
           >
             <X className="h-6 w-6 cursor-pointer hover:text-gray-800" />
           </button>
@@ -241,7 +234,7 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
               Loading patient details...
             </div>
           </div>
-        ) : !currentPatient ? (
+        ) : !patient ? (
           <div className="flex-1 flex items-center justify-center p-8">
             <div className="text-center">
               <div className="text-red-500 text-lg font-medium mb-2">
@@ -252,12 +245,16 @@ const ModalDetails = ({ patient, task, onClose }: ModalDetailsProps) => {
               </div>
             </div>
           </div>
-        ) : selectedTask ? (
-          <TaskDetails task={selectedTask} />
+        ) : task ? (
+          <TaskDetails task={task} />
+        ) : appointment && appointmentId ? (
+          <AppointmentDetails appointmentId={appointmentId} patient={patient} />
         ) : (
           <PatientDetails
-            patient={currentPatient}
-            setSelectedTask={setSelectedTask}
+            patient={patient}
+            setSelectedTask={(item) => {
+              router.push(`${pathname}?taskId=${item?.id}`)
+            }}
           />
         )}
       </div>
