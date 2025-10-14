@@ -19,12 +19,14 @@ interface PatientTasksProps {
   patientId: string
   tasks: WorklistTask[]
   setSelectedTask: (task: WorklistTask) => void
+  onCreateNonCareFlowTask: () => void
 }
 
 const PatientTasks: React.FC<PatientTasksProps> = ({
   patientId,
   tasks,
   setSelectedTask,
+  onCreateNonCareFlowTask,
 }) => {
   const ALL_STATUS_FILTER = 'all-status'
   const [order, setOrder] = useState<'asc' | 'desc'>('desc')
@@ -65,7 +67,10 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
     <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center">
         <div className="font-medium text-gray-900">Tasks list</div>
-        <ManualTrackButton patientId={patientId} />
+        <ManualTrackButton
+          patientId={patientId}
+          onCreateNonCareFlowTask={onCreateNonCareFlowTask}
+        />
       </div>
       <div className=" border-gray-200 flex gap-2">
         <div className="dropdown">

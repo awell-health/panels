@@ -532,6 +532,49 @@ export class MedplumStoreClient {
       throw error
     }
   }
+  async createTask(
+    patientId: string,
+    title: string,
+    description: string,
+    authorName?: string,
+  ): Promise<Task> {
+    const task: Task = {
+      resourceType: 'Task',
+      status: 'draft',
+      intent: 'order',
+      priority: 'routine',
+      code: {
+        text: title || '',
+      },
+      description: description || '',
+      authoredOn: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+      for: { reference: `Patient/${patientId}` },
+      identifier: [
+        {
+          system: 'http://panels.awellhealth.com/fhir/identifier/task',
+          value: `non-care-flow-${Date.now()}`,
+        },
+      ],
+    }
+
+    return await this.client.createResource(task)
+  }
+
+  async updateTask(taskId: string, updates: Partial<Task>): Promise<Task> {
+    try {
+      const task = await this.client.readResource('Task', taskId)
+      const updatedTask = {
+        ...task,
+        ...updates,
+        lastModified: new Date().toISOString(),
+      }
+      return await this.client.updateResource(updatedTask)
+    } catch (error) {
+      console.error('Error updating task:', error)
+      throw error
+    }
+  }
 
   async getPatientsFromReferences(patientRefs: string[]): Promise<Patient[]> {
     const uniqueRefs = [...new Set(patientRefs)]

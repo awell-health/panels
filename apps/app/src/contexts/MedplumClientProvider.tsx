@@ -42,6 +42,12 @@ type MedplumContextType = {
   getPatientEncounters: (patientId: string) => Promise<Encounter[]>
   getPatientDetectedIssues: (patientId: string) => Promise<DetectedIssue[]>
   deletePatient: (patientId: string) => Promise<void>
+  createTask: (
+    patientId: string,
+    title: string,
+    description: string,
+  ) => Promise<Task>
+  updateTask: (taskId: string, updates: Partial<Task>) => Promise<Task>
   getPatientsPaginated: (
     options: PaginationOptions,
   ) => Promise<PaginatedResult<Patient>>
@@ -318,6 +324,36 @@ export function MedplumClientProvider({
     },
     [medplumClient, isLoading],
   )
+  const createTask = useCallback(
+    async (patientId: string, title: string, description: string) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.createTask(
+        patientId,
+        title,
+        description,
+        name ?? practitioner?.name?.[0]?.text ?? '',
+      )
+    },
+    [medplumClient, isLoading, practitioner, name],
+  )
+
+  const updateTask = useCallback(
+    async (taskId: string, updates: Partial<Task>) => {
+      if (isLoading) {
+        throw new Error('Medplum client is still initializing')
+      }
+      if (!medplumClient) {
+        throw new Error('Medplum store not initialized')
+      }
+      return await medplumClient.updateTask(taskId, updates)
+    },
+    [medplumClient, isLoading],
+  )
 
   // Progressive loading methods
   const getPatientsPaginated = useCallback(
@@ -404,6 +440,8 @@ export function MedplumClientProvider({
     getPatientDetectedIssues,
     getPatientCompositions,
     deletePatient,
+    createTask,
+    updateTask,
     getPatientsPaginated,
     getTasksPaginated,
     getPatientsFromReferences,

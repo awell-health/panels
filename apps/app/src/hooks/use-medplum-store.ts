@@ -14,6 +14,8 @@ export function useMedplumStore() {
     getPatientDetectedIssues,
     getPatientCompositions,
     deletePatient,
+    createTask,
+    updateTask,
   } = useMedplum()
 
   // Get the reactive subscription from the store
@@ -60,5 +62,7 @@ export function useMedplumStore() {
     getPatientDetectedIssues,
     deletePatient,
     getPatientCompositions,
+    createTask,
+    updateTask,
   }
 }

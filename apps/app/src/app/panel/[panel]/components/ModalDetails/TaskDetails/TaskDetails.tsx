@@ -4,6 +4,7 @@ import FramePanel from '../FramePanel'
 import StaticContent from '../StaticContent'
 import ConnectorsSection from './ConnectorsSection'
 import TaskAsignment from './TaskAsignment'
+import DraftTaskEditor from './DraftTaskEditor'
 
 interface TaskDetailsProps {
   task: WorklistTask
@@ -41,14 +42,20 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
         >
           {view === 'ahp' && (
             <div className="flex flex-col h-full">
-              <TaskAsignment task={task} />
-              <div className="flex-1 overflow-hidden">
-                <FramePanel
-                  url={AHP_URL}
-                  status={task.status}
-                  taskName={task.description}
-                />
-              </div>
+              {task.status === 'draft' ? (
+                <DraftTaskEditor task={task} />
+              ) : (
+                <>
+                  <TaskAsignment task={task} />
+                  <div className="flex-1 overflow-hidden">
+                    <FramePanel
+                      url={AHP_URL}
+                      status={task.status}
+                      taskName={task.description}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
           {view === 'content' && (

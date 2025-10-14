@@ -9,6 +9,7 @@ import { useMedplumStore } from '@/hooks/use-medplum-store'
 import { useEffect, useState } from 'react'
 import StaticContent from '../StaticContent'
 import PatientTasks from './PatientTasks'
+import { useToastHelpers } from '@/contexts/ToastContext'
 
 interface PatientDetailsProps {
   patient: WorklistPatient
@@ -17,12 +18,41 @@ interface PatientDetailsProps {
 
 const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
   const VIEWS = ['content', 'tasks', 'timeline']
-  const { tasks } = useMedplumStore()
+  const { tasks, createTask } = useMedplumStore()
+  const { showError } = useToastHelpers()
 
-  // State for patient-specific tasks
   const [patientTasks, setPatientTasks] = useState<WorklistTask[]>([])
 
-  // Filter tasks for the current patient when tasks change
+  const handleCreateNonCareFlowTask = async () => {
+    try {
+      const newTask = await createTask(patient.id, '', '')
+
+      const worklistTask: WorklistTask = {
+        id: newTask.id || '',
+        code: newTask.code,
+        description: newTask.description || '',
+        status: newTask.status || 'draft',
+        patientId: patient.id,
+        patientName: patient.name,
+        patient: patient,
+        authoredOn: newTask.authoredOn,
+        lastModified: newTask.lastModified,
+        note: newTask.note,
+        input: newTask.input,
+      }
+
+      setPatientTasks((prev) => [worklistTask, ...prev])
+
+      setSelectedTask(worklistTask)
+    } catch (error) {
+      console.error('Failed to create task:', error)
+      showError(
+        'Failed to create task',
+        'Please try again or contact support if the issue persists',
+      )
+    }
+  }
+
   useEffect(() => {
     const filteredTasks = tasks.filter((task) => task.patientId === patient.id)
     setPatientTasks(filteredTasks)
@@ -84,6 +114,7 @@ const PatientDetails = ({ patient, setSelectedTask }: PatientDetailsProps) => {
               patientId={patient.id}
               tasks={patientTasks}
               setSelectedTask={setSelectedTask}
+              onCreateNonCareFlowTask={handleCreateNonCareFlowTask}
             />
           )}
         </div>

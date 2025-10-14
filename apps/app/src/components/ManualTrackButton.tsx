@@ -11,9 +11,13 @@ import { useAuthentication } from '@/hooks/use-authentication'
 
 interface ManualTrackButtonProps {
   patientId: string
+  onCreateNonCareFlowTask: () => void
 }
 
-export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
+export function ManualTrackButton({
+  patientId,
+  onCreateNonCareFlowTask,
+}: ManualTrackButtonProps) {
   const { organizationSlug } = useAuthentication()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isOptimisticUpdate, setIsOptimisticUpdate] = useState(false)
@@ -70,16 +74,7 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
     setIsOptimisticUpdate(false)
   }
 
-  // Don't render if no Awell care flow context
-  if (!hasAwellCareFlowContext) {
-    return null
-  }
   if (!['awell-dev', 'encompass-health'].includes(organizationSlug ?? '')) {
-    return null
-  }
-
-  // Don't show button if no tracks available or if there was an error loading them
-  if (!hasAvailableTracks || tracksError) {
     return null
   }
 
@@ -90,6 +85,32 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
       <button type="button" tabIndex={0} className="btn btn-xs btn-default">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading tracks...
       </button>
+    )
+  }
+
+  if (!hasAvailableTracks || tracksError) {
+    return (
+      <div className="relative" ref={dropdownRef}>
+        <div className="dropdown dropdown-end">
+          <button type="button" tabIndex={0} className="btn btn-xs btn-success">
+            <Plus className="h-4 w-4" />
+            Add Task
+            <ChevronDown className="h-3 w-3" />
+          </button>
+          <ul className="dropdown-content menu bg-base-100 rounded-box z-1 w-48 shadow p-1">
+            <li key="non-care-flow">
+              <button
+                type="button"
+                onClick={onCreateNonCareFlowTask}
+                className="text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                <Plus className="h-3 w-3 text-gray-900" />
+                <span>Non-care flow Task</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
     )
   }
 
@@ -109,10 +130,7 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
             />
           </>
         </button>
-        <ul
-          // tabIndex={0}
-          className="dropdown-content menu bg-base-100 rounded-box z-1 w-48 shadow p-1"
-        >
+        <ul className="dropdown-content menu bg-base-100 rounded-box z-1 w-48 shadow p-1">
           {availableTracks.map((track) => {
             const isTrackDisabled = !track.isPathwayActive || isLoading
             const trackTooltip = !track.isPathwayActive
@@ -140,6 +158,17 @@ export function ManualTrackButton({ patientId }: ManualTrackButtonProps) {
               </li>
             )
           })}
+          <li key="non-care-flow">
+            <button
+              type="button"
+              onClick={onCreateNonCareFlowTask}
+              disabled={isLoading}
+              className="text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
+            >
+              <Plus className="h-3 w-3 text-gray-900" />
+              <span>Non-care flow Task</span>
+            </button>
+          </li>
         </ul>
       </div>
     </div>
