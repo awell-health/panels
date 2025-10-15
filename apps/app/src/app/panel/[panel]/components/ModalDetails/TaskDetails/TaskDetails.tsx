@@ -3,6 +3,8 @@ import TaskComments from './TaskComments'
 import StaticContent from '../StaticContent'
 import ConnectorsSection from './ConnectorsSection'
 import TaskAsignment from './TaskAsignment'
+import DraftTaskEditor from './DraftTaskEditor'
+import NonCareFlowTaskView from './NonCareFlowTaskView'
 import type { CodeableConcept, Coding } from '@medplum/fhirtypes'
 import ApproveRejectTask from './ApproveRejectTask'
 import TaskStatusBadge from './TaskStatusBadge'
@@ -41,21 +43,21 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
       ),
   )
 
-  const isAHPTask = task?.code?.coding.find(
+  const isAHPTask = task?.code?.coding?.find(
     (c: Coding) =>
       c?.system === 'http://terminology.hl7.org/CodeSystem/task-code' &&
       c?.code === 'approve',
   )
 
-  const isDavitaApprovalRejectTask = task?.code?.coding.find(
+  const isDavitaApprovalRejectTask = task?.code?.coding?.find(
     (c: Coding) =>
       c?.system === 'http://davita.com/fhir/task-code' &&
       (c?.code === 'approval-reject' || c?.code === 'approve-reject'),
   )
 
-  const AHP_URL = getAwellHostedPagesUrl(AHP_CODE)
+  const isNonCareFlowTask = !isAHPTask && !isDavitaApprovalRejectTask
 
-  console.log(task)
+  const AHP_URL = getAwellHostedPagesUrl(AHP_CODE)
 
   return (
     <>
@@ -68,36 +70,50 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
         >
           {view === 'resolve-task' && (
             <div className="flex flex-col h-full">
-              <TaskAsignment task={task} blockAssignee={isNonAssignableTask} />
-              <div className="flex justify-between items-center border-b border-gray-200 pb-2 mb-2">
-                <div className="font-medium text-gray-900">
-                  {task.description}
-                </div>
-                <div className="flex items-center gap-2">
-                  <TaskStatusBadge status={task.status} />
-                </div>
-              </div>
-              {!isNonAssignableTask && (
+              {task.status === 'draft' ? (
+                <DraftTaskEditor task={task} />
+              ) : (
                 <>
-                  {isAHPTask && (
-                    <div className="flex-1 overflow-hidden">
-                      <FramePanel url={AHP_URL} status={task.status} />
+                  <TaskAsignment
+                    task={task}
+                    blockAssignee={isNonAssignableTask}
+                  />
+                  <div className="flex justify-between items-center border-b border-gray-200 pb-2 mb-2">
+                    <div className="font-medium text-gray-900">
+                      {task.code?.text || task.description}
                     </div>
+                    <div className="flex items-center gap-2">
+                      <TaskStatusBadge status={task.status} />
+                    </div>
+                  </div>
+                  {!isNonAssignableTask && (
+                    <>
+                      {isAHPTask && (
+                        <div className="flex-1 overflow-hidden">
+                          <FramePanel url={AHP_URL} status={task.status} />
+                        </div>
+                      )}
+                      {isDavitaApprovalRejectTask && (
+                        <div className="flex-1">
+                          <ApproveRejectTask task={task} />
+                        </div>
+                      )}
+                      {isNonCareFlowTask && (
+                        <div className="flex-1">
+                          <NonCareFlowTaskView task={task} />
+                        </div>
+                      )}
+                    </>
                   )}
-                  {isDavitaApprovalRejectTask && (
-                    <div className="flex-1">
-                      <ApproveRejectTask task={task} />
+
+                  {isNonAssignableTask && (
+                    <div className="flex flex-1 items-center justify-center h-full gap-2">
+                      <span className=" text-gray-500">
+                        This task cannot be completed through panels.
+                      </span>
                     </div>
                   )}
                 </>
-              )}
-
-              {isNonAssignableTask && (
-                <div className="flex flex-1 items-center justify-center h-full gap-2">
-                  <span className=" text-gray-500">
-                    This task cannot be completed through panels.
-                  </span>
-                </div>
               )}
             </div>
           )}
