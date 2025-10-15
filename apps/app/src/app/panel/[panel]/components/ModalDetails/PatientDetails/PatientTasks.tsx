@@ -161,7 +161,7 @@ const PatientTasks: React.FC<PatientTasksProps> = ({
               <div className="flex justify-between p-2 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
                 <div className="flex justify-between w-full items-center">
                   <div className="font-medium text-gray-900 flex flex-col gap-1.5">
-                    {task.description}
+                    {task.code?.text || task.description}
                     <TaskStatusBadge status={task.status} />
                     {task.authoredOn && (
                       <div className="flex items-center gap-1 text-xs text-gray-600 font-normal">

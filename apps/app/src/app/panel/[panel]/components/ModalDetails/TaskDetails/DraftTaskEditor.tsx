@@ -95,32 +95,13 @@ const DraftTaskEditor = ({ task }: DraftTaskEditorProps) => {
         <div className="font-medium text-gray-900">New Task</div>
         <div className="flex items-center gap-2">
           <TaskStatusBadge status={task.status} />
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="btn btn-xs btn-success"
-          >
-            {isSaving ? (
-              <span className="loading loading-spinner loading-xs" />
-            ) : (
-              <Save className="h-3 w-3" />
-            )}
-            Save
-          </button>
         </div>
       </div>
 
-      <div className="p-4 space-y-4 h-[calc(100%-45px)] overflow-auto">
+      <div className="p-2 space-y-4 h-[calc(100%-45px)] overflow-auto">
         <div>
           <label htmlFor="task-title" className="label">
             <span className="label-text font-medium">Task description</span>
-            {errors.title && (
-              <span className="label-text-alt text-error flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.title}
-              </span>
-            )}
           </label>
           <input
             id="task-title"
@@ -130,17 +111,17 @@ const DraftTaskEditor = ({ task }: DraftTaskEditorProps) => {
             placeholder="Enter task description"
             className={`input input-sm w-full ${errors.title ? 'input-error' : ''}`}
           />
+          {errors.title && (
+            <span className="label-text-alt text-error flex items-center gap-1 mt-0.5">
+              <AlertCircle className="h-3 w-3" />
+              {errors.title}
+            </span>
+          )}
         </div>
 
         <div>
           <label htmlFor="task-description" className="label">
             <span className="label-text font-medium">Task details</span>
-            {errors.description && (
-              <span className="label-text-alt text-error flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {errors.description}
-              </span>
-            )}
           </label>
           <textarea
             id="task-description"
@@ -150,6 +131,27 @@ const DraftTaskEditor = ({ task }: DraftTaskEditorProps) => {
             rows={8}
             className={`textarea textarea-sm w-full ${errors.description ? 'textarea-error' : ''}`}
           />
+          {errors.description && (
+            <span className="label-text-alt text-error flex items-center gap-1 mt-0.5">
+              <AlertCircle className="h-3 w-3" />
+              {errors.description}
+            </span>
+          )}
+        </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="btn btn-sm btn-success"
+          >
+            {isSaving ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              <Save className="h-3 w-3" />
+            )}
+            Save
+          </button>
         </div>
       </div>
     </>
