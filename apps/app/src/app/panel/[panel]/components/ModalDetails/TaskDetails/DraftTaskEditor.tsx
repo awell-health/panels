@@ -114,7 +114,7 @@ const DraftTaskEditor = ({ task }: DraftTaskEditorProps) => {
       <div className="p-4 space-y-4 h-[calc(100%-45px)] overflow-auto">
         <div>
           <label htmlFor="task-title" className="label">
-            <span className="label-text font-medium">Task Title</span>
+            <span className="label-text font-medium">Task description</span>
             {errors.title && (
               <span className="label-text-alt text-error flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
@@ -127,14 +127,14 @@ const DraftTaskEditor = ({ task }: DraftTaskEditorProps) => {
             type="text"
             value={title}
             onChange={(e) => handleFieldChange('title', e.target.value)}
-            placeholder="Enter task title"
+            placeholder="Enter task description"
             className={`input input-sm w-full ${errors.title ? 'input-error' : ''}`}
           />
         </div>
 
         <div>
           <label htmlFor="task-description" className="label">
-            <span className="label-text font-medium">Task Description</span>
+            <span className="label-text font-medium">Task details</span>
             {errors.description && (
               <span className="label-text-alt text-error flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
@@ -146,7 +146,7 @@ const DraftTaskEditor = ({ task }: DraftTaskEditorProps) => {
             id="task-description"
             value={description}
             onChange={(e) => handleFieldChange('description', e.target.value)}
-            placeholder="Enter detailed task description"
+            placeholder="Enter detailed task information"
             rows={8}
             className={`textarea textarea-sm w-full ${errors.description ? 'textarea-error' : ''}`}
           />

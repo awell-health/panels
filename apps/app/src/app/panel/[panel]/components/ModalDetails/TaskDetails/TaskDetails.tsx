@@ -4,6 +4,7 @@ import StaticContent from '../StaticContent'
 import ConnectorsSection from './ConnectorsSection'
 import TaskAsignment from './TaskAsignment'
 import DraftTaskEditor from './DraftTaskEditor'
+import NonCareFlowTaskView from './NonCareFlowTaskView'
 import type { CodeableConcept, Coding } from '@medplum/fhirtypes'
 import ApproveRejectTask from './ApproveRejectTask'
 import TaskStatusBadge from './TaskStatusBadge'
@@ -54,6 +55,8 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
       (c?.code === 'approval-reject' || c?.code === 'approve-reject'),
   )
 
+  const isNonCareFlowTask = !isAHPTask && !isDavitaApprovalRejectTask
+
   const AHP_URL = getAwellHostedPagesUrl(AHP_CODE)
 
   console.log(task)
@@ -79,7 +82,7 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
                   />
                   <div className="flex justify-between items-center border-b border-gray-200 pb-2 mb-2">
                     <div className="font-medium text-gray-900">
-                      {task.description}
+                      {task.code?.text || task.description}
                     </div>
                     <div className="flex items-center gap-2">
                       <TaskStatusBadge status={task.status} />
@@ -95,6 +98,11 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
                       {isDavitaApprovalRejectTask && (
                         <div className="flex-1">
                           <ApproveRejectTask task={task} />
+                        </div>
+                      )}
+                      {isNonCareFlowTask && (
+                        <div className="flex-1">
+                          <NonCareFlowTaskView task={task} />
                         </div>
                       )}
                     </>
