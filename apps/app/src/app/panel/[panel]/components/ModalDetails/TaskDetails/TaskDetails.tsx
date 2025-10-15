@@ -43,13 +43,13 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
       ),
   )
 
-  const isAHPTask = task?.code?.coding.find(
+  const isAHPTask = task?.code?.coding?.find(
     (c: Coding) =>
       c?.system === 'http://terminology.hl7.org/CodeSystem/task-code' &&
       c?.code === 'approve',
   )
 
-  const isDavitaApprovalRejectTask = task?.code?.coding.find(
+  const isDavitaApprovalRejectTask = task?.code?.coding?.find(
     (c: Coding) =>
       c?.system === 'http://davita.com/fhir/task-code' &&
       (c?.code === 'approval-reject' || c?.code === 'approve-reject'),
@@ -58,8 +58,6 @@ const TaskDetails = ({ task }: TaskDetailsProps) => {
   const isNonCareFlowTask = !isAHPTask && !isDavitaApprovalRejectTask
 
   const AHP_URL = getAwellHostedPagesUrl(AHP_CODE)
-
-  console.log(task)
 
   return (
     <>
