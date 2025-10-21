@@ -1,5 +1,5 @@
 import type { BotEvent, MedplumClient } from '@medplum/core'
-import type { Task, Extension } from '@medplum/fhirtypes'
+import type { Task, Extension, Patient } from '@medplum/fhirtypes'
 
 /**
  * [AwellHealth] Refresh Patient Data
@@ -137,20 +137,27 @@ export async function handler(
 ): Promise<void> {
   try {
     // Extract patient IDs from the event input
-    const input = event.input as { patientIds?: string[] }
-    const patientIds = input?.patientIds
 
-    if (!patientIds || !Array.isArray(patientIds) || patientIds.length === 0) {
-      console.log(
-        'No patient IDs provided. Please provide a list of patient IDs in the input.',
-      )
-      return
-    }
+    // Search for patients updated in the specified time range
+    // Use separate search parameters for proper FHIR date filtering
+    const searchResult = await medplum.search('Patient', {
+      _count: 1000, // Process up to 1000 patients at a time
+    })
 
     console.log(
-      `Starting patient data refresh process for ${patientIds.length} patients`,
+      'Search result:',
+      JSON.stringify(
+        {
+          total: searchResult.total,
+          entryCount: searchResult.entry?.length || 0,
+        },
+        null,
+        2,
+      ),
     )
-    console.log('Input received:', JSON.stringify(input, null, 2))
+
+    const patients =
+      searchResult.entry?.map((entry) => entry.resource as Patient) || []
 
     // Fetch Phase: Process the provided patient IDs
     let processedCount = 0
@@ -158,7 +165,8 @@ export async function handler(
     let errorCount = 0
 
     // Process each patient ID
-    for (const patientId of patientIds) {
+    for (const patient of patients) {
+      const patientId = patient.id
       if (!patientId || typeof patientId !== 'string') {
         console.log(`Invalid patient ID: ${patientId}`)
         continue
