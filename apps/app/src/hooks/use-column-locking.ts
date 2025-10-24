@@ -12,7 +12,6 @@ import { useColumnOperations } from './use-column-operations'
  */
 export function useColumnLocking(panelId: string, viewId?: string) {
   const { view } = useReactiveView(panelId, viewId || '')
-  const { panel } = useReactivePanel(panelId)
   const { updateView } = useReactivePanelStore()
   const { updateColumn } = useColumnOperations()
 

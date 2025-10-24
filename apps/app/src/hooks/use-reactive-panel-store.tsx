@@ -387,10 +387,7 @@ export class ReactivePanelStore {
                   change.column.sourceField ||
                   change.column.name ||
                   'New Column',
-                tags:
-                  change.viewType === 'patient'
-                    ? ['panels:patients']
-                    : ['panels:tasks'],
+                tags: [`panels:${change.viewType}`],
                 properties: {
                   display: {
                     visible: true,
@@ -746,13 +743,22 @@ export function ReactivePanelStoreProvider({
           storageMode as StorageMode,
         )
 
-        // Wait for initialization to complete
-        await reactiveStore.waitForInitialization()
-
+        // Set store immediately for non-blocking initialization
         setStore(reactiveStore)
-        setIsInitialized(true)
+
+        // Initialize in background without blocking render
+        reactiveStore
+          .waitForInitialization()
+          .then(() => {
+            setIsInitialized(true)
+          })
+          .catch((error) => {
+            console.error('Failed to initialize store:', error)
+            setIsInitialized(true) // Still allow render to proceed
+          })
       } catch (error) {
-        console.error('Failed to initialize store:', error)
+        console.error('Failed to create store:', error)
+        setIsInitialized(true) // Allow render to proceed even on error
       }
     }
 

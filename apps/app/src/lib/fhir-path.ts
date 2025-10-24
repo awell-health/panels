@@ -217,6 +217,46 @@ const userInvocationTable = {
   toDateLiteral,
 }
 
+/**
+ * Preprocess FHIR path to handle resolve() function
+ * Replaces resolve() calls with direct property access for enhanced appointment objects
+ */
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+function preprocessFhirPath(path: string, obj: Record<string, any>): string {
+  // Handle resolve() function calls
+  if (path.includes('.resolve()')) {
+    // Replace common resolve() patterns with direct property access
+    let processedPath = path
+
+    // Handle subject.resolve().property patterns
+    processedPath = processedPath.replace(/subject\.resolve\(\)\./g, 'subject.')
+
+    // Handle participant.resolve().property patterns
+    processedPath = processedPath.replace(
+      /participant\.resolve\(\)\./g,
+      'participant.',
+    )
+
+    // Handle any other resolve() patterns
+    processedPath = processedPath.replace(/\.resolve\(\)\./g, '.')
+
+    // If the object has flattened data, try to access it directly
+    if (
+      obj.subject &&
+      typeof obj.subject === 'object' &&
+      obj.subject.resolved
+    ) {
+      // For enhanced appointment objects, subject.resolve().name becomes subject.name
+      // and subject.name is already flattened with the resolved data
+      return processedPath
+    }
+
+    return processedPath
+  }
+
+  return path
+}
+
 export const getNestedValue = (
   // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   obj: Record<string, any>,
@@ -226,7 +266,10 @@ export const getNestedValue = (
   if (!path) return undefined
 
   try {
-    const result = fhirpath.evaluate(obj, path, env, undefined, {
+    // Preprocess the path to handle resolve() function
+    const processedPath = preprocessFhirPath(path, obj)
+
+    const result = fhirpath.evaluate(obj, processedPath, env, undefined, {
       userInvocationTable,
     })
     if (result?.length === 1) {
@@ -234,7 +277,10 @@ export const getNestedValue = (
     }
     return result.length === 0 ? undefined : result
   } catch (error) {
-    console.error('Error evaluating FHIRPath:', error)
+    // console.error('Error evaluating FHIRPath:', error)
+    // console.error('Original path:', path)
+    // console.error('Processed path:', preprocessFhirPath(path, obj))
+    // console.error('Object keys:', Object.keys(obj))
     return ''
   }
 }

@@ -142,9 +142,6 @@ const ContentCards: React.FC<Props> = ({
           bundle={bundle}
         />
       ))}
-      {appointments.length > 0 && (
-        <AppointmentsCard appointments={appointments} expanded={expanded} />
-      )}
       {compositions?.map((composition) =>
         composition.section?.map((section) => {
           if (!section.id || !section.title) return null

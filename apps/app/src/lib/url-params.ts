@@ -23,26 +23,31 @@ export const handleRowClick = (
 ) => {
   const currentParams = new URLSearchParams(searchParams.toString())
 
-  if (resourceType === 'Patient') {
+  if (resourceType === 'Patient' || resourceType.toLowerCase() === 'patient') {
     currentParams.set('patientId', resourceId)
     currentParams.delete('taskId')
     currentParams.delete('appointmentId')
   }
 
-  if (resourceType === 'Task') {
+  if (resourceType === 'Task' || resourceType.toLowerCase() === 'task') {
     currentParams.delete('patientId')
     currentParams.set('taskId', resourceId)
     currentParams.delete('appointmentId')
   }
 
-  if (resourceType === 'Appointment') {
+  if (
+    resourceType === 'Appointment' ||
+    resourceType.toLowerCase() === 'appointment'
+  ) {
     // For appointments, show the appointment modal
     currentParams.delete('patientId')
     currentParams.delete('taskId')
     currentParams.set('appointmentId', resourceId)
   }
 
-  router.push(`${pathname}?${currentParams.toString()}`)
+  console.log(resourceType, 'currentParams', currentParams.toString())
+
+  return router.push(`${pathname}?${currentParams.toString()}`)
 }
 
 /**
@@ -81,4 +86,29 @@ export const useModalUrlParams = () => {
       handleRowClick(resourceType, resourceId, routerParams),
     handleModalClose: () => handleModalClose(routerParams),
   }
+}
+
+export function setQueryParamsWithoutRerender(
+  params: Record<string, string | null | undefined>,
+) {
+  const url = new URL(window.location.href)
+  for (const [key, value] of Object.entries(params)) {
+    if (value === null || value === undefined || value === '') {
+      url.searchParams.delete(key)
+    } else {
+      url.searchParams.set(key, value)
+    }
+  }
+  // No navigation, no re-render:
+  window.history.replaceState(window.history.state, '', url.toString())
+}
+
+export function removeQueryParamsWithoutRerender(
+  params: Record<string, string | null | undefined>,
+) {
+  const url = new URL(window.location.href)
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.delete(key)
+  }
+  window.history.replaceState(window.history.state, '', url.toString())
 }

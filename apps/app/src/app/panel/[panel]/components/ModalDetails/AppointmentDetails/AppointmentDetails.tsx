@@ -4,20 +4,21 @@ import { Calendar, Clock, MapPin, User } from 'lucide-react'
 import StaticContent from '../StaticContent'
 import type { WorklistPatient } from '../../../../../../lib/fhir-to-table-data'
 import { getPatientName } from '@/lib/patient-utils'
-import { Patient } from '@medplum/fhirtypes'
+import type { Appointment, Location, Patient } from '@medplum/fhirtypes'
+import AppointmentsCard from '../StaticContent/ContentCards/AppointmentsCard'
 
 interface AppointmentDetailsProps {
-  appointmentId: string
-  patient: WorklistPatient
+  appointment: Appointment
+  patient: Patient
+  location: Location | undefined
 }
 
 export default function AppointmentDetails({
-  appointmentId,
+  appointment,
   patient,
+  location,
 }: AppointmentDetailsProps) {
   const VIEWS = ['content', 'appointment']
-  const appointments = useWorklistAppointments()
-  const appointment = appointments.find((apt) => apt.id === appointmentId)
   const { formatDateTime } = useDateTimeFormat()
 
   if (!appointment) {
@@ -43,7 +44,7 @@ export default function AppointmentDetails({
     }
   }
 
-  const patientName = getPatientName(appointment.patient as WorklistPatient)
+  const patientName = getPatientName(patient)
 
   return (
     <div className="flex flex-1 h-full">
@@ -52,7 +53,13 @@ export default function AppointmentDetails({
           key={view}
           className="overflow-y-auto p-2 border-r border-gray-200 h-full overflow-auto w-1/2"
         >
-          {view === 'content' && <StaticContent patient={patient} />}
+          {/* TEMP SOLUTION: use FHIRPath to get the patient name instead of mapping the custom patient object */}
+          {view === 'content' && (
+            <div className="flex flex-col gap-2">
+              <StaticContent patient={patient as unknown as WorklistPatient} />
+              <AppointmentsCard patientId={patient.id as string} />
+            </div>
+          )}
           {view === 'appointment' && (
             <div className="border border-gray-200 rounded-lg bg-white">
               <div className="btn btn-sm btn-ghost w-full justify-between h-auto min-h-8 p-3">
@@ -113,14 +120,14 @@ export default function AppointmentDetails({
                     </div>
                   )}
 
-                  {appointment.locationName && (
+                  {location?.name && (
                     <div>
                       <div className="text-xs font-medium text-gray-500">
                         Location
                       </div>
                       <div className="mt-1 flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-gray-400" />
-                        <span>{appointment.locationName}</span>
+                        <span>{location.name}</span>
                       </div>
                     </div>
                   )}

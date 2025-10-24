@@ -22,9 +22,8 @@ export function useColumnVisibility(
   const { columns: allColumns } = useReactiveColumns(panelId)
   const { panel } = useReactivePanel(panelId)
   const { view } = useReactiveView(panelId, viewId || '')
-  const { updatePanel, updateView } = useReactivePanelStore()
+  const { updateView } = useReactivePanelStore()
   const { updateColumn } = useColumnOperations()
-  const { isColumnLocked } = useColumnLocking(panelId, viewId)
 
   // Determine context type and get relevant columns
   const contextType = viewId ? 'view' : 'panel'
@@ -45,12 +44,15 @@ export function useColumnVisibility(
       return allColumns.filter((col) => viewColumnIds.has(col.id))
     }
 
-    // For panels: return all columns for the view type
-    return allColumns.filter((col) =>
-      currentViewType === 'patient'
-        ? col.tags?.includes('panels:patients')
-        : col.tags?.includes('panels:tasks'),
-    )
+    if (currentViewType === 'patient') {
+      return allColumns.filter((col) => col.tags?.includes('panels:patients'))
+    }
+
+    if (currentViewType === 'task') {
+      return allColumns.filter((col) => col.tags?.includes('panels:tasks'))
+    }
+
+    return allColumns
   }, [allColumns, currentViewType, contextType, view])
 
   // Get visibility for a specific column
@@ -147,11 +149,15 @@ export function useColumnVisibility(
 
   // Get all columns for the current context
   const getAllColumns = useCallback((): Column[] => {
-    return allColumns.filter((col) =>
-      currentViewType === 'patient'
-        ? col?.tags?.includes('panels:patients')
-        : col.tags?.includes('panels:tasks'),
-    )
+    if (currentViewType === 'patient') {
+      return allColumns.filter((col) => col.tags?.includes('panels:patients'))
+    }
+
+    if (currentViewType === 'task') {
+      return allColumns.filter((col) => col.tags?.includes('panels:tasks'))
+    }
+
+    return allColumns
   }, [allColumns, currentViewType])
 
   return {
