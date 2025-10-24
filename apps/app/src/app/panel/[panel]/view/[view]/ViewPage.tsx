@@ -111,7 +111,11 @@ export default function WorklistViewPage() {
       : []
 
   // Create column visibility context for view
-  const columnVisibilityContext = useColumnVisibility(panelId, viewId)
+  const columnVisibilityContext = useColumnVisibility(
+    panelId,
+    viewId,
+    view?.metadata.viewType,
+  )
 
   // Create column locking context for view
   const { setColumnLocked, isColumnLocked } = useColumnLocking(panelId, viewId)
@@ -131,11 +135,18 @@ export default function WorklistViewPage() {
   >(null)
 
   // Get columns using new filtering approach
-  const allColumnsForViewType = allColumns.filter((col) =>
-    view?.metadata.viewType === 'patient'
-      ? col.tags?.includes('panels:patients')
-      : col.tags?.includes('panels:tasks'),
-  )
+  const allColumnsForViewType = allColumns.filter((col) => {
+    if (view?.metadata.viewType === 'patient') {
+      return col.tags?.includes('panels:patients')
+    }
+    if (view?.metadata.viewType === 'task') {
+      return col.tags?.includes('panels:tasks')
+    }
+    if (view?.metadata.viewType === 'appointment') {
+      return col.tags?.includes('panels:appointments')
+    }
+    return col.tags?.includes('panels:tasks')
+  })
 
   // Get only visible columns using column visibility context
   const visibleColumns = columnVisibilityContext.getVisibleColumns()

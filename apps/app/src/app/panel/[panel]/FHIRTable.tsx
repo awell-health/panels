@@ -126,13 +126,21 @@ export default function FHIRTable(props: Props) {
     useColumnOperations()
 
   // Create column visibility context for panel
-  const columnVisibilityContext = useColumnVisibility(panelId)
+  const columnVisibilityContext = useColumnVisibility(
+    panelId,
+    viewId,
+    currentView,
+  )
 
   // Create column locking context for panel or view
   const { setColumnLocked, isColumnLocked } = useColumnLocking(panelId, viewId)
 
   // Get only visible columns using column visibility context
-  const visibleColumns = columnVisibilityContext.getVisibleColumns()
+  const visibleColumns = columnVisibilityContext
+    .getVisibleColumns()
+    .filter((col) => {
+      return col.tags?.includes('panels:appointments')
+    })
 
   // Maintain separate arrays for locked and unlocked columns to preserve drag-drop order within groups
   const { visibleColumnsSorted } = useMemo(() => {
@@ -190,8 +198,6 @@ export default function FHIRTable(props: Props) {
     try {
       if (!panelId) return
 
-      setCurrentView(viewType)
-
       if (viewId) {
         await updateFunction({
           metadata: {
@@ -207,6 +213,8 @@ export default function FHIRTable(props: Props) {
           },
         })
       }
+
+      setCurrentView(viewType)
     } catch (error) {
       console.error('Failed to update view type:', error)
     }
@@ -326,7 +334,6 @@ export default function FHIRTable(props: Props) {
 
     try {
       // Update panel or view metadata with new filters
-
       const appointmentsBundle = await getAllAppointments(
         store.columns,
         filters,

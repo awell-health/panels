@@ -60,11 +60,19 @@ export function useColumnCreator({
     }
 
     // Count currently used columns for this view type
-    stats.usedColumns = columns.filter((col) =>
-      currentViewType === 'patient'
-        ? col.tags?.includes('panels:patients')
-        : col.tags?.includes('panels:tasks'),
-    ).length
+    stats.usedColumns = columns.filter((col) => {
+      if (currentViewType === 'appointment') {
+        return col.tags?.includes('panels:appointments')
+      }
+      if (currentViewType === 'patient') {
+        return col.tags?.includes('panels:patients')
+      }
+      if (currentViewType === 'task') {
+        return col.tags?.includes('panels:tasks')
+      }
+
+      return false
+    }).length
 
     return stats
   }, [sourceData, columns, currentViewType])

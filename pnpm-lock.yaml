@@ -94,10 +94,10 @@ importers:
         specifier: ^1.0.6
         version: 1.0.6(encoding@0.1.13)
       '@medplum/core':
-        specifier: ^4.5.1
+        specifier: ^4.1.6
         version: 4.5.1
       '@medplum/fhirtypes':
-        specifier: ^4.5.1
+        specifier: ^4.1.6
         version: 4.5.1
       '@panels/types':
         specifier: workspace:^

@@ -120,20 +120,37 @@ export default function PanelPage({ viewType, panelId }: PanelPageProps) {
   const { isLoading: isViewsLoading } = useReactiveViews(panelId)
 
   // Create column visibility context for panel
-  const columnVisibilityContext = useColumnVisibility(panelId)
+  const columnVisibilityContext = useColumnVisibility(
+    panelId,
+    undefined,
+    currentView,
+  )
 
   // Create column locking context for panel (no viewId, so uses panel-level locking)
   const { setColumnLocked, isColumnLocked } = useColumnLocking(panelId)
 
   // Get columns for current view type using tag-based filtering
-  const allColumnsForViewType = allColumns.filter((col) =>
-    currentView === 'patient'
-      ? col.tags?.includes('panels:patients')
-      : col.tags?.includes('panels:tasks'),
-  )
+  const allColumnsForViewType = allColumns.filter((col) => {
+    if (currentView === 'appointment') {
+      return col.tags?.includes('panels:appointments')
+    }
+
+    if (currentView === 'task') {
+      return col.tags?.includes('panels:tasks')
+    }
+
+    if (currentView === 'patient') {
+      return col.tags?.includes('panels:patients')
+    }
+
+    return col.tags?.includes('panels:tasks')
+  })
 
   // Get only visible columns using column visibility context
   const visibleColumns = columnVisibilityContext.getVisibleColumns()
+
+  console.log('visibleColumns', visibleColumns)
+  console.log('allColumnsForViewType', allColumnsForViewType)
 
   // Maintain separate arrays for locked and unlocked columns to preserve drag-drop order within groups
   const { lockedColumns, unlockedColumns, visibleColumnsSorted } =
@@ -187,15 +204,9 @@ export default function PanelPage({ viewType, panelId }: PanelPageProps) {
     router.push(`${pathname}?${currentParams.toString()}`)
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     if (panel) {
       setTableFilters(panel.metadata.filters)
-      setCurrentView(
-        panel.metadata.viewType
-          ? (panel.metadata.viewType as ViewType)
-          : 'patient',
-      )
     }
   }, [panel])
 
@@ -210,13 +221,14 @@ export default function PanelPage({ viewType, panelId }: PanelPageProps) {
     try {
       if (!panel) return
 
-      setCurrentView(viewType)
       await updatePanel?.(panelId, {
         metadata: {
           ...panel.metadata,
           viewType,
         },
       })
+
+      setCurrentView(viewType)
     } catch (error) {
       console.error('Failed to update panel view type:', error)
     }

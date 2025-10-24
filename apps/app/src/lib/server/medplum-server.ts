@@ -319,6 +319,15 @@ export async function getAllAppointments(
   try {
     const sortParam = convertSortToFHIR(undefined, columns)
     const filterParam = convertFiltersToFHIR(filters, columns)
+    const referencedColumns =
+      columns
+        .filter((col) => col.tags?.includes('panels:appointments'))
+        .filter((col) => col.sourceField?.includes('entry.resource.ofType'))
+        .map((col) => {
+          const regex = /ofType\(([^)]+)\)/
+          const match = col.sourceField?.match(regex)
+          return match?.[1] || ''
+        }) || []
 
     // First try with _include for better performance
     try {
