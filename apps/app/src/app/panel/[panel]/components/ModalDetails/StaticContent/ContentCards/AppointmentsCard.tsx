@@ -2,37 +2,31 @@ import { formatDateTime } from '@medplum/core'
 import ExpandableCard from '../ExpandableCard'
 import type { Appointment } from '@medplum/fhirtypes'
 import RenderValue from '../RenderValue'
-import { useMemo, memo } from 'react'
+import { useMemo, memo, useState, useEffect } from 'react'
 import CardRowItem from '../CardRowItem'
-import { useLocationsArray } from '../../../../../../../hooks/use-zustand-store'
+import { getPatientAppointments } from '../../../../../../../lib/server/medplum-server'
+import { Loader2 } from 'lucide-react'
 
 interface Props {
-  appointments: Appointment[]
-  expanded: boolean
+  patientId: string
 }
 
-const AppointmentsCard = memo(({ appointments, expanded }: Props) => {
-  // Get locations Map from the global store
-  const locations = useLocationsArray()
-  console.log(locations)
+const AppointmentsCard = memo(({ patientId }: Props) => {
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      const appointments = await getPatientAppointments(patientId)
+      setAppointments(appointments)
+      setIsLoading(false)
+    }
+    fetchAppointments()
+  }, [patientId])
 
   // Memoize the appointments rendering to avoid unnecessary re-renders
   const renderedAppointments = useMemo(() => {
     return appointments.map((appointment) => {
-      // Get location reference from appointment participants
-      const locationReference =
-        appointment.participant?.find((p) =>
-          p.actor?.reference?.startsWith('Location/'),
-        )?.actor?.reference ?? ''
-
-      const locationId = locationReference.split('/')[1]
-      const location = locations.find((l) => l.id === locationId)
-      const locationName =
-        location?.name ||
-        location?.alias?.[0] ||
-        location?.description ||
-        `Location ${locationId}`
-
       return (
         <div
           key={appointment.id}
@@ -47,14 +41,19 @@ const AppointmentsCard = memo(({ appointments, expanded }: Props) => {
             value={formatDateTime(appointment.start)}
           />
           <CardRowItem label="End" value={formatDateTime(appointment.end)} />
-          <CardRowItem label="Location" value={locationName} />
+          <CardRowItem label="Comment" value={appointment.comment} />
         </div>
       )
     })
-  }, [appointments, locations])
+  }, [appointments])
 
   return (
-    <ExpandableCard title="Appointments" defaultExpanded={expanded}>
+    <ExpandableCard title="Appointments" defaultExpanded={true}>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-full">
+          <Loader2 className="w-4 h-4 animate-spin" />
+        </div>
+      ) : null}
       <div className="space-y-2 mt-2 flex flex-col gap-2">
         {renderedAppointments}
       </div>

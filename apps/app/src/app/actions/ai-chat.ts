@@ -105,11 +105,18 @@ export const columnAiAssistantMessageHandler = async (
 
   // Handle columns context - filter by view type if specified
   const relevantColumns = context?.columns
-    ? context.columns.filter((col) =>
-        context.currentViewType === 'patient'
-          ? col.tags?.includes('panels:patients')
-          : col.tags?.includes('panels:tasks'),
-      )
+    ? context.columns.filter((col) => {
+        if (context.currentViewType === 'patient') {
+          return col.tags?.includes('panels:patients')
+        }
+        if (context.currentViewType === 'task') {
+          return col.tags?.includes('panels:tasks')
+        }
+        if (context.currentViewType === 'appointment') {
+          return col.tags?.includes('panels:appointments')
+        }
+        return col.tags?.includes('panels:tasks')
+      })
     : []
 
   const columnsContext =

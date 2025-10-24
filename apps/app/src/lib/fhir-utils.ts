@@ -3,6 +3,7 @@ import type {
   CodeableConcept,
   Coding,
   Location,
+  Resource,
 } from '@medplum/fhirtypes'
 
 /**
@@ -136,15 +137,29 @@ export function resolveLocationNames(
   })
 }
 
-/**
- * Gets the first location reference from an appointment
- * @param appointment - Appointment to get location reference from
- * @returns Location reference or undefined
- */
-export function getFirstLocationReference(
-  appointment: Appointment,
-): string | undefined {
-  return appointment.participant?.find((p) =>
-    p.actor?.reference?.startsWith('Location/'),
-  )?.actor?.reference
+// Create a utility that extracts fields from FHIR types
+export const extractFHIRFields = <T extends Resource>(
+  sampleData: T[],
+): string[] => {
+  if (!sampleData || sampleData.length === 0) {
+    return []
+  }
+
+  const fields = new Set<string>()
+
+  for (const item of sampleData) {
+    if (item && typeof item === 'object') {
+      for (const key of Object.keys(item)) {
+        // Only include direct properties, not nested objects
+        if (
+          typeof item[key as keyof T] !== 'object' ||
+          item[key as keyof T] === null
+        ) {
+          fields.add(key)
+        }
+      }
+    }
+  }
+
+  return Array.from(fields)
 }

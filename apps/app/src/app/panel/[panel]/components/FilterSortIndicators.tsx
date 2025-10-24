@@ -37,7 +37,6 @@ export function FilterSortIndicators({
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
-
   const hasActiveFiltersOrSort = filters.length > 0 || sort
 
   useEffect(() => {

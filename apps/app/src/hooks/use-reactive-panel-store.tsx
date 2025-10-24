@@ -16,6 +16,20 @@ import { useAuthentication } from './use-authentication'
 import { logger } from '../lib/logger'
 import { Loader2 } from 'lucide-react'
 
+// Helper function to convert view types to correct plural tags
+function getViewTypeTag(viewType: string): string {
+  switch (viewType) {
+    case 'patient':
+      return 'panels:patients'
+    case 'task':
+      return 'panels:tasks'
+    case 'appointment':
+      return 'panels:appointments'
+    default:
+      return `panels:${viewType}s` // fallback to plural
+  }
+}
+
 export class ReactivePanelStore {
   private storage: StorageAdapter | null = null
   private reactiveStore: ReactiveStoreZustand | null = null
@@ -387,10 +401,7 @@ export class ReactivePanelStore {
                   change.column.sourceField ||
                   change.column.name ||
                   'New Column',
-                tags:
-                  change.viewType === 'patient'
-                    ? ['panels:patients']
-                    : ['panels:tasks'],
+                tags: [getViewTypeTag(change.viewType)],
                 properties: {
                   display: {
                     visible: true,
@@ -746,13 +757,22 @@ export function ReactivePanelStoreProvider({
           storageMode as StorageMode,
         )
 
-        // Wait for initialization to complete
-        await reactiveStore.waitForInitialization()
-
+        // Set store immediately for non-blocking initialization
         setStore(reactiveStore)
-        setIsInitialized(true)
+
+        // Initialize in background without blocking render
+        reactiveStore
+          .waitForInitialization()
+          .then(() => {
+            setIsInitialized(true)
+          })
+          .catch((error) => {
+            console.error('Failed to initialize store:', error)
+            setIsInitialized(true) // Still allow render to proceed
+          })
       } catch (error) {
-        console.error('Failed to initialize store:', error)
+        console.error('Failed to create store:', error)
+        setIsInitialized(true) // Allow render to proceed even on error
       }
     }
 

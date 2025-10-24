@@ -1,6 +1,6 @@
 'use client'
 
-import { getNestedValue } from '@/lib/fhir-path'
+import { getNestedValue, getNestedValueFromBundle } from '@/lib/fhir-path'
 import { cn } from '@/lib/utils'
 import { CellFactory } from './cells'
 import { useStickyGridContext } from './StickyContext'
@@ -25,6 +25,7 @@ interface VirtualizedRowProps {
   currentView: string
   currentUserName?: string
   getColumnWidth: (columnIndex: number) => number
+  isFHIRBundle: boolean
 }
 
 export function VirtualizedRow({
@@ -40,51 +41,57 @@ export function VirtualizedRow({
   currentView,
   currentUserName,
   getColumnWidth,
+  isFHIRBundle,
 }: VirtualizedRowProps) {
   const { columns, getStickyColumnStyles } = useStickyGridContext()
 
   return (
     <>
       {/* Data columns */}
-      {columns.map((column, columnIndex) => (
-        <td
-          key={column.id}
-          headers={`header-${column.id}`}
-          className={cn(
-            'border-r border-b border-gray-200 cursor-pointer p-2 bg-white',
-            // Sticky columns get their background from CSS hover effects
-            column.properties?.display?.locked && 'sticky-column',
-          )}
-          style={{
-            width: getColumnWidth(columnIndex),
-            minWidth: getColumnWidth(columnIndex),
-            height: ROW_HEIGHT,
-            ...getStickyColumnStyles(columnIndex),
-          }}
-          onClick={() => onRowClick(row)}
-          onMouseEnter={() => onRowHover(index, true, null)}
-          onMouseLeave={() => onRowHover(index, false, null)}
-          onKeyDown={(e) => {
-            if (e.key === ' ') {
-              e.stopPropagation()
-              onRowClick(row)
-            }
-          }}
-        >
-          <CellFactory
-            value={getNestedValue(row, column.sourceField)}
-            column={column}
-            row={row}
-            rowIndex={index}
-            columnIndex={columnIndex}
-            onPDFClick={onPDFClick}
-            onTaskClick={onTaskClick}
-            onAssigneeClick={() => onAssigneeClick(row.id)}
-            currentView={currentView}
-            currentUserName={currentUserName}
-          />
-        </td>
-      ))}
+      {columns.map((column, columnIndex) => {
+        const getValue = isFHIRBundle
+          ? getNestedValueFromBundle(row.resource, column.sourceField ?? '')
+          : getNestedValue(row, column.sourceField)
+        return (
+          <td
+            key={column.id}
+            headers={`header-${column.id}`}
+            className={cn(
+              'border-r border-b border-gray-200 cursor-pointer p-2 bg-white',
+              // Sticky columns get their background from CSS hover effects
+              column.properties?.display?.locked && 'sticky-column',
+            )}
+            style={{
+              width: getColumnWidth(columnIndex),
+              minWidth: getColumnWidth(columnIndex),
+              height: ROW_HEIGHT,
+              ...getStickyColumnStyles(columnIndex),
+            }}
+            onClick={() => onRowClick(row)}
+            onMouseEnter={() => onRowHover(index, true, null)}
+            onMouseLeave={() => onRowHover(index, false, null)}
+            onKeyDown={(e) => {
+              if (e.key === ' ') {
+                e.stopPropagation()
+                onRowClick(row)
+              }
+            }}
+          >
+            <CellFactory
+              value={getValue}
+              column={column}
+              row={row}
+              rowIndex={index}
+              columnIndex={columnIndex}
+              onPDFClick={onPDFClick}
+              onTaskClick={onTaskClick}
+              onAssigneeClick={() => onAssigneeClick(row.id)}
+              currentView={currentView}
+              currentUserName={currentUserName}
+            />
+          </td>
+        )
+      })}
     </>
   )
 }

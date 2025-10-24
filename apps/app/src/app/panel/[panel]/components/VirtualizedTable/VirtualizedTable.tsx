@@ -10,7 +10,11 @@ import {
 } from 'react'
 import { TableVirtuoso } from 'react-virtuoso'
 import type { Column, Filter, Sort } from '@/types/panel'
-import { getNestedValue, isMatchingFhirPathCondition } from '@/lib/fhir-path'
+import {
+  getNestedValue,
+  getNestedValueFromBundle,
+  isMatchingFhirPathCondition,
+} from '@/lib/fhir-path'
 import { resolveDateFilter } from '@/lib/dynamic-date-filter'
 import {
   DndContext,
@@ -74,6 +78,7 @@ interface VirtualizedTableProps {
   hasMore?: boolean
   onLoadMore?: () => void
   isLoadingMore?: boolean
+  isFHIRBundle?: boolean
 }
 
 // Icon helper function (same as original)
@@ -128,8 +133,9 @@ export function VirtualizedTable({
   hasMore,
   onLoadMore,
   isLoadingMore,
+  isFHIRBundle = false,
 }: VirtualizedTableProps) {
-  // State management (similar to original)
+  const getValue = isFHIRBundle ? getNestedValueFromBundle : getNestedValue
 
   const [activeColumn, setActiveColumn] = useState<Column | null>(null)
   const [sortConfig, setSortConfig] = useState<Sort | undefined>(
@@ -138,7 +144,6 @@ export function VirtualizedTable({
   const [containerWidth, setContainerWidth] = useState(1200)
   const [gridKey, setGridKey] = useState(0)
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
-  const [isResizing, setIsResizing] = useState(false)
 
   // Refs
   const virtuosoRef = useRef(null)
@@ -271,130 +276,141 @@ export function VirtualizedTable({
   )
 
   // Data filtering and sorting (same logic as original)
-  const filteredAndSortedData = useMemo(() => {
-    let processedData = [...tableData]
+  const filteredAndSortedData = isFHIRBundle
+    ? tableData
+    : useMemo(() => {
+        let processedData = [...tableData]
 
-    // Helper function to check if a date value falls within a range
-    const isDateInRange = (dateValue: string, filterValue: string): boolean => {
-      if (!dateValue || !filterValue) return false
+        // Helper function to check if a date value falls within a range
+        const isDateInRange = (
+          dateValue: string,
+          filterValue: string,
+        ): boolean => {
+          if (!dateValue || !filterValue) return false
 
-      try {
-        const cellDate = new Date(dateValue)
-        if (Number.isNaN(cellDate.getTime())) return false
+          try {
+            const cellDate = new Date(dateValue)
+            if (Number.isNaN(cellDate.getTime())) return false
 
-        // Resolve dynamic date filters to static date ranges
-        const resolvedFilterValue = resolveDateFilter(filterValue)
+            // Resolve dynamic date filters to static date ranges
+            const resolvedFilterValue = resolveDateFilter(filterValue)
 
-        // Check if filter value contains date range delimiter
-        if (resolvedFilterValue.includes('#')) {
-          const [fromDate, toDate] = resolvedFilterValue.split('#')
+            // Check if filter value contains date range delimiter
+            if (resolvedFilterValue.includes('#')) {
+              const [fromDate, toDate] = resolvedFilterValue.split('#')
 
-          if (fromDate && toDate) {
-            // Handle date-only filters (YYYY-MM-DD format)
-            const from = new Date(fromDate)
-            const to = new Date(toDate)
+              if (fromDate && toDate) {
+                // Handle date-only filters (YYYY-MM-DD format)
+                const from = new Date(fromDate)
+                const to = new Date(toDate)
 
-            // If both dates are the same (single day filter), extend 'to' to end of day
-            if (fromDate === toDate) {
-              to.setHours(23, 59, 59, 999) // End of day
+                // If both dates are the same (single day filter), extend 'to' to end of day
+                if (fromDate === toDate) {
+                  to.setHours(23, 59, 59, 999) // End of day
+                }
+
+                return cellDate >= from && cellDate <= to
+              }
+
+              if (fromDate) {
+                const from = new Date(fromDate)
+                return cellDate >= from
+              }
+
+              if (toDate) {
+                const to = new Date(toDate)
+                // If it's a date-only filter, extend to end of day
+                if (toDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                  to.setHours(23, 59, 59, 999)
+                }
+                return cellDate <= to
+              }
             }
 
-            return cellDate >= from && cellDate <= to
-          }
-
-          if (fromDate) {
-            const from = new Date(fromDate)
-            return cellDate >= from
-          }
-
-          if (toDate) {
-            const to = new Date(toDate)
-            // If it's a date-only filter, extend to end of day
-            if (toDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-              to.setHours(23, 59, 59, 999)
-            }
-            return cellDate <= to
-          }
-        }
-
-        // Fallback to string matching for non-range filters
-        return String(dateValue)
-          .toLowerCase()
-          .includes(resolvedFilterValue.toLowerCase())
-      } catch (error) {
-        console.warn('Error parsing date for filtering:', error)
-        return false
-      }
-    }
-
-    // Apply filters
-    if (filters && filters.length > 0) {
-      processedData = processedData.filter((row) => {
-        return filters.every((filter) => {
-          if (!filter.value || filter.value.trim() === '') return true
-
-          // Handle new filter format with columnId
-          if (filter.columnId) {
-            const column = allColumns.find((col) => col.id === filter.columnId)
-            if (!column) return true
-
-            const cellValue = getNestedValue(row, column.sourceField)
-            const filterValue = filter.value
-
-            if (cellValue === null || cellValue === undefined) return false
-
-            // Handle date range filtering
-            if (column.type === 'date' || column.type === 'datetime') {
-              return isDateInRange(cellValue, filterValue)
-            }
-
-            // Default string matching for non-date columns
-            return String(cellValue)
+            // Fallback to string matching for non-range filters
+            return String(dateValue)
               .toLowerCase()
-              .includes(filterValue.toLowerCase())
+              .includes(resolvedFilterValue.toLowerCase())
+          } catch (error) {
+            console.warn('Error parsing date for filtering:', error)
+            return false
           }
-
-          // Handle legacy filter format with fhirPathFilter
-          if (filter.fhirPathFilter && filter.fhirPathFilter.length >= 2) {
-            const [fhirPath, expectedValue] = filter.fhirPathFilter
-            const fhirExpression = `${fhirPath}.lower().contains('${expectedValue.toLowerCase()}')`
-            return isMatchingFhirPathCondition(row, fhirExpression)
-          }
-
-          return true
-        })
-      })
-    }
-
-    // Apply sorting
-    if (sortConfig) {
-      processedData.sort((a, b) => {
-        const column = visibleColumns.find(
-          (col) => col.id === sortConfig.columnId,
-        )
-        if (!column) return 0
-
-        const aValue = getNestedValue(a, column.sourceField)
-        const bValue = getNestedValue(b, column.sourceField)
-
-        if (aValue === null || aValue === undefined) return 1
-        if (bValue === null || bValue === undefined) return -1
-
-        let comparison = 0
-        if (column.type === 'number') {
-          comparison = Number(aValue) - Number(bValue)
-        } else if (column.type === 'date' || column.type === 'datetime') {
-          comparison = new Date(aValue).getTime() - new Date(bValue).getTime()
-        } else {
-          comparison = String(aValue).localeCompare(String(bValue))
         }
 
-        return sortConfig.direction === 'desc' ? -comparison : comparison
-      })
-    }
+        // Apply filters
+        if (filters && filters.length > 0) {
+          processedData = processedData.filter((row) => {
+            return filters.every((filter) => {
+              if (!filter.value || filter.value.trim() === '') return true
 
-    return processedData
-  }, [tableData, filters, sortConfig, visibleColumns, allColumns])
+              // Handle new filter format with columnId
+              if (filter.columnId) {
+                const column = allColumns.find(
+                  (col) => col.id === filter.columnId,
+                )
+                if (!column) return true
+
+                const cellValue = getValue(
+                  row.resource,
+                  column.sourceField ?? '',
+                )
+                const filterValue = filter.value
+
+                if (cellValue === null || cellValue === undefined) return false
+
+                // Handle date range filtering
+                if (column.type === 'date' || column.type === 'datetime') {
+                  return isDateInRange(cellValue, filterValue)
+                }
+
+                // Default string matching for non-date columns
+                return String(cellValue)
+                  .toLowerCase()
+                  .includes(filterValue.toLowerCase())
+              }
+
+              // Handle legacy filter format with fhirPathFilter
+              if (filter.fhirPathFilter && filter.fhirPathFilter.length >= 2) {
+                const [fhirPath, expectedValue] = filter.fhirPathFilter
+                const fhirExpression = `${fhirPath}.lower().contains('${expectedValue.toLowerCase()}')`
+                return isMatchingFhirPathCondition(row, fhirExpression)
+              }
+
+              return true
+            })
+          })
+        }
+
+        // Apply sorting
+        if (sortConfig) {
+          processedData.sort((a, b) => {
+            const column = visibleColumns.find(
+              (col) => col.id === sortConfig.columnId,
+            )
+            if (!column) return 0
+
+            const aValue = getValue(a.resource, column.sourceField ?? '')
+            const bValue = getValue(b.resource, column.sourceField ?? '')
+
+            if (aValue === null || aValue === undefined) return 1
+            if (bValue === null || bValue === undefined) return -1
+
+            let comparison = 0
+            if (column.type === 'number') {
+              comparison = Number(aValue) - Number(bValue)
+            } else if (column.type === 'date' || column.type === 'datetime') {
+              comparison =
+                new Date(aValue).getTime() - new Date(bValue).getTime()
+            } else {
+              comparison = String(aValue).localeCompare(String(bValue))
+            }
+
+            return sortConfig.direction === 'desc' ? -comparison : comparison
+          })
+        }
+
+        return processedData
+      }, [tableData, filters, sortConfig, visibleColumns, allColumns, getValue])
 
   // Handle internal row hover
   const handleInternalRowHover = useCallback(
@@ -523,6 +539,7 @@ export function VirtualizedTable({
           currentView={currentView}
           currentUserName={currentUserName}
           getColumnWidth={getColumnWidth}
+          isFHIRBundle={isFHIRBundle}
         />
       )
     },
@@ -538,6 +555,7 @@ export function VirtualizedTable({
       currentView,
       currentUserName,
       getColumnWidth,
+      isFHIRBundle,
     ],
   )
 

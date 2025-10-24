@@ -2,42 +2,47 @@ import { useToastHelpers } from '@/contexts/ToastContext'
 import { logger } from '@/lib/logger'
 import { Trash2Icon, User, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import PatientDetails from './PatientDetails/PatientDetails'
-import TaskDetails from './TaskDetails/TaskDetails'
 import { AppointmentDetails } from './AppointmentDetails'
 import { useAuthentication } from '@/hooks/use-authentication'
 import { useMedplumStore } from '@/hooks/use-medplum-store'
-import {
-  useWorklistPatient,
-  useWorklistTask,
-  useWorklistAppointments,
-} from '@/hooks/use-zustand-store'
 import { useDateTimeFormat } from '@/hooks/use-date-time-format'
-import type { Resource } from '@medplum/fhirtypes'
+import type {
+  Patient,
+  Resource,
+  ResourceType,
+  Bundle,
+  BundleEntry,
+  Appointment,
+  Location,
+} from '@medplum/fhirtypes'
 import { Dialog } from '../../../../../components/ui/dialog'
 import { getNestedValueFromBundle } from '../../../../../lib/fhir-path'
 import { useReactivePanel } from '../../../../../hooks/use-reactive-data-zustand'
 import { getCardConfigs } from '../../../../../utils/static/CardConfigs'
 import type { FHIRCard } from './StaticContent/FhirExpandableCard'
+import type { Panel } from '@/types/panel'
 import { useParams, useRouter } from 'next/navigation'
 import type { WorklistPatient } from '@/lib/fhir-to-table-data'
 import { getPatientName } from '@/lib/patient-utils'
+import {
+  useBundleByResourceId,
+  useFHIRStore,
+} from '../../../../../lib/fhir-store'
 
 interface Props {
-  patientId?: string
-  taskId?: string
-  appointmentId?: string
+  resourceType: ResourceType
+  resourceId: string
   pathname: string
   onClose: () => void
 }
 
-const ModalDetails = ({
-  patientId,
-  taskId,
-  appointmentId,
+const HybridModalDetails = ({
+  resourceType,
+  resourceId,
   pathname,
   onClose,
 }: Props) => {
+  const { getBundleByResourceId } = useFHIRStore()
   const { deletePatient } = useMedplumStore()
   const { isAdmin } = useAuthentication()
   const { showSuccess, showError } = useToastHelpers()
@@ -50,15 +55,11 @@ const ModalDetails = ({
   const panelId = params.panel as string
   const { panel } = useReactivePanel(panelId)
 
-  // Use Zustand hooks for reactive data updates
-  const task = useWorklistTask(taskId || '')
-  const appointments = useWorklistAppointments()
-  const appointment = appointmentId
-    ? appointments.find((apt) => apt.id === appointmentId)
-    : undefined
-  const patient = useWorklistPatient(
-    patientId || task?.patientId || appointment?.patientId || '',
-  )
+  const [data, setData] = useState<{
+    appointment?: Appointment
+    patient?: Patient
+    location?: Location
+  }>({})
 
   const contentCards =
     (panel?.metadata?.cardsConfiguration as FHIRCard[]) ??
@@ -66,11 +67,31 @@ const ModalDetails = ({
 
   const [isLoading, setIsLoading] = useState(true)
 
+  // Subscribe to the specific bundle so modal re-renders on store updates
+  const subscribedBundle = useBundleByResourceId(resourceType, resourceId)
+
   useEffect(() => {
-    if (patient) {
+    const mapData = async () => {
+      const bundle =
+        subscribedBundle ?? getBundleByResourceId(resourceType, resourceId)
+      const entries: BundleEntry[] =
+        bundle?.resource?.resourceType === 'Bundle'
+          ? ((bundle.resource as Bundle).entry ?? [])
+          : []
+      const resources = entries
+        .map((e) => e.resource)
+        .filter(Boolean) as Resource[]
+
+      const resourcesData: Record<string, Resource> = {}
+      for (const resource of resources) {
+        resourcesData[resource.resourceType.toLowerCase()] = resource
+      }
+      setData(resourcesData)
       setIsLoading(false)
     }
-  }, [patient])
+
+    mapData()
+  }, [resourceId, resourceType, getBundleByResourceId, subscribedBundle])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -96,14 +117,16 @@ const ModalDetails = ({
     }
   }, [onClose])
 
+  const { patient, appointment, location } = data
+
   if (!patient) {
     return null
   }
 
   // Get patient name and DOB for header
-  const patientName = getPatientName(patient as WorklistPatient)
-  const dateOfBirth = patient?.birthDate || ''
-  const gender = patient?.gender || ''
+  const patientName = getPatientName(patient as unknown as WorklistPatient)
+  const dateOfBirth: string = patient?.birthDate ?? ''
+  const gender: string = patient?.gender ?? ''
 
   const fhirPathForMrn = contentCards
     .find((card) => {
@@ -125,7 +148,7 @@ const ModalDetails = ({
   )
 
   const handleDeleteRequest = async () => {
-    if (!patient) return
+    if (!patient || !patient.id) return
 
     try {
       await deletePatient(patient.id)
@@ -157,7 +180,6 @@ const ModalDetails = ({
       <div
         className="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-shrink-0 text-xs"
         data-patient-id={patient?.id}
-        data-task-id={task?.id}
       >
         <div className="flex items-center gap-2 text-gray-700 pl-4">
           <User className="h-5 w-5" />
@@ -169,16 +191,8 @@ const ModalDetails = ({
             <span className="font-medium text-red-600">
               Error loading patient
             </span>
-          ) : task || appointment ? (
-            <button
-              type="button"
-              className="btn btn-sm btn-link text-blue-600 hover:underline px-1"
-              onClick={() =>
-                router.push(`${pathname}?patientId=${patient?.id}`)
-              }
-            >
-              {patientName}
-            </button>
+          ) : appointment ? (
+            <span className="font-medium">{patientName}</span>
           ) : (
             <span className="font-medium">{patientName}</span>
           )}
@@ -202,7 +216,7 @@ const ModalDetails = ({
                   <span>Gender {gender}</span>
                 </>
               )}
-              {patient && !task && !appointment && isAdmin && (
+              {patient && !appointment && isAdmin && (
                 <button
                   type="button"
                   onClick={handleDeleteRequest}
@@ -227,32 +241,19 @@ const ModalDetails = ({
         </div>
       </div>
       <div className="flex h-[calc(100%-48px)]">
-        {isLoading ? (
+        {isLoading && (
           <div className="flex-1 flex items-center justify-center gap-2">
             <div className="loading loading-spinner loading-lg text-primary" />
             <div className="text-gray-600 text-sm">
               Loading patient details...
             </div>
           </div>
-        ) : !patient ? (
-          <div className="flex-1 flex items-center justify-center p-8">
-            <div className="text-center">
-              <div className="text-red-500 text-lg font-medium mb-2">
-                Unable to Load Patient
-              </div>
-              <div className="text-gray-600 text-sm max-w-md">
-                Patient data could not be loaded. Please try again later.
-              </div>
-            </div>
-          </div>
-        ) : task ? (
-          <TaskDetails task={task} />
-        ) : (
-          <PatientDetails
+        )}
+        {appointment && (
+          <AppointmentDetails
+            location={location}
+            appointment={appointment}
             patient={patient}
-            setSelectedTask={(item) => {
-              router.push(`${pathname}?taskId=${item?.id}`)
-            }}
           />
         )}
       </div>
@@ -260,4 +261,4 @@ const ModalDetails = ({
   )
 }
 
-export default ModalDetails
+export default HybridModalDetails

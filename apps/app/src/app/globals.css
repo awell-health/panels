@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+/* Custom animation delays for loading screen */
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
 [data-theme="github-light"] {
   color-scheme: light;
 
